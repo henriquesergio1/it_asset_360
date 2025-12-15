@@ -10,7 +10,7 @@ services:
     container_name: it-asset-360-app
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8083:80"
     environment:
       # URL da API Backend (ajuste conforme necessário quando tiver o backend)
       - REACT_APP_API_URL=http://localhost:5000/api
