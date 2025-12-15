@@ -12,33 +12,18 @@ services:
     ports:
       - "8083:80"
     environment:
-      # URL da API Backend (ajuste conforme necessário quando tiver o backend)
+      # URL da API Backend
       - REACT_APP_API_URL=http://localhost:5000/api
-    networks:
-      - it-asset-net
-    depends_on:
-      - db
-
-  # Database (SQL Server)
-  db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: it-asset-360-db
-    restart: always
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=StrongP@ssw0rd! # Altere para uma senha segura em produção
-      - MSSQL_PID=Express
-    ports:
-      - "1433:1433"
-    volumes:
-      - mssql_data:/var/opt/mssql
+      
+      # Configuração do SQL Server Externo (Para uso do Backend)
+      - DB_SERVER=192.168.1.XXX  # IP ou Host do Servidor SQL na rede
+      - DB_PORT=1433
+      - DB_DATABASE=ITAsset360
+      - DB_USER=seu_usuario
+      - DB_PASSWORD=sua_senha
     networks:
       - it-asset-net
 
 networks:
   it-asset-net:
     driver: bridge
-
-volumes:
-  mssql_data:
-    driver: local
