@@ -24,10 +24,52 @@ const dbConfig = {
     }
 };
 
-// Connect to Database
-sql.connect(dbConfig).then(pool => {
+// --- AUTO MIGRATION SYSTEM ---
+async function runMigrations(pool) {
+    console.log('🔄 Verificando esquema do banco de dados (Auto-Migração)...');
+    
+    const missingColumns = [
+        // Tabela Devices
+        { table: 'Devices', col: 'PurchaseInvoiceUrl', type: 'NVARCHAR(MAX)' },
+        { table: 'Devices', col: 'Imei', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'PulsusId', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'SectorId', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'CostCenter', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'LinkedSimId', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'InvoiceNumber', type: 'NVARCHAR(50)' },
+        { table: 'Devices', col: 'Supplier', type: 'NVARCHAR(100)' },
+        { table: 'Devices', col: 'PurchaseDate', type: 'DATE' },
+        { table: 'Devices', col: 'PurchaseCost', type: 'DECIMAL(18, 2)' },
+        // Tabela Users
+        { table: 'Users', col: 'Pis', type: 'NVARCHAR(20)' },
+        { table: 'Users', col: 'Rg', type: 'NVARCHAR(20)' }
+    ];
+
+    for (const item of missingColumns) {
+        try {
+            // Verifica se a coluna existe, se não, cria
+            await pool.request().query(`
+                IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '${item.table}')
+                BEGIN
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${item.table}' AND COLUMN_NAME = '${item.col}')
+                    BEGIN
+                        ALTER TABLE ${item.table} ADD ${item.col} ${item.type};
+                        PRINT 'Coluna ${item.col} adicionada em ${item.table}';
+                    END
+                END
+            `);
+        } catch (e) {
+            console.warn(`⚠️ Aviso de Migração (${item.table}.${item.col}):`, e.message);
+        }
+    }
+    console.log('✅ Banco de Dados Verificado/Atualizado.');
+}
+
+// Connect to Database & Run Migrations
+sql.connect(dbConfig).then(async pool => {
     if (pool.connected) {
         console.log('✅ Connected to SQL Server');
+        await runMigrations(pool);
     }
 }).catch(err => {
     console.error('❌ Database Connection Failed:', err);
