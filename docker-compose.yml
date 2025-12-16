@@ -5,8 +5,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile.txt # Usando o mesmo contexto, mas sobrescrevendo o comando
-    command: npm run server
+      dockerfile: Dockerfile.api.txt
     ports:
       - "5000:5000"
     environment:
