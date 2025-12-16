@@ -1,7 +1,10 @@
--- Script Completo de Criação de Tabelas - IT Asset 360 (SQL Server)
+-- Script Completo de Criação de Tabelas - IT Asset 360 (Versão 1.7.7)
 -- Execute este script no seu banco de dados SQL Server (ex: ITAsset360)
 
--- 1. Tabelas Auxiliares (Sem dependências)
+-- =============================================
+-- 1. TABELAS DE CONFIGURAÇÃO E AUXILIARES
+-- =============================================
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings')
 CREATE TABLE SystemSettings (
     Id INT PRIMARY KEY IDENTITY(1,1), -- Único registro
@@ -39,7 +42,10 @@ CREATE TABLE Brands (
     Name NVARCHAR(100) NOT NULL -- Dell, Apple, Samsung
 );
 
--- 2. Tabelas com Dependência Simples
+-- =============================================
+-- 2. TABELAS DE CADASTRO (Modelos e Usuários)
+-- =============================================
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Models')
 CREATE TABLE Models (
     Id NVARCHAR(50) PRIMARY KEY,
@@ -66,7 +72,10 @@ CREATE TABLE Users (
     CONSTRAINT FK_Users_Sectors FOREIGN KEY (SectorId) REFERENCES Sectors(Id)
 );
 
--- 3. Tabelas Principais (Ativos)
+-- =============================================
+-- 3. TABELAS DE ATIVOS (Chips e Dispositivos)
+-- =============================================
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SimCards')
 CREATE TABLE SimCards (
     Id NVARCHAR(50) PRIMARY KEY,
@@ -82,18 +91,25 @@ CREATE TABLE SimCards (
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices')
 CREATE TABLE Devices (
     Id NVARCHAR(50) PRIMARY KEY,
-    ModelId NVARCHAR(50),
+    
+    -- Relacionamento com Modelo
+    ModelId NVARCHAR(50), 
+    
+    -- Identificação
     SerialNumber NVARCHAR(50),
     AssetTag NVARCHAR(50), -- Patrimônio / Hostname
     Imei NVARCHAR(50),     -- Para Celulares
     PulsusId NVARCHAR(50), -- ID MDM
     
+    -- Estado
     Status NVARCHAR(50) NOT NULL,
     CurrentUserId NVARCHAR(50) NULL,
     
+    -- Localização e Custos
     SectorId NVARCHAR(50), -- Localização do ativo
     CostCenter NVARCHAR(50),
     
+    -- Vínculo
     LinkedSimId NVARCHAR(50) NULL, -- Vínculo com Chip
 
     -- Financeiro
@@ -109,7 +125,10 @@ CREATE TABLE Devices (
     CONSTRAINT FK_Devices_SimCards FOREIGN KEY (LinkedSimId) REFERENCES SimCards(Id)
 );
 
--- 4. Tabelas de Histórico e Processos
+-- =============================================
+-- 4. TABELAS DE HISTÓRICO E OPERAÇÕES
+-- =============================================
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords')
 CREATE TABLE MaintenanceRecords (
     Id NVARCHAR(50) PRIMARY KEY,
@@ -146,9 +165,16 @@ CREATE TABLE AuditLogs (
     AdminUser NVARCHAR(100) -- Quem realizou a ação
 );
 
--- Inserção de Dados Iniciais (Opcional - Para não começar vazio)
+-- =============================================
+-- 5. DADOS INICIAIS (SEED)
+-- =============================================
+
 IF NOT EXISTS (SELECT * FROM SystemSettings)
 INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
 
 IF NOT EXISTS (SELECT * FROM SystemUsers)
 INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES ('admin1', 'Administrador', 'admin@empresa.com', 'admin', 'ADMIN');
+
+-- Dados padrão básicos para não quebrar a UI se estiver vazio
+IF NOT EXISTS (SELECT * FROM Brands) INSERT INTO Brands (Id, Name) VALUES ('b1', 'Genérica');
+IF NOT EXISTS (SELECT * FROM AssetTypes) INSERT INTO AssetTypes (Id, Name) VALUES ('t1', 'Outros');

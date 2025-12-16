@@ -29,7 +29,8 @@ async function runMigrations(pool) {
     console.log('🔄 Verificando esquema do banco de dados (Auto-Migração)...');
     
     const missingColumns = [
-        // Tabela Devices
+        // Tabela Devices - Colunas Novas da v1.7.0+
+        { table: 'Devices', col: 'ModelId', type: 'NVARCHAR(50)' },
         { table: 'Devices', col: 'PurchaseInvoiceUrl', type: 'NVARCHAR(MAX)' },
         { table: 'Devices', col: 'Imei', type: 'NVARCHAR(50)' },
         { table: 'Devices', col: 'PulsusId', type: 'NVARCHAR(50)' },
@@ -87,6 +88,21 @@ async function query(command) {
     }
 }
 
+// --- HELPER LOG ---
+async function logAction(assetId, assetType, action, adminUser, notes) {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
+            .input('AssetId', sql.NVarChar, assetId)
+            .input('AssetType', sql.NVarChar, assetType)
+            .input('Action', sql.NVarChar, action)
+            .input('AdminUser', sql.NVarChar, adminUser)
+            .input('Notes', sql.NVarChar, notes || '')
+            .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes)`);
+    } catch (e) { console.error('Log Error', e); }
+}
+
 // --- ROUTES ---
 
 // Health Check
@@ -97,7 +113,6 @@ app.get('/', (req, res) => {
 // 1. Devices
 app.get('/api/devices', async (req, res) => {
     try {
-        // Alias columns to match Frontend Interface (camelCase)
         const data = await query(`
             SELECT 
                 Id as id, ModelId as modelId, SerialNumber as serialNumber, 
@@ -137,7 +152,6 @@ app.post('/api/devices', async (req, res) => {
                 VALUES (@Id, @ModelId, @SerialNumber, @AssetTag, @Imei, @PulsusId, @Status, @CurrentUserId, @SectorId, @CostCenter, @LinkedSimId, @PurchaseDate, @PurchaseCost, @InvoiceNumber, @Supplier)
             `);
         
-        // Log
         await logAction(d.id, 'Device', 'Criação', d._adminUser, 'Novo dispositivo');
         res.json(d);
     } catch (err) { res.status(500).send(err.message); }
@@ -204,7 +218,6 @@ app.delete('/api/sims/:id', async (req, res) => {
 app.get('/api/users', async (req, res) => {
     try {
         const data = await query(`SELECT Id as id, FullName as fullName, Cpf as cpf, Rg as rg, Pis as pis, Address as address, Email as email, SectorId as sectorId, JobTitle as jobTitle, Active as active FROM Users`);
-        // Convert Active bit to boolean
         const formatted = data.map(u => ({ ...u, active: !!u.active }));
         res.json(formatted);
     } catch (err) { res.status(500).send(err.message); }
@@ -252,23 +265,17 @@ app.get('/api/terms', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 5. Operations (Checkout/Checkin)
+// 5. Operations
 app.post('/api/operations/checkout', async (req, res) => {
     const { assetId, assetType, userId, notes, action, _adminUser } = req.body;
     const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-    
     try {
         const pool = await sql.connect(dbConfig);
-        
-        // Update Asset
         await pool.request()
             .input('UserId', sql.NVarChar, userId)
             .input('Id', sql.NVarChar, assetId)
             .query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@UserId WHERE Id=@Id`);
-            
-        // Log
         await logAction(assetId, assetType, action, _adminUser, `Entregue ao usuário. Obs: ${notes}`);
-        
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -276,7 +283,6 @@ app.post('/api/operations/checkout', async (req, res) => {
 app.post('/api/operations/checkin', async (req, res) => {
     const { assetId, assetType, notes, action, _adminUser } = req.body;
     const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-    
     try {
         await query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id='${assetId}'`);
         await logAction(assetId, assetType, action, _adminUser, `Devolução. Obs: ${notes}`);
@@ -284,7 +290,7 @@ app.post('/api/operations/checkin', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 6. Logs & Settings & Aux
+// 6. Logs & Settings
 app.get('/api/logs', async (req, res) => {
     try {
         const data = await query(`SELECT Id as id, AssetId as assetId, AssetType as assetType, TargetName as targetName, Action as action, Timestamp as timestamp, Notes as notes, AdminUser as adminUser FROM AuditLogs ORDER BY Timestamp DESC`);
@@ -303,7 +309,6 @@ app.put('/api/settings', async (req, res) => {
     const s = req.body;
     try {
         const pool = await sql.connect(dbConfig);
-        // Check if exists
         const check = await pool.request().query('SELECT count(*) as count FROM SystemSettings');
         if (check.recordset[0].count === 0) {
             await pool.request()
@@ -324,50 +329,213 @@ app.put('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// --- NEW CRUD ROUTES (MISSING BEFORE) ---
+
+// Models
 app.get('/api/models', async (req, res) => {
     const data = await query(`SELECT Id as id, Name as name, BrandId as brandId, TypeId as typeId, ImageUrl as imageUrl FROM Models`);
     res.json(data);
 });
 
+app.post('/api/models', async (req, res) => {
+    const m = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, m.id)
+            .input('Name', sql.NVarChar, m.name)
+            .input('BrandId', sql.NVarChar, m.brandId)
+            .input('TypeId', sql.NVarChar, m.typeId)
+            .input('ImageUrl', sql.NVarChar, m.imageUrl || '')
+            .query(`INSERT INTO Models (Id, Name, BrandId, TypeId, ImageUrl) VALUES (@Id, @Name, @BrandId, @TypeId, @ImageUrl)`);
+        await logAction(m.id, 'Model', 'Criação', m._adminUser, m.name);
+        res.json(m);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/models/:id', async (req, res) => {
+    const m = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Name', sql.NVarChar, m.name)
+            .input('BrandId', sql.NVarChar, m.brandId)
+            .input('TypeId', sql.NVarChar, m.typeId)
+            .input('ImageUrl', sql.NVarChar, m.imageUrl || '')
+            .query(`UPDATE Models SET Name=@Name, BrandId=@BrandId, TypeId=@TypeId, ImageUrl=@ImageUrl WHERE Id=@Id`);
+        await logAction(m.id, 'Model', 'Atualização', m._adminUser, m.name);
+        res.json(m);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/models/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM Models WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// Brands
 app.get('/api/brands', async (req, res) => {
     const data = await query(`SELECT Id as id, Name as name FROM Brands`);
     res.json(data);
 });
 
+app.post('/api/brands', async (req, res) => {
+    const b = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, b.id)
+            .input('Name', sql.NVarChar, b.name)
+            .query(`INSERT INTO Brands (Id, Name) VALUES (@Id, @Name)`);
+        await logAction(b.id, 'Brand', 'Criação', b._adminUser, b.name);
+        res.json(b);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/brands/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM Brands WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// Asset Types
 app.get('/api/asset-types', async (req, res) => {
     const data = await query(`SELECT Id as id, Name as name FROM AssetTypes`);
     res.json(data);
 });
 
+app.post('/api/asset-types', async (req, res) => {
+    const t = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, t.id)
+            .input('Name', sql.NVarChar, t.name)
+            .query(`INSERT INTO AssetTypes (Id, Name) VALUES (@Id, @Name)`);
+        await logAction(t.id, 'Type', 'Criação', t._adminUser, t.name);
+        res.json(t);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/asset-types/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM AssetTypes WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// Sectors
 app.get('/api/sectors', async (req, res) => {
     const data = await query(`SELECT Id as id, Name as name FROM Sectors`);
     res.json(data);
 });
 
+app.post('/api/sectors', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, s.id)
+            .input('Name', sql.NVarChar, s.name)
+            .query(`INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)`);
+        await logAction(s.id, 'Sector', 'Criação', s._adminUser, s.name);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/sectors/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM Sectors WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// System Users
 app.get('/api/system-users', async (req, res) => {
     const data = await query(`SELECT Id as id, Name as name, Email as email, Role as role, Password as password FROM SystemUsers`);
     res.json(data);
 });
 
+app.post('/api/system-users', async (req, res) => {
+    const u = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, u.id)
+            .input('Name', sql.NVarChar, u.name)
+            .input('Email', sql.NVarChar, u.email)
+            .input('Password', sql.NVarChar, u.password)
+            .input('Role', sql.NVarChar, u.role)
+            .query(`INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@Id, @Name, @Email, @Password, @Role)`);
+        await logAction(u.id, 'System', 'Criação', u._adminUser, u.name);
+        res.json(u);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/system-users/:id', async (req, res) => {
+    const u = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        const request = pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Name', sql.NVarChar, u.name)
+            .input('Email', sql.NVarChar, u.email)
+            .input('Role', sql.NVarChar, u.role);
+        
+        let queryStr = `UPDATE SystemUsers SET Name=@Name, Email=@Email, Role=@Role`;
+        if (u.password) {
+            request.input('Password', sql.NVarChar, u.password);
+            queryStr += `, Password=@Password`;
+        }
+        queryStr += ` WHERE Id=@Id`;
+        
+        await request.query(queryStr);
+        await logAction(u.id, 'System', 'Atualização', u._adminUser, u.name);
+        res.json(u);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/system-users/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM SystemUsers WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// Maintenances
 app.get('/api/maintenances', async (req, res) => {
     const data = await query(`SELECT Id as id, DeviceId as deviceId, Type as type, Date as date, Description as description, Cost as cost, Provider as provider FROM MaintenanceRecords`);
     res.json(data);
 });
 
-// --- HELPER LOG ---
-async function logAction(assetId, assetType, action, adminUser, notes) {
+app.post('/api/maintenances', async (req, res) => {
+    const m = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         await pool.request()
-            .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
-            .input('AssetId', sql.NVarChar, assetId)
-            .input('AssetType', sql.NVarChar, assetType)
-            .input('Action', sql.NVarChar, action)
-            .input('AdminUser', sql.NVarChar, adminUser)
-            .input('Notes', sql.NVarChar, notes || '')
-            .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes)`);
-    } catch (e) { console.error('Log Error', e); }
-}
+            .input('Id', sql.NVarChar, m.id)
+            .input('DeviceId', sql.NVarChar, m.deviceId)
+            .input('Type', sql.NVarChar, m.type)
+            .input('Date', sql.DateTime2, m.date)
+            .input('Description', sql.NVarChar, m.description)
+            .input('Cost', sql.Decimal(18,2), m.cost)
+            .input('Provider', sql.NVarChar, m.provider)
+            .query(`INSERT INTO MaintenanceRecords (Id, DeviceId, Type, Date, Description, Cost, Provider) VALUES (@Id, @DeviceId, @Type, @Date, @Description, @Cost, @Provider)`);
+        await logAction(m.deviceId, 'Device', 'Manutenção', m._adminUser, `Registro de manutenção: ${m.description}`);
+        res.json(m);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/maintenances/:id', async (req, res) => {
+    try {
+        await query(`DELETE FROM MaintenanceRecords WHERE Id = '${req.params.id}'`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
