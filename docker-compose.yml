@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile.txt
     image: it-asset-360:latest
+    pull_policy: build
     container_name: it-asset-360-app
     restart: unless-stopped
     ports:
