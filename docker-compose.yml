@@ -6,8 +6,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api.txt
+    container_name: it-asset-360-api
+    hostname: api # Importante para o Nginx encontrar http://api:5000
     ports:
-      - "5001:5000" # Mapeia porta 5001 do host para 5000 do container
+      - "5001:5000" # Mantemos 5001 aberto apenas para debug direto se precisar
     environment:
       - DB_SERVER=10.10.10.100
       - DB_PORT=1433
@@ -30,7 +32,6 @@ services:
     ports:
       - "8083:80"
     environment:
-      # URL da API removida para uso dinâmico via JS (veja ProdDataProvider.tsx)
       - NODE_ENV=production
     depends_on:
       - api

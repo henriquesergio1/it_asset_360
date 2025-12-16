@@ -2,18 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term } from '../types';
 
-// API Configuration Dinâmica
-// Detecta se está acessando via localhost ou IP e ajusta a chamada da API para a porta 5001 do mesmo host
-const getApiUrl = () => {
-    // Se foi injetado via variável de ambiente (Build time), usa ela.
-    if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL;
-    
-    // Caso contrário, constrói baseado na URL atual do navegador
-    // Ex: Se o site está em 192.168.0.10:8083, a API será chamada em 192.168.0.10:5001
-    return `http://${window.location.hostname}:5001/api`;
-};
-
-const API_URL = getApiUrl();
+// API Configuration Relative Path
+// Agora usamos o Nginx como Proxy Reverso.
+// O navegador chama /api/... na porta 8083, e o Nginx repassa para a API na porta 5000 internamente.
+const API_URL = ''; // Deixamos vazio para usar o mesmo host/porta, pois os endpoints abaixo já começam com /api
 
 export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -37,26 +29,26 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
-      console.log(`[ITAsset360] Conectando API em: ${API_URL}`);
+      console.log(`[ITAsset360] Conectando API via Proxy Nginx (/api)`);
       try {
         setLoading(true);
-        // Execute fetches safely
+        // Execute fetches safely using relative paths
         const [
             devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes, 
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes
         ] = await Promise.all([
-          fetch(`${API_URL}/devices`),
-          fetch(`${API_URL}/sims`),
-          fetch(`${API_URL}/users`),
-          fetch(`${API_URL}/logs`),
-          fetch(`${API_URL}/system-users`),
-          fetch(`${API_URL}/settings`),
-          fetch(`${API_URL}/models`),
-          fetch(`${API_URL}/brands`),
-          fetch(`${API_URL}/asset-types`),
-          fetch(`${API_URL}/maintenances`),
-          fetch(`${API_URL}/sectors`),
-          fetch(`${API_URL}/terms`)
+          fetch(`${API_URL}/api/devices`),
+          fetch(`${API_URL}/api/sims`),
+          fetch(`${API_URL}/api/users`),
+          fetch(`${API_URL}/api/logs`),
+          fetch(`${API_URL}/api/system-users`),
+          fetch(`${API_URL}/api/settings`),
+          fetch(`${API_URL}/api/models`),
+          fetch(`${API_URL}/api/brands`),
+          fetch(`${API_URL}/api/asset-types`),
+          fetch(`${API_URL}/api/maintenances`),
+          fetch(`${API_URL}/api/sectors`),
+          fetch(`${API_URL}/api/terms`)
         ]);
 
         if (!devicesRes.ok) {
@@ -94,8 +86,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTerms(fetchedTerms);
         
       } catch (err: any) {
-        console.error("API Connection Failed. Certifique-se que o backend está rodando na porta 5001.", err);
-        setError(`Erro de Conexão: ${err.message}. Verifique se a API (Backend) está rodando.`);
+        console.error("API Connection Failed. Verifique se o container API está rodando.", err);
+        setError(`Erro de Conexão: ${err.message}.`);
       } finally {
         setLoading(false);
       }
@@ -106,7 +98,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Generic POST helper
   const postData = async (endpoint: string, data: any) => {
-    const res = await fetch(`${API_URL}/${endpoint}`, {
+    // Note: endpoint passed usually doesn't have /api prefix in the calls below, so we add it if needed
+    // But inspecting the code below, calls are like postData('devices'...).
+    // We need to ensure we hit /api/devices
+    const res = await fetch(`${API_URL}/api/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -117,7 +112,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Generic PUT helper
   const putData = async (endpoint: string, data: any) => {
-    const res = await fetch(`${API_URL}/${endpoint}/${data.id}`, {
+    const res = await fetch(`${API_URL}/api/${endpoint}/${data.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -127,7 +122,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Generic DELETE helper
   const deleteData = async (endpoint: string, id: string) => {
-    await fetch(`${API_URL}/${endpoint}/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/api/${endpoint}/${id}`, { method: 'DELETE' });
   };
 
   // --- CRUD Implementations ---
@@ -198,7 +193,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Settings
   const updateSettings = async (newSettings: SystemSettings, adminName: string) => {
-      await fetch(`${API_URL}/settings`, {
+      await fetch(`${API_URL}/api/settings`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...newSettings, _adminUser: adminName })
