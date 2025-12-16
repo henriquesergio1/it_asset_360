@@ -25,6 +25,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper to check response
+  const safeJson = async (res: Response, fallbackValue: any = []) => {
+      if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`${res.status} ${res.statusText}: ${text.substring(0, 100)}`);
+      }
+      return res.json();
+  };
+
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
@@ -51,44 +60,38 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           fetch(`${API_URL}/api/accessory-types`)
         ]);
 
-        if (!devicesRes.ok) {
-           const text = await devicesRes.text();
-           throw new Error(`API Error ${devicesRes.status}: ${text}`);
-        }
-
-        // Process Users and Terms safely
-        const fetchedUsers: User[] = await usersRes.json();
+        // Process Responses safely
+        const devicesData = await safeJson(devicesRes);
+        const simsData = await safeJson(simsRes);
+        const usersData: User[] = await safeJson(usersRes);
+        const termsData: Term[] = await safeJson(termsRes, []); // Fallback not used due to throw, but standard
         
-        let fetchedTerms: Term[] = [];
-        if (termsRes.ok) {
-            fetchedTerms = await termsRes.json();
-        }
-
         // Map terms into users structure
-        const usersWithTerms = fetchedUsers.map(u => ({
+        const usersWithTerms = usersData.map(u => ({
             ...u,
-            terms: fetchedTerms.filter(t => t.userId === u.id)
+            terms: termsData.filter(t => t.userId === u.id)
         }));
 
-        setDevices(await devicesRes.json());
-        setSims(await simsRes.json());
+        setDevices(devicesData);
+        setSims(simsData);
         setUsers(usersWithTerms);
-        setLogs(await logsRes.json());
+        setLogs(await safeJson(logsRes, []));
         
         if (sysUsersRes.ok) setSystemUsers(await sysUsersRes.json());
         if (settingsRes.ok) setSettings(await settingsRes.json());
         
-        setModels(await modelsRes.json());
-        setBrands(await brandsRes.json());
-        setAssetTypes(await typesRes.json());
-        setMaintenances(await maintRes.json());
+        setModels(await safeJson(modelsRes));
+        setBrands(await safeJson(brandsRes));
+        setAssetTypes(await safeJson(typesRes));
+        setMaintenances(await safeJson(maintRes));
+        
         if (sectorsRes.ok) setSectors(await sectorsRes.json());
-        setTerms(fetchedTerms);
         if (accTypesRes.ok) setAccessoryTypes(await accTypesRes.json());
+        setTerms(termsData);
         
       } catch (err: any) {
-        console.error("API Connection Failed. Verifique se o container API está rodando.", err);
-        setError(`Erro de Conexão: ${err.message}.`);
+        console.error("API Connection Failed.", err);
+        setError(`Erro de Conexão: ${err.message}. Verifique o container API.`);
       } finally {
         setLoading(false);
       }
@@ -104,8 +107,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(`Failed to post to ${endpoint}`);
-    return res.json();
+    return safeJson(res);
   };
 
   // Generic PUT helper
@@ -115,12 +117,13 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    return res.json();
+    return safeJson(res);
   };
 
   // Generic DELETE helper
   const deleteData = async (endpoint: string, id: string) => {
-    await fetch(`${API_URL}/api/${endpoint}/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_URL}/api/${endpoint}/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete');
   };
 
   // --- CRUD Implementations ---
