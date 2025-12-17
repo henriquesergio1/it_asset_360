@@ -5,6 +5,40 @@ import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
+// --- VALIDAÇÕES ---
+const isValidCPF = (cpf: string) => {
+    cpf = cpf.replace(/[^\d]+/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    let sum = 0, remainder;
+    for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+    remainder = (sum * 10) % 11;
+    if ((remainder === 10) || (remainder === 11)) remainder = 0;
+    if (remainder !== parseInt(cpf.substring(9, 10))) return false;
+    sum = 0;
+    for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+    remainder = (sum * 10) % 11;
+    if ((remainder === 10) || (remainder === 11)) remainder = 0;
+    if (remainder !== parseInt(cpf.substring(10, 11))) return false;
+    return true;
+};
+
+const isValidPIS = (pis: string) => {
+    pis = pis.replace(/[^\d]+/g, '');
+    if (pis.length !== 11) return false; // PIS deve ter 11 dígitos
+    
+    // Algoritmo PIS/PASEP
+    const weights = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+        sum += parseInt(pis.charAt(i)) * weights[i];
+    }
+    const remainder = sum % 11;
+    let digit = 11 - remainder;
+    if (digit === 10 || digit === 11) digit = 0;
+    
+    return digit === parseInt(pis.charAt(10));
+};
+
 const UserManager = () => {
   const { 
     users, addUser, updateUser, toggleUserActive, 
@@ -50,9 +84,28 @@ const UserManager = () => {
     e.preventDefault();
     if (isViewOnly) return;
 
+    // --- VALIDAÇÕES DE CAMPOS ---
+    if (!formData.sectorId) {
+        alert('ERRO: O campo "Cargo / Função" é obrigatório. Por favor, selecione uma opção.');
+        return;
+    }
+
+    const cleanCpf = formData.cpf?.replace(/[^\d]+/g, '') || '';
+    if (!isValidCPF(cleanCpf)) {
+        alert(`ERRO: O CPF "${formData.cpf}" informado é inválido. Verifique os dígitos.`);
+        return;
+    }
+
+    if (formData.pis) {
+        const cleanPis = formData.pis.replace(/[^\d]+/g, '');
+        if (!isValidPIS(cleanPis)) {
+            alert(`ERRO: O PIS "${formData.pis}" informado é inválido. Verifique os dígitos.`);
+            return;
+        }
+    }
+
     // --- VALIDAÇÃO DE UNICIDADE (CPF E EMAIL) ---
     const cleanEmail = formData.email?.trim().toLowerCase();
-    const cleanCpf = formData.cpf?.trim();
 
     if (cleanEmail) {
         // Procura usuário com mesmo email, excluindo o usuário atual (em caso de edição)
@@ -72,8 +125,9 @@ const UserManager = () => {
 
     if (cleanCpf) {
         // CPF continua único globalmente (uma pessoa física não muda de CPF, mesmo saindo e voltando)
+        // Comparar apenas os números
         const cpfConflict = users.find(u => 
-            u.cpf === cleanCpf && 
+            u.cpf.replace(/[^\d]+/g, '') === cleanCpf && 
             u.id !== editingId
         );
 
@@ -432,11 +486,11 @@ const UserManager = () => {
                         {/* INVERTED LOGIC FIELDS */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Setor / Cód. Interno</label>
-                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2 bg-yellow-50" placeholder="Ex: ADM-001" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
+                          <input disabled={isViewOnly} type="text" className="w-full border rounded-lg p-2 bg-yellow-50" placeholder="Ex: ADM-001" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo / Função (Selecionar)</label>
-                          <select disabled={isViewOnly} className="w-full border rounded-lg p-2 bg-blue-50" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo / Função (Selecionar) *</label>
+                          <select required disabled={isViewOnly} className="w-full border rounded-lg p-2 bg-blue-50" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                              <option value="">Selecione a Função...</option>
                              {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                           </select>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SystemUser, SystemRole, ActionType } from '../types';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info } from 'lucide-react';
 import DataImporter from './DataImporter';
 
 const AdminPanel = () => {
@@ -22,14 +22,34 @@ const AdminPanel = () => {
   // App Mode State
   const [currentMode, setCurrentMode] = useState('mock');
   
-  // Template Preview State
-  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
-  const [activeTemplateType, setActiveTemplateType] = useState<'DELIVERY' | 'RETURN'>('DELIVERY'); // NEW: Switch between templates
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Template Logic State
+  const [activeTemplateType, setActiveTemplateType] = useState<'DELIVERY' | 'RETURN'>('DELIVERY');
+  
+  // Track focused textarea for insertions
+  const [activeField, setActiveField] = useState<'declaration' | 'clauses'>('declaration');
+  const declRef = useRef<HTMLTextAreaElement>(null);
+  const clausesRef = useRef<HTMLTextAreaElement>(null);
+
+  // Parsed Config Object (for Structured Editing)
+  const [termConfig, setTermConfig] = useState({
+      delivery: { declaration: '', clauses: '' },
+      return: { declaration: '', clauses: '' }
+  });
 
   useEffect(() => {
     setCurrentMode(localStorage.getItem('app_mode') || 'mock');
   }, []);
+
+  // Initialize Config from Settings string
+  useEffect(() => {
+      try {
+          if (settings.termTemplate && settings.termTemplate.trim().startsWith('{')) {
+              setTermConfig(JSON.parse(settings.termTemplate));
+          }
+      } catch (e) {
+          console.error("Failed to parse term config", e);
+      }
+  }, [settings]);
 
   // Handlers for User Management
   const handleOpenModal = (user?: SystemUser) => {
@@ -62,6 +82,16 @@ const AdminPanel = () => {
     setTimeout(() => setMsg(''), 3000);
   };
 
+  // Handler for saving Term Texts
+  const handleTermSave = () => {
+      const jsonString = JSON.stringify(termConfig);
+      const newSettings = { ...settingsForm, termTemplate: jsonString };
+      setSettingsForm(newSettings);
+      updateSettings(newSettings, currentUser?.name || 'Admin');
+      setMsg('Textos dos termos atualizados com sucesso!');
+      setTimeout(() => setMsg(''), 3000);
+  };
+
   // Handler for Mode Switch
   const toggleAppMode = () => {
     const newMode = currentMode === 'mock' ? 'prod' : 'mock';
@@ -71,55 +101,54 @@ const AdminPanel = () => {
     }
   };
 
-  // --- Rich Text Editor Helpers ---
-  const getCurrentTemplateContent = () => {
-      return activeTemplateType === 'DELIVERY' 
-        ? settingsForm.termTemplate 
-        : settingsForm.returnTermTemplate;
+  const updateConfig = (field: 'declaration' | 'clauses', value: string) => {
+      setTermConfig(prev => ({
+          ...prev,
+          [activeTemplateType === 'DELIVERY' ? 'delivery' : 'return']: {
+              ...prev[activeTemplateType === 'DELIVERY' ? 'delivery' : 'return'],
+              [field]: value
+          }
+      }));
   };
 
-  const updateCurrentTemplateContent = (newContent: string) => {
-      if (activeTemplateType === 'DELIVERY') {
-          setSettingsForm({ ...settingsForm, termTemplate: newContent });
-      } else {
-          setSettingsForm({ ...settingsForm, returnTermTemplate: newContent });
-      }
-  };
-
+  // --- RICH TEXT HELPERS ---
   const insertTag = (tagStart: string, tagEnd: string) => {
-      const textarea = textareaRef.current;
+      const textarea = activeField === 'declaration' ? declRef.current : clausesRef.current;
       if (!textarea) return;
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const text = getCurrentTemplateContent() || '';
+      const text = activeField === 'declaration' 
+        ? (activeTemplateType === 'DELIVERY' ? termConfig.delivery.declaration : termConfig.return.declaration)
+        : (activeTemplateType === 'DELIVERY' ? termConfig.delivery.clauses : termConfig.return.clauses);
       
       const selectedText = text.substring(start, end);
       const newText = text.substring(0, start) + tagStart + selectedText + tagEnd + text.substring(end);
 
-      updateCurrentTemplateContent(newText);
+      updateConfig(activeField, newText);
       
-      // Restore focus and cursor
       setTimeout(() => {
           textarea.focus();
           textarea.setSelectionRange(start + tagStart.length, end + tagStart.length);
       }, 0);
   };
 
-  const insertVariable = (variable: string) => {
-      const textarea = textareaRef.current;
+  const insertVariable = (val: string) => {
+      const textarea = activeField === 'declaration' ? declRef.current : clausesRef.current;
       if (!textarea) return;
       
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const text = getCurrentTemplateContent() || '';
+      const text = activeField === 'declaration' 
+        ? (activeTemplateType === 'DELIVERY' ? termConfig.delivery.declaration : termConfig.return.declaration)
+        : (activeTemplateType === 'DELIVERY' ? termConfig.delivery.clauses : termConfig.return.clauses);
 
-      const newText = text.substring(0, start) + variable + text.substring(end);
-      updateCurrentTemplateContent(newText);
+      const newText = text.substring(0, start) + val + text.substring(end);
+      updateConfig(activeField, newText);
 
       setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + variable.length, start + variable.length);
+          textarea.focus();
+          textarea.setSelectionRange(start + val.length, start + val.length);
       }, 0);
   };
 
@@ -154,7 +183,7 @@ const AdminPanel = () => {
             onClick={() => setActiveTab('TEMPLATE')}
             className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
         >
-            <FileText size={18} /> Modelos de Termo
+            <FileText size={18} /> Editor de Termos
         </button>
         <button 
             onClick={() => setActiveTab('LOGS')}
@@ -227,12 +256,13 @@ const AdminPanel = () => {
                 <form onSubmit={handleSettingsSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Aplicação</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa / Razão Social</label>
                             <input 
                                 type="text" 
                                 value={settingsForm.appName}
                                 onChange={(e) => setSettingsForm({...settingsForm, appName: e.target.value})}
                                 className="w-full border rounded-lg p-2.5"
+                                placeholder="Minha Empresa S.A."
                             />
                         </div>
                         <div>
@@ -306,105 +336,103 @@ const AdminPanel = () => {
           </div>
       )}
 
-      {/* --- TEMPLATE TAB --- */}
+      {/* --- TEMPLATE TAB (STRUCTURED EDITOR) --- */}
       {activeTab === 'TEMPLATE' && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-in flex flex-col h-[800px]">
-              <div className="flex justify-between items-center mb-4 shrink-0">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-in flex flex-col h-full min-h-[600px]">
+              <div className="flex justify-between items-center mb-6 shrink-0">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Editores de Documentos</h3>
-                    <p className="text-sm text-gray-500">Personalize os termos gerados na entrega e devolução.</p>
+                    <h3 className="text-lg font-bold text-gray-800">Editor de Documentos</h3>
+                    <p className="text-sm text-gray-500">Personalize o texto jurídico dos termos. Use a barra de ferramentas para formatação.</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowTemplatePreview(!showTemplatePreview)} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
-                        <Eye size={18} /> {showTemplatePreview ? 'Voltar para Edição' : 'Pré-visualizar'}
-                    </button>
-                    <button onClick={handleSettingsSubmit} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                        <Save size={18} /> Salvar
-                    </button>
-                  </div>
+                  <button onClick={handleTermSave} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm font-medium">
+                      <Save size={18} /> Salvar Textos
+                  </button>
               </div>
 
               {/* Template Switcher */}
-              <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+              <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
                   <button 
                     onClick={() => setActiveTemplateType('DELIVERY')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'DELIVERY' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'DELIVERY' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
                       <FileText size={16}/> Termo de Entrega
                   </button>
                   <button 
                     onClick={() => setActiveTemplateType('RETURN')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'RETURN' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'RETURN' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                   >
                       <ArrowLeftRight size={16}/> Termo de Devolução
                   </button>
               </div>
+
+              {/* TOOLBAR */}
+              <div className="flex flex-wrap items-center gap-2 bg-gray-100 p-2 rounded-t-lg border-b border-gray-300">
+                  <span className="text-xs font-bold text-gray-500 uppercase mr-2 pl-2">Formatação:</span>
+                  <button onClick={() => insertTag('<strong>', '</strong>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold" title="Negrito"><Bold size={16}/></button>
+                  <button onClick={() => insertTag('<em>', '</em>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 italic" title="Itálico"><Italic size={16}/></button>
+                  <div className="w-px h-5 bg-gray-300 mx-1"></div>
+                  <button onClick={() => insertTag('<h3>', '</h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Título da Seção"><Heading1 size={16}/></button>
+                  <button onClick={() => insertTag('<p>', '</p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-serif text-xs font-bold" title="Parágrafo">¶</button>
+                  <div className="w-px h-5 bg-gray-300 mx-1"></div>
+                  <button onClick={() => insertTag('<br>', '')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs font-bold" title="Quebra de Linha">BR</button>
+                  <button onClick={() => insertTag('<ul><li>', '</li></ul>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Lista"><List size={16}/></button>
+                  
+                  <div className="flex-1"></div>
+                  <span className="text-xs font-bold text-gray-500 uppercase mr-2">Variáveis:</span>
+                  <button onClick={() => insertVariable('{NOME_EMPRESA}')} className="px-2 py-1 bg-white border rounded text-xs hover:bg-blue-50 text-blue-700">Empresa</button>
+                  <button onClick={() => insertVariable('{CNPJ}')} className="px-2 py-1 bg-white border rounded text-xs hover:bg-blue-50 text-blue-700">CNPJ</button>
+              </div>
               
-              {!showTemplatePreview ? (
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden">
-                    <div className="lg:col-span-3 flex flex-col border rounded-lg overflow-hidden">
-                        {/* Toolbar */}
-                        <div className="bg-gray-100 border-b p-2 flex gap-2 flex-wrap items-center">
-                            <button type="button" onClick={() => insertTag('<strong>', '</strong>')} className="p-2 hover:bg-gray-200 rounded text-gray-700 font-bold" title="Negrito"><Bold size={16}/></button>
-                            <button type="button" onClick={() => insertTag('<em>', '</em>')} className="p-2 hover:bg-gray-200 rounded text-gray-700 italic" title="Itálico"><Italic size={16}/></button>
-                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                            <button type="button" onClick={() => insertTag('<h2>', '</h2>')} className="p-2 hover:bg-gray-200 rounded text-gray-700" title="Título"><Heading1 size={16}/></button>
-                            <button type="button" onClick={() => insertTag('<p>', '</p>')} className="p-2 hover:bg-gray-200 rounded text-gray-700 font-mono text-xs" title="Parágrafo">P</button>
-                            <button type="button" onClick={() => insertTag('<ul><li>', '</li></ul>')} className="p-2 hover:bg-gray-200 rounded text-gray-700" title="Lista"><List size={16}/></button>
-                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                            <button type="button" onClick={() => insertTag('<br/>', '')} className="p-2 hover:bg-gray-200 rounded text-gray-700 text-xs font-mono" title="Quebra de Linha">BR</button>
-                            <button type="button" onClick={() => insertTag('<hr/>', '')} className="p-2 hover:bg-gray-200 rounded text-gray-700 text-xs font-mono" title="Linha Horizontal">HR</button>
-                            <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                            {activeTemplateType === 'RETURN' && (
-                                <button type="button" onClick={() => insertTag('<!-- TABELA DE ITENS -->', '')} className="px-3 py-1 bg-orange-100 text-orange-700 text-xs rounded font-bold border border-orange-200" title="Local onde o checklist será inserido">
-                                    INSERIR POSIÇÃO DO CHECKLIST
-                                </button>
-                            )}
-                        </div>
-                        
-                        <textarea 
-                            ref={textareaRef}
-                            className="w-full flex-1 p-4 font-mono text-sm resize-none outline-none focus:bg-blue-50/10"
-                            value={getCurrentTemplateContent() || ''}
-                            onChange={(e) => updateCurrentTemplateContent(e.target.value)}
-                        />
-                    </div>
-                    
-                    <div className="bg-blue-50 p-4 rounded-lg overflow-y-auto">
-                        <h4 className="font-bold text-blue-900 mb-3 text-sm">Inserir Variáveis</h4>
-                        <p className="text-xs text-blue-800 mb-4">Clique para adicionar ao texto:</p>
-                        <div className="space-y-2">
-                            {[
-                                { label: 'Nome do Colaborador', val: '{NOME_COLABORADOR}' },
-                                { label: 'CPF', val: '{CPF}' },
-                                { label: 'RG', val: '{RG}' },
-                                { label: 'Nome da Empresa', val: '{NOME_EMPRESA}' },
-                                { label: 'CNPJ', val: '{CNPJ}' },
-                                { label: 'Modelo do Ativo', val: '{MODELO_DISPOSITIVO}' },
-                                { label: 'Patrimônio / TAG', val: '{TAG_PATRIMONIO}' },
-                                { label: 'Número de Série', val: '{NUMERO_SERIE}' },
-                                { label: 'IMEI / ICCID', val: '{IMEI_ICCID}' },
-                                { label: 'Acessórios Padrão', val: '{ACESSORIOS}' },
-                                { label: 'Cidade e Data', val: '{CIDADE_DATA}' },
-                                { label: 'Tabela de Chip', val: '{CHIP_VINCULADO_HTML}' }
-                            ].map((item) => (
-                                <button 
-                                    key={item.val}
-                                    type="button"
-                                    onClick={() => insertVariable(item.val)}
-                                    className="w-full text-left px-3 py-2 bg-white border border-blue-200 rounded hover:bg-blue-100 text-xs font-mono text-blue-800 transition-colors"
-                                >
-                                    {item.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-              ) : (
-                  <div className="flex-1 border rounded-lg p-8 overflow-y-auto bg-gray-50">
-                      <div className="bg-white shadow-lg p-10 max-w-3xl mx-auto min-h-[600px]" dangerouslySetInnerHTML={{ __html: getCurrentTemplateContent() || '' }}></div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 border border-t-0 p-6 rounded-b-lg border-gray-300">
+                  
+                  {/* Left Column: Declaration */}
+                  <div className="flex flex-col h-full">
+                      <div className="flex items-center gap-2 mb-2">
+                          <span className="bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded text-xs">1</span>
+                          <h4 className="font-bold text-gray-700">Declaração Inicial (Topo)</h4>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">
+                          Este texto aparece logo após os dados do colaborador. Clique na caixa para ativar a barra de ferramentas.
+                      </p>
+                      <textarea 
+                          ref={declRef}
+                          onFocus={() => setActiveField('declaration')}
+                          className={`w-full h-40 p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none ${activeField === 'declaration' ? 'border-blue-400 bg-white' : 'border-gray-300 bg-gray-50'}`}
+                          value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.declaration : termConfig.return.declaration}
+                          onChange={(e) => updateConfig('declaration', e.target.value)}
+                          placeholder="Digite o texto de declaração aqui..."
+                      />
+                      
+                      {/* Visual Placeholder for Assets Table */}
+                      <div className="my-6 border-y-2 border-dashed border-gray-200 py-6 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded">
+                          <List size={32} className="mb-2 opacity-20"/>
+                          <span className="text-xs font-bold uppercase tracking-wider">[ Área Fixa: Tabela de Ativos e Acessórios ]</span>
+                          <span className="text-[10px]">Gerada automaticamente pelo sistema</span>
+                      </div>
                   </div>
-              )}
+
+                  {/* Right Column: Clauses */}
+                  <div className="flex flex-col h-full">
+                      <div className="flex items-center gap-2 mb-2">
+                          <span className="bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded text-xs">2</span>
+                          <h4 className="font-bold text-gray-700">Cláusulas e Condições (Base)</h4>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-2">
+                          Use <strong>&lt;h3&gt;</strong> para títulos e <strong>&lt;strong&gt;</strong> para negrito.
+                      </p>
+                      <textarea 
+                          ref={clausesRef}
+                          onFocus={() => setActiveField('clauses')}
+                          className={`w-full flex-1 p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none min-h-[300px] font-mono leading-relaxed ${activeField === 'clauses' ? 'border-blue-400 bg-white' : 'border-gray-300 bg-gray-50'}`}
+                          value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.clauses : termConfig.return.clauses}
+                          onChange={(e) => updateConfig('clauses', e.target.value)}
+                          placeholder="Digite as cláusulas contratuais aqui..."
+                      />
+                  </div>
+
+              </div>
+
+              {msg && <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center font-bold text-sm animate-fade-in">{msg}</div>}
           </div>
       )}
 

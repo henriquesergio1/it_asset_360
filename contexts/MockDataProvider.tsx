@@ -9,7 +9,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [users, setUsers] = useState<User[]>(mockUsers);
   const [logs, setLogs] = useState<AuditLog[]>(mockAuditLogs);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>(mockSystemUsers);
-  const [settings, setSettings] = useState<SystemSettings>(mockSystemSettings);
+  
+  // Persist Settings in LocalStorage for better Demo Experience
+  const [settings, setSettings] = useState<SystemSettings>(() => {
+      const stored = localStorage.getItem('mock_settings');
+      return stored ? JSON.parse(stored) : mockSystemSettings;
+  });
   
   // Novos States
   const [models, setModels] = useState<DeviceModel[]>(mockModels);
@@ -139,9 +144,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (user) logAction(ActionType.DELETE, 'System', id, user.name, adminName);
   };
 
-  // --- Settings ---
+  // --- Settings (Updated to Persist in LocalStorage for Mock) ---
   const updateSettings = (newSettings: SystemSettings, adminName: string) => {
     setSettings(newSettings);
+    localStorage.setItem('mock_settings', JSON.stringify(newSettings));
     logAction(ActionType.UPDATE, 'System', 'settings', 'Configurações', adminName);
   };
 
