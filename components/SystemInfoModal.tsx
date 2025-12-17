@@ -7,8 +7,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.7.7',
+    version: '1.8.0',
     date: 'Atual',
+    title: 'Reestruturação de Dados de Colaborador',
+    changes: [
+      'Inversão semântica nos campos de colaborador.',
+      'O campo "Setor" (Dropdown) agora representa o "Cargo / Função" (Ex: Vendedor, TI).',
+      'O campo "Cargo" (Texto) agora representa o "Setor / Código Interno" digitável.',
+      'Ajustes nos filtros e labels para refletir a nova organização.'
+    ]
+  },
+    {
+    version: '1.7.7',
+    date: '15/11/2023',
     title: 'Refinamento Jurídico',
     changes: [
       'Restauração das cláusulas completas e profissionais no Termo de Responsabilidade.',

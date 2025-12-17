@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 const UserManager = () => {
@@ -239,7 +239,7 @@ const UserManager = () => {
         </div>
         <div className="flex gap-2">
             <button onClick={() => setIsSectorModalOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50">
-                <Settings size={18} /> Setores
+                <Briefcase size={18} /> Cargos
             </button>
             <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm">
                 <Plus size={18} /> Novo Usuário
@@ -291,7 +291,7 @@ const UserManager = () => {
                 value={filterSectorId}
                 onChange={(e) => setFilterSectorId(e.target.value)}
             >
-                <option value="">Todos os Setores</option>
+                <option value="">Todos os Cargos</option>
                 {sectors.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -305,8 +305,8 @@ const UserManager = () => {
           <table className="w-full text-sm text-left text-gray-500">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
               <tr>
-                <th className="px-6 py-3">Nome / Cargo</th>
-                <th className="px-6 py-3">Setor</th>
+                <th className="px-6 py-3">Nome / Setor (Cód.)</th>
+                <th className="px-6 py-3">Cargo / Função</th>
                 <th className="px-6 py-3">Contato / CPF</th>
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3 text-right">Ações</th>
@@ -314,8 +314,8 @@ const UserManager = () => {
             </thead>
             <tbody>
               {filteredUsers.map((user) => {
-                const sectorName = sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor';
-                // Check for pending terms
+                // Inversão: sectorId agora representa o Cargo/Função
+                const cargoName = sectors.find(s => s.id === user.sectorId)?.name || 'Não Definado';
                 const hasPending = user.terms?.some(t => !t.fileUrl);
 
                 return (
@@ -336,13 +336,16 @@ const UserManager = () => {
                              >
                                  {user.fullName}
                              </div>
-                             <div className="text-xs text-gray-400">{user.jobTitle}</div>
+                             {/* Inversão: jobTitle agora exibe o Código Interno / Setor digitado */}
+                             <div className="text-xs text-gray-400 flex items-center gap-1">
+                                <Tag size={10}/> {user.jobTitle || 'S/ Cód.'}
+                             </div>
                          </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-medium">
-                            {sectorName}
+                        <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-medium border border-gray-200">
+                            {cargoName}
                         </span>
                     </td>
                     <td className="px-6 py-4">
@@ -425,17 +428,20 @@ const UserManager = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                           <input disabled={isViewOnly} required type="email" className="w-full border rounded-lg p-2" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
                         </div>
+                        
+                        {/* INVERTED LOGIC FIELDS */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Setor / Cód. Interno</label>
+                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2 bg-yellow-50" placeholder="Ex: ADM-001" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
-                          <select disabled={isViewOnly} className="w-full border rounded-lg p-2" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
-                             <option value="">Selecione...</option>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo / Função (Selecionar)</label>
+                          <select disabled={isViewOnly} className="w-full border rounded-lg p-2 bg-blue-50" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                             <option value="">Selecione a Função...</option>
                              {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                           </select>
                         </div>
+                        
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
                           <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
@@ -623,12 +629,12 @@ const UserManager = () => {
         </div>
       )}
 
-      {/* Sector Modal */}
+      {/* Sector Modal (RENAMED TO CARGOS/FUNÇÕES) */}
       {isSectorModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
              <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
                 <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-white">Gerenciar Setores</h3>
+                    <h3 className="text-lg font-bold text-white">Gerenciar Cargos / Funções</h3>
                     <button onClick={() => setIsSectorModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
                 </div>
                 <div className="p-6">
@@ -636,7 +642,7 @@ const UserManager = () => {
                         <input 
                             type="text" 
                             className="flex-1 border rounded-lg p-2" 
-                            placeholder="Nome do Setor"
+                            placeholder="Nome do Cargo (ex: Vendedor)"
                             value={newSectorName}
                             onChange={(e) => setNewSectorName(e.target.value)}
                         />

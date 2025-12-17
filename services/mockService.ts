@@ -85,8 +85,7 @@ const DEFAULT_TERM_TEMPLATE = `
             <strong>Sinistros (Perda, Roubo ou Furto):</strong> Em caso de sinistro, o colaborador deverá comunicar imediatamente o seu gestor e o departamento de T.I., apresentando o Boletim de Ocorrência (B.O.) no prazo máximo de 48 horas. A não apresentação do B.O. poderá acarretar na responsabilização total pelos custos de reposição do bem.
         </li>
         <li style="margin-bottom: 5px;">
-            <strong>Devolução e Desbloqueio:</strong> Ao término do contrato de trabalho ou quando solicitado pela empresa, o equipamento deverá ser devolvido em perfeito estado de conservação. 
-            <em>Dispositivos móveis (Smartphones/Tablets) devem ser devolvidos <strong>restaurados de fábrica</strong>, sem senhas de bloqueio e sem contas pessoais (iCloud/Google) vinculadas.</em>
+            <strong>Devolução:</strong> Ao término do contrato de trabalho ou quando solicitado pela empresa, o equipamento deverá ser devolvido imediatamente, em perfeito estado de conservação e funcionamento.
         </li>
         <li style="margin-bottom: 5px;">
             <strong>Autorização de Desconto:</strong> Em conformidade com o § 1º do Art. 462 da CLT, autorizo o desconto em folha de pagamento ou verbas rescisórias dos valores correspondentes ao reparo ou reposição do equipamento, caso seja comprovado dano causado por dolo (intenção) ou culpa (negligência, imprudência ou imperícia) de minha parte.
