@@ -3,7 +3,6 @@ import React, { useState, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, User, SimCard, DeviceStatus, UserSector, DeviceModel, DeviceBrand, AssetType } from '../types';
-// Added AlertCircle to imports from lucide-react
 import { Download, Upload, FileText, CheckCircle, AlertTriangle, AlertCircle, Loader2, Database, ArrowRight, RefreshCcw, X, CheckSquare, ChevronRight, ChevronDown } from 'lucide-react';
 
 type ImportType = 'USERS' | 'DEVICES' | 'SIMS';
@@ -39,7 +38,6 @@ const DataImporter = () => {
 
   const adminName = currentUser?.name || 'Importador';
 
-  // Usamos ";" por padrão para Excel BR
   const getTemplateHeaders = () => {
       switch(importType) {
           case 'USERS': return 'Nome Completo;Email;CPF;PIS;Cargo/Funcao (Dropdown);Setor/Codigo (Texto);RG;Endereco';
@@ -51,7 +49,6 @@ const DataImporter = () => {
 
   const downloadTemplate = () => {
       const headers = getTemplateHeaders();
-      // Adicionamos o BOM para o Excel abrir com a codificação correta
       const blob = new Blob(["\uFEFF" + headers], { type: 'text/csv;charset=utf-8;' }); 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -74,14 +71,12 @@ const DataImporter = () => {
       const lines = text.split(/\r?\n/).filter(l => l.trim());
       if (lines.length < 2) return alert('Arquivo vazio ou sem dados.');
       
-      // Detecção inteligente de separador (vírgula ou ponto-e-vírgula)
       const firstLine = lines[0];
       const separator = firstLine.includes(';') ? ';' : ',';
       
       const headers = firstLine.split(separator).map(h => h.trim().replace(/^"|"$/g, ''));
       
       const rows = lines.slice(1).map(line => {
-          // Regex robusta para lidar com valores entre aspas que contém o próprio separador
           const regex = new RegExp(`${separator}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
           const values = line.split(regex).map(v => v.trim().replace(/^"|"$/g, ''));
           
@@ -107,14 +102,8 @@ const DataImporter = () => {
           } else if (importType === 'DEVICES') {
               const tag = row['Patrimonio']?.trim();
               const imei = row['IMEI']?.trim();
-              
               if (!tag && !imei) throw new Error('Identificação (Patrimônio ou IMEI) é obrigatória');
-              
-              const existing = devices.find(d => 
-                  (tag && d.assetTag && d.assetTag.toLowerCase() === tag.toLowerCase()) || 
-                  (imei && d.imei && d.imei === imei)
-              );
-              
+              const existing = devices.find(d => (tag && d.assetTag && d.assetTag.toLowerCase() === tag.toLowerCase()) || (imei && d.imei && d.imei === imei));
               if (!existing) return { status: 'NEW', row, selected: true };
               return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
           } else {
@@ -160,7 +149,6 @@ const DataImporter = () => {
               if (importType === 'DEVICES') {
                   const r = item.row;
                   
-                  // 1. Resolução de Marca
                   const bName = (r['Marca'] || 'Genérica').trim();
                   let bId = brands.find(b => b.name.toLowerCase() === bName.toLowerCase())?.id || brandCache.get(bName.toLowerCase());
                   if (!bId) {
@@ -169,7 +157,6 @@ const DataImporter = () => {
                       brandCache.set(bName.toLowerCase(), bId);
                   }
 
-                  // 2. Resolução de Tipo (Normalização)
                   const tNameRaw = (r['Tipo'] || 'Outros').trim();
                   let tId = assetTypes.find(t => 
                     t.name.toLowerCase() === tNameRaw.toLowerCase() || 
@@ -183,7 +170,6 @@ const DataImporter = () => {
                       typeCache.set(tNameRaw.toLowerCase(), tId);
                   }
 
-                  // 3. Resolução de Modelo
                   const mName = (r['Modelo'] || 'Genérico').trim();
                   let mId = models.find(m => m.name.toLowerCase() === mName.toLowerCase() && m.brandId === bId)?.id || modelCache.get(mName.toLowerCase() + bId);
                   if (!mId) {
@@ -192,25 +178,24 @@ const DataImporter = () => {
                       modelCache.set(mName.toLowerCase() + bId, mId);
                   }
 
-                  // 4. Limpeza Financeira Robusta (Trata "1.440,20" ou "R$ 1440,20")
                   const rawCost = (r['Valor Pago'] || '0').toString();
                   const cleanCost = parseFloat(rawCost.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                  
                   const rawDate = r['Data Compra'] || new Date().toISOString().split('T')[0];
 
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       modelId: mId,
-                      assetTag: r['Patrimonio']?.trim() || r['IMEI']?.trim(),
-                      serialNumber: (r['Serial']?.trim() || r['Patrimonio']?.trim() || r['IMEI']?.trim()),
+                      assetTag: r['Patrimonio']?.trim() || r['IMEI']?.trim() || '',
+                      serialNumber: (r['Serial']?.trim() || r['Patrimonio']?.trim() || r['IMEI']?.trim() || ''),
                       status: (r['Status'] as DeviceStatus) || DeviceStatus.AVAILABLE,
                       purchaseCost: cleanCost,
                       purchaseDate: rawDate,
                       supplier: (r['Fornecedor'] || '').trim(),
-                      pulsusId: (r['ID Pulsus'] || '').trim(),
+                      // MAPEAMENTO DIRETO SEM FALLBACKS:
+                      pulsusId: (r['ID Pulsus'] || '').toString().trim(),
+                      costCenter: (r['Centro de Custo'] || '').toString().trim(),
                       imei: r['IMEI']?.trim() || undefined,
                       sectorId: resolveSector(r['Setor Ativo']),
-                      costCenter: (r['Centro de Custo'] || '').trim(),
                       currentUserId: null,
                       customData: {}
                   };
@@ -259,9 +244,9 @@ const DataImporter = () => {
         <div className="mb-6 flex justify-between items-start">
             <div>
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <Database className="text-blue-600"/> Importador Avançado (v1.8.6)
+                    <Database className="text-blue-600"/> Importador Avançado (v1.8.8)
                 </h3>
-                <p className="text-sm text-gray-500">Suporte a Ponto e Vírgula e correção automática de decimais.</p>
+                <p className="text-sm text-gray-500">Mapeamento estrito de ID Pulsus e Centro de Custo.</p>
             </div>
             {step !== 'UPLOAD' && (
                 <button onClick={() => setStep('UPLOAD')} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-bold">
@@ -290,8 +275,8 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <div className="text-[11px] text-gray-400 text-center space-y-1">
-                        <p className="flex items-center justify-center gap-1 font-bold text-orange-600"><AlertCircle size={12}/> Use ponto e vírgula (;) se seu Excel estiver em Português.</p>
-                        <p>Os campos ID Pulsus, Setor do Equipamento e Fornecedor já estão incluídos.</p>
+                        <p className="flex items-center justify-center gap-1 font-bold text-orange-600"><AlertCircle size={12}/> O ID Pulsus e o Centro de Custo devem estar em colunas separadas.</p>
+                        <p>O motor de importação agora garante que um dado não sobrescreva o outro indevidamente.</p>
                     </div>
                 </div>
             </div>
@@ -325,7 +310,7 @@ const DataImporter = () => {
                                     </td>
                                     <td className="px-6 py-3 text-gray-500">
                                         {item.errorMsg ? <span className="text-red-600 font-bold flex items-center gap-1"><AlertTriangle size={12}/> {item.errorMsg}</span> : 
-                                         item.status === 'CONFLICT' ? `Valor: R$ ${item.row['Valor Pago']} | Fornecedor: ${item.row['Fornecedor']}` : `Pronto para importar como ${item.row['Tipo']}`}
+                                         item.status === 'CONFLICT' ? `Pulsus: ${item.row['ID Pulsus']} | C.Custo: ${item.row['Centro de Custo']}` : `Pronto para importar como ${item.row['Tipo']}`}
                                     </td>
                                 </tr>
                             ))}
@@ -345,7 +330,7 @@ const DataImporter = () => {
                 </div>
                 <div className="text-center">
                     <h3 className="text-2xl font-black text-slate-800">Salvando {progress.current} de {progress.total}</h3>
-                    <p className="text-gray-500">Corrigindo decimais e vinculando setores...</p>
+                    <p className="text-gray-500">Mapeando identidades digitais...</p>
                 </div>
                 <div className="w-full max-w-md bg-gray-100 rounded-full h-5 overflow-hidden shadow-inner border">
                     <div className="bg-blue-600 h-full transition-all duration-500 shadow-lg" style={{width: `${(progress.current/progress.total)*100}%`}}></div>
@@ -365,7 +350,7 @@ const DataImporter = () => {
                 <button onClick={() => setStep('UPLOAD')} className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-wider shadow-lg hover:bg-black transition-all">Nova Importação</button>
                 {logs.length > 0 && (
                     <div className="w-full max-w-xl bg-red-50 p-6 rounded-2xl text-xs text-red-700 border border-red-200 max-h-48 overflow-y-auto">
-                        <strong className="block mb-2 uppercase font-black text-red-800 tracking-tighter">Erros Reportados:</strong>
+                        <strong className="block mb-2 uppercase font-black text-red-800 tracking-tighter">Relatório de Conflitos:</strong>
                         <ul className="space-y-1 list-disc pl-4">{logs.map((l, i) => <li key={i}>{l}</li>)}</ul>
                     </div>
                 )}

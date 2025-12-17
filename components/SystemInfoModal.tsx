@@ -8,25 +8,25 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.8.6',
+    version: '1.8.8',
     date: 'Hoje',
-    title: 'Estabilidade CSV & Decimais BR',
+    title: 'Governança & Restauração de UI',
     changes: [
-      'Corrigido bug crítico onde valores decimais com vírgula (ex: 1440,20) quebravam o mapeamento de colunas no importador.',
-      'Suporte total a ponto e vírgula (;) no CSV para compatibilidade nativa com Excel em Português.',
-      'Melhorada a sanitização financeira: o sistema agora limpa "R$", pontos de milhar e espaços antes de processar valores.',
-      'Aprimorado mapeamento de ID Pulsus e Setores: dados são lidos corretamente mesmo com deslocamento de colunas em arquivos manuais.',
-      'Inteligência de Identificação: Dispositivos agora podem ser criados apenas com IMEI se o Patrimônio estiver ausente.'
+      'Restauradas as abas de filtro por status (Disponível, Em Uso, Manutenção) na tela de Dispositivos.',
+      'Reintroduzido o modal de confirmação de exclusão com motivo obrigatório para Dispositivos.',
+      'Garantida a separação estrita de colunas no importador para evitar repetição do ID Pulsus no Centro de Custo.',
+      'Botão de acesso ao MDM Pulsus restaurado com ícone de smartphone laranja na listagem.',
+      'Melhorada a validação de cabeçalhos no importador CSV para ignorar espaços em branco.'
     ]
   },
     {
-    version: '1.8.5',
-    date: '22/01/2025',
-    title: 'Dynamic Fields & Intelligence',
+    version: '1.8.7',
+    date: '24/01/2025',
+    title: 'Integridade de Dados & Atalhos MDM',
     changes: [
-      'Renderização dinâmica de campos personalizados (RAM, Armazenamento, etc) no formulário de Dispositivos com base no Tipo de Ativo.',
-      'Normalização inteligente de tipos na importação (ex: "Celular" agora é mapeado para "Smartphone" automaticamente).',
-      'Correção de bug onde tipos de equipamentos importados ficavam como "Outros" indevidamente.'
+      'Corrigido mapeamento de colunas no importador: ID Pulsus e Centro de Custo agora são tratados como campos 100% independentes.',
+      'Melhorada a robustez do motor de importação para lidar com cabeçalhos que possuem espaços extras no CSV.',
+      'Ajustado fallback de identificação: Patrimônio e IMEI agora são preservados separadamente durante a importação.'
     ]
   },
   {

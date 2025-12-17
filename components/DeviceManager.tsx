@@ -20,6 +20,9 @@ const DeviceManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewStatus, setViewStatus] = useState<DeviceStatus | 'ALL'>('ALL'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,7 +30,6 @@ const DeviceManager = () => {
   const [formData, setFormData] = useState<Partial<Device>>({ status: DeviceStatus.AVAILABLE, accessories: [], customData: {} });
   const [idType, setIdType] = useState<'TAG' | 'IMEI'>('TAG');
   const [newMaint, setNewMaint] = useState<Partial<MaintenanceRecord>>({ type: MaintenanceType.CORRECTIVE, cost: 0, invoiceUrl: '' });
-  const [selectedAccType, setSelectedAccType] = useState('');
 
   const adminName = currentUser?.name || 'Sistema';
 
@@ -76,6 +78,23 @@ const DeviceManager = () => {
     setIsModalOpen(true);
   };
 
+  const handleDeleteClick = (id: string) => {
+      setDeleteTargetId(id);
+      setDeleteReason('');
+      setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+      if (deleteTargetId && deleteReason.trim()) {
+          deleteDevice(deleteTargetId, adminName, deleteReason);
+          setIsDeleteModalOpen(false);
+          setDeleteTargetId(null);
+          setDeleteReason('');
+      } else {
+          alert('Por favor, informe o motivo da exclusão.');
+      }
+  };
+
   const handleDeviceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId && formData.id) {
@@ -88,7 +107,6 @@ const DeviceManager = () => {
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
 
-  // --- LÓGICA DE CAMPOS PERSONALIZADOS ---
   const currentModel = models.find(m => m.id === formData.modelId);
   const currentAssetType = assetTypes.find(t => t.id === currentModel?.typeId);
   const relevantFields = currentAssetType?.customFieldIds 
@@ -122,9 +140,25 @@ const DeviceManager = () => {
         </div>
       </div>
 
+      {/* --- ABAS DE STATUS --- */}
+      <div className="flex gap-4 border-b border-gray-200">
+          {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE] as (DeviceStatus | 'ALL')[]).map(status => (
+              <button 
+                  key={status}
+                  onClick={() => setViewStatus(status)}
+                  className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors ${viewStatus === status ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                  {status === 'ALL' ? 'Todos' : status}
+                  <span className="ml-2 bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+                      {status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}
+                  </span>
+              </button>
+          ))}
+      </div>
+
       <div className="relative">
         <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-        <input type="text" placeholder="Buscar..." className="pl-10 w-full border rounded-lg py-2 focus:ring-2 focus:ring-blue-500 outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+        <input type="text" placeholder="Buscar por tag, imei, modelo ou pulsus..." className="pl-10 w-full border rounded-lg py-2 focus:ring-2 focus:ring-blue-500 outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -159,12 +193,25 @@ const DeviceManager = () => {
                     <div className="text-gray-500">{d.costCenter || 'S/ Cód'}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-800'}`}>{d.status}</span>
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-100 text-green-700' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-800'}`}>{d.status}</span>
                   </td>
                   <td className="px-6 py-4 text-xs font-medium text-gray-700">{user?.fullName || '-'}</td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => handleOpenModal(d)} className="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors"><Edit2 size={16}/></button>
-                    <button onClick={() => deleteDevice(d.id, adminName, 'Exclusão manual')} className="text-red-500 hover:bg-red-50 p-1 rounded ml-1 transition-colors"><Trash2 size={16}/></button>
+                    <div className="flex items-center justify-end gap-1">
+                        {d.pulsusId && (
+                            <a 
+                                href={`https://hub.pulsus.mobi/devices/${d.pulsusId}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-orange-600 hover:bg-orange-50 p-1.5 rounded transition-colors"
+                                title="Ver no MDM Pulsus"
+                            >
+                                <SmartphoneNfc size={16}/>
+                            </a>
+                        )}
+                        <button onClick={() => handleOpenModal(d)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors"><Edit2 size={16}/></button>
+                        <button onClick={() => handleDeleteClick(d.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"><Trash2 size={16}/></button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -172,6 +219,47 @@ const DeviceManager = () => {
           </tbody>
         </table>
       </div>
+
+      {/* --- MODAL DE EXCLUSÃO COM MOTIVO --- */}
+      {isDeleteModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in">
+                  <div className="p-6">
+                      <div className="flex flex-col items-center text-center mb-4">
+                          <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-3">
+                              <AlertTriangle size={24} />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900">Excluir Dispositivo?</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                              Esta ação removerá o item do inventário. É obrigatório informar o motivo.
+                          </p>
+                      </div>
+                      
+                      <div className="mb-4">
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Motivo da Exclusão</label>
+                          <textarea 
+                              className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" 
+                              rows={3} 
+                              placeholder="Ex: Sucata, Roubo, Extravio..."
+                              value={deleteReason}
+                              onChange={(e) => setDeleteReason(e.target.value)}
+                          ></textarea>
+                      </div>
+
+                      <div className="flex gap-3">
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
+                          <button 
+                              onClick={handleConfirmDelete} 
+                              disabled={!deleteReason.trim()}
+                              className={`flex-1 py-2 rounded-lg text-white font-bold transition-colors ${!deleteReason.trim() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                          >
+                              Confirmar Exclusão
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -208,7 +296,6 @@ const DeviceManager = () => {
                          <input required className="w-full border rounded-lg p-2.5 font-mono text-sm bg-white shadow-sm" placeholder={idType === 'TAG' ? 'TAG-001' : 'IMEI (15 dígitos)'} value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value, imei: idType === 'IMEI' ? e.target.value : undefined})} />
                      </div>
 
-                     {/* CAMPOS DINÂMICOS - RENDEREIZADOS SE HOUVER TIPO DEFINIDO */}
                      {relevantFields.length > 0 && (
                          <div className="col-span-2 grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 animate-fade-in">
                             <h4 className="col-span-2 text-[10px] font-black uppercase text-gray-400 mb-1 flex items-center gap-2">
