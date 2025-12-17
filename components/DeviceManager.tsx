@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, ReturnChecklist, DeviceAccessory } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X, Layers, Square, Copy, Box, Ban, LayoutGrid, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X, Layers, Square, Copy, Box, Ban, LayoutGrid, Eye, AlertTriangle, HardDrive, SmartphoneNfc, Sliders } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 const DeviceManager = () => {
   const { 
     devices, addDevice, updateDevice, deleteDevice, 
-    users, models, brands, assetTypes, sims, sectors, accessoryTypes,
+    users, models, brands, assetTypes, sims, sectors, accessoryTypes, customFields,
     maintenances, addMaintenance, deleteMaintenance,
     getHistory, settings,
     assignAsset, returnAsset // Import operations
@@ -42,7 +42,8 @@ const DeviceManager = () => {
   // Form State
   const [formData, setFormData] = useState<Partial<Device>>({
     status: DeviceStatus.AVAILABLE,
-    accessories: []
+    accessories: [],
+    customData: {}
   });
 
   // Bulk Form State
@@ -207,7 +208,11 @@ const DeviceManager = () => {
     
     if (device) {
       setEditingId(device.id);
-      setFormData({ ...device, accessories: device.accessories || [] });
+      setFormData({ 
+          ...device, 
+          accessories: device.accessories || [],
+          customData: device.customData || {} 
+      });
       if (device.imei) {
           setIdType('IMEI');
       } else {
@@ -219,7 +224,8 @@ const DeviceManager = () => {
         status: DeviceStatus.AVAILABLE, 
         purchaseDate: new Date().toISOString().split('T')[0],
         purchaseCost: 0,
-        accessories: []
+        accessories: [],
+        customData: {}
       });
       setIdType('TAG');
     }
@@ -998,6 +1004,47 @@ const DeviceManager = () => {
                                 <input type="text" disabled={isViewOnly} className="w-full border rounded-lg p-2" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Ex: 10293" />
                             </div>
 
+                            {/* --- CONDITIONAL FIELDS BLOCK (DYNAMIC) --- */}
+                            {formData.modelId && (() => {
+                                const m = models.find(x => x.id === formData.modelId);
+                                const t = assetTypes.find(x => x.id === m?.typeId);
+                                
+                                // Se o AssetType tem campos personalizados configurados
+                                if (t?.customFieldIds && t.customFieldIds.length > 0) {
+                                    return (
+                                        <div className="col-span-2 grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200 mt-2">
+                                            <div className="col-span-2">
+                                                <h5 className="text-xs font-bold text-gray-500 uppercase mb-2 flex items-center gap-1"><Sliders size={12}/> Campos Personalizados ({t.name})</h5>
+                                            </div>
+                                            {t.customFieldIds.map(fid => {
+                                                const fieldDef = customFields.find(f => f.id === fid);
+                                                if (!fieldDef) return null;
+                                                return (
+                                                    <div key={fid}>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">{fieldDef.name}</label>
+                                                        <input 
+                                                            disabled={isViewOnly}
+                                                            type="text" 
+                                                            className="w-full border rounded-lg p-2"
+                                                            value={formData.customData?.[fid] || ''} 
+                                                            onChange={e => setFormData({
+                                                                ...formData, 
+                                                                customData: {
+                                                                    ...formData.customData,
+                                                                    [fid]: e.target.value
+                                                                }
+                                                            })} 
+                                                        />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+                            {/* --- END CONDITIONAL BLOCK --- */}
+
                             <div className="col-span-2 border-t pt-2 mt-2">
                                 <h4 className="text-sm font-bold text-gray-700 mb-2">Localização & Setor do Ativo</h4>
                                 <div className="grid grid-cols-2 gap-4">
@@ -1026,6 +1073,8 @@ const DeviceManager = () => {
                             {formData.modelId && (() => {
                                 const m = models.find(x => x.id === formData.modelId);
                                 const t = assetTypes.find(x => x.id === m?.typeId);
+                                // Simples verificação por nome para manter retrocompatibilidade visual rápida, 
+                                // mas idealmente poderia ser um campo personalizado do tipo "Suporta SIM"
                                 const isMobile = t?.name.toLowerCase().includes('phone') || t?.name.toLowerCase().includes('celular') || t?.name.toLowerCase().includes('tablet');
                                 
                                 if (isMobile) {

@@ -2,7 +2,7 @@
 // ... existing imports
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -12,7 +12,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [logs, setLogs] = useState<AuditLog[]>(mockAuditLogs);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>(mockSystemUsers);
   
-  // Persist Settings in LocalStorage for better Demo Experience
   const [settings, setSettings] = useState<SystemSettings>(() => {
       const stored = localStorage.getItem('mock_settings');
       return stored ? JSON.parse(stored) : mockSystemSettings;
@@ -25,10 +24,16 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>(mockMaintenanceRecords);
   const [sectors, setSectors] = useState<UserSector[]>(mockSectors);
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>(mockAccessoryTypes || []);
+  const [customFields, setCustomFields] = useState<CustomField[]>([
+      { id: 'cf1', name: 'Memória RAM' },
+      { id: 'cf2', name: 'Armazenamento' },
+      { id: 'cf3', name: 'ID FlexxGPS' },
+      { id: 'cf4', name: 'ID Connect Sales' }
+  ]);
 
   const logAction = (
     action: ActionType, 
-    assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory', 
+    assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory' | 'CustomField', 
     assetId: string, 
     targetName: string, 
     adminName: string, 
@@ -204,6 +209,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAssetTypes(prev => [...prev, type]);
     logAction(ActionType.create, 'Type', type.id, type.name, adminName);
   };
+  const updateAssetType = (type: AssetType, adminName: string) => {
+    setAssetTypes(prev => prev.map(t => t.id === type.id ? type : t));
+    logAction(ActionType.UPDATE, 'Type', type.id, type.name, adminName);
+  };
   const deleteAssetType = (id: string, adminName: string) => {
     setAssetTypes(prev => prev.filter(t => t.id !== id));
     logAction(ActionType.DELETE, 'Type', id, 'Tipo', adminName);
@@ -212,6 +221,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addBrand = (brand: DeviceBrand, adminName: string) => {
     setBrands(prev => [...prev, brand]);
     logAction(ActionType.create, 'Brand', brand.id, brand.name, adminName);
+  };
+  const updateBrand = (brand: DeviceBrand, adminName: string) => {
+    setBrands(prev => prev.map(b => b.id === brand.id ? brand : b));
+    logAction(ActionType.UPDATE, 'Brand', brand.id, brand.name, adminName);
   };
   const deleteBrand = (id: string, adminName: string) => {
     setBrands(prev => prev.filter(b => b.id !== id));
@@ -235,10 +248,23 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setAccessoryTypes(prev => [...prev, type]);
       logAction(ActionType.create, 'Accessory', type.id, type.name, adminName);
   };
-  
+  const updateAccessoryType = (type: AccessoryType, adminName: string) => {
+      setAccessoryTypes(prev => prev.map(t => t.id === type.id ? type : t));
+      logAction(ActionType.UPDATE, 'Accessory', type.id, type.name, adminName);
+  };
   const deleteAccessoryType = (id: string, adminName: string) => {
       setAccessoryTypes(prev => prev.filter(t => t.id !== id));
       logAction(ActionType.DELETE, 'Accessory', id, 'Tipo Acessório', adminName);
+  };
+
+  // --- Custom Fields ---
+  const addCustomField = (field: CustomField, adminName: string) => {
+      setCustomFields(prev => [...prev, field]);
+      logAction(ActionType.create, 'CustomField', field.id, field.name, adminName);
+  };
+  const deleteCustomField = (id: string, adminName: string) => {
+      setCustomFields(prev => prev.filter(f => f.id !== id));
+      logAction(ActionType.DELETE, 'CustomField', id, 'Campo Personalizado', adminName);
   };
 
   // --- Maintenance ---
@@ -340,7 +366,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
-    models, brands, assetTypes, maintenances, sectors, accessoryTypes,
+    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     addDevice, updateDevice, deleteDevice,
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
@@ -349,12 +375,13 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     assignAsset, returnAsset, getHistory,
     clearLogs,
     restoreItem, // New
-    addAssetType, deleteAssetType,
-    addBrand, deleteBrand,
+    addAssetType, updateAssetType, deleteAssetType,
+    addBrand, updateBrand, deleteBrand,
     addModel, updateModel, deleteModel,
     addMaintenance, deleteMaintenance,
     addSector, deleteSector,
-    addAccessoryType, deleteAccessoryType
+    addAccessoryType, updateAccessoryType, deleteAccessoryType,
+    addCustomField, deleteCustomField
   };
 
   return (

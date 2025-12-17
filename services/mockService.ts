@@ -1,72 +1,43 @@
 
-import { Device, DeviceStatus, SimCard, User, AuditLog, ActionType, SystemUser, SystemRole, SystemSettings, AssetType, DeviceBrand, DeviceModel, MaintenanceRecord, MaintenanceType, UserSector, AccessoryType } from '../types';
+import { Device, DeviceStatus, SimCard, User, AuditLog, ActionType, SystemUser, SystemRole, SystemSettings, AssetType, DeviceBrand, DeviceModel, MaintenanceRecord, MaintenanceType, UserSector, AccessoryType, CustomField } from '../types';
 
-// Textos Padrão solicitados (COM FORMATAÇÃO HTML)
-const DEFAULT_DELIVERY_DECLARATION = `Declaro que recebi da empresa <strong>{NOME_EMPRESA}</strong> (CNPJ: {CNPJ}), a título de empréstimo para uso exclusivo profissional, os equipamentos relacionados abaixo.<br><br>Comprometo-me a zelar pela sua guarda, conservação e limpeza, responsabilizando-me por qualquer dano causado por negligência, imprudência ou imperícia.`;
+const DEFAULT_DELIVERY_DECLARATION = `Declaro que recebi da empresa <strong>{NOME_EMPRESA}</strong> (CNPJ: {CNPJ}), a título de empréstimo...`;
+const DEFAULT_DELIVERY_CLAUSES = `<h3>2. Condições Gerais...</h3>...`;
+const DEFAULT_RETURN_DECLARATION = `Declaro que devolvi...`;
+const DEFAULT_RETURN_CLAUSES = `<p>O material foi conferido...</p>`;
 
-const DEFAULT_DELIVERY_CLAUSES = `<h3>2. Condições Gerais de Uso e Responsabilidade</h3>
-<p><strong>Finalidade e Uso Adequado:</strong> O equipamento é uma ferramenta de trabalho de propriedade da empresa, cedido em comodato. É estritamente vedado o seu uso para fins pessoais, bem como a instalação de jogos ou softwares não homologados pelo departamento de T.I.</p>
-
-<p><strong>Segurança da Informação:</strong> O colaborador compromete-se a zelar pela segurança lógica e física do ativo, não compartilhando senhas de acesso. A empresa reserva-se o direito de auditar o equipamento e seus dados a qualquer momento, sem aviso prévio, para garantir a conformidade com as políticas corporativas.</p>
-
-<p><strong>Sinistros (Perda, Roubo ou Furto):</strong> Em caso de sinistro, o colaborador deverá comunicar imediatamente o seu gestor e o departamento de T.I., apresentando o Boletim de Ocorrência (B.O.) no prazo máximo de 48 horas. A não apresentação do B.O. poderá acarretar na responsabilização total pelos custos de reposição do bem.</p>
-
-<p><strong>Devolução:</strong> Ao término do contrato de trabalho ou quando solicitado pela empresa, o equipamento deverá ser devolvido imediatamente, em perfeito estado de conservação e funcionamento.</p>
-
-<p><strong>Autorização de Desconto:</strong> Em conformidade com o § 1º do Art. 462 da CLT, autorizo o desconto em folha de pagamento ou verbas rescisórias dos valores correspondentes ao reparo ou reposição do equipamento, caso seja comprovado dano causado por dolo (intenção) ou culpa (negligência, imprudência ou imperícia) de minha parte.</p>`;
-
-const DEFAULT_RETURN_DECLARATION = `Declaro que devolvi à empresa <strong>{NOME_EMPRESA}</strong> os equipamentos e acessórios descritos abaixo, cessando minha responsabilidade sobre a guarda dos mesmos a partir desta data.`;
-
-const DEFAULT_RETURN_CLAUSES = `<p>O material foi conferido na presença do colaborador e atestado conforme o checklist acima.</p>
-<p>A empresa dá plena quitação referente à devolução física dos ativos listados.</p>`;
-
-// Armazenamos como JSON string para compatibilidade com o campo string do banco
 const DEFAULT_CONFIG_JSON = JSON.stringify({
-    delivery: {
-        declaration: DEFAULT_DELIVERY_DECLARATION,
-        clauses: DEFAULT_DELIVERY_CLAUSES
-    },
-    return: {
-        declaration: DEFAULT_RETURN_DECLARATION,
-        clauses: DEFAULT_RETURN_CLAUSES
-    }
+    delivery: { declaration: DEFAULT_DELIVERY_DECLARATION, clauses: DEFAULT_DELIVERY_CLAUSES },
+    return: { declaration: DEFAULT_RETURN_DECLARATION, clauses: DEFAULT_RETURN_CLAUSES }
 });
 
-// Mock Config Data
 export const mockSystemSettings: SystemSettings = {
   appName: 'IT Asset 360',
   cnpj: '00.000.000/0001-00',
   logoUrl: '',
-  // O campo termTemplate agora guarda a configuração JSON de ambos os termos
   termTemplate: DEFAULT_CONFIG_JSON, 
-  returnTermTemplate: '' // Depreciado, usamos o JSON acima
+  returnTermTemplate: ''
 };
 
 export const mockSystemUsers: SystemUser[] = [
-  {
-    id: 'admin1',
-    name: 'Administrador TI',
-    email: 'admin@empresa.com',
-    password: 'admin',
-    role: SystemRole.ADMIN,
-    avatarUrl: ''
-  },
-  {
-    id: 'op1',
-    name: 'Operador Suporte',
-    email: 'suporte@empresa.com',
-    password: '123',
-    role: SystemRole.OPERATOR
-  }
+  { id: 'admin1', name: 'Administrador TI', email: 'admin@empresa.com', password: 'admin', role: SystemRole.ADMIN, avatarUrl: '' },
+  { id: 'op1', name: 'Operador Suporte', email: 'suporte@empresa.com', password: '123', role: SystemRole.OPERATOR }
 ];
 
-// --- New Structure Mocks ---
+// --- Configuração de Campos e Tipos (Mock) ---
+
+export const mockCustomFields: CustomField[] = [
+    { id: 'cf_ram', name: 'Memória RAM' },
+    { id: 'cf_storage', name: 'Armazenamento' },
+    { id: 'cf_flexx', name: 'ID FlexxGPS' },
+    { id: 'cf_sales', name: 'ID Connect Sales' }
+];
 
 export const mockAssetTypes: AssetType[] = [
-  { id: 't1', name: 'Notebook' },
-  { id: 't2', name: 'Smartphone' },
-  { id: 't3', name: 'Tablet' },
-  { id: 't4', name: 'Monitor' }
+  { id: 't1', name: 'Notebook', customFieldIds: ['cf_ram', 'cf_storage'] },
+  { id: 't2', name: 'Smartphone', customFieldIds: ['cf_storage', 'cf_flexx', 'cf_sales'] },
+  { id: 't3', name: 'Tablet', customFieldIds: ['cf_flexx'] },
+  { id: 't4', name: 'Monitor', customFieldIds: [] }
 ];
 
 export const mockAccessoryTypes: AccessoryType[] = [
@@ -84,27 +55,9 @@ export const mockBrands: DeviceBrand[] = [
 ];
 
 export const mockModels: DeviceModel[] = [
-  { 
-    id: 'm1', 
-    name: 'Latitude 5420', 
-    brandId: 'b1', 
-    typeId: 't1', 
-    imageUrl: 'https://i.dell.com/is/image/DellContent/content/dam/ss2/product-images/dell-client-products/notebooks/latitude-notebooks/14-5420/media-gallery/peripherals_laptop_latitude_5420_gallery_1.psd?fmt=png-alpha&pscan=auto&scl=1&hei=402&wid=555&qlt=100,1&resMode=sharp2&size=555,402&chrss=full' 
-  },
-  { 
-    id: 'm2', 
-    name: 'iPhone 13 128GB', 
-    brandId: 'b2', 
-    typeId: 't2',
-    imageUrl: 'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-13-midnight-select-2021?wid=940&hei=1112&fmt=png-alpha&.v=1645572315940'
-  },
-  { 
-    id: 'm3', 
-    name: 'Galaxy S21 FE', 
-    brandId: 'b3', 
-    typeId: 't2',
-    imageUrl: 'https://images.samsung.com/is/image/samsung/p6pim/br/sm-g990ezagzto/gallery/br-galaxy-s21-fe-g990-sm-g990ezagzto-530656209?$650_519_PNG$' 
-  }
+  { id: 'm1', name: 'Latitude 5420', brandId: 'b1', typeId: 't1', imageUrl: '' },
+  { id: 'm2', name: 'iPhone 13 128GB', brandId: 'b2', typeId: 't2', imageUrl: '' },
+  { id: 'm3', name: 'Galaxy S21 FE', brandId: 'b3', typeId: 't2', imageUrl: '' }
 ];
 
 export const mockDevices: Device[] = [
@@ -120,7 +73,12 @@ export const mockDevices: Device[] = [
     status: DeviceStatus.AVAILABLE,
     currentUserId: null,
     sectorId: 'sec3', // TI
-    costCenter: 'CC-1010'
+    costCenter: 'CC-1010',
+    // Dados migrados para customData
+    customData: {
+        'cf_ram': '16GB',
+        'cf_storage': '512GB SSD'
+    }
   },
   {
     id: 'd2',
@@ -131,11 +89,16 @@ export const mockDevices: Device[] = [
     purchaseCost: 3800.00,
     status: DeviceStatus.IN_USE,
     currentUserId: 'u1',
-    linkedSimId: 's1', // Vinculado ao chip s1
+    linkedSimId: 's1', 
     imei: '356988012345678',
     pulsusId: '10928',
-    sectorId: 'sec1', // Vendas
-    costCenter: 'CC-2020'
+    sectorId: 'sec1', 
+    costCenter: 'CC-2020',
+    customData: {
+        'cf_storage': '128GB',
+        'cf_flexx': 'FX-100',
+        'cf_sales': 'CS-999'
+    }
   },
   {
     id: 'd3',
@@ -149,7 +112,8 @@ export const mockDevices: Device[] = [
     imei: '357999098765432',
     pulsusId: '10930',
     sectorId: 'sec1',
-    costCenter: 'CC-2020'
+    costCenter: 'CC-2020',
+    customData: {}
   }
 ];
 

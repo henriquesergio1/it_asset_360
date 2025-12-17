@@ -1,6 +1,8 @@
--- Script Completo de Criação de Tabelas - IT Asset 360 (Versão 1.8.0)
--- Atualizado para Suporte a Acessórios e Pendências
 
+-- Script Completo de Criação de Tabelas - IT Asset 360
+-- Versão 2.0 (Arquitetura de Campos Personalizados)
+
+-- Configurações e Sistema
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings')
 CREATE TABLE SystemSettings (
     Id INT PRIMARY KEY IDENTITY(1,1),
@@ -21,14 +23,9 @@ CREATE TABLE SystemUsers (
     AvatarUrl NVARCHAR(MAX)
 );
 
+-- Dados Auxiliares
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Sectors')
 CREATE TABLE Sectors (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AssetTypes')
-CREATE TABLE AssetTypes (
     Id NVARCHAR(50) PRIMARY KEY,
     Name NVARCHAR(100) NOT NULL
 );
@@ -39,23 +36,25 @@ CREATE TABLE Brands (
     Name NVARCHAR(100) NOT NULL
 );
 
--- NOVAS TABELAS DE ACESSÓRIOS --
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AccessoryTypes')
 CREATE TABLE AccessoryTypes (
     Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL -- Ex: Carregador, Mouse, Mochila
+    Name NVARCHAR(100) NOT NULL
 );
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories')
-CREATE TABLE DeviceAccessories (
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CustomFields')
+CREATE TABLE CustomFields (
     Id NVARCHAR(50) PRIMARY KEY,
-    DeviceId NVARCHAR(50) NOT NULL,
-    AccessoryTypeId NVARCHAR(50) NOT NULL,
-    Name NVARCHAR(100), -- Nome específico (ex: Carregador 65W Dell)
-    CONSTRAINT FK_DevAcc_Devices FOREIGN KEY (DeviceId) REFERENCES Devices(Id) ON DELETE CASCADE,
-    CONSTRAINT FK_DevAcc_Type FOREIGN KEY (AccessoryTypeId) REFERENCES AccessoryTypes(Id)
+    Name NVARCHAR(100) NOT NULL
 );
-----------------------------------
+
+-- Tipos de Ativo (Configuração Dinâmica)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AssetTypes')
+CREATE TABLE AssetTypes (
+    Id NVARCHAR(50) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    CustomFieldIds NVARCHAR(MAX) -- JSON Array: ["id1", "id2"]
+);
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Models')
 CREATE TABLE Models (
@@ -80,8 +79,8 @@ CREATE TABLE Users (
     SectorId NVARCHAR(50),
     JobTitle NVARCHAR(100),
     Active BIT DEFAULT 1,
-    HasPendingIssues BIT DEFAULT 0, -- Nova Coluna
-    PendingIssuesNote NVARCHAR(MAX), -- Nova Coluna
+    HasPendingIssues BIT DEFAULT 0, 
+    PendingIssuesNote NVARCHAR(MAX), 
     CONSTRAINT FK_Users_Sectors FOREIGN KEY (SectorId) REFERENCES Sectors(Id)
 );
 
@@ -97,14 +96,21 @@ CREATE TABLE SimCards (
     CONSTRAINT FK_SimCards_Users FOREIGN KEY (CurrentUserId) REFERENCES Users(Id)
 );
 
+-- Tabela de Dispositivos (Limpa de campos legados)
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices')
 CREATE TABLE Devices (
     Id NVARCHAR(50) PRIMARY KEY,
     ModelId NVARCHAR(50), 
     SerialNumber NVARCHAR(50),
     AssetTag NVARCHAR(50),
+    
+    -- Identificadores Especiais (Mantidos por uso intensivo na UI)
     Imei NVARCHAR(50),
     PulsusId NVARCHAR(50),
+    
+    -- DADOS DINÂMICOS (RAM, Storage, IDs Apps, etc)
+    CustomData NVARCHAR(MAX), -- JSON Object: {"id_ram": "16gb"}
+
     Status NVARCHAR(50) NOT NULL,
     CurrentUserId NVARCHAR(50) NULL,
     SectorId NVARCHAR(50),
@@ -119,6 +125,16 @@ CREATE TABLE Devices (
     CONSTRAINT FK_Devices_Users FOREIGN KEY (CurrentUserId) REFERENCES Users(Id),
     CONSTRAINT FK_Devices_Sectors FOREIGN KEY (SectorId) REFERENCES Sectors(Id),
     CONSTRAINT FK_Devices_SimCards FOREIGN KEY (LinkedSimId) REFERENCES SimCards(Id)
+);
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories')
+CREATE TABLE DeviceAccessories (
+    Id NVARCHAR(50) PRIMARY KEY,
+    DeviceId NVARCHAR(50) NOT NULL,
+    AccessoryTypeId NVARCHAR(50) NOT NULL,
+    Name NVARCHAR(100), 
+    CONSTRAINT FK_DevAcc_Devices FOREIGN KEY (DeviceId) REFERENCES Devices(Id) ON DELETE CASCADE,
+    CONSTRAINT FK_DevAcc_Type FOREIGN KEY (AccessoryTypeId) REFERENCES AccessoryTypes(Id)
 );
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords')
@@ -154,11 +170,10 @@ CREATE TABLE AuditLogs (
     Action NVARCHAR(50),
     Timestamp DATETIME2 DEFAULT GETDATE(),
     Notes NVARCHAR(MAX),
-    AdminUser NVARCHAR(100)
+    AdminUser NVARCHAR(100),
+    BackupData NVARCHAR(MAX)
 );
 
 -- Seed Minimal
 IF NOT EXISTS (SELECT * FROM SystemSettings) INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
 IF NOT EXISTS (SELECT * FROM SystemUsers) INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES ('admin1', 'Administrador', 'admin@empresa.com', 'admin', 'ADMIN');
-IF NOT EXISTS (SELECT * FROM Brands) INSERT INTO Brands (Id, Name) VALUES ('b1', 'Genérica');
-IF NOT EXISTS (SELECT * FROM AssetTypes) INSERT INTO AssetTypes (Id, Name) VALUES ('t1', 'Outros');

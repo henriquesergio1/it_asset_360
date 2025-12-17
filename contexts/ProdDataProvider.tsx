@@ -2,7 +2,7 @@
 // ... imports
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField } from '../types';
 
 // API Configuration Relative Path
 const API_URL = ''; 
@@ -23,6 +23,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [sectors, setSectors] = useState<UserSector[]>([]);
   const [terms, setTerms] = useState<Term[]>([]);
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Execute fetches safely using relative paths
         const [
             devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes, 
-            modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes, accTypesRes
+            modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes, accTypesRes, customFieldsRes
         ] = await Promise.all([
           fetch(`${API_URL}/api/devices`),
           fetch(`${API_URL}/api/sims`),
@@ -93,7 +94,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           fetch(`${API_URL}/api/maintenances`),
           fetch(`${API_URL}/api/sectors`),
           fetch(`${API_URL}/api/terms`),
-          fetch(`${API_URL}/api/accessory-types`)
+          fetch(`${API_URL}/api/accessory-types`),
+          fetch(`${API_URL}/api/custom-fields`)
         ]);
 
         // Process Responses safely
@@ -123,6 +125,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         
         if (sectorsRes.ok) setSectors(await sectorsRes.json());
         if (accTypesRes.ok) setAccessoryTypes(await accTypesRes.json());
+        if (customFieldsRes.ok) setCustomFields(await customFieldsRes.json());
         setTerms(termsData);
         
       } catch (err: any) {
@@ -344,6 +347,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setBrands(prev => [...prev, saved]);
       fetchLogs();
   };
+  const updateBrand = async (brand: DeviceBrand, adminName: string) => {
+      await putData('brands', { ...brand, _adminUser: adminName });
+      setBrands(prev => prev.map(b => b.id === brand.id ? brand : b));
+      fetchLogs();
+  };
   const deleteBrand = async (id: string, adminName: string) => {
       await deleteData('brands', id);
       setBrands(prev => prev.filter(b => b.id !== id));
@@ -353,6 +361,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addAssetType = async (type: AssetType, adminName: string) => {
       const saved = await postData('asset-types', { ...type, _adminUser: adminName });
       setAssetTypes(prev => [...prev, saved]);
+      fetchLogs();
+  };
+  const updateAssetType = async (type: AssetType, adminName: string) => {
+      await putData('asset-types', { ...type, _adminUser: adminName });
+      setAssetTypes(prev => prev.map(t => t.id === type.id ? type : t));
       fetchLogs();
   };
   const deleteAssetType = async (id: string, adminName: string) => {
@@ -388,15 +401,31 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setAccessoryTypes(prev => [...prev, saved]);
       fetchLogs();
   };
+  const updateAccessoryType = async (type: AccessoryType, adminName: string) => {
+      await putData('accessory-types', { ...type, _adminUser: adminName });
+      setAccessoryTypes(prev => prev.map(t => t.id === type.id ? type : t));
+      fetchLogs();
+  };
   const deleteAccessoryType = async (id: string, adminName: string) => {
       await deleteData('accessory-types', id);
       setAccessoryTypes(prev => prev.filter(t => t.id !== id));
       fetchLogs();
   };
 
+  const addCustomField = async (field: CustomField, adminName: string) => {
+      const saved = await postData('custom-fields', { ...field, _adminUser: adminName });
+      setCustomFields(prev => [...prev, saved]);
+      fetchLogs();
+  };
+  const deleteCustomField = async (id: string, adminName: string) => {
+      await deleteData('custom-fields', id);
+      setCustomFields(prev => prev.filter(f => f.id !== id));
+      fetchLogs();
+  };
+
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
-    models, brands, assetTypes, maintenances, sectors, accessoryTypes,
+    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     addDevice, updateDevice, deleteDevice,
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
@@ -406,11 +435,12 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     clearLogs,
     restoreItem, // New
     addModel, updateModel, deleteModel,
-    addBrand, deleteBrand,
-    addAssetType, deleteAssetType,
+    addBrand, updateBrand, deleteBrand,
+    addAssetType, updateAssetType, deleteAssetType,
     addMaintenance, deleteMaintenance,
     addSector, deleteSector,
-    addAccessoryType, deleteAccessoryType
+    addAccessoryType, updateAccessoryType, deleteAccessoryType,
+    addCustomField, deleteCustomField
   };
 
   return (

@@ -6,10 +6,17 @@ export enum DeviceStatus {
   RETIRED = 'Descartado'
 }
 
-// Configurações Dinâmicas
+// Campos Personalizados
+export interface CustomField {
+  id: string;
+  name: string; // Label visual (ex: Memória RAM, ID Flexx)
+}
+
+// Configurações Dinâmicas (Tipo de Ativo)
 export interface AssetType {
   id: string;
-  name: string; 
+  name: string;
+  customFieldIds?: string[]; // IDs dos campos vinculados a este tipo
 }
 
 export interface DeviceBrand {
@@ -25,17 +32,17 @@ export interface DeviceModel {
   imageUrl?: string; 
 }
 
-// Novos Tipos para Acessórios
+// Acessórios
 export interface AccessoryType {
     id: string;
-    name: string; // Ex: Carregador, Capa, Mochila, Mouse
+    name: string; 
 }
 
 export interface DeviceAccessory {
     id: string;
     deviceId: string;
-    accessoryTypeId: string; // Relacionado a AccessoryType
-    name: string; // Nome cacheado ou específico (ex: Carregador 65W)
+    accessoryTypeId: string; 
+    name: string; 
 }
 
 export interface MaintenanceRecord {
@@ -63,14 +70,18 @@ export interface Device {
   status: DeviceStatus;
   currentUserId?: string | null;
   
+  // Identificadores Fixos (Mantidos por terem lógica específica na UI)
   imei?: string;         
-  pulsusId?: string;     
+  pulsusId?: string;
+  
+  // Dados Personalizados (JSON flexível para RAM, IDs de Apps, etc)
+  // Substitui: Storage, Memory, FlexxGPSId, etc.
+  customData?: Record<string, string>; 
+
   sectorId?: string;     
   costCenter?: string;   
 
   linkedSimId?: string | null;
-  
-  // Array de acessórios vinculados a este dispositivo
   accessories?: DeviceAccessory[]; 
 
   purchaseDate: string;
@@ -104,7 +115,6 @@ export interface Term {
   fileUrl: string; 
 }
 
-// Checklist Dinâmico (Chave = Nome do Acessório, Valor = Boolean)
 export type ReturnChecklist = Record<string, boolean>;
 
 export interface User {
@@ -119,8 +129,6 @@ export interface User {
   jobTitle: string;
   active: boolean;
   terms?: Term[];
-  
-  // Nova flag para indicar pendências manuais (ex: devolução incompleta)
   hasPendingIssues?: boolean; 
   pendingIssuesNote?: string;
 }
@@ -151,7 +159,7 @@ export enum ActionType {
   create = 'Criação',
   UPDATE = 'Atualização',
   DELETE = 'Exclusão',
-  RESTORE = 'Restauração', // Novo tipo
+  RESTORE = 'Restauração', 
   CHECKOUT = 'Entrega',
   CHECKIN = 'Devolução',
   MAINTENANCE_START = 'Envio Manutenção',
@@ -164,13 +172,13 @@ export enum ActionType {
 export interface AuditLog {
   id: string;
   assetId: string;
-  assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory';
+  assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory' | 'CustomField';
   targetName?: string;
   action: ActionType;
   timestamp: string;
   notes?: string;
   adminUser: string;
-  backupData?: string; // JSON string do item excluído para restauração
+  backupData?: string; 
 }
 
 export interface DashboardStats {
