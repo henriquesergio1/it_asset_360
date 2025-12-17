@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, ReturnChecklist, DeviceAccessory } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X, Layers, Square, Copy, Box, Ban, LayoutGrid, Eye, AlertTriangle, HardDrive, SmartphoneNfc, Sliders } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X, Layers, Square, Copy, Box, Ban, LayoutGrid, Eye, AlertTriangle, HardDrive, SmartphoneNfc, Sliders, MapPin } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
@@ -509,7 +509,7 @@ const DeviceManager = () => {
                 </th>
                 <th className="px-6 py-3">Modelo / Imagem</th>
                 <th className="px-6 py-3">Identificação</th>
-                <th className="px-6 py-3">Localização</th>
+                <th className="px-6 py-3">Localização (Ativo)</th>
                 {viewStatus === 'ALL' && <th className="px-6 py-3">Status</th>}
                 <th className="px-6 py-3">Usuário Atual</th>
                 <th className="px-6 py-3 text-right">Ações</th>
@@ -521,6 +521,15 @@ const DeviceManager = () => {
                 const { model, brand, type } = getModelDetails(device.modelId);
                 const sectorName = sectors.find(s => s.id === device.sectorId)?.name;
                 const isSelected = selectedIds.includes(device.id);
+
+                // Check for divergence: Device Sector vs User Sector
+                let sectorDivergence = false;
+                if (assignedUser && assignedUser.sectorId && device.sectorId) {
+                    // Compare IDs. If differ, it means device belongs to one sector but is with user from another.
+                    if (assignedUser.sectorId !== device.sectorId) {
+                        sectorDivergence = true;
+                    }
+                }
 
                 return (
                   <tr key={device.id} className={`border-b transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50 bg-white'}`}>
@@ -566,8 +575,18 @@ const DeviceManager = () => {
                     </td>
                     <td className="px-6 py-4">
                         <div className="text-xs text-gray-600">
-                            {sectorName ? <div className="font-semibold">{sectorName}</div> : '-'}
+                            {sectorName ? <div className="font-bold">{sectorName}</div> : <div className="text-gray-400">-</div>}
                             {device.costCenter && <div>Cód: {device.costCenter}</div>}
+                            
+                            {/* DIVERGENCE WARNING */}
+                            {sectorDivergence && assignedUser && (
+                                <div className="mt-1 bg-orange-100 text-orange-800 p-1 rounded flex items-start gap-1" title="Dispositivo alocado em setor diferente do original (Possível Empréstimo)">
+                                    <AlertTriangle size={10} className="mt-0.5 shrink-0"/>
+                                    <span className="text-[10px] leading-tight">
+                                        Em uso por: {sectors.find(s => s.id === assignedUser.sectorId)?.name || 'Outro'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </td>
                     
@@ -589,7 +608,7 @@ const DeviceManager = () => {
                           <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
                             {assignedUser.fullName.charAt(0)}
                           </div>
-                          <span className="truncate max-w-[100px]">{assignedUser.fullName}</span>
+                          <span className="truncate max-w-[100px] text-xs" title={assignedUser.fullName}>{assignedUser.fullName}</span>
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>

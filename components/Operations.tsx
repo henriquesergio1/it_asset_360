@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist } from '../types';
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 type OperationType = 'CHECKOUT' | 'CHECKIN';
@@ -124,7 +125,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
 
 
 const Operations = () => {
-  const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors } = useData();
+  const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors, updateDevice } = useData();
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<OperationType>('CHECKOUT');
   const [assetType, setAssetType] = useState<AssetType>('Device');
@@ -135,6 +136,9 @@ const Operations = () => {
   const [notes, setNotes] = useState('');
   const [termFile, setTermFile] = useState<File | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
+  
+  // SYNC STATE (New)
+  const [syncAssetData, setSyncAssetData] = useState(true);
   
   // Checkin Checklist State
   const [checklist, setChecklist] = useState<ReturnChecklist>({
@@ -216,7 +220,7 @@ const Operations = () => {
   });
 
 
-  const handleExecute = () => {
+  const handleExecute = async () => {
     const adminName = currentUser?.name || 'Unknown';
     
     // Store data for printing before clearing inputs
@@ -228,6 +232,24 @@ const Operations = () => {
             currentUserId = sims.find(s => s.id === selectedAssetId)?.currentUserId || '';
         }
     }
+
+    // --- LOGIC FOR DATA SYNC (The "Centralization") ---
+    if (activeTab === 'CHECKOUT' && syncAssetData && assetType === 'Device') {
+        const user = users.find(u => u.id === selectedUserId);
+        const device = devices.find(d => d.id === selectedAssetId);
+        
+        if (user && device) {
+            const updatedDevice: Device = {
+                ...device,
+                sectorId: user.sectorId, // Atualiza Setor do Equipamento (Ex: Vendas)
+                costCenter: user.jobTitle // Atualiza Cód. Interno (Ex: CC-101)
+            };
+            // Executa update (em background ou await se a api permitir)
+            // No DataContext Mock/Prod, isso é síncrono ou async rápido
+            await updateDevice(updatedDevice, adminName);
+        }
+    }
+    // --------------------------------------------------
 
     if (activeTab === 'CHECKOUT') {
       assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, termFile || undefined);
@@ -251,6 +273,7 @@ const Operations = () => {
     setSelectedUserId('');
     setNotes('');
     setTermFile(null);
+    setSyncAssetData(true); // Reset to default
     setTimeout(() => setSuccessMsg(''), 5000);
   };
 
@@ -297,6 +320,23 @@ const Operations = () => {
           checklist: lastOperation.checklistSnapshot,
           notes: lastOperation.notes
       });
+  };
+
+  // Helper to show what will be synced
+  const getSyncPreview = () => {
+      if (!selectedUserId) return null;
+      const u = users.find(x => x.id === selectedUserId);
+      const s = sectors.find(x => x.id === u?.sectorId);
+      if (!u) return null;
+      return (
+          <div className="text-xs text-blue-600 mt-2 pl-7">
+              <p>O ativo assumirá:</p>
+              <ul className="list-disc pl-4">
+                  <li>Setor: <strong>{s?.name || 'N/A'}</strong></li>
+                  <li>Centro Custo: <strong>{u.jobTitle || 'N/A'}</strong></li>
+              </ul>
+          </div>
+      );
   };
 
   return (
@@ -359,11 +399,13 @@ const Operations = () => {
                   {assetType === 'Device' ? (() => {
                     const d = devices.find(x => x.id === selectedAssetId);
                     const m = d ? models.find(mod => mod.id === d.modelId) : null;
+                    const sec = sectors.find(s => s.id === d?.sectorId);
                     return d ? (
                       <div className="space-y-1">
                         <p><span className="text-gray-500">Modelo:</span> <span className="font-medium">{m?.name || 'Desconhecido'}</span></p>
                         <p><span className="text-gray-500">Serial:</span> {d.serialNumber}</p>
                         <p><span className="text-gray-500">Tag:</span> {d.assetTag}</p>
+                        <p><span className="text-gray-500">Setor Atual:</span> {sec?.name || '-'} ({d.costCenter || 'S/ Cód'})</p>
                         {d.imei && <p><span className="text-gray-500">IMEI:</span> {d.imei}</p>}
                       </div>
                     ) : null;
@@ -393,6 +435,35 @@ const Operations = () => {
                      placeholder="Pesquisar Colaborador (Nome, Email...)"
                      icon={<UserIcon size={18}/>}
                   />
+
+                  {/* SYNC CHECKBOX (CENTRALIZATION LOGIC) */}
+                  {selectedUserId && assetType === 'Device' && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 animate-fade-in">
+                          <label className="flex items-start gap-3 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={syncAssetData} 
+                                onChange={e => setSyncAssetData(e.target.checked)}
+                                className="mt-1 rounded text-blue-600 focus:ring-blue-500 h-4 w-4"
+                              />
+                              <div>
+                                  <span className="block text-sm font-bold text-gray-800 flex items-center gap-2">
+                                      <RefreshCw size={14}/> Sincronizar Cadastro do Ativo
+                                  </span>
+                                  <span className="block text-xs text-gray-600 mt-1">
+                                      Atualiza o Setor e Centro de Custo do equipamento para igualar ao do colaborador.
+                                  </span>
+                                  {syncAssetData && getSyncPreview()}
+                                  {!syncAssetData && (
+                                      <div className="mt-2 flex items-start gap-1 text-xs text-orange-700 bg-orange-50 p-1.5 rounded border border-orange-100">
+                                          <AlertCircle size={12} className="mt-0.5 shrink-0"/>
+                                          <span>Modo Empréstimo/Férias: O ativo manterá seu setor original, mas ficará em posse deste usuário.</span>
+                                      </div>
+                                  )}
+                              </div>
+                          </label>
+                      </div>
+                  )}
                 </>
               )}
 
