@@ -160,7 +160,7 @@ const DataImporter = () => {
       }
 
       if (diffs.length > 0) {
-          return { status: 'CONFLICT', row, existingId: existing.id, diffs, selected: true }; // Selecionado por padrão para atualizar
+          return { status: 'CONFLICT', row, existingId: existing.id, diffs, selected: true };
       }
 
       return { status: 'UNCHANGED', row, selected: false };
@@ -187,8 +187,6 @@ const DataImporter = () => {
       if (statusCSV && existing.status !== statusCSV) {
           diffs.push({ field: 'Status', oldValue: existing.status, newValue: statusCSV });
       }
-      
-      // Validação de Modelo/Marca é complexa de exibir diff, focamos nos dados primários
       
       if (diffs.length > 0) {
           return { status: 'CONFLICT', row, existingId: existing.id, diffs, selected: true };
@@ -239,16 +237,23 @@ const DataImporter = () => {
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
       setLogs([]);
 
+      // --- LOCAL CACHES FOR BATCH EXECUTION ---
+      // This prevents creating duplicate Sectors/Brands/Models within the same import loop
+      const tempSectors = new Map<string, string>();
+      const tempBrands = new Map<string, string>();
+      const tempAssetTypes = new Map<string, string>();
+      const tempModels = new Map<string, string>();
+
       const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
       for (let i = 0; i < toProcess.length; i++) {
           const item = toProcess[i];
           try {
               if (item.status === 'NEW') {
-                  await createRecord(item.row);
+                  await createRecord(item.row, tempSectors, tempBrands, tempAssetTypes, tempModels);
                   setProgress(p => ({ ...p, current: i + 1, created: p.created + 1 }));
               } else if (item.status === 'CONFLICT' && item.existingId) {
-                  await updateRecord(item.existingId, item.row);
+                  await updateRecord(item.existingId, item.row, tempSectors);
                   setProgress(p => ({ ...p, current: i + 1, updated: p.updated + 1 }));
               }
           } catch (e: any) {
@@ -262,19 +267,74 @@ const DataImporter = () => {
       setStep('DONE');
   };
 
-  // --- HELPERS CREATE/UPDATE ---
+  // --- HELPERS CREATE/UPDATE (WITH CACHING) ---
   
-  const resolveSector = (name: string): string => {
-      const existing = sectors.find(s => s.name.toLowerCase() === name.toLowerCase());
+  const resolveSector = (name: string, cache: Map<string, string>): string => {
+      const normalized = name.trim().toLowerCase();
+      
+      // 1. Check DB State
+      const existing = sectors.find(s => s.name.toLowerCase() === normalized);
       if (existing) return existing.id;
+
+      // 2. Check Local Cache (created in this batch)
+      if (cache.has(normalized)) return cache.get(normalized)!;
+
+      // 3. Create New
       const newId = Math.random().toString(36).substr(2, 9);
       addSector({ id: newId, name }, adminName);
+      cache.set(normalized, newId); // Add to cache
       return newId;
   };
 
-  const createRecord = async (row: any) => {
+  const resolveBrand = (name: string, cache: Map<string, string>): string => {
+      const normalized = name.trim().toLowerCase();
+      const existing = brands.find(b => b.name.toLowerCase() === normalized);
+      if (existing) return existing.id;
+      if (cache.has(normalized)) return cache.get(normalized)!;
+
+      const newId = Math.random().toString(36).substr(2, 9);
+      addBrand({ id: newId, name }, adminName);
+      cache.set(normalized, newId);
+      return newId;
+  };
+
+  const resolveType = (name: string, cache: Map<string, string>): string => {
+      const normalized = name.trim().toLowerCase();
+      const existing = assetTypes.find(t => t.name.toLowerCase() === normalized);
+      if (existing) return existing.id;
+      if (cache.has(normalized)) return cache.get(normalized)!;
+
+      const newId = Math.random().toString(36).substr(2, 9);
+      addAssetType({ id: newId, name }, adminName);
+      cache.set(normalized, newId);
+      return newId;
+  };
+
+  const resolveModel = (name: string, brandId: string, typeId: string, cache: Map<string, string>): string => {
+      const normalized = name.trim().toLowerCase();
+      // Check existing in DB matching name AND brand (to avoid name collision across brands)
+      const existing = models.find(m => m.name.toLowerCase() === normalized && m.brandId === brandId);
+      if (existing) return existing.id;
+      
+      // Cache key includes brand to be unique
+      const cacheKey = `${normalized}_${brandId}`;
+      if (cache.has(cacheKey)) return cache.get(cacheKey)!;
+
+      const newId = Math.random().toString(36).substr(2, 9);
+      addModel({ id: newId, name, brandId, typeId, imageUrl: '' }, adminName);
+      cache.set(cacheKey, newId);
+      return newId;
+  };
+
+  const createRecord = async (
+      row: any, 
+      secCache: Map<string, string>,
+      brandCache: Map<string, string>,
+      typeCache: Map<string, string>,
+      modelCache: Map<string, string>
+  ) => {
       if (importType === 'USERS') {
-          const secId = row['Funcao (Dropdown)'] ? resolveSector(row['Funcao (Dropdown)']) : '';
+          const secId = row['Funcao (Dropdown)'] ? resolveSector(row['Funcao (Dropdown)'], secCache) : '';
           addUser({
               id: Math.random().toString(36).substr(2, 9),
               fullName: row['Nome Completo'],
@@ -290,36 +350,33 @@ const DataImporter = () => {
           }, adminName);
       } 
       else if (importType === 'DEVICES') {
-          // Resolve Model/Brand Logic (Simplified)
-          let brandId = '';
           const bName = row['Marca'] || 'Genérica';
-          const existB = brands.find(b => b.name.toLowerCase() === bName.toLowerCase());
-          if (existB) brandId = existB.id; else { brandId = Math.random().toString(36).substr(2,9); addBrand({id:brandId, name:bName}, adminName); }
+          const brandId = resolveBrand(bName, brandCache);
 
-          let modelId = '';
+          const tName = row['Tipo'] || 'Outros';
+          const typeId = resolveType(tName, typeCache);
+
           const mName = row['Modelo'] || 'Genérico';
-          const existM = models.find(m => m.name.toLowerCase() === mName.toLowerCase());
-          if (existM) modelId = existM.id; else { 
-              modelId = Math.random().toString(36).substr(2,9); 
-              // Tenta achar tipo
-              let typeId = assetTypes[0]?.id;
-              const tName = row['Tipo'];
-              if(tName) {
-                  const existT = assetTypes.find(t => t.name.toLowerCase() === tName.toLowerCase());
-                  if(existT) typeId = existT.id; else { typeId = Math.random().toString(36).substr(2,9); addAssetType({id:typeId, name:tName}, adminName); }
-              }
-              addModel({id:modelId, name:mName, brandId, typeId, imageUrl:''}, adminName); 
+          const modelId = resolveModel(mName, brandId, typeId, modelCache);
+
+          // Lógica de IMEI inteligente
+          let finalImei = row['IMEI'] || undefined;
+          const tag = row['Patrimonio(Tag)'];
+          
+          // Se não veio IMEI na coluna certa, mas o campo Tag parece um IMEI (15 digitos numericos)
+          if (!finalImei && tag && /^\d{15}$/.test(tag)) {
+              finalImei = tag;
           }
 
           addDevice({
               id: Math.random().toString(36).substr(2, 9),
               modelId,
-              assetTag: row['Patrimonio(Tag)'],
+              assetTag: tag,
               serialNumber: row['Serial'] || 'N/A',
               status: (row['Status'] as DeviceStatus) || DeviceStatus.AVAILABLE,
               purchaseCost: parseFloat(row['Valor Compra']) || 0,
               purchaseDate: row['Data Compra(AAAA-MM-DD)'] || new Date().toISOString().split('T')[0],
-              imei: row['IMEI'] || undefined,
+              imei: finalImei,
               currentUserId: null
           }, adminName);
       }
@@ -336,19 +393,18 @@ const DataImporter = () => {
       }
   };
 
-  const updateRecord = async (id: string, row: any) => {
+  const updateRecord = async (id: string, row: any, secCache: Map<string, string>) => {
       if (importType === 'USERS') {
           const oldUser = users.find(u => u.id === id);
           if (!oldUser) return;
           
-          // Preservar dados antigos que não vieram no CSV
           const updated: User = { ...oldUser };
           if(row['Nome Completo']) updated.fullName = row['Nome Completo'];
           if(row['RG']) updated.rg = row['RG'];
           if(row['PIS']) updated.pis = row['PIS'];
           if(row['Endereco']) updated.address = row['Endereco'];
           if(row['Setor/Codigo (Texto)']) updated.jobTitle = row['Setor/Codigo (Texto)'];
-          if(row['Funcao (Dropdown)']) updated.sectorId = resolveSector(row['Funcao (Dropdown)']);
+          if(row['Funcao (Dropdown)']) updated.sectorId = resolveSector(row['Funcao (Dropdown)'], secCache);
 
           updateUser(updated, adminName);
       }
