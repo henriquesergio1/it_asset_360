@@ -341,6 +341,17 @@ app.put('/api/users/:id', async (req, res) => {
     const u = req.body;
     try {
         const pool = await sql.connect(dbConfig);
+        
+        // 1. Fetch current state to compare (Detect Activation/Inactivation)
+        let currentActive = null;
+        try {
+            const currentRes = await pool.request().query(`SELECT Active FROM Users WHERE Id = '${req.params.id}'`);
+            if (currentRes.recordset.length > 0) {
+                currentActive = currentRes.recordset[0].Active;
+            }
+        } catch(e) { console.error('Error fetching current user state', e); }
+
+        // 2. Perform Update
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
             .input('FullName', sql.NVarChar, u.fullName)
@@ -352,14 +363,19 @@ app.put('/api/users/:id', async (req, res) => {
             .input('PendingIssuesNote', sql.NVarChar, u.pendingIssuesNote || '')
             .query(`UPDATE Users SET FullName=@FullName, Email=@Email, SectorId=@SectorId, JobTitle=@JobTitle, Active=@Active, HasPendingIssues=@HasPendingIssues, PendingIssuesNote=@PendingIssuesNote WHERE Id=@Id`);
         
-        // Log Logic for User Updates (Includes Activation/Inactivation)
+        // 3. Determine precise log action
         let logActionType = 'Atualização';
-        let logNotes = `Dados atualizados`;
+        let logNotes = 'Dados atualizados';
         
-        // Detect Status Change intent (heuristic based on active prop being present)
-        if (u.active !== undefined) {
-            logNotes += `. Status: ${u.active ? 'Ativo' : 'Inativo'}`;
-            // If it was a pure toggle, we could check DB, but here we just log the new state.
+        // Check for Status Change
+        if (currentActive !== null && u.active !== undefined) {
+            const isCurrentlyActive = !!currentActive;
+            const willBeActive = !!u.active;
+            
+            if (isCurrentlyActive !== willBeActive) {
+                logActionType = willBeActive ? 'Ativação' : 'Inativação';
+                logNotes = willBeActive ? 'Colaborador reativado no sistema.' : 'Colaborador inativado.';
+            }
         }
         
         await logAction(u.id, 'User', logActionType, u._adminUser, logNotes);

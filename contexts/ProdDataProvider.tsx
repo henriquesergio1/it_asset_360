@@ -34,6 +34,13 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return res.json();
   };
 
+  const fetchLogs = async () => {
+      try {
+          const res = await fetch(`${API_URL}/api/logs`);
+          if (res.ok) setLogs(await res.json());
+      } catch (e) { console.error('Failed to fetch logs', e); }
+  };
+
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
@@ -132,64 +139,76 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const saved = await postData('devices', { ...device, _adminUser: adminName });
       setDevices(prev => [...prev, saved]);
+      fetchLogs();
     } catch (e) { alert('Erro ao salvar dispositivo'); }
   };
 
   const updateDevice = async (device: Device, adminName: string) => {
     await putData('devices', { ...device, _adminUser: adminName });
     setDevices(prev => prev.map(d => d.id === device.id ? device : d));
+    fetchLogs();
   };
 
   const deleteDevice = async (id: string, adminName: string) => {
     await deleteData('devices', id);
     setDevices(prev => prev.filter(d => d.id !== id));
+    fetchLogs();
   };
 
   const addSim = async (sim: SimCard, adminName: string) => {
     const saved = await postData('sims', { ...sim, _adminUser: adminName });
     setSims(prev => [...prev, saved]);
+    fetchLogs();
   };
 
   const updateSim = async (sim: SimCard, adminName: string) => {
     await putData('sims', { ...sim, _adminUser: adminName });
     setSims(prev => prev.map(s => s.id === sim.id ? sim : s));
+    fetchLogs();
   };
 
   const deleteSim = async (id: string, adminName: string) => {
     await deleteData('sims', id);
     setSims(prev => prev.filter(s => s.id !== id));
+    fetchLogs();
   };
 
   const addUser = async (user: User, adminName: string) => {
     const saved = await postData('users', { ...user, _adminUser: adminName });
     setUsers(prev => [...prev, { ...saved, terms: [] }]);
+    fetchLogs();
   };
 
   const updateUser = async (user: User, adminName: string) => {
     await putData('users', { ...user, _adminUser: adminName });
     setUsers(prev => prev.map(u => u.id === user.id ? user : u));
+    fetchLogs();
   };
 
   const toggleUserActive = async (user: User, adminName: string) => {
     const updatedUser = { ...user, active: !user.active };
     await putData('users', { ...updatedUser, _adminUser: adminName });
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
+    fetchLogs(); // Essential: Update logs to show "Inativação"/"Ativação" immediately
   };
 
   // System Users
   const addSystemUser = async (user: SystemUser, adminName: string) => {
     const saved = await postData('system-users', { ...user, _adminUser: adminName });
     setSystemUsers(prev => [...prev, saved]);
+    fetchLogs();
   };
 
   const updateSystemUser = async (user: SystemUser, adminName: string) => {
     await putData('system-users', { ...user, _adminUser: adminName });
     setSystemUsers(prev => prev.map(u => u.id === user.id ? user : u));
+    fetchLogs();
   };
 
   const deleteSystemUser = async (id: string, adminName: string) => {
     await deleteData('system-users', id);
     setSystemUsers(prev => prev.filter(u => u.id !== id));
+    fetchLogs();
   };
 
   // Settings
@@ -200,6 +219,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           body: JSON.stringify({ ...newSettings, _adminUser: adminName })
       });
       setSettings(newSettings);
+      fetchLogs();
   };
 
   // --- Operations Logic Updated to Create Terms ---
@@ -229,14 +249,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         fileUrl: termFile ? 'PENDING_UPLOAD' : '' // 'PENDING_UPLOAD' is just a placeholder logic, simpler is empty string if no file
     };
 
-    // If file exists, in a real app we upload it first to get URL. 
-    // Here we skip file upload logic implementation details and just assume string or empty.
-    // Ideally: const url = await uploadFile(termFile); termData.fileUrl = url;
     if (termFile) {
         // Mocking the URL for prod demo (in real world, upload endpoint needed)
-        // Since we don't have file storage in this setup, we just mark it as "Signed" text or leave empty to simulate pending if no storage.
-        // Let's assume we can't really store the file in SQL easily without a blob table.
-        // We will leave it empty if no storage service is implemented, OR use a dummy URL.
         termData.fileUrl = "signed_doc.pdf"; 
     } else {
         termData.fileUrl = "";
@@ -290,59 +304,72 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addModel = async (model: DeviceModel, adminName: string) => {
       const saved = await postData('models', { ...model, _adminUser: adminName });
       setModels(prev => [...prev, saved]);
+      fetchLogs();
   };
   const updateModel = async (model: DeviceModel, adminName: string) => {
       await putData('models', { ...model, _adminUser: adminName });
       setModels(prev => prev.map(m => m.id === model.id ? model : m));
+      fetchLogs();
   };
   const deleteModel = async (id: string, adminName: string) => {
       await deleteData('models', id);
       setModels(prev => prev.filter(m => m.id !== id));
+      fetchLogs();
   };
 
   const addBrand = async (brand: DeviceBrand, adminName: string) => {
       const saved = await postData('brands', { ...brand, _adminUser: adminName });
       setBrands(prev => [...prev, saved]);
+      fetchLogs();
   };
   const deleteBrand = async (id: string, adminName: string) => {
       await deleteData('brands', id);
       setBrands(prev => prev.filter(b => b.id !== id));
+      fetchLogs();
   };
 
   const addAssetType = async (type: AssetType, adminName: string) => {
       const saved = await postData('asset-types', { ...type, _adminUser: adminName });
       setAssetTypes(prev => [...prev, saved]);
+      fetchLogs();
   };
   const deleteAssetType = async (id: string, adminName: string) => {
       await deleteData('asset-types', id);
       setAssetTypes(prev => prev.filter(t => t.id !== id));
+      fetchLogs();
   };
 
   const addMaintenance = async (record: MaintenanceRecord, adminName: string) => {
       const saved = await postData('maintenances', { ...record, _adminUser: adminName });
       setMaintenances(prev => [...prev, saved]);
+      fetchLogs();
   };
   const deleteMaintenance = async (id: string, adminName: string) => {
       await deleteData('maintenances', id);
       setMaintenances(prev => prev.filter(m => m.id !== id));
+      fetchLogs();
   };
 
   const addSector = async (sector: UserSector, adminName: string) => {
       const saved = await postData('sectors', { ...sector, _adminUser: adminName });
       setSectors(prev => [...prev, saved]);
+      fetchLogs();
   };
   const deleteSector = async (id: string, adminName: string) => {
       await deleteData('sectors', id);
       setSectors(prev => prev.filter(s => s.id !== id));
+      fetchLogs();
   };
 
   const addAccessoryType = async (type: AccessoryType, adminName: string) => {
       const saved = await postData('accessory-types', { ...type, _adminUser: adminName });
       setAccessoryTypes(prev => [...prev, saved]);
+      fetchLogs();
   };
   const deleteAccessoryType = async (id: string, adminName: string) => {
       await deleteData('accessory-types', id);
       setAccessoryTypes(prev => prev.filter(t => t.id !== id));
+      fetchLogs();
   };
 
   const value: DataContextType = {
