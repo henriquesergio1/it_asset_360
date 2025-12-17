@@ -42,6 +42,38 @@ const UserManager = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // --- VALIDAÇÃO DE UNICIDADE (CPF E EMAIL) ---
+    const cleanEmail = formData.email?.trim().toLowerCase();
+    const cleanCpf = formData.cpf?.trim();
+
+    if (cleanEmail) {
+        // Procura usuário com mesmo email, excluindo o usuário atual (em caso de edição)
+        const emailConflict = users.find(u => 
+            u.email.toLowerCase() === cleanEmail && 
+            u.id !== editingId
+        );
+
+        if (emailConflict) {
+            alert(`ERRO: O E-mail "${formData.email}" já está cadastrado para o colaborador: ${emailConflict.fullName}.`);
+            return;
+        }
+    }
+
+    if (cleanCpf) {
+        // Procura usuário com mesmo CPF, excluindo o usuário atual
+        const cpfConflict = users.find(u => 
+            u.cpf === cleanCpf && 
+            u.id !== editingId
+        );
+
+        if (cpfConflict) {
+            alert(`ERRO: O CPF "${formData.cpf}" já está cadastrado para o colaborador: ${cpfConflict.fullName}.`);
+            return;
+        }
+    }
+    // ---------------------------------------------
+
     if (editingId && formData.id) {
       updateUser(formData as User, adminName);
     } else {

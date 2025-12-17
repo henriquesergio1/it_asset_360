@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, ReturnChecklist, DeviceAccessory } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Monitor, Settings, Image as ImageIcon, FileText, Wrench, DollarSign, Paperclip, Link, Unlink, History, ArrowRight, Tablet, Hash, ScanBarcode, ExternalLink, ArrowUpRight, ArrowDownLeft, CheckSquare, Printer, CheckCircle, Plug, X, Layers, Square, Copy } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
@@ -21,6 +21,10 @@ const DeviceManager = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [isQuickOpOpen, setIsQuickOpOpen] = useState(false); // Quick Operation Modal
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false); // Bulk Edit Modal
+  
+  // Selection State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,6 +34,23 @@ const DeviceManager = () => {
   const [formData, setFormData] = useState<Partial<Device>>({
     status: DeviceStatus.AVAILABLE,
     accessories: []
+  });
+
+  // Bulk Form State
+  const [bulkForm, setBulkForm] = useState<{
+      modelId: string;
+      sectorId: string;
+      status: string;
+      costCenter: string;
+      accessories: string[]; // List of AccessoryType IDs
+      applyAccessories: boolean; // Checkbox to confirm accessory overwrite
+  }>({
+      modelId: '',
+      sectorId: '',
+      status: '',
+      costCenter: '',
+      accessories: [],
+      applyAccessories: false
   });
   
   // Quick Operation State
@@ -52,7 +73,99 @@ const DeviceManager = () => {
 
   const adminName = currentUser?.name || 'Unknown User';
 
-  // --- Handlers ---
+  // --- Helpers ---
+  const getModelDetails = (modelId?: string) => {
+    const model = models.find(m => m.id === modelId);
+    const brand = brands.find(b => b.id === model?.brandId);
+    const type = assetTypes.find(t => t.id === model?.typeId);
+    return { model, brand, type };
+  };
+
+  const filteredDevices = devices.filter(d => {
+    const { model, brand } = getModelDetails(d.modelId);
+    const searchString = `${model?.name} ${brand?.name} ${d.assetTag} ${d.imei || ''} ${d.pulsusId || ''}`.toLowerCase();
+    return searchString.includes(searchTerm.toLowerCase());
+  });
+
+  // --- Bulk Selection Handlers ---
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.checked) {
+          setSelectedIds(filteredDevices.map(d => d.id));
+      } else {
+          setSelectedIds([]);
+      }
+  };
+
+  const handleSelectOne = (id: string) => {
+      if (selectedIds.includes(id)) {
+          setSelectedIds(prev => prev.filter(item => item !== id));
+      } else {
+          setSelectedIds(prev => [...prev, id]);
+      }
+  };
+
+  const handleBulkSubmit = async () => {
+      if (!window.confirm(`Tem certeza que deseja alterar ${selectedIds.length} dispositivos? Essa ação não pode ser desfeita.`)) return;
+
+      let skippedStatusCount = 0;
+
+      for (const id of selectedIds) {
+          const originalDevice = devices.find(d => d.id === id);
+          if (!originalDevice) continue;
+
+          const updatedDevice = { ...originalDevice };
+
+          // Apply changes only if selected/filled
+          if (bulkForm.modelId) updatedDevice.modelId = bulkForm.modelId;
+          if (bulkForm.sectorId) updatedDevice.sectorId = bulkForm.sectorId;
+          if (bulkForm.costCenter) updatedDevice.costCenter = bulkForm.costCenter;
+          
+          // STATUS LOGIC: Only apply if device is NOT currently assigned to a user
+          if (bulkForm.status) {
+              if (originalDevice.currentUserId) {
+                  // Device is allocated, ignore status change to prevent inconsistency
+                  skippedStatusCount++;
+              } else {
+                  updatedDevice.status = bulkForm.status as DeviceStatus;
+              }
+          }
+
+          // Handle Accessories (Overwrite mode)
+          if (bulkForm.applyAccessories) {
+              const newAccessories: DeviceAccessory[] = bulkForm.accessories.map(typeId => {
+                  const type = accessoryTypes.find(t => t.id === typeId);
+                  return {
+                      id: Math.random().toString(36).substr(2, 9),
+                      deviceId: id,
+                      accessoryTypeId: typeId,
+                      name: type?.name || 'Acessório'
+                  };
+              });
+              updatedDevice.accessories = newAccessories;
+          }
+
+          await updateDevice(updatedDevice, adminName);
+      }
+
+      setIsBulkEditOpen(false);
+      setSelectedIds([]);
+      
+      if (skippedStatusCount > 0) {
+          alert(`Alteração em massa concluída!\n\nNota: O status NÃO foi alterado para ${skippedStatusCount} dispositivo(s) pois eles estão atualmente alocados (em uso) por colaboradores.`);
+      } else {
+          alert('Alteração em massa concluída!');
+      }
+  };
+
+  const toggleBulkAccessory = (typeId: string) => {
+      setBulkForm(prev => {
+          const exists = prev.accessories.includes(typeId);
+          if (exists) return { ...prev, accessories: prev.accessories.filter(id => id !== typeId) };
+          return { ...prev, accessories: [...prev.accessories, typeId] };
+      });
+  };
+
+  // --- Standard Handlers ---
 
   const handleOpenModal = (device?: Device) => {
     setActiveTab('GENERAL');
@@ -229,20 +342,6 @@ const DeviceManager = () => {
       }
   };
 
-  // --- Helpers ---
-
-  const getModelDetails = (modelId?: string) => {
-    const model = models.find(m => m.id === modelId);
-    const brand = brands.find(b => b.id === model?.brandId);
-    const type = assetTypes.find(t => t.id === model?.typeId);
-    return { model, brand, type };
-  };
-
-  const filteredDevices = devices.filter(d => {
-    const { model, brand } = getModelDetails(d.modelId);
-    const searchString = `${model?.name} ${brand?.name} ${d.assetTag} ${d.imei || ''} ${d.pulsusId || ''}`.toLowerCase();
-    return searchString.includes(searchTerm.toLowerCase());
-  });
 
   const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE || s.id === formData.linkedSimId);
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
@@ -280,12 +379,36 @@ const DeviceManager = () => {
         />
       </div>
 
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl z-40 flex items-center gap-6 animate-fade-in-up">
+              <span className="font-bold">{selectedIds.length} selecionado(s)</span>
+              <div className="h-4 w-px bg-slate-600"></div>
+              <button onClick={() => { setBulkForm({
+                  modelId: '', sectorId: '', status: '', costCenter: '', accessories: [], applyAccessories: false
+              }); setIsBulkEditOpen(true); }} className="flex items-center gap-2 hover:text-blue-300 font-medium">
+                  <Edit2 size={18} /> Alterar em Massa
+              </button>
+              <button onClick={() => setSelectedIds([])} className="hover:text-gray-300">
+                  <X size={18} />
+              </button>
+          </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left text-gray-500">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50">
               <tr>
+                <th className="px-6 py-3 w-4">
+                    <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                        onChange={handleSelectAll}
+                        checked={filteredDevices.length > 0 && selectedIds.length === filteredDevices.length}
+                    />
+                </th>
                 <th className="px-6 py-3">Modelo / Imagem</th>
                 <th className="px-6 py-3">Identificação</th>
                 <th className="px-6 py-3">Localização</th>
@@ -299,9 +422,18 @@ const DeviceManager = () => {
                 const assignedUser = users.find(u => u.id === device.currentUserId);
                 const { model, brand, type } = getModelDetails(device.modelId);
                 const sectorName = sectors.find(s => s.id === device.sectorId)?.name;
+                const isSelected = selectedIds.includes(device.id);
 
                 return (
-                  <tr key={device.id} className="bg-white border-b hover:bg-gray-50">
+                  <tr key={device.id} className={`border-b transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50 bg-white'}`}>
+                    <td className="px-6 py-4">
+                        <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                            checked={isSelected}
+                            onChange={() => handleSelectOne(device.id)}
+                        />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded bg-gray-100 border flex items-center justify-center overflow-hidden shrink-0">
@@ -403,6 +535,104 @@ const DeviceManager = () => {
           )}
         </div>
       </div>
+
+      {/* === BULK EDIT MODAL === */}
+      {isBulkEditOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-fade-in">
+                  <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
+                      <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                          <Layers size={20}/> Edição em Massa ({selectedIds.length})
+                      </h3>
+                      <button onClick={() => setIsBulkEditOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
+                  </div>
+                  
+                  <div className="p-6 max-h-[80vh] overflow-y-auto">
+                      <p className="text-sm text-gray-500 mb-4 bg-blue-50 p-3 rounded border border-blue-100">
+                          <strong>Atenção:</strong> Os campos deixados em branco (ou não selecionados) <u>não serão alterados</u> nos dispositivos. Apenas os valores preenchidos serão aplicados.
+                      </p>
+
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Modelo (Aplica a todos)</label>
+                              <select className="w-full border rounded-lg p-2" value={bulkForm.modelId} onChange={e => setBulkForm({...bulkForm, modelId: e.target.value})}>
+                                  <option value="">(Não alterar modelo)</option>
+                                  {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                              </select>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
+                                  <select className="w-full border rounded-lg p-2" value={bulkForm.sectorId} onChange={e => setBulkForm({...bulkForm, sectorId: e.target.value})}>
+                                      <option value="">(Não alterar)</option>
+                                      {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                  </select>
+                              </div>
+                              <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Centro de Custo</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border rounded-lg p-2" 
+                                    placeholder="(Não alterar)"
+                                    value={bulkForm.costCenter}
+                                    onChange={e => setBulkForm({...bulkForm, costCenter: e.target.value})}
+                                  />
+                              </div>
+                          </div>
+
+                          <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                              <select className="w-full border rounded-lg p-2" value={bulkForm.status} onChange={e => setBulkForm({...bulkForm, status: e.target.value})}>
+                                  <option value="">(Não alterar status)</option>
+                                  {Object.values(DeviceStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                              <p className="text-xs text-orange-600 mt-1">Nota: O status não será alterado para dispositivos que já estejam alocados a usuários.</p>
+                          </div>
+
+                          <div className="pt-2 border-t">
+                              <div className="flex justify-between items-center mb-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={bulkForm.applyAccessories} 
+                                        onChange={e => setBulkForm({...bulkForm, applyAccessories: e.target.checked})} 
+                                        className="rounded text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="text-sm font-bold text-gray-700">Sobrescrever Acessórios</span>
+                                  </label>
+                              </div>
+                              
+                              {bulkForm.applyAccessories && (
+                                  <div className="bg-gray-50 p-3 rounded-lg border max-h-40 overflow-y-auto grid grid-cols-2 gap-2">
+                                      {accessoryTypes.map(type => (
+                                          <label key={type.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1 rounded">
+                                              <input 
+                                                type="checkbox" 
+                                                checked={bulkForm.accessories.includes(type.id)}
+                                                onChange={() => toggleBulkAccessory(type.id)}
+                                                className="rounded text-blue-600"
+                                              />
+                                              <span className="text-sm text-gray-700">{type.name}</span>
+                                          </label>
+                                      ))}
+                                      {accessoryTypes.length === 0 && <span className="text-xs text-gray-400">Nenhum tipo cadastrado.</span>}
+                                  </div>
+                              )}
+                              {bulkForm.applyAccessories && (
+                                  <p className="text-xs text-red-500 mt-1">Atenção: Os acessórios atuais serão removidos e substituídos pela seleção acima.</p>
+                              )}
+                          </div>
+                      </div>
+
+                      <div className="mt-6 flex gap-3">
+                          <button onClick={() => setIsBulkEditOpen(false)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancelar</button>
+                          <button onClick={handleBulkSubmit} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold">Aplicar Alterações</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* === QUICK OPERATION MODAL === */}
       {isQuickOpOpen && quickOpDevice && (
