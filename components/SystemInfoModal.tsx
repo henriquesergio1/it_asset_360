@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -7,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.8.0',
+    version: '1.8.1',
     date: 'Atual',
+    title: 'Importação Inteligente & Sincronização',
+    changes: [
+      'Correção na importação CSV: O campo Patrimônio agora é opcional se o IMEI for fornecido (soberania do IMEI para dispositivos móveis).',
+      'Detecção de duplicados aprimorada no importador (Tag OU IMEI).',
+      'Adicionada opção "Sincronizar Cadastro" no fluxo de entrega: permite que o ativo herde automaticamente o Setor/Cód. do colaborador.',
+      'Ajuste visual na lista de dispositivos para alertar divergências de setor entre Ativo e Usuário.'
+    ]
+  },
+  {
+    version: '1.8.0',
+    date: '10/01/2025',
     title: 'Reestruturação de Dados de Colaborador',
     changes: [
       'Inversão semântica nos campos de colaborador.',
@@ -25,167 +37,6 @@ const versions = [
       'Restauração das cláusulas completas e profissionais no Termo de Responsabilidade.',
       'Melhoria na redação das condições de uso, segurança e devolução.',
       'Manutenção da formatação compacta para impressão em página única.'
-    ]
-  },
-    {
-    version: '1.7.6',
-    date: '14/11/2023',
-    title: 'Ajuste Legal e Layout',
-    changes: [
-      'Adicionado campo CNPJ nas configurações globais do sistema.',
-      'Inclusão automática do CNPJ no cabeçalho do Termo de Responsabilidade.',
-      'Otimização vertical do Termo para garantir impressão em uma única página A4.'
-    ]
-  },
-    {
-    version: '1.7.5',
-    date: '14/11/2023',
-    title: 'Personalização Avançada de Termos',
-    changes: [
-      'Inclusão automática do Logo da Empresa no cabeçalho do Termo de Responsabilidade.',
-      'Exibição destacada do Nome da Empresa no topo do documento.',
-      'Ajuste final de layout para garantir formatação correta na impressão.'
-    ]
-  },
-    {
-    version: '1.7.4',
-    date: '14/11/2023',
-    title: 'Simplificação de Assinaturas',
-    changes: [
-      'Remoção do campo de assinatura da empresa/TI no Termo de Responsabilidade.',
-      'Centralização da assinatura do colaborador para layout mais limpo.',
-      'Inclusão do CPF do colaborador logo abaixo da assinatura.'
-    ]
-  },
-    {
-    version: '1.7.3',
-    date: '14/11/2023',
-    title: 'Ajuste de Template',
-    changes: [
-      'Restauração das cláusulas jurídicas completas no Termo de Responsabilidade.',
-      'Ajuste fino de margens e fontes para manter o documento em uma única página A4.',
-      'Manutenção da exibição do "Setor" no cabeçalho do termo.'
-    ]
-  },
-  {
-    version: '1.7.2',
-    date: '14/11/2023',
-    title: 'Otimização de Documentos',
-    changes: [
-      'Substituição do campo "Empresa" por "Setor" no Termo de Responsabilidade.',
-      'Refinamento do layout de impressão para ajuste perfeito em folha A4.',
-      'Melhoria na organização visual das cláusulas e assinaturas.'
-    ]
-  },
-  {
-    version: '1.7.1',
-    date: '14/11/2023',
-    title: 'Atualização de Compliance',
-    changes: [
-      'Novo layout Profissional para o Termo de Responsabilidade.',
-      'Inclusão de cláusulas LGPD e segurança de contas (iCloud/Google) no termo padrão.',
-      'Melhoria na formatação de impressão dos termos.'
-    ]
-  },
-  {
-    version: '1.7.0',
-    date: '14/11/2023',
-    title: 'Melhorias de Usabilidade',
-    changes: [
-      'Nova interface de lista (tabela) para Colaboradores.',
-      'Busca inteligente (Dropdown com pesquisa) na tela de Entrega/Devolução.',
-      'Novo editor de Termos de Responsabilidade com barra de ferramentas e variáveis rápidas.'
-    ]
-  },
-  {
-    version: '1.6.2',
-    date: '14/11/2023',
-    title: 'Integração Visual Pulsus',
-    changes: [
-      'Adicionado botão de ação rápida na lista de dispositivos para abrir o MDM Pulsus.',
-      'Melhoria na visualização de dispositivos vinculados.'
-    ]
-  },
-  {
-    version: '1.6.1',
-    date: '12/11/2023',
-    title: 'Otimização de Cadastro de Dispositivos',
-    changes: [
-      'Unificação dos campos Patrimônio (TAG) e IMEI em uma única interface inteligente.',
-      'Seletor de Tipo de Identificação (Tag vs IMEI).',
-      'Validação automática de 15 dígitos numéricos quando o tipo IMEI é selecionado.'
-    ]
-  },
-  {
-    version: '1.6.0',
-    date: '12/11/2023',
-    title: 'Expansão de Dados de Dispositivo',
-    changes: [
-      'Adicionado campo IMEI para dispositivos móveis.',
-      'Adicionado campo ID PULSUS para integração com MDM.',
-      'Adicionado campos de Setor e Código do Setor (Centro de Custo) diretamente no cadastro do dispositivo.'
-    ]
-  },
-  {
-    version: '1.5.1',
-    date: '12/11/2023',
-    title: 'Melhorias em Termos & Documentos',
-    changes: [
-      'Otimização na geração de termos: Chips vinculados a dispositivos agora são impressos automaticamente no termo do dispositivo principal.',
-      'Ocultação do botão de termo individual para chips vinculados no perfil do colaborador.'
-    ]
-  },
-  {
-    version: '1.5.0',
-    date: '10/11/2023',
-    title: 'Automação de Documentos',
-    changes: [
-      'Gerador de Termos de Responsabilidade dinâmico.',
-      'Editor de Templates HTML no Painel Admin.',
-      'Impressão automática de termos na Entrega e Devolução.',
-      'Botões de reimpressão de termos no perfil do colaborador.'
-    ]
-  },
-  {
-    version: '1.4.0',
-    date: '15/10/2023',
-    title: 'Gestão Avançada de Usuários',
-    changes: [
-      'Refatoração do módulo de Colaboradores.',
-      'Gestão dinâmica de Setores.',
-      'Lógica de inativação segura (bloqueio se houver ativos vinculados).',
-      'Abas de Ativos, Termos e Logs no detalhe do usuário.'
-    ]
-  },
-  {
-    version: '1.3.0',
-    date: '01/10/2023',
-    title: 'Financeiro & Manutenção',
-    changes: [
-      'Módulo de controle de Manutenções e Custos.',
-      'Cadastro de dados fiscais (NF, Valor, Fornecedor).',
-      'Upload (simulado) de notas fiscais.',
-      'Dashboards financeiros básicos.'
-    ]
-  },
-  {
-    version: '1.2.0',
-    date: '10/09/2023',
-    title: 'Configurações Dinâmicas',
-    changes: [
-      'Cadastro de Modelos, Marcas e Tipos de Ativo.',
-      'Vínculo de Chips (SIM) com Aparelhos.',
-      'Melhoria na busca e filtros de inventário.'
-    ]
-  },
-  {
-    version: '1.1.0',
-    date: '20/08/2023',
-    title: 'Operações & Auditoria',
-    changes: [
-      'Implementação do fluxo de Entrega (Checkout) e Devolução (Checkin).',
-      'Sistema de Logs de Auditoria global.',
-      'Rastreamento de histórico por ativo.'
     ]
   },
   {
