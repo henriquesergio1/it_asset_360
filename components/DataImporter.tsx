@@ -24,8 +24,7 @@ const DataImporter = () => {
     sectors, addSector,
     models, addModel,
     brands, addBrand,
-    assetTypes, addAssetType,
-    customFields
+    assetTypes, addAssetType
   } = useData();
   const { user: currentUser } = useAuth();
   
@@ -50,7 +49,7 @@ const DataImporter = () => {
 
   const getTemplateHeaders = () => {
       switch(importType) {
-          case 'USERS': return 'Nome Completo;Email;CPF;PIS;Cargo/Funcao;Setor/Codigo;RG;Endereco';
+          case 'USERS': return 'Nome Completo;Email;CPF;PIS;Cargo/Funcao;Setor;RG;Endereco';
           case 'DEVICES': return 'Patrimonio;Serial;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;IMEI;ID Pulsus;Email Responsavel;Setor Ativo;Centro de Custo';
           case 'SIMS': return 'Numero;Operadora;ICCID;Plano';
           default: return '';
@@ -130,12 +129,15 @@ const DataImporter = () => {
       const brandCache = new Map();
       const typeCache = new Map();
       const modelCache = new Map();
+      const sectorCache = new Map();
 
       for (let i = 0; i < toProcess.length; i++) {
           const item = toProcess[i];
           try {
               if (importType === 'DEVICES') {
                   const r = item.row;
+                  
+                  // 1. Marca
                   const bName = (r['Marca'] || 'Genérica').trim();
                   let bId = brands.find(b => b.name.toLowerCase() === bName.toLowerCase())?.id || brandCache.get(bName.toLowerCase());
                   if (!bId) {
@@ -143,6 +145,8 @@ const DataImporter = () => {
                       addBrand({ id: bId, name: bName }, adminName);
                       brandCache.set(bName.toLowerCase(), bId);
                   }
+
+                  // 2. Tipo
                   const tName = (r['Tipo'] || 'Outros').trim();
                   let tId = assetTypes.find(t => t.name.toLowerCase() === tName.toLowerCase())?.id || typeCache.get(tName.toLowerCase());
                   if (!tId) {
@@ -150,12 +154,26 @@ const DataImporter = () => {
                       addAssetType({ id: tId, name: tName }, adminName);
                       typeCache.set(tName.toLowerCase(), tId);
                   }
+
+                  // 3. Modelo
                   const mName = (r['Modelo'] || 'Genérico').trim();
                   let mId = models.find(m => m.name.toLowerCase() === mName.toLowerCase() && m.brandId === bId)?.id || modelCache.get(mName.toLowerCase() + bId);
                   if (!mId) {
                       mId = Math.random().toString(36).substr(2, 9);
                       addModel({ id: mId, name: mName, brandId: bId, typeId: tId }, adminName);
                       modelCache.set(mName.toLowerCase() + bId, mId);
+                  }
+
+                  // 4. Setor do Ativo
+                  const sName = (r['Setor Ativo'] || '').trim();
+                  let sId = '';
+                  if (sName) {
+                      sId = sectors.find(s => s.name.toLowerCase() === sName.toLowerCase())?.id || sectorCache.get(sName.toLowerCase());
+                      if (!sId) {
+                          sId = Math.random().toString(36).substr(2, 9);
+                          addSector({ id: sId, name: sName }, adminName);
+                          sectorCache.set(sName.toLowerCase(), sId);
+                      }
                   }
 
                   const respEmail = r['Email Responsavel']?.trim().toLowerCase();
@@ -169,29 +187,44 @@ const DataImporter = () => {
                       serialNumber: r['Serial'] || r['Patrimonio'],
                       status: targetStatus,
                       currentUserId: foundUser?.id || null,
-                      pulsusId: r['ID Pulsus'], // CAMPO ADICIONADO
+                      pulsusId: r['ID Pulsus'],
+                      imei: r['IMEI'],
+                      sectorId: sId || undefined,
+                      costCenter: r['Centro de Custo'],
                       purchaseCost: parseFloat(r['Valor Pago']?.replace(',', '.') || '0'),
                       purchaseDate: r['Data Compra'] || new Date().toISOString().split('T')[0],
                       supplier: r['Fornecedor'],
-                      imei: r['IMEI'],
-                      costCenter: r['Centro de Custo'],
                       customData: {}
                   };
 
                   if (item.status === 'NEW') { addDevice(deviceData, adminName); setProgress(p => ({ ...p, created: p.created + 1 })); }
                   else { updateDevice(deviceData, adminName); setProgress(p => ({ ...p, updated: p.updated + 1 })); }
+
               } else if (importType === 'USERS') {
                   const r = item.row;
+
+                  // Setor do Usuário
+                  const uSectorName = (r['Setor'] || '').trim();
+                  let uSectorId = '';
+                  if (uSectorName) {
+                      uSectorId = sectors.find(s => s.name.toLowerCase() === uSectorName.toLowerCase())?.id || sectorCache.get(uSectorName.toLowerCase());
+                      if (!uSectorId) {
+                          uSectorId = Math.random().toString(36).substr(2, 9);
+                          addSector({ id: uSectorId, name: uSectorName }, adminName);
+                          sectorCache.set(uSectorName.toLowerCase(), uSectorId);
+                      }
+                  }
+
                   const userData: User = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
                       email: r['Email'],
                       cpf: r['CPF'],
                       pis: r['PIS'],
-                      jobTitle: r['Setor/Codigo'],
+                      jobTitle: r['Cargo/Funcao'],
                       rg: r['RG'],
                       address: r['Endereco'],
-                      sectorId: '', 
+                      sectorId: uSectorId, 
                       active: true
                   };
                   if (item.status === 'NEW') { addUser(userData, adminName); setProgress(p => ({ ...p, created: p.created + 1 })); }
@@ -210,9 +243,9 @@ const DataImporter = () => {
     <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full animate-fade-in">
         <div className="mb-8">
             <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-                <Database className="text-blue-600"/> Importador Snipe-IT para IT Asset 360
+                <Database className="text-blue-600"/> Importador de Dados Completo
             </h3>
-            <p className="text-slate-500 font-medium">Sincronize sua base de dados MariaDB/CSV em massa.</p>
+            <p className="text-slate-500 font-medium">Migre Colaboradores, Dispositivos e Vínculos sem perda de informação.</p>
         </div>
 
         {step === 'UPLOAD' && (
@@ -236,7 +269,7 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <div className="text-center space-y-2">
-                        <p className="text-sm font-bold text-slate-400">Dica: No arquivo de Dispositivos, preencha as colunas <span className="text-blue-600">"ID Pulsus"</span> e <span className="text-blue-600">"Email Responsavel"</span>.</p>
+                        <p className="text-sm font-bold text-slate-400">Suporte completo para <span className="text-blue-600">Setores, ID Pulsus, IMEI</span> e vínculos automáticos por e-mail.</p>
                     </div>
                 </div>
             </div>
@@ -246,7 +279,7 @@ const DataImporter = () => {
             <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex gap-3">
-                        <div className="bg-green-100 text-green-700 px-6 py-2 rounded-xl text-xs font-black uppercase shadow-sm border border-green-200">{analyzedData.filter(i => i.status === 'NEW').length} Novos Registros</div>
+                        <div className="bg-green-100 text-green-700 px-6 py-2 rounded-xl text-xs font-black uppercase shadow-sm border border-green-200">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
                         <div className="bg-orange-100 text-orange-700 px-6 py-2 rounded-xl text-xs font-black uppercase shadow-sm border border-orange-200">{analyzedData.filter(i => i.status === 'CONFLICT').length} Atualizações</div>
                     </div>
                     <button onClick={() => setStep('UPLOAD')} className="text-xs font-black text-slate-400 hover:text-slate-600 uppercase flex items-center gap-2 transition-colors"><RefreshCcw size={14}/> Trocar Arquivo</button>
@@ -257,7 +290,7 @@ const DataImporter = () => {
                             <tr>
                                 <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest">Identificador</th>
                                 <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest">Operação</th>
-                                <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest">Responsável / Pulsus</th>
+                                <th className="px-8 py-4 font-black text-slate-400 uppercase tracking-widest">Setor / Responsável</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -268,21 +301,13 @@ const DataImporter = () => {
                                     </td>
                                     <td className="px-8 py-4">
                                         <span className={`px-4 py-1.5 rounded-lg font-black text-[10px] tracking-tighter shadow-sm border ${item.status === 'NEW' ? 'bg-green-50 text-green-600 border-green-200' : item.status === 'CONFLICT' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                                            {item.status === 'NEW' ? 'CRIAR NOVO' : item.status === 'CONFLICT' ? 'SOBREPOR DADOS' : 'ERRO NA LINHA'}
+                                            {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
                                         </span>
                                     </td>
                                     <td className="px-8 py-4">
                                         <div className="flex flex-col gap-1">
-                                            {importType === 'DEVICES' && item.row['ID Pulsus'] && <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded font-black text-slate-500 w-fit">PULSUS: {item.row['ID Pulsus']}</span>}
-                                            {importType === 'DEVICES' && item.row['Email Responsavel'] ? (
-                                                <div className="flex items-center gap-2">
-                                                    {users.find(u => u.email.toLowerCase() === item.row['Email Responsavel'].toLowerCase()) ? (
-                                                        <span className="text-green-600 font-bold flex items-center gap-1"><CheckCircle size={14}/> {item.row['Email Responsavel']}</span>
-                                                    ) : (
-                                                        <span className="text-slate-400 italic">Usuário não encontrado</span>
-                                                    )}
-                                                </div>
-                                            ) : '-'}
+                                            {item.row['Setor'] || item.row['Setor Ativo'] ? <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-black w-fit uppercase">SETOR: {item.row['Setor'] || item.row['Setor Ativo']}</span> : null}
+                                            {importType === 'DEVICES' && item.row['Email Responsavel'] && <span className="text-emerald-600 font-bold text-[10px] flex items-center gap-1"><CheckCircle size={10}/> Vínculo: {item.row['Email Responsavel']}</span>}
                                         </div>
                                     </td>
                                 </tr>
@@ -291,7 +316,7 @@ const DataImporter = () => {
                     </table>
                 </div>
                 <button onClick={executeImport} className="mt-8 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-blue-700 transition-all hover:scale-[1.01] active:scale-95">
-                    Iniciar Migração de {analyzedData.filter(x => x.status !== 'ERROR').length} Itens
+                    Processar {analyzedData.filter(x => x.status !== 'ERROR').length} Itens
                 </button>
             </div>
         )}
@@ -303,8 +328,8 @@ const DataImporter = () => {
                     <Loader2 size={80} className="text-blue-600 animate-spin relative z-10"/>
                 </div>
                 <div className="text-center">
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Sincronizando Banco de Dados</h3>
-                    <p className="text-slate-500 font-bold mt-2">Processando {progress.current} de {progress.total}...</p>
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Sincronizando Banco de Dados SQL Server</h3>
+                    <p className="text-slate-500 font-bold mt-2">Item {progress.current} de {progress.total}...</p>
                 </div>
                 <div className="w-full max-w-lg bg-slate-100 rounded-full h-4 overflow-hidden shadow-inner border border-slate-200">
                     <div className="bg-blue-600 h-full transition-all duration-300 shadow-lg" style={{width: `${(progress.current/progress.total)*100}%`}}></div>
@@ -317,13 +342,13 @@ const DataImporter = () => {
                 <div className="h-28 w-28 bg-green-100 text-green-600 rounded-full flex items-center justify-center shadow-2xl animate-bounce">
                     <CheckCircle size={64} strokeWidth={2.5}/>
                 </div>
-                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">Migração Finalizada!</h3>
+                <h3 className="text-4xl font-black text-slate-900 tracking-tighter">Sincronização Finalizada!</h3>
                 <div className="grid grid-cols-3 gap-8 text-center bg-white p-12 rounded-[2.5rem] border-2 border-slate-100 shadow-2xl w-full max-w-2xl">
                     <div className="space-y-1"><p className="text-5xl font-black text-green-600">{progress.created}</p><p className="text-xs uppercase font-black text-slate-400 tracking-widest">Novos</p></div>
                     <div className="space-y-1"><p className="text-5xl font-black text-blue-500">{progress.updated}</p><p className="text-xs uppercase font-black text-slate-400 tracking-widest">Atualizados</p></div>
                     <div className="space-y-1"><p className="text-5xl font-black text-red-500">{progress.errors}</p><p className="text-xs uppercase font-black text-slate-400 tracking-widest">Falhas</p></div>
                 </div>
-                <button onClick={() => setStep('UPLOAD')} className="bg-slate-900 text-white px-16 py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all hover:scale-105">Realizar Outra Importação</button>
+                <button onClick={() => setStep('UPLOAD')} className="bg-slate-900 text-white px-16 py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl hover:bg-black transition-all hover:scale-105">Nova Importação</button>
             </div>
         )}
     </div>
