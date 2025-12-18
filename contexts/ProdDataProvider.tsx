@@ -2,7 +2,7 @@
 // ... imports
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField } from '../types';
 
 // API Configuration Relative Path
 const API_URL = ''; 
@@ -145,21 +145,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteDevice = async (id: string, adminName: string, reason: string) => {
-    // Soft delete: update device status to RETIRED instead of hard deleting from the database
-    const device = devices.find(d => d.id === id);
-    if (device) {
-      await putData('devices', { ...device, status: DeviceStatus.RETIRED, _adminUser: adminName, _reason: reason });
-      await fetchData();
-    }
-  };
-
-  // Added restoreDevice to satisfy DataContextType interface
-  const restoreDevice = async (id: string, adminName: string, reason: string) => {
-    const device = devices.find(d => d.id === id);
-    if (device) {
-      await putData('devices', { ...device, status: DeviceStatus.AVAILABLE, currentUserId: null, _adminUser: adminName, _reason: reason });
-      await fetchData();
-    }
+    await deleteData('devices', id, { _adminUser: adminName, reason });
+    setDevices(prev => prev.filter(d => d.id !== id));
+    fetchData();
   };
 
   const addSim = async (sim: SimCard, adminName: string) => {
@@ -382,7 +370,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    addDevice, updateDevice, deleteDevice, restoreDevice,
+    addDevice, updateDevice, deleteDevice,
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
     addSystemUser, updateSystemUser, deleteSystemUser,

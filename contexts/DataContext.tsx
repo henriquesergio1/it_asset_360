@@ -26,7 +26,6 @@ export interface DataContextType {
   addDevice: (device: Device, adminName: string) => void;
   updateDevice: (device: Device, adminName: string) => void;
   deleteDevice: (id: string, adminName: string, reason: string) => void;
-  restoreDevice: (id: string, adminName: string, reason: string) => void; // Nova função
   
   // CRUD Sims
   addSim: (sim: SimCard, adminName: string) => void;
