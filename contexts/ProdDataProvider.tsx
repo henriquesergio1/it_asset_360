@@ -25,7 +25,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const safeJson = async (res: Response, fallbackValue: any = []) => {
       if (!res.ok) {
           const text = await res.text();
-          throw new Error(`${res.status} ${res.statusText}: ${text.substring(0, 100)}`);
+          throw new Error(text || `${res.status} ${res.statusText}`);
       }
       return res.json();
   };
@@ -33,6 +33,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError(null); // Limpar erros anteriores para permitir nova tentativa de render
       const [devs, simsR, usrs, logsR, sysUsrs, setts, mods, brnds, typs, maints, sects, accTyps, cFields] = await Promise.all([
         fetch(`${API_URL}/api/devices`).then(r => safeJson(r)),
         fetch(`${API_URL}/api/sims`).then(r => safeJson(r)),
@@ -64,6 +65,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setCustomFields(cFields);
     } catch (err: any) {
       setError(err.message);
+      console.error("[ITAsset360] Erro ao sincronizar:", err);
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await fetch(`${API_URL}/api/${endpoint}/${id}`, { method: 'DELETE' });
   };
 
-  // CRUD Implementations (Wait for fetch to finish)
   const addDevice = async (d: Device, admin: string) => { await postData('devices', { ...d, _adminUser: admin }); await fetchData(); };
   const updateDevice = async (d: Device, admin: string) => { await putData('devices', { ...d, _adminUser: admin }); await fetchData(); };
   const deleteDevice = async (id: string, admin: string, reason: string) => { await fetch(`${API_URL}/api/devices/${id}`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({_adminUser: admin, reason}) }); await fetchData(); };
@@ -103,7 +104,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleUserActive = async (u: User, admin: string, reason?: string) => { await putData('users', { ...u, active: !u.active, _adminUser: admin, _reason: reason }); await fetchData(); };
 
   const addSector = async (s: UserSector, admin: string) => { await postData('sectors', { ...s, _adminUser: admin }); await fetchData(); };
-  const updateSector = async (s: UserSector, admin: string) => { await putData('sectors', { ...s, _adminUser: admin }); await fetchData(); }; // No DataContext but for safety
+  const updateSector = async (s: UserSector, admin: string) => { await putData('sectors', { ...s, _adminUser: admin }); await fetchData(); };
   const deleteSector = async (id: string, admin: string) => { await deleteData('sectors', id); await fetchData(); };
 
   const addSim = async (s: SimCard, admin: string) => { await postData('sims', { ...s, _adminUser: admin }); await fetchData(); };

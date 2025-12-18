@@ -10,7 +10,7 @@ import { generateAndPrintTerm } from '../utils/termGenerator';
 const UserManager = () => {
   const { 
     users, addUser, updateUser, toggleUserActive, 
-    sectors, addSector, deleteSector,
+    sectors, addSector, deleteSector, updateSector,
     devices, sims, models, brands, assetTypes, getHistory, settings 
   } = useData();
   const { user: currentUser } = useAuth();
@@ -55,27 +55,39 @@ const UserManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
-    if (editingId && formData.id) await updateUser(formData as User, adminName);
-    else await addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
-    setIsModalOpen(false);
+    try {
+        if (editingId && formData.id) await updateUser(formData as User, adminName);
+        else await addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+        setIsModalOpen(false);
+    } catch (e: any) {
+        alert("Erro ao salvar colaborador: " + e.message);
+    }
   };
 
-  // Sector Logic
+  // Sector Logic Renovada com Validação de Duplicidade
   const handleSaveSector = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!newSectorName.trim()) return;
+      const trimmedName = newSectorName.trim();
+      if (!trimmedName) return;
+
+      // Validação de Duplicidade Local
+      const alreadyExists = sectors.some(s => s.name.toLowerCase() === trimmedName.toLowerCase() && s.id !== editingSectorId);
+      if (alreadyExists) {
+          alert(`O cargo "${trimmedName}" já existe!`);
+          return;
+      }
+
       setIsSavingSector(true);
       try {
           if (editingSectorId) {
-              // Simula update de setor (se o contexto suportasse update direto, aqui chamaria)
-              // Como o contexto de produção foca no sync total, usamos addSector com ID existente para re-salvar ou apenas deletamos e criamos
-              await deleteSector(editingSectorId, adminName);
-              await addSector({ id: editingSectorId, name: newSectorName }, adminName);
+              await updateSector({ id: editingSectorId, name: trimmedName }, adminName);
           } else {
-              await addSector({ id: Math.random().toString(36).substr(2, 9), name: newSectorName }, adminName);
+              await addSector({ id: Math.random().toString(36).substr(2, 9), name: trimmedName }, adminName);
           }
           setNewSectorName('');
           setEditingSectorId(null);
+      } catch (e: any) {
+          alert("Erro ao salvar cargo: " + e.message);
       } finally {
           setIsSavingSector(false);
       }
@@ -227,7 +239,6 @@ const UserManager = () => {
                         <div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Endereço Completo</label><input disabled={isViewOnly} className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})}/></div>
                     </form>
                 )}
-                {/* Outras abas permanecem como estão... */}
             </div>
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t shrink-0">
                 <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-xl bg-gray-200 font-bold text-gray-600 hover:bg-gray-300">Fechar</button>
@@ -237,7 +248,6 @@ const UserManager = () => {
         </div>
       )}
 
-      {/* Modal de Gestão de Setores (Restaurado com CRUD completo) */}
       {isSectorModalOpen && (
           <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
@@ -265,7 +275,7 @@ const UserManager = () => {
                       </form>
 
                       <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                          {sectors.length > 0 ? sectors.map(s => (
+                          {sectors.length > 0 ? [...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => (
                               <div key={s.id} className={`flex justify-between items-center p-3 rounded-xl border transition-all group ${editingSectorId === s.id ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100 hover:bg-white hover:shadow-sm'}`}>
                                   <span className={`text-sm font-bold ${editingSectorId === s.id ? 'text-blue-700' : 'text-slate-700'}`}>{s.name}</span>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -277,7 +287,15 @@ const UserManager = () => {
                                           <Edit2 size={14}/>
                                       </button>
                                       <button 
-                                          onClick={() => { if(window.confirm(`Excluir o cargo "${s.name}"?`)) deleteSector(s.id, adminName); }}
+                                          onClick={async () => { 
+                                              if(window.confirm(`Excluir o cargo "${s.name}"?`)) {
+                                                  try {
+                                                      await deleteSector(s.id, adminName);
+                                                  } catch(e: any) {
+                                                      alert("Erro ao excluir: " + e.message);
+                                                  }
+                                              }
+                                          }}
                                           className="text-red-300 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg"
                                           title="Excluir Cargo"
                                       >

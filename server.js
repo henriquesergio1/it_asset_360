@@ -7,11 +7,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// SQL Configuration
 const dbConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -19,35 +17,23 @@ const dbConfig = {
     port: parseInt(process.env.DB_PORT || '1433'),
     database: process.env.DB_DATABASE,
     options: {
-        encrypt: false, // Set to true if using Azure
+        encrypt: false,
         trustServerCertificate: true,
         enableArithAbort: true
     }
 };
 
-// --- AUTO MIGRATION SYSTEM ---
 async function runMigrations(pool) {
-    console.log('🔄 Verificando esquema do banco de dados (Auto-Migração)...');
-    
-    // 1. Create Tables if not exist
+    console.log('🔄 Verificando esquema do banco de dados...');
     const createTablesQuery = `
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Sectors')
-        CREATE TABLE Sectors (
-            Id NVARCHAR(50) PRIMARY KEY,
-            Name NVARCHAR(100) NOT NULL
-        );
-
+        CREATE TABLE Sectors (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
+        
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AccessoryTypes')
-        CREATE TABLE AccessoryTypes (
-            Id NVARCHAR(50) PRIMARY KEY,
-            Name NVARCHAR(100) NOT NULL
-        );
+        CREATE TABLE AccessoryTypes (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
 
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CustomFields')
-        CREATE TABLE CustomFields (
-            Id NVARCHAR(50) PRIMARY KEY,
-            Name NVARCHAR(100) NOT NULL
-        );
+        CREATE TABLE CustomFields (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
 
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories')
         CREATE TABLE DeviceAccessories (
@@ -59,13 +45,8 @@ async function runMigrations(pool) {
             CONSTRAINT FK_DevAcc_Type FOREIGN KEY (AccessoryTypeId) REFERENCES AccessoryTypes(Id)
         );
     `;
-    try {
-        await pool.request().query(createTablesQuery);
-    } catch (e) {
-        console.warn('⚠️ Erro na criação de tabelas novas:', e.message);
-    }
+    try { await pool.request().query(createTablesQuery); } catch (e) { console.warn('Erro tabelas:', e.message); }
 
-    // 2. Add Columns to Existing Tables
     const missingColumns = [
         { table: 'Devices', col: 'CustomData', type: 'NVARCHAR(MAX)' }, 
         { table: 'Devices', col: 'ModelId', type: 'NVARCHAR(50)' },
@@ -101,12 +82,10 @@ async function runMigrations(pool) {
                     END
                 END
             `);
-        } catch (e) { console.warn(`Migração falhou: ${item.table}`, e.message); }
+        } catch (e) { }
     }
-    console.log('✅ Banco de Dados Verificado.');
 }
 
-// Connect to Database
 sql.connect(dbConfig).then(async pool => {
     if (pool.connected) {
         console.log('✅ Connected to SQL Server');
@@ -114,16 +93,12 @@ sql.connect(dbConfig).then(async pool => {
     }
 }).catch(err => console.error('❌ Database Connection Failed:', err));
 
-// Helper query
 async function query(command) {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query(command);
-        return result.recordset;
-    } catch (err) { throw err; }
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query(command);
+    return result.recordset;
 }
 
-// Helper log
 async function logAction(assetId, assetType, action, adminUser, notes, backupData = null) {
     try {
         const pool = await sql.connect(dbConfig);
@@ -136,14 +111,12 @@ async function logAction(assetId, assetType, action, adminUser, notes, backupDat
             .input('Notes', sql.NVarChar, notes || '')
             .input('BackupData', sql.NVarChar, backupData)
             .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, BackupData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, @BackupData)`);
-    } catch (e) { console.error('Log Error', e); }
+    } catch (e) { }
 }
-
-// --- ROUTES ---
 
 app.get('/', (req, res) => res.send({ status: 'ok', service: 'IT Asset 360 API' }));
 
-// Sectors (Cargos) - RESTAURADO
+// Sectors CRUD com validação de Unicidade
 app.get('/api/sectors', async (req, res) => {
     try {
         const data = await query(`SELECT Id as id, Name as name FROM Sectors ORDER BY Name ASC`);
@@ -155,6 +128,10 @@ app.post('/api/sectors', async (req, res) => {
     const s = req.body;
     try {
         const pool = await sql.connect(dbConfig);
+        // Verificar se nome já existe
+        const exists = await pool.request().input('Name', sql.NVarChar, s.name).query(`SELECT 1 FROM Sectors WHERE Name = @Name`);
+        if (exists.recordset.length > 0) return res.status(400).send('Já existe um cargo com este nome.');
+
         await pool.request()
             .input('Id', sql.NVarChar, s.id)
             .input('Name', sql.NVarChar, s.name)
@@ -168,6 +145,13 @@ app.put('/api/sectors/:id', async (req, res) => {
     const s = req.body;
     try {
         const pool = await sql.connect(dbConfig);
+        // Verificar duplicidade excluindo o próprio ID
+        const exists = await pool.request()
+            .input('Name', sql.NVarChar, s.name)
+            .input('Id', sql.NVarChar, req.params.id)
+            .query(`SELECT 1 FROM Sectors WHERE Name = @Name AND Id <> @Id`);
+        if (exists.recordset.length > 0) return res.status(400).send('Este nome já está sendo usado por outro cargo.');
+
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
             .input('Name', sql.NVarChar, s.name)
@@ -184,7 +168,7 @@ app.delete('/api/sectors/:id', async (req, res) => {
     } catch (e) { res.status(500).send(e.message); }
 });
 
-// Users
+// Outras rotas permanecem...
 app.get('/api/users', async (req, res) => {
     try {
         const data = await query(`SELECT Id as id, FullName as fullName, Cpf as cpf, Rg as rg, Pis as pis, SectorCode as sectorCode, Address as address, Email as email, SectorId as sectorId, JobTitle as jobTitle, Active as active, HasPendingIssues as hasPendingIssues, PendingIssuesNote as pendingIssuesNote FROM Users`);
@@ -232,7 +216,6 @@ app.put('/api/users/:id', async (req, res) => {
     } catch (e) { res.status(500).send(e.message); }
 });
 
-// Devices
 app.get('/api/devices', async (req, res) => {
     try {
         const devices = await query(`SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, Imei as imei, PulsusId as pulsusId, SectorCode as sectorCode, CustomData as customDataStr, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, PurchaseInvoiceUrl as purchaseInvoiceUrl FROM Devices`);
