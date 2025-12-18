@@ -126,7 +126,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchData();
   };
 
-  // Resto dos métodos simplificados chamando fetchData ao final para sincronia
   const addSim = async (s: SimCard, a: string) => { await postData('sims', {...s, _adminUser: a}); fetchData(); };
   const updateSim = async (s: SimCard, a: string) => { await putData('sims', {...s, _adminUser: a}); fetchData(); };
   const deleteSim = async (id: string, a: string, r: string) => { 
