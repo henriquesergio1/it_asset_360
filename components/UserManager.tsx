@@ -114,7 +114,7 @@ const UserManager = () => {
     const matchesStatus = viewMode === 'ACTIVE' ? u.active : !u.active;
     if (!matchesStatus) return false;
     if (filterSectorId && u.sectorId !== filterSectorId) return false;
-    return u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || u.cpf.includes(searchTerm);
+    return u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || u.cpf.includes(searchTerm) || (u.sectorCode && u.sectorCode.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   const userHistory = editingId ? getHistory(editingId) : [];
@@ -135,7 +135,7 @@ const UserManager = () => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            <input type="text" placeholder="Nome ou CPF..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Nome, CPF ou Código de Setor..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <div className="flex bg-gray-200 p-1 rounded-lg">
             <button onClick={() => setViewMode('ACTIVE')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'ACTIVE' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>Ativos</button>
@@ -149,7 +149,7 @@ const UserManager = () => {
             <tr>
               <th className="px-6 py-3">Colaborador</th>
               <th className="px-6 py-3">Ativos em Posse</th>
-              <th className="px-6 py-3">Cargo / Função</th>
+              <th className="px-6 py-3">Cargo / Setor</th>
               <th className="px-6 py-3">Contato</th>
               <th className="px-6 py-3 text-right">Ações</th>
             </tr>
@@ -182,7 +182,10 @@ const UserManager = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner">{cargo || 'Não Definado'}</span>
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner w-fit">{cargo || 'Não Definado'}</span>
+                        {user.sectorCode && <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight">Cód. Setor: {user.sectorCode}</span>}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-xs">
                     <div className="flex items-center gap-1 text-gray-600 font-medium"><Mail size={12}/> {user.email}</div>
@@ -243,7 +246,7 @@ const UserManager = () => {
                             <input disabled={isViewOnly} required type="email" className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cargo / Função</label>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cargo / Função (Setor)</label>
                             <select disabled={isViewOnly} required className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.sectorId} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                                 <option value="">Selecione...</option>
                                 {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -266,12 +269,8 @@ const UserManager = () => {
                              </div>
                              <div>
                                 <label className="block text-[10px] font-black uppercase text-blue-600 mb-1">Código de Setor</label>
-                                <input disabled={isViewOnly} className="w-full border-2 border-blue-100 rounded-lg p-2.5 text-sm bg-blue-50 font-bold" placeholder="Opcional" value={formData.sectorCode || ''} onChange={e => setFormData({...formData, sectorCode: e.target.value})}/>
+                                <input disabled={isViewOnly} className="w-full border-2 border-blue-100 rounded-lg p-2.5 text-sm bg-blue-50 font-bold" placeholder="Vendedores/Promotores" value={formData.sectorCode || ''} onChange={e => setFormData({...formData, sectorCode: e.target.value})}/>
                              </div>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cód. Interno / Cargo Detalhado</label>
-                            <input disabled={isViewOnly} className="w-full border rounded-lg p-2.5 text-sm" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})}/>
                         </div>
                         <div className="md:col-span-2">
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Endereço Completo</label>

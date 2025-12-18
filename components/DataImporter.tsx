@@ -49,7 +49,7 @@ const DataImporter = () => {
 
   const getTemplateHeaders = () => {
       switch(importType) {
-          case 'USERS': return 'Nome Completo;Email;CPF;PIS;Cargo/Funcao;Setor;RG;Endereco;Codigo de Setor';
+          case 'USERS': return 'Nome Completo;Email;CPF;PIS;Setor;RG;Endereco;Codigo de Setor';
           case 'DEVICES': return 'Patrimonio;Serial;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;IMEI;ID Pulsus;Codigo de Setor;Email Responsavel;Setor Ativo;Centro de Custo';
           case 'SIMS': return 'Numero;Operadora;ICCID;Plano';
           default: return '';
@@ -188,7 +188,7 @@ const DataImporter = () => {
                       status: targetStatus,
                       currentUserId: foundUser?.id || null,
                       pulsusId: r['ID Pulsus'],
-                      sectorCode: r['Codigo de Setor'], // Restaurado e renomeado
+                      sectorCode: r['Codigo de Setor'], 
                       imei: r['IMEI'],
                       sectorId: sId || undefined,
                       costCenter: r['Centro de Custo'],
@@ -222,8 +222,8 @@ const DataImporter = () => {
                       email: r['Email'],
                       cpf: r['CPF'],
                       pis: r['PIS'],
-                      jobTitle: r['Cargo/Funcao'],
-                      sectorCode: r['Codigo de Setor'], // Adicionado aos usuários
+                      jobTitle: r['Cargo/Funcao'] || '', // Fallback para compatibilidade se vier do CSV antigo
+                      sectorCode: r['Codigo de Setor'], 
                       rg: r['RG'],
                       address: r['Endereco'],
                       sectorId: uSectorId, 
