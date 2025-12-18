@@ -1,51 +1,21 @@
 
-// ... existing imports
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
-
-// ... (Existing validation functions - isValidCPF, etc) ...
-const isValidCPF = (cpf: string) => {
-    cpf = cpf.replace(/[^\d]+/g, '');
-    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-    let sum = 0, remainder;
-    for (let i = 1; i <= 9; i++) sum += parseInt(cpf.substring(i - 1, i)) * (11 - i);
-    remainder = (sum * 10) % 11;
-    if ((remainder === 10) || (remainder === 11)) remainder = 0;
-    if (remainder !== parseInt(cpf.substring(9, 10))) return false;
-    sum = 0;
-    for (let i = 1; i <= 10; i++) sum += parseInt(cpf.substring(i - 1, i)) * (12 - i);
-    remainder = (sum * 10) % 11;
-    if ((remainder === 10) || (remainder === 11)) remainder = 0;
-    if (remainder !== parseInt(cpf.substring(10, 11))) return false;
-    return true;
-};
-
-const isValidPIS = (pis: string) => {
-    pis = pis.replace(/[^\d]+/g, '');
-    if (pis.length !== 11) return false; 
-    const weights = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
-    let sum = 0;
-    for (let i = 0; i < 10; i++) {
-        sum += parseInt(pis.charAt(i)) * weights[i];
-    }
-    const remainder = sum % 11;
-    let digit = 11 - remainder;
-    if (digit === 10 || digit === 11) digit = 0;
-    
-    return digit === parseInt(pis.charAt(10));
-};
 
 const UserManager = () => {
   const { 
     users, addUser, updateUser, toggleUserActive, 
-    sectors, addSector, deleteSector,
+    sectors, addSector,
     devices, sims, models, brands, assetTypes, getHistory, settings 
   } = useData();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,25 +27,27 @@ const UserManager = () => {
   const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
 
-  // Inactivate Modal State
-  const [isInactivateModalOpen, setIsInactivateModalOpen] = useState(false);
-  const [inactivateTarget, setInactivateTarget] = useState<User | null>(null);
-  const [inactivateReasonType, setInactivateReasonType] = useState('Demissão / Desligamento');
-  const [inactivateReasonText, setInactivateReasonText] = useState('');
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
-  
-  // Sector Management State
-  const [newSectorName, setNewSectorName] = useState('');
+
+  // --- LOGICA DE ABERTURA VIA URL (DEEP LINKING) ---
+  useEffect(() => {
+      const params = new URLSearchParams(location.search);
+      const userId = params.get('userId');
+      if (userId) {
+          const user = users.find(u => u.id === userId);
+          if (user) {
+              handleOpenModal(user, true);
+              navigate('/users', { replace: true });
+          }
+      }
+  }, [location, users]);
 
   const adminName = currentUser?.name || 'Unknown';
 
-  // --- Helpers ---
   const handleOpenModal = (user?: User, viewOnly: boolean = false) => {
     setActiveTab('DATA');
     setIsViewOnly(viewOnly);
-    
     if (user) {
       setEditingId(user.id);
       setFormData(user);
@@ -89,704 +61,295 @@ const UserManager = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
-
-    if (!formData.sectorId) {
-        alert('ERRO: O campo "Cargo / Função" é obrigatório. Por favor, selecione uma opção.');
-        return;
-    }
-
-    const cleanCpf = formData.cpf?.replace(/[^\d]+/g, '') || '';
-    if (!isValidCPF(cleanCpf)) {
-        alert(`ERRO: O CPF "${formData.cpf}" informado é inválido. Verifique os dígitos.`);
-        return;
-    }
-
-    if (formData.pis) {
-        const cleanPis = formData.pis.replace(/[^\d]+/g, '');
-        if (!isValidPIS(cleanPis)) {
-            alert(`ERRO: O PIS "${formData.pis}" informado é inválido. Verifique os dígitos.`);
-            return;
-        }
-    }
-
-    const cleanEmail = formData.email?.trim().toLowerCase();
-
-    if (cleanEmail) {
-        const emailConflict = users.find(u => 
-            u.email.toLowerCase() === cleanEmail && 
-            u.id !== editingId &&
-            u.active === true 
-        );
-
-        if (emailConflict) {
-            alert(`ERRO: O E-mail "${formData.email}" já está em uso pelo colaborador ATIVO: ${emailConflict.fullName}.`);
-            return;
-        }
-    }
-
-    if (cleanCpf) {
-        const cpfConflict = users.find(u => 
-            u.cpf.replace(/[^\d]+/g, '') === cleanCpf && 
-            u.id !== editingId
-        );
-
-        if (cpfConflict) {
-            alert(`ERRO: O CPF "${formData.cpf}" já está cadastrado para o colaborador: ${cpfConflict.fullName}.`);
-            return;
-        }
-    }
-
-    if (editingId && formData.id) {
-      updateUser(formData as User, adminName);
-    } else {
-      addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
-    }
+    if (editingId && formData.id) updateUser(formData as User, adminName);
+    else addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
     setIsModalOpen(false);
   };
 
   const handleToggleClick = (user: User) => {
-      // Re-Activation
       if (!user.active) {
-          const emailConflict = users.find(u => 
-              u.email.toLowerCase() === user.email.toLowerCase() && 
-              u.id !== user.id &&
-              u.active === true
-          );
-          if (emailConflict) {
-              alert(`NÃO É POSSÍVEL REATIVAR!\n\nO e-mail "${user.email}" agora pertence ao colaborador ativo: ${emailConflict.fullName}.\n\nEdite o e-mail deste cadastro antes de reativá-lo.`);
-              return;
-          }
-          if (window.confirm(`Deseja reativar o colaborador ${user.fullName}?`)) {
-              toggleUserActive(user, adminName, 'Reativação Manual');
-          }
+          if (window.confirm(`Deseja reativar o colaborador ${user.fullName}?`)) toggleUserActive(user, adminName, 'Reativação Manual');
           return;
       }
-
-      // Inactivation Logic
       const assignedDevices = devices.filter(d => d.currentUserId === user.id);
-      const assignedSims = sims.filter(s => s.currentUserId === user.id);
-      
-      if (assignedDevices.length > 0 || assignedSims.length > 0) {
-          alert(`NÃO É POSSÍVEL INATIVAR!\n\nO colaborador ${user.fullName} possui ${assignedDevices.length} dispositivo(s) e ${assignedSims.length} chip(s) vinculados.\n\nRealize a devolução dos equipamentos antes de inativar o cadastro.`);
-          return;
-      }
-
-      // Open Modal
-      setInactivateTarget(user);
-      setInactivateReasonType('Demissão / Desligamento');
-      setInactivateReasonText('');
-      setIsInactivateModalOpen(true);
+      if (assignedDevices.length > 0) return alert('Devolva os ativos antes de inativar.');
+      toggleUserActive(user, adminName, 'Inativação Manual');
   };
 
-  const confirmInactivation = () => {
-      if (!inactivateTarget) return;
-      
-      let finalReason = inactivateReasonType;
-      if (inactivateReasonType === 'Outros') {
-          if (!inactivateReasonText.trim()) {
-              alert('Por favor, descreva o motivo.');
-              return;
-          }
-          finalReason = inactivateReasonText;
-      }
-
-      toggleUserActive(inactivateTarget, adminName, finalReason);
-      setIsInactivateModalOpen(false);
-      setInactivateTarget(null);
-  };
-
-  const handleAddSector = () => {
-      if(newSectorName.trim()) {
-          addSector({ id: Math.random().toString(36).substr(2, 9), name: newSectorName }, adminName);
-          setNewSectorName('');
-      }
-  };
-
-  const handlePrintTerm = (asset: Device | SimCard, type: 'Device' | 'Sim') => {
-      if (!editingId) return;
-      const user = users.find(u => u.id === editingId);
-      if (!user) return;
-
-      let model, brand, assetType;
-      let linkedSim: SimCard | undefined;
-      
-      if (type === 'Device') {
-          const d = asset as Device;
-          model = models.find(m => m.id === d.modelId);
-          brand = brands.find(b => b.id === model?.brandId);
-          assetType = assetTypes.find(t => t.id === model?.typeId);
-
-           // Check for linked SIM
-          if (d.linkedSimId) {
-              linkedSim = sims.find(s => s.id === d.linkedSimId);
-          }
-      }
-
-      const sectorName = sectors.find(s => s.id === user.sectorId)?.name;
-
-      generateAndPrintTerm({
-          user,
-          asset,
-          settings,
-          model,
-          brand,
-          type: assetType,
-          actionType: 'ENTREGA', 
-          linkedSim,
-          sectorName
-      });
-  };
-
-  const handleReprintHistoricTerm = (term: Term) => {
-      if (!editingId) return;
-      const user = users.find(u => u.id === editingId);
-      if (!user) return;
-
-      const ghostAsset: any = {
-          assetTag: 'N/A', 
-          serialNumber: 'N/A'
-      };
-
-      const sectorName = sectors.find(s => s.id === user.sectorId)?.name;
-      const mockModel: any = { name: term.assetDetails }; 
-      
-      generateAndPrintTerm({
-          user,
-          asset: ghostAsset,
-          settings,
-          model: mockModel,
-          actionType: term.type,
-          sectorName
-      });
-  };
-
-  const handleAttachFile = (termId: string, file: File) => {
-      if (isViewOnly) return;
-      if (!editingId) return;
-      
-      const user = users.find(u => u.id === editingId);
-      if (!user || !user.terms) return;
-
-      const updatedTerms = user.terms.map(t => 
-          t.id === termId ? { ...t, fileUrl: URL.createObjectURL(file) } : t
-      );
-
-      updateUser({ ...user, terms: updatedTerms }, adminName);
-  };
-
-  // --- FILTER LOGIC ---
   const filteredUsers = users.filter(u => {
-    // 1. Status Filter (Active vs Inactive)
     const matchesStatus = viewMode === 'ACTIVE' ? u.active : !u.active;
     if (!matchesStatus) return false;
-
-    // 2. Sector Filter
     if (filterSectorId && u.sectorId !== filterSectorId) return false;
-
-    // 3. Search Term
-    const searchLower = searchTerm.toLowerCase();
-    return (
-        u.fullName.toLowerCase().includes(searchLower) || 
-        u.email.toLowerCase().includes(searchLower) ||
-        u.cpf.includes(searchTerm)
-    );
+    return u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || u.cpf.includes(searchTerm);
   });
 
-  // Counts for Tabs
-  const countActive = users.filter(u => u.active).length;
-  const countInactive = users.filter(u => !u.active).length;
-
-  // Data for tabs
-  const userAssets = editingId ? devices.filter(d => d.currentUserId === editingId) : [];
-  const userSims = editingId ? sims.filter(s => s.currentUserId === editingId) : [];
   const userHistory = editingId ? getHistory(editingId) : [];
-  const userTerms = editingId ? users.find(u => u.id === editingId)?.terms || [] : [];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Colaboradores</h1>
-          <p className="text-gray-500 text-sm">Cadastro de funcionários e gestão de termos.</p>
+          <p className="text-gray-500 text-sm">Gestão de vínculos, termos e histórico de auditoria.</p>
         </div>
         <div className="flex gap-2">
-            <button onClick={() => setIsSectorModalOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50">
-                <Briefcase size={18} /> Cargos
-            </button>
-            <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm">
-                <Plus size={18} /> Novo Usuário
-            </button>
+            <button onClick={() => setIsSectorModalOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50"><Briefcase size={18} /> Cargos</button>
+            <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm"><Plus size={18} /> Novo Usuário</button>
         </div>
       </div>
 
-      {/* --- TABS (ACTIVE vs INACTIVE) --- */}
-      <div className="flex gap-4 border-b border-gray-200">
-          <button 
-            onClick={() => setViewMode('ACTIVE')} 
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${viewMode === 'ACTIVE' ? 'border-emerald-500 text-emerald-700 font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-          >
-              <Users size={18} /> Ativos 
-              <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full ml-1">{countActive}</span>
-          </button>
-          <button 
-            onClick={() => setViewMode('INACTIVE')} 
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${viewMode === 'INACTIVE' ? 'border-gray-500 text-gray-700 font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-          >
-              <Archive size={18} /> Inativos / Histórico
-              <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full ml-1">{countInactive}</span>
-          </button>
-      </div>
-
-      {/* --- SEARCH & FILTER BAR --- */}
       <div className="flex flex-col md:flex-row gap-4">
-        {/* Search */}
         <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input 
-            type="text" 
-            placeholder="Buscar por nome, email ou CPF..." 
-            className="pl-10 w-full border border-gray-300 rounded-lg py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
+            <input type="text" placeholder="Nome ou CPF..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
-
-        {/* Sector Filter */}
-        <div className="relative w-full md:w-64">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-4 w-4 text-gray-500" />
-            </div>
-            <select 
-                className="pl-9 w-full border border-gray-300 rounded-lg py-2 focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-gray-700 appearance-none"
-                value={filterSectorId}
-                onChange={(e) => setFilterSectorId(e.target.value)}
-            >
-                <option value="">Todos os Cargos</option>
-                {sectors.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-            </select>
+        <div className="flex bg-gray-200 p-1 rounded-lg">
+            <button onClick={() => setViewMode('ACTIVE')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'ACTIVE' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>Ativos</button>
+            <button onClick={() => setViewMode('INACTIVE')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'INACTIVE' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500'}`}>Inativos</button>
         </div>
       </div>
 
-      {/* Tabela de Usuários */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-500">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-              <tr>
-                <th className="px-6 py-3">Nome / Setor (Cód.)</th>
-                <th className="px-6 py-3">Cargo / Função</th>
-                <th className="px-6 py-3">Contato / CPF</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => {
-                // Inversão: sectorId agora representa o Cargo/Função
-                const cargoName = sectors.find(s => s.id === user.sectorId)?.name || 'Não Definado';
-                const hasPending = user.terms?.some(t => !t.fileUrl);
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-700">
+            <tr>
+              <th className="px-6 py-3">Colaborador</th>
+              <th className="px-6 py-3">Ativos em Posse</th>
+              <th className="px-6 py-3">Cargo / Função</th>
+              <th className="px-6 py-3">Contato</th>
+              <th className="px-6 py-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user) => {
+              const userDevices = devices.filter(d => d.currentUserId === user.id);
+              const userSims = sims.filter(s => s.currentUserId === user.id);
+              const cargo = sectors.find(s => s.id === user.sectorId)?.name;
 
-                return (
-                  <tr key={user.id} className={`border-b hover:bg-gray-50 transition-colors ${!user.active ? 'bg-gray-50/50' : 'bg-white'}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                         <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 relative ${user.active ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500'}`}>
-                             {user.fullName.charAt(0)}
-                             {hasPending && (
-                                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full border-2 border-white" title="Termos Pendentes"></span>
-                             )}
-                         </div>
-                         <div>
-                             <div 
-                                onClick={() => handleOpenModal(user, true)}
-                                className={`font-bold cursor-pointer hover:underline ${user.active ? 'text-gray-900 hover:text-emerald-700' : 'text-gray-500 hover:text-gray-700'}`}
-                                title="Ver Detalhes do Colaborador"
-                             >
-                                 {user.fullName}
-                             </div>
-                             {/* Inversão: jobTitle agora exibe o Código Interno / Setor digitado */}
-                             <div className="text-xs text-gray-400 flex items-center gap-1">
-                                <Tag size={10}/> {user.jobTitle || 'S/ Cód.'}
-                             </div>
-                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-medium border border-gray-200">
-                            {cargoName}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                            <span className="flex items-center gap-1"><Mail size={12}/> {user.email}</span>
-                            <span className="text-xs text-gray-400">CPF: {user.cpf}</span>
-                        </div>
-                    </td>
-                    <td className="px-6 py-4">
-                        {user.active ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                <span className="h-2 w-2 rounded-full bg-green-500"></span> Ativo
-                            </span>
-                        ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-600">
-                                Inativo
+              return (
+                <tr key={user.id} className={`border-b hover:bg-gray-50 transition-colors ${!user.active ? 'opacity-60 bg-gray-50/50' : 'bg-white'}`}>
+                  <td className="px-6 py-4">
+                    <div onClick={() => handleOpenModal(user, true)} className="font-bold text-gray-900 cursor-pointer hover:text-emerald-600 hover:underline">{user.fullName}</div>
+                    <div className="text-[10px] text-gray-400 font-mono font-bold tracking-tighter uppercase">CPF: {user.cpf}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div onClick={() => handleOpenModal(user, true)} className="flex items-center gap-2 cursor-pointer group">
+                        {userDevices.length > 0 && (
+                            <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-[10px] font-black border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                                <Smartphone size={10}/> {userDevices.length}
                             </span>
                         )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                             <button onClick={() => handleOpenModal(user)} className="text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors" title="Editar">
-                                 <Edit2 size={16} />
-                             </button>
-                             <button 
-                                onClick={() => handleToggleClick(user)} 
-                                className={`p-1 rounded transition-colors ${user.active ? 'text-gray-400 hover:text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`} 
-                                title={user.active ? 'Inativar Usuário' : 'Reativar Usuário'}
-                             >
-                                 <Power size={16} />
-                             </button>
-                        </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {filteredUsers.length === 0 && (
-              <div className="p-8 text-center text-gray-400">
-                  {searchTerm || filterSectorId ? 'Nenhum colaborador encontrado com os filtros atuais.' : 'Nenhum colaborador nesta lista.'}
-              </div>
-          )}
-        </div>
+                        {userSims.length > 0 && (
+                            <span className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-[10px] font-black border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                                <Cpu size={10}/> {userSims.length}
+                            </span>
+                        )}
+                        {userDevices.length === 0 && userSims.length === 0 && <span className="text-gray-300 italic text-xs">Sem Ativos</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded border shadow-inner">{cargo || 'Não Definado'}</span>
+                  </td>
+                  <td className="px-6 py-4 text-xs">
+                    <div className="flex items-center gap-1 text-gray-600 font-medium"><Mail size={12}/> {user.email}</div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                        <button onClick={() => handleOpenModal(user)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Editar"><Edit2 size={16}/></button>
+                        <button onClick={() => handleToggleClick(user)} className={`p-1.5 rounded transition-colors ${user.active ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`} title={user.active ? 'Desativar' : 'Reativar'}><Power size={16}/></button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* --- INACTIVATE MODAL --- */}
-      {isInactivateModalOpen && inactivateTarget && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in">
-                  <div className="p-6">
-                      <div className="flex flex-col items-center text-center mb-4">
-                          <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 mb-3">
-                              <Archive size={24} />
-                          </div>
-                          <h3 className="text-lg font-bold text-gray-900">Inativar Colaborador?</h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                              {inactivateTarget.fullName} será inativado. Informe o motivo.
-                          </p>
-                      </div>
-                      
-                      <div className="space-y-4 mb-4">
-                          <div>
-                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Motivo da Inativação</label>
-                              <select 
-                                  className="w-full border rounded-lg p-2 text-sm bg-white"
-                                  value={inactivateReasonType}
-                                  onChange={(e) => setInactivateReasonType(e.target.value)}
-                              >
-                                  <option value="Demissão / Desligamento">Demissão / Desligamento</option>
-                                  <option value="Outros">Outros</option>
-                              </select>
-                          </div>
-
-                          {inactivateReasonType === 'Outros' && (
-                              <div className="animate-fade-in">
-                                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Descreva o Motivo</label>
-                                  <textarea 
-                                      className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-gray-500 outline-none" 
-                                      rows={3} 
-                                      placeholder="Ex: Licença prolongada, transferência..."
-                                      value={inactivateReasonText}
-                                      onChange={(e) => setInactivateReasonText(e.target.value)}
-                                  ></textarea>
-                              </div>
-                          )}
-                      </div>
-
-                      <div className="flex gap-3">
-                          <button onClick={() => setIsInactivateModalOpen(false)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
-                          <button 
-                              onClick={confirmInactivation} 
-                              className="flex-1 py-2 rounded-lg text-white font-bold transition-colors bg-red-600 hover:bg-red-700"
-                          >
-                              Confirmar
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* User Modal (Same as before) */}
       {isModalOpen && (
-        // ... (Modal Content - No changes needed inside)
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0">
-              <h3 className="text-lg font-bold text-white">
-                  {editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}
-              </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-fade-in">
+            <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-white">
+                    {editingId ? (isViewOnly ? 'Visualização de Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}
+                </h3>
+                {isViewOnly && (
+                    <button 
+                        onClick={() => setIsViewOnly(false)} 
+                        className="bg-emerald-600 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase hover:bg-emerald-700 flex items-center gap-1 shadow-lg transition-transform active:scale-95"
+                    >
+                        <Edit2 size={10}/> Editar Cadastro
+                    </button>
+                )}
+              </div>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b shrink-0 overflow-x-auto bg-gray-50">
-                <button onClick={() => setActiveTab('DATA')} className={`flex-1 min-w-[120px] py-3 text-sm font-medium border-b-2 whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Dados Cadastrais</button>
+            <div className="flex border-b bg-gray-50 overflow-x-auto shrink-0">
+                <button onClick={() => setActiveTab('DATA')} className={`flex-1 min-w-[120px] py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400 hover:bg-gray-100'}`}>Cadastro</button>
                 {editingId && (
                     <>
-                        <button onClick={() => setActiveTab('ASSETS')} className={`flex-1 min-w-[120px] py-3 text-sm font-medium border-b-2 whitespace-nowrap ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Dispositivos ({userAssets.length + userSims.length})</button>
-                        <button onClick={() => setActiveTab('TERMS')} className={`flex-1 min-w-[120px] py-3 text-sm font-medium border-b-2 whitespace-nowrap ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Termos ({userTerms.length})</button>
-                        <button onClick={() => setActiveTab('LOGS')} className={`flex-1 min-w-[120px] py-3 text-sm font-medium border-b-2 whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-500 hover:bg-gray-100'}`}>Histórico</button>
+                        <button onClick={() => setActiveTab('ASSETS')} className={`flex-1 min-w-[120px] py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400 hover:bg-gray-100'}`}>Equipamentos</button>
+                        <button onClick={() => setActiveTab('TERMS')} className={`flex-1 min-w-[120px] py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400 hover:bg-gray-100'}`}>Termos</button>
+                        <button onClick={() => setActiveTab('LOGS')} className={`flex-1 min-w-[120px] py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400 hover:bg-gray-100'}`}>Histórico ({userHistory.length})</button>
                     </>
                 )}
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-                {/* TAB: DATA */}
                 {activeTab === 'DATA' && (
-                    <form id="userForm" onSubmit={handleSubmit} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form id="userForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Nome Completo</label>
+                            <input disabled={isViewOnly} required className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-                          <input disabled={isViewOnly} required type="email" className="w-full border rounded-lg p-2" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
-                        </div>
-                        
-                        {/* INVERTED LOGIC FIELDS */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Setor / Cód. Interno</label>
-                          <input disabled={isViewOnly} type="text" className="w-full border rounded-lg p-2 bg-yellow-50" placeholder="Ex: ADM-001" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})} />
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">E-mail Corporativo</label>
+                            <input disabled={isViewOnly} required type="email" className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Cargo / Função (Selecionar) *</label>
-                          <select required disabled={isViewOnly} className="w-full border rounded-lg p-2 bg-blue-50" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
-                             <option value="">Selecione a Função...</option>
-                             {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                          </select>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cargo / Função</label>
+                            <select disabled={isViewOnly} required className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.sectorId} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                                <option value="">Selecione...</option>
+                                {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
                         </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
-                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
+                        <div className="grid grid-cols-2 gap-2">
+                             <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">CPF</label>
+                                <input disabled={isViewOnly} required className="w-full border rounded-lg p-2.5 text-sm font-mono" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})}/>
+                             </div>
+                             <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">RG</label>
+                                <input disabled={isViewOnly} required className="w-full border rounded-lg p-2.5 text-sm font-mono" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})}/>
+                             </div>
                         </div>
-                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">RG</label>
-                          <input disabled={isViewOnly} required type="text" className="w-full border rounded-lg p-2" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} />
+                        <div className="grid grid-cols-2 gap-2">
+                             <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">PIS</label>
+                                <input disabled={isViewOnly} className="w-full border rounded-lg p-2.5 text-sm font-mono" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})}/>
+                             </div>
+                             <div>
+                                <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cód. Interno</label>
+                                <input disabled={isViewOnly} className="w-full border rounded-lg p-2.5 text-sm bg-yellow-50 font-bold" value={formData.jobTitle || ''} onChange={e => setFormData({...formData, jobTitle: e.target.value})}/>
+                             </div>
                         </div>
-                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">PIS (Opcional)</label>
-                          <input disabled={isViewOnly} type="text" className="w-full border rounded-lg p-2" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} />
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Endereço Completo</label>
+                            <input disabled={isViewOnly} className="w-full border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})}/>
                         </div>
-                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Endereço Completo</label>
-                          <input disabled={isViewOnly} type="text" className="w-full border rounded-lg p-2" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} />
-                        </div>
-                      </div>
                     </form>
                 )}
 
-                {/* TAB: ASSETS */}
                 {activeTab === 'ASSETS' && (
                     <div className="space-y-4">
-                        <h4 className="font-bold text-gray-800">Equipamentos Vinculados Atualmente</h4>
-                        
-                        {userAssets.length === 0 && userSims.length === 0 && (
-                            <p className="text-gray-400 text-center py-4">Nenhum ativo vinculado a este colaborador.</p>
-                        )}
-
-                        {userAssets.map(dev => {
-                            const model = models.find(m => m.id === dev.modelId);
-                            return (
-                                <div key={dev.id} className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                                    <Smartphone className="text-blue-600" size={20}/>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-gray-800">{model?.name || 'Desconhecido'}</p>
-                                        <p className="text-xs text-gray-500">Patrimônio: {dev.assetTag} | Serial: {dev.serialNumber}</p>
-                                    </div>
-                                    <button onClick={() => handlePrintTerm(dev, 'Device')} className="flex items-center gap-1 text-xs bg-white border border-blue-200 text-blue-700 px-2 py-1 rounded hover:bg-blue-50">
-                                        <Printer size={14}/> Termo
-                                    </button>
-                                </div>
-                            )
-                        })}
-
-                        {userSims.map(sim => {
-                            // Verifica se este chip está vinculado a algum dispositivo
-                            const parentDevice = devices.find(d => d.linkedSimId === sim.id);
-                            const parentModel = parentDevice ? models.find(m => m.id === parentDevice.modelId) : null;
-                            
-                            return (
-                                <div key={sim.id} className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                                    <div className="text-indigo-600 font-bold text-xs border border-indigo-200 bg-white rounded p-1">SIM</div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <p className="font-bold text-gray-800">{sim.phoneNumber}</p>
-                                            {parentDevice && (
-                                                <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded-full flex items-center gap-1" title={`Vinculado ao ${parentModel?.name || 'Dispositivo'}`}>
-                                                    <Link size={8}/> Vinculado
-                                                </span>
-                                            )}
+                        <h4 className="font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2"><Smartphone size={18} className="text-blue-600"/> Equipamentos Vinculados</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {devices.filter(d => d.currentUserId === editingId).map(d => {
+                                const m = models.find(mod => mod.id === d.modelId);
+                                return (
+                                    <div 
+                                        key={d.id} 
+                                        onClick={() => navigate(`/devices?deviceId=${d.id}`)}
+                                        className="flex items-center gap-4 p-4 border rounded-2xl hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all shadow-sm group bg-white"
+                                    >
+                                        <div className="h-12 w-12 bg-slate-50 rounded-xl border flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
+                                            {m?.imageUrl ? <img src={m.imageUrl} className="h-full w-full object-cover" /> : <Smartphone className="text-gray-300"/>}
                                         </div>
-                                        <p className="text-xs text-gray-500">Operadora: {sim.operator} | ICCID: {sim.iccid}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-gray-800 truncate text-sm">{m?.name || 'Dispositivo'}</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase font-mono">TAG: {d.assetTag}</p>
+                                        </div>
+                                        <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all"/>
                                     </div>
-                                    
-                                    {parentDevice ? (
-                                        <span className="text-xs text-gray-400 italic px-2">
-                                            Use o termo do dispositivo
-                                        </span>
-                                    ) : (
-                                        <button onClick={() => handlePrintTerm(sim, 'Sim')} className="flex items-center gap-1 text-xs bg-white border border-indigo-200 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-50">
-                                            <Printer size={14}/> Termo
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
+                        {devices.filter(d => d.currentUserId === editingId).length === 0 && (
+                            <div className="text-center py-16 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                                <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3"><Smartphone size={24} className="text-slate-300"/></div>
+                                <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Nenhum equipamento em posse.</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* TAB: TERMS */}
+                {activeTab === 'LOGS' && (
+                    <div className="space-y-6">
+                        <h4 className="font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2"><History size={18} className="text-emerald-600"/> Histórico de Auditoria</h4>
+                        <div className="relative border-l-2 border-slate-200 ml-3 space-y-6 py-2">
+                            {userHistory.length > 0 ? userHistory.map(log => (
+                                <div key={log.id} className="relative pl-8 animate-fade-in">
+                                    <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white shadow-sm
+                                        ${log.action === ActionType.CHECKOUT ? 'bg-blue-500' :
+                                          log.action === ActionType.CHECKIN ? 'bg-orange-500' :
+                                          log.action === ActionType.INACTIVATE ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
+                                        {new Date(log.timestamp).toLocaleString('pt-BR')}
+                                    </div>
+                                    <div className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                        {log.action}
+                                    </div>
+                                    <div className="text-xs text-slate-600 leading-relaxed max-w-2xl">{log.notes}</div>
+                                    <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-widest">Realizado por: {log.adminUser}</div>
+                                </div>
+                            )) : (
+                                <div className="text-center py-16 text-slate-400 italic text-sm font-medium">Nenhum registro de movimentação encontrado para este colaborador.</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'TERMS' && (
                     <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="font-bold text-gray-800">Termos de Responsabilidade</h4>
-                            <span className="text-xs text-gray-500">Histórico de Entrega/Devolução</span>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            {userTerms.slice().reverse().map(term => {
-                                const isPending = !term.fileUrl;
-                                return (
-                                <div key={term.id} className={`flex items-center justify-between p-3 border rounded-lg hover:shadow-sm ${isPending ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
+                         <h4 className="font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2"><FileText size={18} className="text-orange-600"/> Termos de Responsabilidade</h4>
+                         <div className="grid grid-cols-1 gap-2">
+                            {(users.find(u => u.id === editingId)?.terms || []).map(term => (
+                                <div key={term.id} className="flex items-center justify-between p-4 bg-white border rounded-xl shadow-sm hover:border-orange-300 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-full ${term.type === 'ENTREGA' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
-                                            <FileText size={16} />
+                                        <div className={`p-2 rounded-lg ${term.type === 'ENTREGA' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                            <FileText size={20}/>
                                         </div>
                                         <div>
-                                            <p className="font-bold text-sm text-gray-800 flex items-center gap-2">
-                                                Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}
-                                                {isPending && <span className="text-[10px] bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded font-bold">PENDENTE</span>}
-                                            </p>
-                                            <p className="text-xs text-gray-500">{new Date(term.date).toLocaleString()} • {term.assetDetails}</p>
+                                            <p className="font-bold text-slate-800 text-sm">{term.assetDetails}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Termo de {term.type} • {new Date(term.date).toLocaleDateString()}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {/* Reprint Button */}
-                                        <button onClick={() => handleReprintHistoricTerm(term)} className="flex items-center gap-1 text-xs bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded hover:bg-gray-50" title="Reimprimir Documento">
-                                            <Printer size={14}/>
-                                        </button>
-
-                                        {/* View/Upload Action */}
-                                        {isPending ? (
-                                            !isViewOnly && (
-                                                <label className="flex items-center gap-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 cursor-pointer">
-                                                    <Upload size={14}/> Anexar
-                                                    <input type="file" className="hidden" accept=".pdf,.png,.jpg" onChange={(e) => e.target.files?.[0] && handleAttachFile(term.id, e.target.files[0])} />
-                                                </label>
-                                            )
+                                    <div className="flex gap-2">
+                                        {term.fileUrl ? (
+                                            <a href={term.fileUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors"><ExternalLink size={16}/></a>
                                         ) : (
-                                            <a href={term.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-blue-600 hover:underline px-2">
-                                                <CheckCircle size={14} className="text-green-500"/> Visualizar
-                                            </a>
+                                            <span className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">PENDENTE ARQUIVO</span>
                                         )}
                                     </div>
                                 </div>
-                            )})}
-                            {userTerms.length === 0 && (
-                                <div className="text-center py-6 text-gray-400 bg-gray-50 rounded-lg border border-dashed">
-                                    Nenhum termo gerado para este colaborador.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* TAB: LOGS */}
-                {activeTab === 'LOGS' && (
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-2 mb-4">
-                            <History size={20} className="text-emerald-600" />
-                            <h4 className="font-bold text-gray-800">Linha do Tempo do Colaborador</h4>
-                        </div>
-                        
-                        <div className="relative border-l-2 border-gray-200 ml-3 space-y-8">
-                            {userHistory.map((log) => (
-                                <div key={log.id} className="relative pl-6">
-                                    <div className={`absolute -left-[9px] top-0 h-4 w-4 rounded-full border-2 border-white
-                                        ${log.action === ActionType.CHECKOUT ? 'bg-blue-500' : 
-                                          log.action === ActionType.CHECKIN ? 'bg-green-500' :
-                                          log.action === ActionType.INACTIVATE ? 'bg-red-500' :
-                                          'bg-gray-400'
-                                        }`}></div>
-                                    
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                                        <div>
-                                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{new Date(log.timestamp).toLocaleString()}</span>
-                                            <h5 className="font-bold text-gray-900 mt-1">{log.action}</h5>
-                                            <p className="text-sm text-gray-600 mt-1">{log.notes || 'Sem observações.'}</p>
-                                        </div>
-                                        <div className="text-xs text-right bg-gray-50 px-2 py-1 rounded border self-start">
-                                            <span className="text-gray-400 block">Admin</span>
-                                            <span className="font-medium text-gray-700">{log.adminUser}</span>
-                                        </div>
-                                    </div>
-                                </div>
                             ))}
-                            {userHistory.length === 0 && (
-                                <p className="text-gray-400 text-sm pl-6">Nenhum histórico registrado.</p>
-                            )}
-                        </div>
+                         </div>
                     </div>
                 )}
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 border-t flex justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Fechar</button>
-                {!isViewOnly && activeTab === 'DATA' && (
-                    <button type="submit" form="userForm" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                        {editingId ? 'Salvar Alterações' : 'Cadastrar'}
-                    </button>
-                )}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t shrink-0">
+                <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-xl bg-gray-200 font-bold text-gray-600 hover:bg-gray-300 transition-colors">Fechar Janela</button>
+                {!isViewOnly && activeTab === 'DATA' && <button type="submit" form="userForm" className="px-8 py-2 rounded-xl bg-emerald-600 text-white font-black uppercase tracking-widest shadow-lg hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95">Salvar Dados</button>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Sector Modal (RENAMED TO CARGOS/FUNÇÕES) */}
+      {/* Modal de Gestão de Setores (Simplificado conforme original) */}
       {isSectorModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-white">Gerenciar Cargos / Funções</h3>
-                    <button onClick={() => setIsSectorModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
-                </div>
-                <div className="p-6">
-                    <div className="flex gap-2 mb-4">
-                        <input 
-                            type="text" 
-                            className="flex-1 border rounded-lg p-2" 
-                            placeholder="Nome do Cargo (ex: Vendedor)"
-                            value={newSectorName}
-                            onChange={(e) => setNewSectorName(e.target.value)}
-                        />
-                        <button onClick={handleAddSector} className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"><Plus/></button>
-                    </div>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {sectors.map(s => (
-                            <div key={s.id} className="flex justify-between items-center p-3 bg-gray-50 border rounded-lg">
-                                <span>{s.name}</span>
-                                <button onClick={() => deleteSector(s.id, adminName)} className="text-red-400 hover:text-red-600"><Trash2 size={16}/></button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-             </div>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                  <div className="bg-slate-900 p-4 text-white flex justify-between items-center"><h3 className="font-bold">Gerenciar Cargos</h3><button onClick={() => setIsSectorModalOpen(false)}><X size={20}/></button></div>
+                  <div className="p-6">
+                      <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                          {sectors.map(s => <div key={s.id} className="flex justify-between items-center p-2 bg-gray-50 rounded border"><span>{s.name}</span></div>)}
+                      </div>
+                  </div>
+              </div>
           </div>
       )}
     </div>
