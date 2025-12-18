@@ -91,7 +91,10 @@ async function runMigrations(pool) {
         { table: 'Devices', col: 'InvoiceNumber', type: 'NVARCHAR(50)' },
         { table: 'Devices', col: 'Supplier', type: 'NVARCHAR(100)' },
         { table: 'Devices', col: 'PurchaseInvoiceUrl', type: 'NVARCHAR(MAX)' },
-        { table: 'Users', col: 'JobTitle', type: 'NVARCHAR(100)' }
+        { table: 'Users', col: 'JobTitle', type: 'NVARCHAR(100)' },
+        { table: 'Users', col: 'Cpf', type: 'NVARCHAR(20)' },
+        { table: 'Users', col: 'Rg', type: 'NVARCHAR(20)' },
+        { table: 'Users', col: 'Address', type: 'NVARCHAR(255)' }
     ];
 
     for (const item of columns) {
@@ -205,7 +208,7 @@ app.put('/api/devices/:id', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     try {
-        const result = await sql.query(`SELECT Id as id, FullName as fullName, Email as email, InternalCode as internalCode, JobTitle as jobTitle, SectorId as sectorId, Active as active FROM Users`);
+        const result = await sql.query(`SELECT Id as id, FullName as fullName, Email as email, Cpf as cpf, Rg as rg, Address as address, InternalCode as internalCode, JobTitle as jobTitle, SectorId as sectorId, Active as active FROM Users`);
         res.json(result.recordset.map(u => ({ ...u, active: !!u.active })));
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -217,11 +220,14 @@ app.post('/api/users', async (req, res) => {
         await pool.request()
             .input('Id', sql.NVarChar, u.id)
             .input('FullName', sql.NVarChar, u.fullName)
-            .input('Email', sql.NVarChar, u.email)
+            .input('Email', sql.NVarChar, u.email || '')
+            .input('Cpf', sql.NVarChar, u.cpf || null)
+            .input('Rg', sql.NVarChar, u.rg || null)
+            .input('Address', sql.NVarChar, u.address || null)
             .input('InternalCode', sql.NVarChar, u.internalCode || null)
             .input('JobTitle', sql.NVarChar, u.jobTitle || null)
             .input('SectorId', sql.NVarChar, u.sectorId)
-            .query(`INSERT INTO Users (Id, FullName, Email, InternalCode, JobTitle, SectorId, Active) VALUES (@Id, @FullName, @Email, @InternalCode, @JobTitle, @SectorId, 1)`);
+            .query(`INSERT INTO Users (Id, FullName, Email, Cpf, Rg, Address, InternalCode, JobTitle, SectorId, Active) VALUES (@Id, @FullName, @Email, @Cpf, @Rg, @Address, @InternalCode, @JobTitle, @SectorId, 1)`);
         res.json(u);
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -233,13 +239,33 @@ app.put('/api/users/:id', async (req, res) => {
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
             .input('FullName', sql.NVarChar, u.fullName)
-            .input('Email', sql.NVarChar, u.email)
+            .input('Email', sql.NVarChar, u.email || '')
+            .input('Cpf', sql.NVarChar, u.cpf || null)
+            .input('Rg', sql.NVarChar, u.rg || null)
+            .input('Address', sql.NVarChar, u.address || null)
             .input('InternalCode', sql.NVarChar, u.internalCode || null)
             .input('JobTitle', sql.NVarChar, u.jobTitle || null)
             .input('Active', sql.Bit, u.active ? 1 : 0)
             .input('SectorId', sql.NVarChar, u.sectorId)
-            .query(`UPDATE Users SET FullName=@FullName, Email=@Email, InternalCode=@InternalCode, JobTitle=@JobTitle, Active=@Active, SectorId=@SectorId WHERE Id=@Id`);
+            .query(`UPDATE Users SET FullName=@FullName, Email=@Email, Cpf=@Cpf, Rg=@Rg, Address=@Address, InternalCode=@InternalCode, JobTitle=@JobTitle, Active=@Active, SectorId=@SectorId WHERE Id=@Id`);
         res.json(u);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/sectors', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/sectors', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, s.id)
+            .input('Name', sql.NVarChar, s.name)
+            .query(`INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)`);
+        res.json(s);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -316,11 +342,6 @@ app.get('/api/logs', async (req, res) => {
 
 app.get('/api/system-users', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, Name as name, Email as email, Role as role, Password as password FROM SystemUsers`); res.json(result.recordset); }
-    catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/sectors', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
 

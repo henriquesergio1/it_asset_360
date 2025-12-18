@@ -51,8 +51,8 @@ const DataImporter = () => {
 
   const getTemplateHeaders = () => {
       switch(importType) {
-          case 'USERS': return 'Nome Completo;Email;CPF;RG;PIS;Codigo de Setor;Cargo ou Funcao;Endereco';
-          case 'DEVICES': return 'Patrimonio;Serial;IMEI;ID Pulsus;Codigo de Setor;Cargo ou Funcao;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;Email Colaborador';
+          case 'USERS': return 'Nome Completo;CPF;Email;RG;PIS;Codigo de Setor;Cargo ou Funcao;Endereco';
+          case 'DEVICES': return 'Patrimonio;Serial;IMEI;ID Pulsus;Codigo de Setor;Cargo ou Funcao;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;CPF Colaborador';
           case 'SIMS': return 'Numero;Operadora;ICCID;Plano';
           default: return '';
       }
@@ -102,9 +102,9 @@ const DataImporter = () => {
   const analyzeRow = (row: any): AnalysisResult => {
       try {
           if (importType === 'USERS') {
-              const email = row['Email']?.trim();
-              if (!email) throw new Error('Email obrigatório');
-              const existing = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+              const cpf = row['CPF']?.trim();
+              if (!cpf) throw new Error('CPF obrigatório');
+              const existing = users.find(u => u.cpf === cpf);
               if (!existing) return { status: 'NEW', row, selected: true };
               return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
           } else if (importType === 'DEVICES') {
@@ -131,18 +131,27 @@ const DataImporter = () => {
       setStep('PROCESSING');
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
 
-      const cache = { sectors: new Map(), brands: new Map(), types: new Map(), models: new Map() };
+      // Cache para evitar recriar itens durante o mesmo lote
+      const localSectors = [...sectors];
 
-      const resolveSector = (name: string): string => {
+      const resolveSector = async (name: string): Promise<string> => {
           if (!name) return '';
           const norm = name.trim().toLowerCase();
-          const existing = sectors.find(s => s.name.toLowerCase() === norm);
+          const existing = localSectors.find(s => s.name.toLowerCase() === norm);
           if (existing) return existing.id;
-          if (cache.sectors.has(norm)) return cache.sectors.get(norm);
+          
           const newId = Math.random().toString(36).substr(2, 9);
-          addSector({ id: newId, name: name.trim() }, adminName);
-          cache.sectors.set(norm, newId);
-          return newId;
+          const newSector = { id: newId, name: name.trim() };
+          
+          try {
+              // Chamada síncrona para garantir a FK no banco real
+              await addSector(newSector, adminName);
+              localSectors.push(newSector);
+              return newId;
+          } catch (e) {
+              console.error("Erro ao criar cargo:", e);
+              return '';
+          }
       };
 
       for (let i = 0; i < toProcess.length; i++) {
@@ -150,50 +159,66 @@ const DataImporter = () => {
           const r = item.row;
           try {
               if (importType === 'USERS') {
-                  const sId = resolveSector(r['Cargo ou Funcao']);
+                  const sId = await resolveSector(r['Cargo ou Funcao']);
+                  if (!sId) throw new Error(`Não foi possível definir o cargo: ${r['Cargo ou Funcao']}`);
+
                   const userData: User = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
-                      email: r['Email'],
+                      email: r['Email'] || '',
                       cpf: r['CPF'],
                       rg: r['RG'] || '',
                       pis: r['PIS'] || '',
                       internalCode: r['Codigo de Setor'],
                       sectorId: sId,
-                      jobTitle: r['Cargo ou Funcao'] || '', // Mantemos por compatibilidade mas o foco é o sectorId
+                      jobTitle: r['Cargo ou Funcao'] || '', 
                       address: r['Endereco'] || '',
                       active: true
                   };
-                  item.status === 'NEW' ? addUser(userData, adminName) : updateUser(userData, adminName);
+                  
+                  item.status === 'NEW' ? await addUser(userData, adminName) : await updateUser(userData, adminName);
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  // Resolve Hierarquia do Modelo
+                  // Resolve Hierarquia do Modelo (Simplificado para o lote)
                   const bName = r['Marca'] || 'Outros';
-                  let bId = brands.find(b => b.name === bName)?.id || cache.brands.get(bName);
-                  if (!bId) { bId = Math.random().toString(36).substr(2,9); addBrand({id:bId, name:bName}, adminName); cache.brands.set(bName, bId); }
+                  let brand = brands.find(b => b.name === bName);
+                  if (!brand) { 
+                      const bId = Math.random().toString(36).substr(2,9);
+                      await addBrand({id: bId, name: bName}, adminName);
+                      brand = { id: bId, name: bName };
+                  }
 
                   const tName = r['Tipo'] || 'Outros';
-                  let tId = assetTypes.find(t => t.name === tName)?.id || cache.types.get(tName);
-                  if (!tId) { tId = Math.random().toString(36).substr(2,9); addAssetType({id:tId, name:tName}, adminName); cache.types.set(tName, tId); }
+                  let type = assetTypes.find(t => t.name === tName);
+                  if (!type) {
+                      const tId = Math.random().toString(36).substr(2,9);
+                      await addAssetType({id: tId, name: tName}, adminName);
+                      type = { id: tId, name: tName };
+                  }
 
                   const mName = r['Modelo'] || 'Padrão';
-                  let mId = models.find(m => m.name === mName && m.brandId === bId)?.id || cache.models.get(mName+bId);
-                  if (!mId) { mId = Math.random().toString(36).substr(2,9); addModel({id:mId, name:mName, brandId:bId, typeId:tId}, adminName); cache.models.set(mName+bId, mId); }
+                  let model = models.find(m => m.name === mName && m.brandId === brand?.id);
+                  if (!model) {
+                      const mId = Math.random().toString(36).substr(2,9);
+                      await addModel({id: mId, name: mName, brandId: brand!.id, typeId: type!.id}, adminName);
+                      model = { id: mId, name: mName, brandId: brand!.id, typeId: type!.id };
+                  }
 
-                  // Vínculo com Usuário e Herança de Setor
-                  const userEmail = r['Email Colaborador']?.trim().toLowerCase();
-                  const linkedUser = userEmail ? users.find(u => u.email.toLowerCase() === userEmail) : null;
+                  // Vínculo com Usuário via CPF
+                  const userCpf = r['CPF Colaborador']?.trim();
+                  const linkedUser = userCpf ? users.find(u => u.cpf === userCpf) : null;
+                  const sId = await resolveSector(r['Cargo ou Funcao']);
 
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
-                      modelId: mId,
+                      modelId: model!.id,
                       assetTag: r['Patrimonio'],
                       serialNumber: r['Serial'] || r['Patrimonio'],
                       imei: r['IMEI'],
                       pulsusId: r['ID Pulsus'],
                       internalCode: r['Codigo de Setor'],
-                      sectorId: resolveSector(r['Cargo ou Funcao']), // Destinação via Cargo/Função
+                      sectorId: sId || linkedUser?.sectorId || null, 
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
                       purchaseCost: parseFloat(r['Valor Pago']?.replace(',','.')) || 0,
@@ -202,7 +227,7 @@ const DataImporter = () => {
                       customData: {}
                   };
 
-                  item.status === 'NEW' ? addDevice(deviceData, adminName) : updateDevice(deviceData, adminName);
+                  item.status === 'NEW' ? await addDevice(deviceData, adminName) : await updateDevice(deviceData, adminName);
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               }
               setProgress(p => ({ ...p, current: i + 1 }));
@@ -221,7 +246,7 @@ const DataImporter = () => {
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <Database className="text-blue-600"/> Importador de Dados
                 </h3>
-                <p className="text-sm text-gray-500">Cadastro de colaboradores e ativos via CSV.</p>
+                <p className="text-sm text-gray-500">Identificação de colaboradores por CPF.</p>
             </div>
             {step !== 'UPLOAD' && (
                 <button onClick={() => setStep('UPLOAD')} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-bold">
@@ -250,7 +275,7 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        Nota: Utilize ponto e vírgula (;) como separador. O campo "Cargo ou Função" define a categoria organizacional.
+                        Nota: Utilize o CPF como identificador para colaboradores. O sistema criará automaticamente os Cargos/Funções que não existirem no banco.
                     </p>
                 </div>
             </div>
@@ -266,16 +291,16 @@ const DataImporter = () => {
                     <table className="w-full text-xs text-left">
                         <thead className="bg-slate-100 sticky top-0 shadow-sm z-10">
                             <tr>
-                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Identificador</th>
+                                <th className="px-6 py-4 font-black text-slate-600 uppercase">CPF / Identificador</th>
                                 <th className="px-6 py-4 font-black text-slate-600 uppercase">Ação</th>
-                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Cargo Destino</th>
+                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Observação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {analyzedData.map((item, idx) => (
                                 <tr key={idx} className="border-b hover:bg-blue-50/30 transition-colors">
                                     <td className="px-6 py-3 font-mono font-bold text-blue-900">
-                                        {importType === 'USERS' ? item.row['Email'] : (item.row['Patrimonio'] || item.row['IMEI'])}
+                                        {importType === 'USERS' ? item.row['CPF'] : (item.row['Patrimonio'] || item.row['IMEI'])}
                                     </td>
                                     <td className="px-6 py-3">
                                         <span className={`px-2.5 py-1 rounded font-black text-[10px] ${item.status === 'NEW' ? 'bg-green-100 text-green-700' : item.status === 'CONFLICT' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
@@ -283,7 +308,7 @@ const DataImporter = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-3 text-gray-500 font-bold uppercase text-[10px]">
-                                        {item.errorMsg || item.row['Cargo ou Funcao'] || 'NÃO INFORMADO'}
+                                        {item.errorMsg || item.row['Cargo ou Funcao'] || 'CARGO PADRÃO'}
                                     </td>
                                 </tr>
                             ))}
