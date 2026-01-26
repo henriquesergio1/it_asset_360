@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 // --- Helper para renderizar logs com Links ---
@@ -82,6 +82,7 @@ const UserManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE'); 
   const [filterSectorId, setFilterSectorId] = useState(''); 
+  const [showPendingOnly, setShowPendingOnly] = useState(false); // Novo filtro
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false); 
@@ -220,9 +221,17 @@ const UserManager = () => {
       setDeactivateReasonNote('');
   };
 
+  const hasPendingTerms = (user: User) => {
+      return (user.terms || []).some(t => !t.fileUrl);
+  };
+
   const filteredUsers = users.filter(u => {
     const matchesStatus = viewMode === 'ACTIVE' ? u.active : !u.active;
     if (!matchesStatus) return false;
+    
+    // Novo Filtro de Pendência
+    if (showPendingOnly && !hasPendingTerms(u)) return false;
+
     if (filterSectorId && u.sectorId !== filterSectorId) return false;
     const searchStr = `${u.fullName} ${u.cpf} ${u.internalCode || ''}`.toLowerCase();
     return searchStr.includes(searchTerm.toLowerCase());
@@ -268,12 +277,22 @@ const UserManager = () => {
           </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
             <input type="text" placeholder="Nome, CPF ou Código de Setor..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
-        <div className="flex bg-gray-200 p-1 rounded-lg shadow-inner border border-gray-300">
+        
+        {/* Toggle Filtro Pendências */}
+        <button 
+            onClick={() => setShowPendingOnly(!showPendingOnly)} 
+            className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-xs font-bold uppercase transition-all whitespace-nowrap ${showPendingOnly ? 'bg-orange-50 border-orange-200 text-orange-700 shadow-sm' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}
+        >
+            <FileWarning size={16} className={showPendingOnly ? 'text-orange-500' : 'text-gray-400'}/>
+            {showPendingOnly ? 'Exibindo Pendências' : 'Filtrar Pendências'}
+        </button>
+
+        <div className="flex bg-gray-200 p-1 rounded-lg shadow-inner border border-gray-300 shrink-0">
             <button onClick={() => setViewMode('ACTIVE')} className={`px-6 py-1.5 rounded-md text-xs font-black uppercase transition-all ${viewMode === 'ACTIVE' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>Ativos</button>
             <button onClick={() => setViewMode('INACTIVE')} className={`px-6 py-1.5 rounded-md text-xs font-black uppercase transition-all ${viewMode === 'INACTIVE' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500'}`}>Inativos</button>
         </div>
@@ -295,6 +314,7 @@ const UserManager = () => {
               const userDevices = devices.filter(d => d.currentUserId === user.id);
               const userSims = sims.filter(s => s.currentUserId === user.id);
               const cargoNome = sectors.find(s => s.id === user.sectorId)?.name;
+              const hasPending = hasPendingTerms(user);
 
               return (
                 <tr key={user.id} className={`border-b hover:bg-gray-50 transition-colors ${!user.active ? 'opacity-60 bg-gray-50/50' : 'bg-white'}`}>
@@ -303,6 +323,11 @@ const UserManager = () => {
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-400 font-mono font-bold uppercase tracking-tighter">CPF: {user.cpf}</span>
                     </div>
+                    {hasPending && (
+                        <span className="inline-flex items-center gap-1 mt-1 bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-0.5 rounded border border-orange-200">
+                            <FileWarning size={10} /> TERMO PENDENTE
+                        </span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div onClick={() => handleOpenModal(user, true)} className="flex items-center gap-2 cursor-pointer group">

@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.7',
+    version: '1.9.8',
     date: 'Hoje',
+    title: 'Melhorias de Upload e Visualização',
+    changes: [
+      'Aumentado o limite de upload de arquivos (Termos e Notas Fiscais) para 50MB (Correção do erro 413).',
+      'Adicionado filtro rápido na lista de colaboradores para exibir apenas os que possuem termos pendentes.',
+      'Adicionada tag visual de alerta "Termo Pendente" na listagem de colaboradores.'
+    ]
+  },
+    {
+    version: '1.9.7',
+    date: '28/01/2025',
     title: 'Anexo de Termos',
     changes: [
       'Corrigido bug que impedia o upload de termos assinados na ficha do colaborador.',

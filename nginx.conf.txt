@@ -1,6 +1,10 @@
+
 server {
     listen 80;
     server_name localhost;
+
+    # AUMENTO DO LIMITE DE UPLOAD
+    client_max_body_size 50M;
 
     root /usr/share/nginx/html;
     index index.html;
