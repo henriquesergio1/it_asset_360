@@ -15,7 +15,6 @@ import SimManager from './components/SimManager';
 import UserManager from './components/UserManager';
 import Operations from './components/Operations';
 import AdminPanel from './components/AdminPanel';
-import SystemInfoModal from './components/SystemInfoModal';
 
 const SidebarLink = ({ to, icon: Icon, label }: { to: string; icon: any; label: string }) => {
   const location = useLocation();
@@ -31,7 +30,6 @@ const SidebarLink = ({ to, icon: Icon, label }: { to: string; icon: any; label: 
 
 const Layout = ({ children }: { children?: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   
   const { logout, user, isAdmin } = useAuth();
   const { settings } = useData();
@@ -77,10 +75,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         {/* Footer Info & Logout */}
         <div className="p-6 border-t border-slate-800 bg-slate-950 shrink-0">
           
-          <button onClick={() => setIsInfoModalOpen(true)} className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 mb-4 w-full transition-colors">
+          <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
              <Info size={14}/>
-             <span>Versão 1.7.7</span>
-          </button>
+             <span>Versão 1.8.1</span>
+          </div>
 
           <div className="mb-4">
              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Desenvolvido por</p>
@@ -116,9 +114,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {children}
         </main>
       </div>
-
-      {/* Info Modal */}
-      {isInfoModalOpen && <SystemInfoModal onClose={() => setIsInfoModalOpen(false)} />}
     </div>
   );
 };
