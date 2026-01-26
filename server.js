@@ -94,7 +94,10 @@ async function runMigrations(pool) {
         { table: 'Users', col: 'JobTitle', type: 'NVARCHAR(100)' },
         { table: 'Users', col: 'Cpf', type: 'NVARCHAR(20)' },
         { table: 'Users', col: 'Rg', type: 'NVARCHAR(20)' },
-        { table: 'Users', col: 'Address', type: 'NVARCHAR(255)' }
+        { table: 'Users', col: 'Address', type: 'NVARCHAR(255)' },
+        { table: 'SimCards', col: 'Operator', type: 'NVARCHAR(50)' },
+        { table: 'SimCards', col: 'Iccid', type: 'NVARCHAR(50)' },
+        { table: 'SimCards', col: 'PlanDetails', type: 'NVARCHAR(100)' }
     ];
 
     for (const item of columns) {
@@ -315,10 +318,56 @@ app.post('/api/models', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// --- SIM CARDS CRUD ---
 app.get('/api/sims', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, PhoneNumber as phoneNumber, Status as status, CurrentUserId as currentUserId FROM SimCards`); res.json(result.recordset); }
+    try { const result = await sql.query(`SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
+
+app.post('/api/sims', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, s.id)
+            .input('PhoneNumber', sql.NVarChar, s.phoneNumber)
+            .input('Operator', sql.NVarChar, s.operator || null)
+            .input('Iccid', sql.NVarChar, s.iccid || null)
+            .input('PlanDetails', sql.NVarChar, s.planDetails || null)
+            .input('Status', sql.NVarChar, s.status)
+            .query(`INSERT INTO SimCards (Id, PhoneNumber, Operator, Iccid, PlanDetails, Status) VALUES (@Id, @PhoneNumber, @Operator, @Iccid, @PlanDetails, @Status)`);
+        await logAction(s.id, 'Sim', 'Criação', s._adminUser, s.phoneNumber);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/sims/:id', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('PhoneNumber', sql.NVarChar, s.phoneNumber)
+            .input('Operator', sql.NVarChar, s.operator || null)
+            .input('Iccid', sql.NVarChar, s.iccid || null)
+            .input('PlanDetails', sql.NVarChar, s.planDetails || null)
+            .input('Status', sql.NVarChar, s.status)
+            .query(`UPDATE SimCards SET PhoneNumber=@PhoneNumber, Operator=@Operator, Iccid=@Iccid, PlanDetails=@PlanDetails, Status=@Status WHERE Id=@Id`);
+        await logAction(s.id, 'Sim', 'Atualização', s._adminUser, s.phoneNumber);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/sims/:id', async (req, res) => {
+    const { _adminUser, reason } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM SimCards WHERE Id=@Id`);
+        await logAction(req.params.id, 'Sim', 'Exclusão', _adminUser, `Motivo: ${reason}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+// --------------------
 
 app.get('/api/settings', async (req, res) => {
     try { const result = await sql.query(`SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings`); res.json(result.recordset[0] || {}); }

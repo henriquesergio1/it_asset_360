@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SimCard, DeviceStatus } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal } from 'lucide-react';
 
 const SimManager = () => {
   const { sims, addSim, updateSim, deleteSim, users } = useData();
@@ -17,6 +17,11 @@ const SimManager = () => {
   const [formData, setFormData] = useState<Partial<SimCard>>({ status: DeviceStatus.AVAILABLE });
 
   const adminName = currentUser?.name || 'Unknown';
+
+  // Statistics
+  const total = sims.length;
+  const inUse = sims.filter(s => s.status === DeviceStatus.IN_USE).length;
+  const available = sims.filter(s => s.status === DeviceStatus.AVAILABLE).length;
 
   const handleOpenModal = (sim?: SimCard) => {
     if (sim) {
@@ -67,11 +72,36 @@ const SimManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Gestão de Chips / SIMs</h1>
-          <p className="text-gray-500 text-sm">Controle de linhas móveis e dados.</p>
+          <p className="text-gray-500 text-sm">Controle de linhas móveis e planos de dados.</p>
         </div>
-        <button onClick={() => handleOpenModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm">
+        <button onClick={() => handleOpenModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold">
           <Plus size={18} /> Novo SIM
         </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">Total de Linhas</span>
+                <p className="text-3xl font-black text-blue-900">{total}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm"><Signal size={20}/></div>
+          </div>
+          <div className="bg-green-50 p-5 rounded-2xl border border-green-100 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-green-500 uppercase tracking-widest block mb-1">Disponíveis</span>
+                <p className="text-3xl font-black text-green-800">{available}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-green-500 shadow-sm"><Wifi size={20}/></div>
+          </div>
+          <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Em Uso</span>
+                <p className="text-3xl font-black text-indigo-900">{inUse}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-indigo-500 shadow-sm"><Smartphone size={20}/></div>
+          </div>
       </div>
 
       <div className="relative">
@@ -81,7 +111,7 @@ const SimManager = () => {
         <input 
           type="text" 
           placeholder="Buscar por número, ICCID ou operadora..." 
-          className="pl-10 w-full sm:w-96 border border-gray-300 rounded-lg py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+          className="pl-10 w-full border border-gray-300 rounded-xl py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none shadow-sm"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -106,25 +136,27 @@ const SimManager = () => {
                 const assignedUser = users.find(u => u.id === sim.currentUserId);
                 return (
                   <tr key={sim.id} className="bg-white border-b hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-gray-900">{sim.phoneNumber}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900">{sim.phoneNumber}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-semibold">{sim.operator}</span>
+                      <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider">{sim.operator}</span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs">{sim.iccid}</td>
-                    <td className="px-6 py-4">{sim.planDetails || '-'}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-500 font-bold">{sim.iccid}</td>
+                    <td className="px-6 py-4 text-xs font-medium">{sim.planDetails || '-'}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold 
-                        ${sim.status === DeviceStatus.AVAILABLE ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider 
+                        ${sim.status === DeviceStatus.AVAILABLE ? 'bg-green-100 text-green-800' : 'bg-indigo-100 text-indigo-800'}`}>
                         {sim.status}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {assignedUser ? assignedUser.fullName : <span className="text-gray-400">-</span>}
+                      {assignedUser ? (
+                          <span className="text-xs font-bold text-blue-600 underline cursor-pointer">{assignedUser.fullName}</span>
+                      ) : <span className="text-gray-300 font-bold text-xs uppercase tracking-wider">Livre</span>}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenModal(sim)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Edit2 size={16} /></button>
-                        <button onClick={() => handleDeleteClick(sim.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16} /></button>
+                        <button onClick={() => handleOpenModal(sim)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-colors"><Edit2 size={16} /></button>
+                        <button onClick={() => handleDeleteClick(sim.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-colors"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
@@ -138,22 +170,22 @@ const SimManager = () => {
        {/* Delete Modal */}
        {isDeleteModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in border border-red-100">
                   <div className="p-6">
                       <div className="flex flex-col items-center text-center mb-4">
                           <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 mb-3">
                               <AlertTriangle size={24} />
                           </div>
-                          <h3 className="text-lg font-bold text-gray-900">Excluir Chip/SIM?</h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                              Esta ação removerá o item do inventário. É obrigatório informar o motivo.
+                          <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Excluir Chip/SIM?</h3>
+                          <p className="text-xs text-gray-500 mt-1 font-medium">
+                              Esta ação removerá o item do inventário permanentemente. É obrigatório informar o motivo.
                           </p>
                       </div>
                       
                       <div className="mb-4">
-                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Motivo da Exclusão</label>
+                          <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Motivo da Exclusão</label>
                           <textarea 
-                              className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" 
+                              className="w-full border-2 border-red-100 rounded-xl p-3 text-sm focus:border-red-400 outline-none transition-colors" 
                               rows={3} 
                               placeholder="Ex: Cancelamento de linha, perda, defeito..."
                               value={deleteReason}
@@ -162,13 +194,13 @@ const SimManager = () => {
                       </div>
 
                       <div className="flex gap-3">
-                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 font-bold text-xs uppercase tracking-widest">Cancelar</button>
                           <button 
                               onClick={handleConfirmDelete} 
                               disabled={!deleteReason.trim()}
-                              className={`flex-1 py-2 rounded-lg text-white font-bold transition-colors ${!deleteReason.trim() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+                              className={`flex-1 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest transition-colors ${!deleteReason.trim() ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 shadow-lg'}`}
                           >
-                              Confirmar Exclusão
+                              Confirmar
                           </button>
                       </div>
                   </div>
@@ -178,39 +210,42 @@ const SimManager = () => {
 
        {/* Edit Modal */}
        {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up">
             <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-white">{editingId ? 'Editar SIM' : 'Novo SIM'}</h3>
+              <h3 className="text-lg font-black text-white uppercase tracking-tight">{editingId ? 'Editar Cadastro de SIM' : 'Novo Cadastro de SIM'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-8 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Número da Linha</label>
-                <input required type="text" className="w-full border rounded-lg p-2" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} placeholder="(00) 00000-0000"/>
+                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Número da Linha</label>
+                <input required type="text" className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none font-bold text-slate-800" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} placeholder="(00) 00000-0000"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Operadora</label>
+                    <select className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-white font-medium" value={formData.operator} onChange={e => setFormData({...formData, operator: e.target.value})}>
+                        <option value="">Selecione...</option>
+                        <option value="Vivo">Vivo</option>
+                        <option value="Claro">Claro</option>
+                        <option value="Tim">Tim</option>
+                        <option value="Oi">Oi</option>
+                        <option value="Outra">Outra</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">ICCID (Serial do Chip)</label>
+                    <input required type="text" className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none font-mono" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value})} />
+                  </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Operadora</label>
-                <select className="w-full border rounded-lg p-2" value={formData.operator} onChange={e => setFormData({...formData, operator: e.target.value})}>
-                    <option value="">Selecione...</option>
-                    <option value="Vivo">Vivo</option>
-                    <option value="Claro">Claro</option>
-                    <option value="Tim">Tim</option>
-                    <option value="Oi">Oi</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">ICCID</label>
-                <input required type="text" className="w-full border rounded-lg p-2" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value})} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Detalhes do Plano</label>
-                <input type="text" className="w-full border rounded-lg p-2" value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})} />
+                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Detalhes do Plano de Dados</label>
+                <input type="text" className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none" value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})} placeholder="Ex: Corporativo 20GB + Roaming"/>
               </div>
               
-              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+              <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-slate-500 bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 font-bold text-xs uppercase tracking-widest">Cancelar</button>
+                <button type="submit" className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-bold text-xs uppercase tracking-widest shadow-lg transform active:scale-95 transition-all">Salvar Cadastro</button>
               </div>
             </form>
           </div>
