@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.3',
+    version: '1.9.4',
     date: 'Hoje',
+    title: 'Melhorias na Gestão de Colaboradores',
+    changes: [
+      'Implementado fluxo seguro de inativação de colaboradores.',
+      'Obrigatório selecionar motivo (Desligamento, Afastamento, Cadastro Incorreto, etc.) ao inativar.',
+      'Bloqueio de inativação caso o colaborador ainda possua ativos vinculados.'
+    ]
+  },
+    {
+    version: '1.9.3',
+    date: '27/01/2025',
     title: 'Restauração de Operações Diretas',
     changes: [
       'Restaurados os botões de Entrega e Devolução diretamente na linha de cada dispositivo.',

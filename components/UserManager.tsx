@@ -27,6 +27,12 @@ const UserManager = () => {
   const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
 
+  // Inactivation Modal State
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
+  const [deactivateReasonType, setDeactivateReasonType] = useState('');
+  const [deactivateReasonNote, setDeactivateReasonNote] = useState('');
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
 
@@ -72,13 +78,38 @@ const UserManager = () => {
   };
 
   const handleToggleClick = (user: User) => {
+      // Reativação (Lógica simples)
       if (!user.active) {
           if (window.confirm(`Deseja reativar o colaborador ${user.fullName}?`)) toggleUserActive(user, adminName, 'Reativação Manual');
           return;
       }
+
+      // Inativação (Com validação de ativos)
       const assignedDevices = devices.filter(d => d.currentUserId === user.id);
-      if (assignedDevices.length > 0) return alert('Devolva os ativos antes de inativar.');
-      toggleUserActive(user, adminName, 'Inativação Manual');
+      const assignedSims = sims.filter(s => s.currentUserId === user.id);
+      
+      if (assignedDevices.length > 0 || assignedSims.length > 0) {
+          return alert(`Não é possível inativar ${user.fullName}.\n\nO colaborador ainda possui ${assignedDevices.length} dispositivo(s) e ${assignedSims.length} chip(s) vinculados.\n\nRealize a devolução dos ativos no menu "Entrega/Devolução" antes de inativar.`);
+      }
+
+      // Abre Modal de Motivo
+      setDeactivateTarget(user);
+      setDeactivateReasonType('');
+      setDeactivateReasonNote('');
+      setIsDeactivateModalOpen(true);
+  };
+
+  const handleConfirmDeactivation = () => {
+      if (!deactivateTarget || !deactivateReasonType) return;
+      
+      const fullReason = `${deactivateReasonType}${deactivateReasonNote ? ` - Obs: ${deactivateReasonNote}` : ''}`;
+      
+      toggleUserActive(deactivateTarget, adminName, fullReason);
+      
+      setIsDeactivateModalOpen(false);
+      setDeactivateTarget(null);
+      setDeactivateReasonType('');
+      setDeactivateReasonNote('');
   };
 
   const filteredUsers = users.filter(u => {
@@ -374,7 +405,7 @@ const UserManager = () => {
         </div>
       )}
 
-      {/* Modal de Gestão de Setores (Renomeado para Cargos/Funções) */}
+      {/* Modal de Gestão de Setores */}
       {isSectorModalOpen && (
           <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in border border-slate-100">
@@ -385,6 +416,69 @@ const UserManager = () => {
                           {sectors.map(s => <div key={s.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 font-bold text-slate-700 text-sm"><span>{s.name}</span></div>)}
                       </div>
                       <button onClick={() => { const n = prompt('Nome do novo Cargo/Função:'); if(n) addSector({id: Math.random().toString(36).substr(2,9), name: n}, adminName); }} className="w-full py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all">Adicionar Novo Cargo</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* MODAL DE INATIVAÇÃO */}
+      {isDeactivateModalOpen && deactivateTarget && (
+          <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-up border border-red-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100">
+                              <UserX size={32} />
+                          </div>
+                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Inativar Colaborador</h3>
+                          <p className="text-sm font-bold text-red-500 mt-1">{deactivateTarget.fullName}</p>
+                          <p className="text-xs text-slate-400 mt-2">Selecione o motivo para manter o histórico de auditoria organizado.</p>
+                      </div>
+
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Motivo Principal</label>
+                              <select 
+                                  className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-red-400 outline-none bg-white font-bold text-slate-700"
+                                  value={deactivateReasonType}
+                                  onChange={(e) => setDeactivateReasonType(e.target.value)}
+                              >
+                                  <option value="">Selecione...</option>
+                                  <option value="Desligamento / Demissão">Desligamento / Demissão</option>
+                                  <option value="Cadastro Incorreto">Cadastro Incorreto</option>
+                                  <option value="Afastamento">Afastamento / Licença</option>
+                                  <option value="Aposentadoria">Aposentadoria</option>
+                                  <option value="Outro">Outro (Especificar)</option>
+                              </select>
+                          </div>
+                          
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Observações Adicionais</label>
+                              <textarea 
+                                  className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-red-400 outline-none bg-slate-50 transition-colors" 
+                                  rows={3} 
+                                  placeholder="Detalhes opcionais sobre a inativação..."
+                                  value={deactivateReasonNote}
+                                  onChange={(e) => setDeactivateReasonNote(e.target.value)}
+                              ></textarea>
+                          </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-8">
+                          <button 
+                              onClick={() => setIsDeactivateModalOpen(false)} 
+                              className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 font-bold text-xs uppercase tracking-widest"
+                          >
+                              Cancelar
+                          </button>
+                          <button 
+                              onClick={handleConfirmDeactivation}
+                              disabled={!deactivateReasonType}
+                              className={`flex-1 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg transition-all ${!deactivateReasonType ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 hover:scale-105'}`}
+                          >
+                              Confirmar
+                          </button>
+                      </div>
                   </div>
               </div>
           </div>
