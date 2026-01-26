@@ -414,4 +414,164 @@ app.get('/api/custom-fields', async (req, res) => {
     catch (err) { res.status(500).send(err.message); }
 });
 
+// --- OPERATIONS (CHECKOUT / CHECKIN) ---
+
+app.post('/api/operations/checkout', async (req, res) => {
+    const { assetId, assetType, userId, notes, _adminUser } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+
+        try {
+            let assetName = '';
+            if (assetType === 'Device') {
+                const devResult = await transaction.request().input('Id', sql.NVarChar, assetId).query("SELECT AssetTag, ModelId FROM Devices WHERE Id=@Id");
+                const dev = devResult.recordset[0];
+                if(dev) {
+                    const modelResult = await transaction.request().input('Id', sql.NVarChar, dev.ModelId).query("SELECT Name FROM Models WHERE Id=@Id");
+                    const modelName = modelResult.recordset[0]?.Name || 'Dispositivo';
+                    assetName = `${modelName} (${dev.AssetTag})`;
+                }
+
+                await transaction.request()
+                    .input('UserId', sql.NVarChar, userId)
+                    .input('Id', sql.NVarChar, assetId)
+                    .query("UPDATE Devices SET Status='Em Uso', CurrentUserId=@UserId WHERE Id=@Id");
+            } else {
+                const simResult = await transaction.request().input('Id', sql.NVarChar, assetId).query("SELECT PhoneNumber FROM SimCards WHERE Id=@Id");
+                const sim = simResult.recordset[0];
+                assetName = sim ? `Chip ${sim.PhoneNumber}` : 'Chip';
+
+                await transaction.request()
+                    .input('UserId', sql.NVarChar, userId)
+                    .input('Id', sql.NVarChar, assetId)
+                    .query("UPDATE SimCards SET Status='Em Uso', CurrentUserId=@UserId WHERE Id=@Id");
+            }
+
+            const userResult = await transaction.request().input('Id', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Id");
+            const userName = userResult.recordset[0]?.FullName || 'Usuário';
+
+            // Logs
+            const logIdAsset = Math.random().toString(36).substr(2, 9);
+            await transaction.request()
+                .input('Id', sql.NVarChar, logIdAsset)
+                .input('AssetId', sql.NVarChar, assetId)
+                .input('AssetType', sql.NVarChar, assetType)
+                .input('Action', sql.NVarChar, 'Entrega')
+                .input('AdminUser', sql.NVarChar, _adminUser)
+                .input('Notes', sql.NVarChar, `Entregue para: ${userName}. Obs: ${notes}`)
+                .query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
+
+            const logIdUser = Math.random().toString(36).substr(2, 9);
+            await transaction.request()
+                .input('Id', sql.NVarChar, logIdUser)
+                .input('AssetId', sql.NVarChar, userId)
+                .input('AssetType', sql.NVarChar, 'User')
+                .input('Action', sql.NVarChar, 'Entrega')
+                .input('AdminUser', sql.NVarChar, _adminUser)
+                .input('Notes', sql.NVarChar, `Recebeu: ${assetName}. Obs: ${notes}`)
+                .query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
+
+            // Term
+            const termId = Math.random().toString(36).substr(2, 9);
+            await transaction.request()
+                 .input('Id', sql.NVarChar, termId)
+                 .input('UserId', sql.NVarChar, userId)
+                 .input('Type', sql.NVarChar, 'ENTREGA')
+                 .input('AssetDetails', sql.NVarChar, assetName)
+                 .input('Date', sql.DateTime2, new Date())
+                 .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@Id, @UserId, @Type, @AssetDetails, @Date)");
+
+            await transaction.commit();
+            res.json({ success: true });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/operations/checkin', async (req, res) => {
+    const { assetId, assetType, notes, _adminUser } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+
+        try {
+            let userId = null;
+            let assetName = '';
+
+            if (assetType === 'Device') {
+                const devResult = await transaction.request().input('Id', sql.NVarChar, assetId).query("SELECT CurrentUserId, AssetTag, ModelId FROM Devices WHERE Id=@Id");
+                const dev = devResult.recordset[0];
+                if(dev) {
+                    userId = dev.CurrentUserId;
+                    const modelResult = await transaction.request().input('Id', sql.NVarChar, dev.ModelId).query("SELECT Name FROM Models WHERE Id=@Id");
+                    const modelName = modelResult.recordset[0]?.Name || 'Dispositivo';
+                    assetName = `${modelName} (${dev.AssetTag})`;
+                }
+                await transaction.request().input('Id', sql.NVarChar, assetId).query("UPDATE Devices SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Id");
+            } else {
+                const simResult = await transaction.request().input('Id', sql.NVarChar, assetId).query("SELECT CurrentUserId, PhoneNumber FROM SimCards WHERE Id=@Id");
+                const sim = simResult.recordset[0];
+                if(sim) {
+                    userId = sim.CurrentUserId;
+                    assetName = `Chip ${sim.PhoneNumber}`;
+                }
+                await transaction.request().input('Id', sql.NVarChar, assetId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Id");
+            }
+
+            let userName = 'Desconhecido';
+            if(userId) {
+                const userResult = await transaction.request().input('Id', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Id");
+                if(userResult.recordset[0]) userName = userResult.recordset[0].FullName;
+            }
+
+            const logIdAsset = Math.random().toString(36).substr(2, 9);
+            await transaction.request()
+                .input('Id', sql.NVarChar, logIdAsset)
+                .input('AssetId', sql.NVarChar, assetId)
+                .input('AssetType', sql.NVarChar, assetType)
+                .input('Action', sql.NVarChar, 'Devolução')
+                .input('AdminUser', sql.NVarChar, _adminUser)
+                .input('Notes', sql.NVarChar, `Devolvido por: ${userName}. Obs: ${notes}`)
+                .query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
+
+            if (userId) {
+                const logIdUser = Math.random().toString(36).substr(2, 9);
+                await transaction.request()
+                    .input('Id', sql.NVarChar, logIdUser)
+                    .input('AssetId', sql.NVarChar, userId)
+                    .input('AssetType', sql.NVarChar, 'User')
+                    .input('Action', sql.NVarChar, 'Devolução')
+                    .input('AdminUser', sql.NVarChar, _adminUser)
+                    .input('Notes', sql.NVarChar, `Devolveu: ${assetName}. Obs: ${notes}`)
+                    .query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
+
+                const termId = Math.random().toString(36).substr(2, 9);
+                await transaction.request()
+                    .input('Id', sql.NVarChar, termId)
+                    .input('UserId', sql.NVarChar, userId)
+                    .input('Type', sql.NVarChar, 'DEVOLUCAO')
+                    .input('AssetDetails', sql.NVarChar, assetName)
+                    .input('Date', sql.DateTime2, new Date())
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@Id, @UserId, @Type, @AssetDetails, @Date)");
+            }
+
+            await transaction.commit();
+            res.json({ success: true });
+        } catch (err) {
+            await transaction.rollback();
+            throw err;
+        }
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/restore', async (req, res) => {
+    // Placeholder - Implementar restauração baseada em backup JSON se necessário
+    res.status(501).send("Not Implemented");
+});
+
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
