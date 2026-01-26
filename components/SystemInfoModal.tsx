@@ -8,8 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.8',
+    version: '1.9.9',
     date: 'Hoje',
+    title: 'Correção na Visualização de Termos',
+    changes: [
+      'Corrigido problema onde arquivos PDF assinados abriam como texto bruto (Base64) em nova aba.',
+      'Agora os arquivos anexados são processados corretamente para visualização no navegador.'
+    ]
+  },
+    {
+    version: '1.9.8',
+    date: '29/01/2025',
     title: 'Melhorias de Upload e Visualização',
     changes: [
       'Aumentado o limite de upload de arquivos (Termos e Notas Fiscais) para 50MB (Correção do erro 413).',

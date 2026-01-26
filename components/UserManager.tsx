@@ -168,6 +168,27 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
+  // --- Função para abrir arquivos Base64 corretamente ---
+  const handleOpenFile = (fileUrl: string) => {
+      // Se for uma string Data URI (Base64)
+      if (fileUrl.startsWith('data:')) {
+          // Converter Base64 para Blob para abrir em nova aba sem restrições de tamanho de URL
+          fetch(fileUrl)
+              .then(res => res.blob())
+              .then(blob => {
+                  const blobUrl = URL.createObjectURL(blob);
+                  window.open(blobUrl, '_blank');
+              })
+              .catch(err => {
+                  console.error("Erro ao converter arquivo:", err);
+                  alert("Não foi possível abrir o arquivo. Tente novamente.");
+              });
+      } else {
+          // Se for URL normal
+          window.open(fileUrl, '_blank');
+      }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
@@ -514,7 +535,13 @@ const UserManager = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         {term.fileUrl ? (
-                                            <a href={term.fileUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" title="Ver Arquivo"><ExternalLink size={20}/></a>
+                                            <button 
+                                                onClick={() => handleOpenFile(term.fileUrl)}
+                                                className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" 
+                                                title="Ver Arquivo"
+                                            >
+                                                <ExternalLink size={20}/>
+                                            </button>
                                         ) : (
                                             !isViewOnly ? (
                                                 <label className="cursor-pointer flex items-center gap-1 text-[10px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border-2 border-dashed border-red-200 hover:bg-red-100 transition-colors shadow-sm">
