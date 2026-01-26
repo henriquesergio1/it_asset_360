@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 const UserManager = () => {
@@ -29,6 +29,11 @@ const UserManager = () => {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
+
+  // Statistics
+  const totalUsers = users.length;
+  const activeUsers = users.filter(u => u.active).length;
+  const inactiveUsers = users.filter(u => !u.active).length;
 
   // --- LOGICA DE ABERTURA VIA URL (DEEP LINKING) ---
   useEffect(() => {
@@ -97,6 +102,31 @@ const UserManager = () => {
             <button onClick={() => setIsSectorModalOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50"><Briefcase size={18} /> Cargos / Funções</button>
             <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold"><Plus size={18} /> Novo Colaborador</button>
         </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">Total Geral</span>
+                <p className="text-3xl font-black text-blue-900">{totalUsers}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm"><Users size={20}/></div>
+          </div>
+          <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block mb-1">Ativos</span>
+                <p className="text-3xl font-black text-emerald-800">{activeUsers}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm"><UserCheck size={20}/></div>
+          </div>
+          <div className="bg-gray-100 p-5 rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm">
+            <div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Inativos / Desligados</span>
+                <p className="text-3xl font-black text-gray-700">{inactiveUsers}</p>
+            </div>
+            <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm"><UserX size={20}/></div>
+          </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
@@ -235,7 +265,7 @@ const UserManager = () => {
                              </div>
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1 tracking-widest">Endereço</label>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 ml-1 tracking-widest">Endereço de Entrega / Residencial</label>
                             <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF"/>
                         </div>
                     </form>

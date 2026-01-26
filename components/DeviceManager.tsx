@@ -221,6 +221,18 @@ const DeviceManager = () => {
                         {d.assetTag && <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag}</div>}
                         {d.internalCode && <div className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Setor: {d.internalCode}</div>}
                         <div className="text-[9px] text-slate-400 font-mono">SN: {d.serialNumber || '---'}</div>
+                        
+                        {d.pulsusId && (
+                            <a 
+                                href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 mt-1.5 px-2 py-1 bg-purple-50 text-purple-700 rounded-md border border-purple-100 text-[9px] font-black uppercase hover:bg-purple-100 transition-colors shadow-sm"
+                                title="Acessar Gerenciador MDM (Pulsus)"
+                            >
+                                <Smartphone size={10} className="fill-purple-200"/> Pulsus MDM <ExternalLink size={8} className="opacity-50"/>
+                            </a>
+                        )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
