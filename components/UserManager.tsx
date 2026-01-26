@@ -144,6 +144,29 @@ const UserManager = () => {
       return changes.length > 0 ? changes.join(', ') : 'Edição de detalhes';
   };
 
+  const handleTermUpload = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !editingId) return;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          const fileUrl = reader.result as string;
+          
+          // Recupera o usuário atual para garantir dados frescos
+          const currentUserData = users.find(u => u.id === editingId);
+          if (!currentUserData) return;
+
+          // Atualiza a lista de termos
+          const updatedTerms = (currentUserData.terms || []).map(t => 
+              t.id === termId ? { ...t, fileUrl } : t
+          );
+
+          // Salva usando a função de update existente
+          updateUser({ ...currentUserData, terms: updatedTerms }, adminName, "Anexo de termo assinado");
+      };
+      reader.readAsDataURL(file);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
@@ -468,7 +491,16 @@ const UserManager = () => {
                                         {term.fileUrl ? (
                                             <a href={term.fileUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" title="Ver Arquivo"><ExternalLink size={20}/></a>
                                         ) : (
-                                            <span className="text-[10px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border-2 border-dashed border-red-200">ARQUIVO PENDENTE</span>
+                                            !isViewOnly ? (
+                                                <label className="cursor-pointer flex items-center gap-1 text-[10px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border-2 border-dashed border-red-200 hover:bg-red-100 transition-colors shadow-sm">
+                                                    <Upload size={12}/> ANEXAR ARQUIVO
+                                                    <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
+                                                </label>
+                                            ) : (
+                                                <span className="text-[10px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border-2 border-dashed border-red-200 opacity-50 cursor-not-allowed" title="Habilite a edição para anexar">
+                                                    PENDENTE (SOMENTE LEITURA)
+                                                </span>
+                                            )
                                         )}
                                     </div>
                                 </div>

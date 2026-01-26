@@ -8,8 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.6',
+    version: '1.9.7',
     date: 'Hoje',
+    title: 'Anexo de Termos',
+    changes: [
+      'Corrigido bug que impedia o upload de termos assinados na ficha do colaborador.',
+      'Agora é possível clicar em "ANEXAR ARQUIVO" nos termos pendentes quando a edição está habilitada.'
+    ]
+  },
+    {
+    version: '1.9.6',
+    date: '28/01/2025',
     title: 'UX de Inventário e Segurança',
     changes: [
       'Inventário de Dispositivos agora possui clique na linha para abrir detalhes (visualização rápida).',
