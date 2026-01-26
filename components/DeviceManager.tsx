@@ -119,7 +119,10 @@ const DeviceManager = () => {
 
   const handleOpenModal = (device?: Device, viewOnly: boolean = false) => {
     setActiveTab('GENERAL');
-    setIsViewOnly(viewOnly || device?.status === DeviceStatus.RETIRED);
+    // Se estiver descartado, sempre viewOnly. Senão, respeita o parametro.
+    const isRetired = device?.status === DeviceStatus.RETIRED;
+    setIsViewOnly(isRetired || viewOnly);
+    
     if (device) {
       setEditingId(device.id);
       setFormData({ ...device, customData: device.customData || {} });
@@ -188,6 +191,16 @@ const DeviceManager = () => {
     setIsModalOpen(false);
   };
 
+  const handleDeleteAttempt = (device: Device) => {
+      if (device.status === DeviceStatus.IN_USE || device.currentUserId) {
+          alert('AÇÃO BLOQUEADA: Não é possível descartar um dispositivo que está em uso.\n\nPor favor, realize a devolução do ativo no menu "Entrega/Devolução" antes de prosseguir com o descarte.');
+          return;
+      }
+      setDeleteTargetId(device.id);
+      setDeleteReason('');
+      setIsDeleteModalOpen(true);
+  };
+
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
 
   return (
@@ -240,7 +253,11 @@ const DeviceManager = () => {
               const cargoDestino = sectors.find(s => s.id === d.sectorId)?.name;
 
               return (
-                <tr key={d.id} className={`border-b transition-colors hover:bg-slate-50/50 ${isRet ? 'opacity-60 grayscale' : 'bg-white'}`}>
+                <tr 
+                    key={d.id} 
+                    onClick={() => handleOpenModal(d, true)}
+                    className={`border-b transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50' : 'hover:bg-blue-50/30 bg-white'}`}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 shadow-inner shrink-0">
@@ -263,6 +280,7 @@ const DeviceManager = () => {
                                 href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-1 mt-1.5 px-2 py-1 bg-purple-50 text-purple-700 rounded-md border border-purple-100 text-[9px] font-black uppercase hover:bg-purple-100 transition-colors shadow-sm"
                                 title="Acessar Gerenciador MDM (Pulsus)"
                             >
@@ -281,20 +299,20 @@ const DeviceManager = () => {
                   </td>
                   <td className="px-6 py-4">
                     {user ? (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <span className="text-xs font-bold text-blue-600 underline cursor-pointer" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
                             <span className="text-[9px] text-slate-400 font-black uppercase">{user.internalCode || 'S/ Cód'}</span>
                         </div>
                     ) : <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter italic">Livre no Estoque</span>}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         {isRet ? (
                             <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
                         ) : (
                             <>
-                                <button onClick={() => handleOpenModal(d)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Ficha Completa"><Edit2 size={18}/></button>
-                                <button onClick={() => { setDeleteTargetId(d.id); setDeleteReason(''); setIsDeleteModalOpen(true); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
+                                <button onClick={() => handleOpenModal(d)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
+                                <button onClick={() => handleDeleteAttempt(d)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
                             </>
                         )}
                     </div>
@@ -312,7 +330,19 @@ const DeviceManager = () => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
             <div className="bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
               <div className="flex flex-col">
-                <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-tight">{editingId ? 'Ficha Técnica do Ativo' : 'Novo Cadastro de Ativo'}</h3>
+                <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-tight">
+                        {editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}
+                    </h3>
+                    {isViewOnly && editingId && !devices.find(d => d.id === editingId)?.status?.includes('Descartado') && (
+                        <button 
+                            onClick={() => setIsViewOnly(false)} 
+                            className="bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-full font-black uppercase hover:bg-blue-700 flex items-center gap-1 shadow-lg transition-transform active:scale-95"
+                        >
+                            <Edit2 size={12}/> Habilitar Edição
+                        </button>
+                    )}
+                </div>
                 {editingId && <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: {editingId}</span>}
               </div>
               <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>

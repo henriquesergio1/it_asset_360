@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.5',
+    version: '1.9.6',
     date: 'Hoje',
+    title: 'UX de Inventário e Segurança',
+    changes: [
+      'Inventário de Dispositivos agora possui clique na linha para abrir detalhes (visualização rápida).',
+      'Adicionado botão "Habilitar Edição" no modal de detalhes do dispositivo.',
+      'Bloqueio de segurança: Não é mais permitido excluir/descartar dispositivos que estejam em uso (devolução obrigatória).'
+    ]
+  },
+    {
+    version: '1.9.5',
+    date: '28/01/2025',
     title: 'Auditoria Inteligente',
     changes: [
       'Log detalhado de edições no cadastro de colaboradores (registra o que foi alterado).',
@@ -18,7 +28,7 @@ const versions = [
   },
     {
     version: '1.9.4',
-    date: 'Hoje',
+    date: '27/01/2025',
     title: 'Melhorias na Gestão de Colaboradores',
     changes: [
       'Implementado fluxo seguro de inativação de colaboradores.',
