@@ -1,4 +1,5 @@
 
+// ... existing content (imports, config, migrations) ...
 const express = require('express');
 const sql = require('mssql');
 const cors = require('cors');
@@ -23,7 +24,9 @@ const dbConfig = {
     }
 };
 
+// ... runMigrations function ...
 async function runMigrations(pool) {
+    // ... existing content of runMigrations ...
     console.log('🔄 Verificando esquema do banco de dados...');
     
     const baseTables = `
@@ -135,6 +138,7 @@ async function logAction(assetId, assetType, action, adminUser, notes, backupDat
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
+// ... GET/POST devices ...
 app.get('/api/devices', async (req, res) => {
     try {
         const result = await sql.query(`
@@ -209,6 +213,7 @@ app.put('/api/devices/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// ... existing GET/POST users ...
 app.get('/api/users', async (req, res) => {
     try {
         const result = await sql.query(`SELECT Id as id, FullName as fullName, Email as email, Cpf as cpf, Rg as rg, Address as address, InternalCode as internalCode, JobTitle as jobTitle, SectorId as sectorId, Active as active FROM Users`);
@@ -231,6 +236,8 @@ app.post('/api/users', async (req, res) => {
             .input('JobTitle', sql.NVarChar, u.jobTitle || null)
             .input('SectorId', sql.NVarChar, u.sectorId)
             .query(`INSERT INTO Users (Id, FullName, Email, Cpf, Rg, Address, InternalCode, JobTitle, SectorId, Active) VALUES (@Id, @FullName, @Email, @Cpf, @Rg, @Address, @InternalCode, @JobTitle, @SectorId, 1)`);
+        
+        await logAction(u.id, 'User', 'Criação', u._adminUser, `Novo colaborador: ${u.fullName}`);
         res.json(u);
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -251,10 +258,21 @@ app.put('/api/users/:id', async (req, res) => {
             .input('Active', sql.Bit, u.active ? 1 : 0)
             .input('SectorId', sql.NVarChar, u.sectorId)
             .query(`UPDATE Users SET FullName=@FullName, Email=@Email, Cpf=@Cpf, Rg=@Rg, Address=@Address, InternalCode=@InternalCode, JobTitle=@JobTitle, Active=@Active, SectorId=@SectorId WHERE Id=@Id`);
+        
+        // Log action
+        let action = 'Atualização';
+        let notes = u._notes || 'Edição de cadastro';
+        if (u._reason) {
+            action = u.active ? 'Ativação' : 'Inativação';
+            notes = `Motivo: ${u._reason}`;
+        }
+        await logAction(u.id, 'User', action, u._adminUser, notes);
+
         res.json(u);
     } catch (err) { res.status(500).send(err.message); }
 });
 
+// ... rest of the file ...
 app.get('/api/sectors', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }

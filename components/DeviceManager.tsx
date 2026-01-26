@@ -7,6 +7,41 @@ import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, A
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
+// --- Helper para renderizar logs com Links ---
+const LogNoteRenderer = ({ note }: { note: string }) => {
+    const { users } = useData();
+    const navigate = useNavigate();
+
+    // Regex para capturar padrões como "Entregue para: Nome..." ou "Devolvido por: Nome..."
+    const userPattern = /(Entregue para|Devolvido por):\s+([^\.]+)/i;
+    const match = note.match(userPattern);
+
+    if (!match) return <span>{note}</span>;
+
+    const action = match[1];
+    const nameString = match[2].trim();
+    const restOfNote = note.substring(match[0].length);
+
+    // Tenta encontrar o usuário pelo nome exato
+    const foundUser = users.find(u => u.fullName.toLowerCase() === nameString.toLowerCase());
+
+    return (
+        <span>
+            {action}: {foundUser ? (
+                <span 
+                    onClick={() => navigate(`/users?userId=${foundUser.id}`)} 
+                    className="text-blue-600 hover:underline font-bold cursor-pointer hover:bg-blue-50 px-1 rounded"
+                >
+                    {nameString}
+                </span>
+            ) : (
+                <span className="font-bold">{nameString}</span>
+            )}
+            {restOfNote}
+        </span>
+    );
+};
+
 const DeviceManager = () => {
   const { 
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
@@ -157,6 +192,7 @@ const DeviceManager = () => {
 
   return (
     <div className="space-y-6 relative pb-20">
+      {/* ... Header and Filters ... */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Inventário de Dispositivos</h1>
@@ -356,6 +392,7 @@ const DeviceManager = () => {
                   </form>
                 )}
 
+                {/* FINANCIAL and MAINTENANCE tabs remain unchanged */}
                 {activeTab === 'FINANCIAL' && (
                   <div className="space-y-8 animate-fade-in">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -496,7 +533,9 @@ const DeviceManager = () => {
                                 <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
                                 <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
                                 <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">"{log.notes}"</div>
+                                <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
+                                    <LogNoteRenderer note={log.notes || ''} />
+                                </div>
                                 <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                             </div>
                         ))}

@@ -167,9 +167,9 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUsers(prev => [...prev, user]);
     logAction(ActionType.create, 'User', user.id, user.fullName, adminName);
   };
-  const updateUser = (user: User, adminName: string) => {
+  const updateUser = (user: User, adminName: string, notes?: string) => {
     setUsers(prev => prev.map(u => u.id === user.id ? user : u));
-    logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName);
+    logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName, notes || 'Edição de cadastro');
   };
   const toggleUserActive = (user: User, adminName: string, reason?: string) => {
     const updatedUser = { ...user, active: !user.active };
@@ -377,14 +377,14 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    addDevice, updateDevice, deleteDevice, restoreDevice, // Adicionado restoreDevice ao valor exportado
+    addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
     addSystemUser, updateSystemUser, deleteSystemUser,
     updateSettings,
     assignAsset, returnAsset, getHistory,
     clearLogs,
-    restoreItem, // New
+    restoreItem,
     addAssetType, updateAssetType, deleteAssetType,
     addBrand, updateBrand, deleteBrand,
     addModel, updateModel, deleteModel,

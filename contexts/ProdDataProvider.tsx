@@ -1,4 +1,5 @@
 
+// ... existing imports
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus } from '../types';
@@ -137,8 +138,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUsers(p => [...p, user]);
   };
   
-  const updateUser = async (user: User, adminName: string) => { 
-    await putData('users', { ...user, _adminUser: adminName }); 
+  const updateUser = async (user: User, adminName: string, notes?: string) => { 
+    await putData('users', { ...user, _adminUser: adminName, _notes: notes }); 
     setUsers(p => p.map(u => u.id === user.id ? user : u));
   };
   

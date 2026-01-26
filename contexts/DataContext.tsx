@@ -36,7 +36,7 @@ export interface DataContextType {
   
   // CRUD Users
   addUser: (user: User, adminName: string) => void;
-  updateUser: (user: User, adminName: string) => void;
+  updateUser: (user: User, adminName: string, notes?: string) => void; // Updated signature
   toggleUserActive: (user: User, adminName: string, reason?: string) => void;
   
   // CRUD Sectors

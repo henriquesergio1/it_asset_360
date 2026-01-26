@@ -8,6 +8,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '1.9.5',
+    date: 'Hoje',
+    title: 'Auditoria Inteligente',
+    changes: [
+      'Log detalhado de edições no cadastro de colaboradores (registra o que foi alterado).',
+      'Links inteligentes nos logs de auditoria: Clique no nome do ativo ou colaborador para navegar diretamente para o detalhe.'
+    ]
+  },
+    {
     version: '1.9.4',
     date: 'Hoje',
     title: 'Melhorias na Gestão de Colaboradores',

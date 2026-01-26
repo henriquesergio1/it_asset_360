@@ -7,6 +7,67 @@ import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
+// --- Helper para renderizar logs com Links ---
+const LogNoteRenderer = ({ note }: { note: string }) => {
+    const { devices, sims, models } = useData();
+    const navigate = useNavigate();
+
+    // Regex para capturar padrões como "Recebeu: Modelo (TAG)..." ou "Devolveu: Modelo (TAG)..."
+    // Captura tudo até o ponto final ou "Obs:"
+    const assetPattern = /(Recebeu|Devolveu):\s+([^\.]+)/i;
+    const match = note.match(assetPattern);
+
+    if (!match) return <span>{note}</span>;
+
+    const action = match[1];
+    const assetString = match[2].trim();
+    const restOfNote = note.substring(match[0].length);
+
+    // Tenta encontrar o asset pelo nome (que geralmente contém a Tag ou Número)
+    // Extrai TAG ou IMEI ou Numero se possível da string
+    const tagMatch = assetString.match(/\((.*?)\)/); // Pega o que está entre parênteses, ex: (TI-001)
+    const identifier = tagMatch ? tagMatch[1] : assetString;
+
+    let targetLink = null;
+    
+    // Procura em Devices
+    const foundDevice = devices.find(d => 
+        assetString.includes(d.assetTag) || 
+        (d.imei && assetString.includes(d.imei))
+    );
+
+    if (foundDevice) {
+        targetLink = (
+            <span 
+                onClick={() => navigate(`/devices?deviceId=${foundDevice.id}`)} 
+                className="text-blue-600 hover:underline font-bold cursor-pointer hover:bg-blue-50 px-1 rounded"
+            >
+                {assetString}
+            </span>
+        );
+    } else {
+        // Procura em Sims
+        const foundSim = sims.find(s => assetString.includes(s.phoneNumber));
+        if (foundSim) {
+            targetLink = (
+                <span 
+                    onClick={() => navigate(`/sims`)} 
+                    className="text-indigo-600 hover:underline font-bold cursor-pointer hover:bg-indigo-50 px-1 rounded"
+                >
+                    {assetString}
+                </span>
+            );
+        }
+    }
+
+    return (
+        <span>
+            {action}: {targetLink || <span className="font-bold">{assetString}</span>}
+            {restOfNote}
+        </span>
+    );
+};
+
 const UserManager = () => {
   const { 
     users, addUser, updateUser, toggleUserActive, 
@@ -69,11 +130,35 @@ const UserManager = () => {
     setIsModalOpen(true);
   };
 
+  const calculateUserDiff = (oldUser: User, newUser: Partial<User>) => {
+      const changes: string[] = [];
+      if (oldUser.fullName !== newUser.fullName) changes.push(`Nome alterado`);
+      if (oldUser.sectorId !== newUser.sectorId) {
+          const oldSector = sectors.find(s => s.id === oldUser.sectorId)?.name || 'N/A';
+          const newSector = sectors.find(s => s.id === newUser.sectorId)?.name || 'N/A';
+          changes.push(`Cargo: ${oldSector} -> ${newSector}`);
+      }
+      if (oldUser.email !== newUser.email) changes.push(`Email alterado`);
+      if (oldUser.internalCode !== newUser.internalCode) changes.push(`Cód. Setor alterado`);
+      // ... outros campos conforme necessário
+      return changes.length > 0 ? changes.join(', ') : 'Edição de detalhes';
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
-    if (editingId && formData.id) updateUser(formData as User, adminName);
-    else addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+    
+    if (editingId && formData.id) {
+        const oldUser = users.find(u => u.id === editingId);
+        let notes = 'Edição de cadastro';
+        if (oldUser) {
+            notes = calculateUserDiff(oldUser, formData);
+        }
+        updateUser(formData as User, adminName, notes);
+    }
+    else {
+        addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+    }
     setIsModalOpen(false);
   };
 
@@ -352,7 +437,9 @@ const UserManager = () => {
                                     <div className="font-black text-slate-800 text-sm uppercase tracking-tight flex items-center gap-2">
                                         {log.action}
                                     </div>
-                                    <div className="text-xs text-slate-600 italic mt-2 bg-slate-50 p-3 rounded-xl border-l-4 border-slate-200 leading-relaxed max-w-2xl">{log.notes}</div>
+                                    <div className="text-xs text-slate-600 italic mt-2 bg-slate-50 p-3 rounded-xl border-l-4 border-slate-200 leading-relaxed max-w-2xl">
+                                        <LogNoteRenderer note={log.notes || ''} />
+                                    </div>
                                     <div className="text-[9px] font-black text-slate-300 uppercase mt-3 tracking-widest">Operador: {log.adminUser}</div>
                                 </div>
                             )) : (
