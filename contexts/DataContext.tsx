@@ -54,6 +54,11 @@ export interface DataContextType {
   // Operations
   assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, termFile?: File) => void;
   returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, termFile?: File, returnedChecklist?: Record<string, boolean>) => void;
+  
+  // Term Management
+  updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;
+  deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => void;
+
   getHistory: (assetId: string) => AuditLog[];
   
   // Admin Tools

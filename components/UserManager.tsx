@@ -72,7 +72,8 @@ const UserManager = () => {
   const { 
     users, addUser, updateUser, toggleUserActive, 
     sectors, addSector,
-    devices, sims, models, brands, assetTypes, getHistory, settings 
+    devices, sims, models, brands, assetTypes, getHistory, settings,
+    updateTermFile, deleteTermFile 
   } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -94,6 +95,11 @@ const UserManager = () => {
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
   const [deactivateReasonType, setDeactivateReasonType] = useState('');
   const [deactivateReasonNote, setDeactivateReasonNote] = useState('');
+  
+  // Delete Term Modal State
+  const [isDeleteTermModalOpen, setIsDeleteTermModalOpen] = useState(false);
+  const [deleteTermTarget, setDeleteTermTarget] = useState<{termId: string, userId: string} | null>(null);
+  const [deleteTermReason, setDeleteTermReason] = useState('');
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
@@ -152,20 +158,25 @@ const UserManager = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
           const fileUrl = reader.result as string;
-          
-          // Recupera o usuário atual para garantir dados frescos
-          const currentUserData = users.find(u => u.id === editingId);
-          if (!currentUserData) return;
-
-          // Atualiza a lista de termos
-          const updatedTerms = (currentUserData.terms || []).map(t => 
-              t.id === termId ? { ...t, fileUrl } : t
-          );
-
-          // Salva usando a função de update existente
-          updateUser({ ...currentUserData, terms: updatedTerms }, adminName, "Anexo de termo assinado");
+          // Usa a nova função específica para atualizar o arquivo do termo
+          updateTermFile(termId, editingId, fileUrl, adminName);
       };
       reader.readAsDataURL(file);
+  };
+  
+  const handleDeleteTermClick = (termId: string) => {
+      if (!editingId) return;
+      setDeleteTermTarget({ termId, userId: editingId });
+      setDeleteTermReason('');
+      setIsDeleteTermModalOpen(true);
+  };
+  
+  const confirmDeleteTerm = () => {
+      if (!deleteTermTarget || !deleteTermReason) return;
+      deleteTermFile(deleteTermTarget.termId, deleteTermTarget.userId, deleteTermReason, adminName);
+      setIsDeleteTermModalOpen(false);
+      setDeleteTermTarget(null);
+      setDeleteTermReason('');
   };
 
   // --- Função para abrir arquivos Base64 corretamente ---
@@ -535,13 +546,24 @@ const UserManager = () => {
                                     </div>
                                     <div className="flex gap-2">
                                         {term.fileUrl ? (
-                                            <button 
-                                                onClick={() => handleOpenFile(term.fileUrl)}
-                                                className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" 
-                                                title="Ver Arquivo"
-                                            >
-                                                <ExternalLink size={20}/>
-                                            </button>
+                                            <>
+                                                <button 
+                                                    onClick={() => handleOpenFile(term.fileUrl)}
+                                                    className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm border border-emerald-100" 
+                                                    title="Ver Arquivo"
+                                                >
+                                                    <ExternalLink size={20}/>
+                                                </button>
+                                                {!isViewOnly && (
+                                                    <button 
+                                                        onClick={() => handleDeleteTermClick(term.id)}
+                                                        className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all shadow-sm border border-red-100" 
+                                                        title="Excluir Arquivo"
+                                                    >
+                                                        <Trash2 size={20}/>
+                                                    </button>
+                                                )}
+                                            </>
                                         ) : (
                                             !isViewOnly ? (
                                                 <label className="cursor-pointer flex items-center gap-1 text-[10px] font-black text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border-2 border-dashed border-red-200 hover:bg-red-100 transition-colors shadow-sm">
@@ -648,6 +670,57 @@ const UserManager = () => {
                               className={`flex-1 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg transition-all ${!deactivateReasonType ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 hover:scale-105'}`}
                           >
                               Confirmar
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+      
+      {/* MODAL DE EXCLUSÃO DE TERMO */}
+      {isDeleteTermModalOpen && deleteTermTarget && (
+          <div className="fixed inset-0 bg-black/70 z-[120] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-up border border-red-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100">
+                              <FileWarning size={32} />
+                          </div>
+                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Excluir Arquivo do Termo</h3>
+                          <p className="text-xs text-slate-400 mt-2">O termo voltará para o status "Pendente". Informe o motivo da exclusão.</p>
+                      </div>
+
+                      <div className="space-y-4">
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Motivo da Exclusão</label>
+                              <select 
+                                  className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm focus:border-red-400 outline-none bg-white font-bold text-slate-700"
+                                  value={deleteTermReason}
+                                  onChange={(e) => setDeleteTermReason(e.target.value)}
+                              >
+                                  <option value="">Selecione...</option>
+                                  <option value="Termo Incorreto">Termo Incorreto / Errado</option>
+                                  <option value="Arquivo Ilegível">Arquivo Ilegível / Corrompido</option>
+                                  <option value="Erro no Upload">Erro no Upload</option>
+                                  <option value="Solicitação da Diretoria">Solicitação da Diretoria</option>
+                                  <option value="Outro">Outro (Especificar)</option>
+                              </select>
+                          </div>
+                      </div>
+
+                      <div className="flex gap-3 mt-8">
+                          <button 
+                              onClick={() => setIsDeleteTermModalOpen(false)} 
+                              className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 font-bold text-xs uppercase tracking-widest"
+                          >
+                              Cancelar
+                          </button>
+                          <button 
+                              onClick={confirmDeleteTerm}
+                              disabled={!deleteTermReason}
+                              className={`flex-1 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg transition-all ${!deleteTermReason ? 'bg-gray-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 hover:scale-105'}`}
+                          >
+                              Excluir
                           </button>
                       </div>
                   </div>

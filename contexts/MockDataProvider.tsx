@@ -182,6 +182,33 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     logAction(action, 'User', user.id, user.fullName, adminName, notes);
   };
 
+  // --- Term File Management ---
+  const updateTermFile = (termId: string, userId: string, fileUrl: string, adminName: string) => {
+      setUsers(prev => prev.map(u => {
+          if (u.id === userId) {
+              const updatedTerms = (u.terms || []).map(t => 
+                  t.id === termId ? { ...t, fileUrl } : t
+              );
+              return { ...u, terms: updatedTerms };
+          }
+          return u;
+      }));
+      logAction(ActionType.UPDATE, 'User', userId, 'Termo Assinado', adminName, `Termo ID ${termId} anexado.`);
+  };
+
+  const deleteTermFile = (termId: string, userId: string, reason: string, adminName: string) => {
+      setUsers(prev => prev.map(u => {
+          if (u.id === userId) {
+              const updatedTerms = (u.terms || []).map(t => 
+                  t.id === termId ? { ...t, fileUrl: '' } : t
+              );
+              return { ...u, terms: updatedTerms };
+          }
+          return u;
+      }));
+      logAction(ActionType.DELETE, 'User', userId, 'Termo Excluído', adminName, `Termo ID ${termId} limpo. Motivo: ${reason}`);
+  };
+
   // --- Sectors ---
   const addSector = (sector: UserSector, adminName: string) => {
       setSectors(prev => [...prev, sector]);
@@ -382,7 +409,9 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addUser, updateUser, toggleUserActive,
     addSystemUser, updateSystemUser, deleteSystemUser,
     updateSettings,
-    assignAsset, returnAsset, getHistory,
+    assignAsset, returnAsset, 
+    updateTermFile, deleteTermFile, // Adicionados
+    getHistory,
     clearLogs,
     restoreItem,
     addAssetType, updateAssetType, deleteAssetType,

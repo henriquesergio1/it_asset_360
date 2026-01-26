@@ -422,6 +422,32 @@ app.get('/api/terms', async (req, res) => {
     catch (err) { res.status(500).send(err.message); }
 });
 
+app.put('/api/terms/:id/file', async (req, res) => {
+    const { id, fileUrl, _adminUser } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, id)
+            .input('FileUrl', sql.NVarChar, fileUrl)
+            .query(`UPDATE Terms SET FileUrl=@FileUrl WHERE Id=@Id`);
+        await logAction(id, 'User', 'Atualização', _adminUser, `Termo assinado anexado (ID: ${id})`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/terms/:id/file', async (req, res) => {
+    const { _adminUser, reason } = req.body;
+    const termId = req.params.id;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, termId)
+            .query(`UPDATE Terms SET FileUrl=NULL WHERE Id=@Id`);
+        await logAction(termId, 'User', 'Exclusão', _adminUser, `Termo excluído. Motivo: ${reason}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
 app.get('/api/accessory-types', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, Name as name FROM AccessoryTypes`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }

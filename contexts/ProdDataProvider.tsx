@@ -148,6 +148,51 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setUsers(p => p.map(u => u.id === user.id ? { ...u, active: !u.active } : u));
   };
 
+  // --- TERM FILE MANAGEMENT ---
+  const updateTermFile = async (termId: string, userId: string, fileUrl: string, adminName: string) => {
+      try {
+          await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName });
+          
+          // Update local state immediately
+          setUsers(prev => prev.map(u => {
+              if (u.id === userId) {
+                  const updatedTerms = (u.terms || []).map(t => 
+                      t.id === termId ? { ...t, fileUrl } : t
+                  );
+                  return { ...u, terms: updatedTerms };
+              }
+              return u;
+          }));
+      } catch (err) {
+          console.error("Failed to update term file", err);
+          alert("Falha ao salvar arquivo do termo.");
+      }
+  };
+
+  const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
+      try {
+          await fetch(`${API_URL}/api/terms/${termId}/file`, { 
+              method: 'DELETE', 
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ _adminUser: adminName, reason }) 
+          });
+
+          // Update local state
+          setUsers(prev => prev.map(u => {
+            if (u.id === userId) {
+                const updatedTerms = (u.terms || []).map(t => 
+                    t.id === termId ? { ...t, fileUrl: '' } : t
+                );
+                return { ...u, terms: updatedTerms };
+            }
+            return u;
+          }));
+      } catch (err) {
+          console.error("Failed to delete term file", err);
+          alert("Falha ao excluir arquivo do termo.");
+      }
+  };
+
   const addSim = async (s: SimCard, a: string) => { await postData('sims', {...s, _adminUser: a}); setSims(p => [...p, s]); };
   const updateSim = async (s: SimCard, a: string) => { await putData('sims', {...s, _adminUser: a}); setSims(p => p.map(x => x.id === s.id ? s : x)); };
   const deleteSim = async (id: string, a: string, r: string) => { 
@@ -187,6 +232,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm }); 
         fetchData(); 
     },
+    updateTermFile, deleteTermFile, // Added
     getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },
     restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(); },
