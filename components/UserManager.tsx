@@ -163,6 +163,44 @@ const UserManager = () => {
       };
       reader.readAsDataURL(file);
   };
+
+  const handleReprintTerm = (term: Term) => {
+      const user = users.find(u => u.id === term.userId);
+      if (!user) return;
+
+      // Localizar Ativo baseado no assetDetails ("Nome (TAG)" ou "Chip Número (Operadora)")
+      let asset: any = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
+      if (!asset) {
+          asset = sims.find(s => term.assetDetails.includes(s.phoneNumber));
+      }
+
+      if (!asset) {
+          alert("Não foi possível localizar os dados originais do ativo para re-impressão. Verifique se o ativo não foi excluído.");
+          return;
+      }
+
+      let model, brand, type, linkedSim;
+      if ('serialNumber' in asset) {
+          const d = asset as Device;
+          model = models.find(m => m.id === d.modelId);
+          brand = brands.find(b => b.id === model?.brandId);
+          type = assetTypes.find(t => t.id === model?.typeId);
+          if (d.linkedSimId) linkedSim = sims.find(s => s.id === d.linkedSimId);
+      }
+
+      generateAndPrintTerm({
+          user,
+          asset,
+          settings,
+          model,
+          brand,
+          type,
+          linkedSim,
+          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
+          sectorName: sectors.find(s => s.id === user.sectorId)?.name,
+          notes: 'Re-impressão solicitada via Painel de Colaborador.'
+      });
+  };
   
   const handleDeleteTermClick = (termId: string) => {
       if (!editingId) return;
@@ -420,7 +458,7 @@ const UserManager = () => {
                 {editingId && (
                     <>
                         <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Ativos em Posse</button>
-                        <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Termos Assinados</button>
+                        <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Termos Gerados</button>
                         <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Auditoria ({userHistory.length})</button>
                     </>
                 )}
@@ -545,6 +583,14 @@ const UserManager = () => {
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => handleReprintTerm(term)}
+                                            className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all shadow-sm border border-blue-100" 
+                                            title="Reimprimir Termo"
+                                        >
+                                            <Printer size={20}/>
+                                        </button>
+                                        
                                         {term.fileUrl ? (
                                             <>
                                                 <button 

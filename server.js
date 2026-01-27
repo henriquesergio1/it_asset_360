@@ -422,8 +422,9 @@ app.get('/api/terms', async (req, res) => {
     catch (err) { res.status(500).send(err.message); }
 });
 
-app.put('/api/terms/:id/file', async (req, res) => {
-    const { id, fileUrl, _adminUser } = req.body;
+app.put('/api/terms/file/:id', async (req, res) => {
+    const { fileUrl, _adminUser } = req.body;
+    const { id } = req.params;
     try {
         const pool = await sql.connect(dbConfig);
         await pool.request()
