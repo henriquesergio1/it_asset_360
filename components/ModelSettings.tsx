@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { AssetType, DeviceBrand, DeviceModel, AccessoryType, CustomField } from '../types';
-import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface ModelSettingsProps {
   onClose: () => void;
@@ -15,7 +15,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     brands, addBrand, updateBrand, deleteBrand,
     models, addModel, updateModel, deleteModel,
     accessoryTypes, addAccessoryType, updateAccessoryType, deleteAccessoryType,
-    customFields, addCustomField, deleteCustomField
+    customFields, addCustomField, deleteCustomField,
+    devices // Necessário para verificar se modelos estão em uso
   } = useData();
   const { user } = useAuth();
   
@@ -63,7 +64,6 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     setModelForm({ imageUrl: '' });
   };
 
-  // --- CONVERSÃO PARA BASE64 (PERSISTÊNCIA REAL) ---
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -73,22 +73,57 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
             setModelForm({ ...modelForm, imageUrl: reader.result as string });
             setIsUploading(false);
         };
-        reader.onerror = () => {
-            alert('Erro ao carregar imagem.');
-            setIsUploading(false);
-        };
+        reader.onerror = () => { alert('Erro ao carregar imagem.'); setIsUploading(false); };
         reader.readAsDataURL(file);
     }
   };
 
-  const removeImage = () => {
-      setModelForm({ ...modelForm, imageUrl: '' });
-  };
+  const removeImage = () => { setModelForm({ ...modelForm, imageUrl: '' }); };
 
   const toggleFieldInType = (fieldId: string) => {
       const currentIds = editingType.customFieldIds || [];
       if (currentIds.includes(fieldId)) setEditingType({ ...editingType, customFieldIds: currentIds.filter(id => id !== fieldId) });
       else setEditingType({ ...editingType, customFieldIds: [...currentIds, fieldId] });
+  };
+
+  // --- SAFETY CHECKS ---
+  const checkAndDeleteType = (type: AssetType) => {
+      const isUsedByModel = models.some(m => m.typeId === type.id);
+      if (isUsedByModel) return alert(`BLOQUEADO: O tipo "${type.name}" está vinculado a um ou mais Modelos no catálogo. Remova os modelos primeiro.`);
+      if (window.confirm(`Tem certeza que deseja excluir o tipo "${type.name}"?`)) {
+          deleteAssetType(type.id, adminName);
+      }
+  };
+
+  const checkAndDeleteBrand = (brand: DeviceBrand) => {
+      const isUsedByModel = models.some(m => m.brandId === brand.id);
+      if (isUsedByModel) return alert(`BLOQUEADO: A marca "${brand.name}" está vinculada a um ou mais Modelos. Remova os modelos primeiro.`);
+      if (window.confirm(`Tem certeza que deseja excluir a marca "${brand.name}"?`)) {
+          deleteBrand(brand.id, adminName);
+      }
+  };
+
+  const checkAndDeleteModel = (model: DeviceModel) => {
+      const isUsedByDevice = devices.some(d => d.modelId === model.id);
+      if (isUsedByDevice) return alert(`BLOQUEADO: O modelo "${model.name}" está em uso por dispositivos no inventário (Ativos ou Descartados).`);
+      if (window.confirm(`Tem certeza que deseja excluir o modelo "${model.name}" do catálogo?`)) {
+          deleteModel(model.id, adminName);
+      }
+  };
+
+  const checkAndDeleteCustomField = (field: CustomField) => {
+      const isUsedByType = assetTypes.some(t => t.customFieldIds?.includes(field.id));
+      if (isUsedByType) return alert(`BLOQUEADO: O campo "${field.name}" está habilitado em um ou mais Tipos de Ativo.`);
+      if (window.confirm(`Deseja excluir permanentemente o campo personalizado "${field.name}"?`)) {
+          deleteCustomField(field.id, adminName);
+      }
+  };
+
+  const checkAndDeleteAccessory = (acc: AccessoryType) => {
+      // Opcional: checar se algum device tem esse acessório vinculado (campo opcional no Device)
+      if (window.confirm(`Excluir o tipo de acessório "${acc.name}"?`)) {
+          deleteAccessoryType(acc.id, adminName);
+      }
   };
 
   return (
@@ -175,7 +210,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                                 </div>
                                 <div className="flex gap-1">
                                     <button onClick={() => setModelForm(m)} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                                    <button onClick={() => deleteModel(m.id, adminName)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                    <button onClick={() => checkAndDeleteModel(m)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                                 </div>
                             </div>
                         );
@@ -184,7 +219,6 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
               </div>
             )}
             
-            {/* Outras abas (TYPES, FIELDS, BRANDS, ACCESSORIES) permanecem com sua lógica de CRUD */}
             {activeTab === 'TYPES' && (
                 <div className="max-w-2xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Tipos de Equipamento</h4>
@@ -212,7 +246,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-bold text-slate-700">{t.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingType(t)} className="text-blue-400 hover:text-blue-600 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteAssetType(t.id, adminName)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => checkAndDeleteType(t)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
@@ -231,7 +265,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                         {customFields.map(f => (
                             <div key={f.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
                                 <span className="font-medium text-gray-700">{f.name}</span>
-                                <button onClick={() => deleteCustomField(f.id, adminName)} className="text-red-400 hover:text-red-600"><Trash2 size={18}/></button>
+                                <button onClick={() => checkAndDeleteCustomField(f)} className="text-red-400 hover:text-red-600"><Trash2 size={18}/></button>
                             </div>
                         ))}
                     </div>
@@ -251,7 +285,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-medium">{b.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingBrand(b)} className="text-blue-400 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteBrand(b.id, adminName)} className="text-red-300 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => checkAndDeleteBrand(b)} className="text-red-300 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
@@ -272,7 +306,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-medium">{acc.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingAccessory(acc)} className="text-blue-400 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteAccessoryType(acc.id, adminName)} className="text-red-300 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => checkAndDeleteAccessory(acc)} className="text-red-300 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
