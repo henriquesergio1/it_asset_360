@@ -77,7 +77,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           
           <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
              <Info size={14}/>
-             <span>Versão 2.0.0</span>
+             <span>Versão 2.2.0</span>
           </div>
 
           <div className="mb-4">
@@ -118,7 +118,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   );
 };
 
-// Fixed: ProtectedRoute now accepts optional children to avoid TypeScript errors regarding missing 'children' property
 const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
     const { isAuthenticated } = useAuth();
     if (!isAuthenticated) {
@@ -127,7 +126,6 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
     return <Layout>{children}</Layout>;
 };
 
-// Fixed: AdminRoute now accepts optional children to avoid TypeScript errors regarding missing 'children' property
 const AdminRoute = ({ children }: { children?: React.ReactNode }) => {
     const { isAuthenticated, isAdmin } = useAuth();
     if (!isAuthenticated) {

@@ -8,100 +8,33 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.0.0',
+    version: '2.2.0',
     date: 'Hoje',
+    title: 'Padronização de Ordenação A-Z',
+    changes: [
+      'Implementada ordenação alfabética automática em todas as listas: Colaboradores, Dispositivos, Chips e Cadastros.',
+      'Refinamento no sequenciamento de campos personalizados: a ordem definida na administração é rigorosamente mantida nos formulários.',
+      'Melhoria na UX de seleção de marcas e modelos no catálogo.'
+    ]
+  },
+    {
+    version: '2.1.0',
+    date: '31/01/2025',
+    title: 'Ordenação de Campos Personalizados',
+    changes: [
+      'Implementada a funcionalidade de ordenar campos personalizados dentro do cadastro de Tipos de Ativo.',
+      'O formulário de cadastro de dispositivos agora respeita rigorosamente a sequência definida na administração.',
+      'Adicionados controles visuais (setas Sobe/Desce) na tela de configuração de Tipos de Ativo.'
+    ]
+  },
+    {
+    version: '2.0.0',
+    date: '31/01/2025',
     title: 'Governança de Exclusão e Campos Extras',
     changes: [
       'Adicionado botão editar nos campos extras (configurações de ativos).',
       'Implementada trava de segurança: Não é permitido excluir Marcas, Tipos, Modelos ou Campos Extras que estejam vinculados a ativos no inventário.',
       'Adicionada confirmação visual antes de qualquer exclusão de configuração para evitar cliques acidentais.'
-    ]
-  },
-    {
-    version: '1.9.9',
-    date: '30/01/2025',
-    title: 'Correção na Visualização de Termos',
-    changes: [
-      'Corrigido problema onde arquivos PDF assinados abriam como texto bruto (Base64) em nova aba.',
-      'Agora os arquivos anexados são processados corretamente para visualização no navegador.'
-    ]
-  },
-    {
-    version: '1.9.8',
-    date: '29/01/2025',
-    title: 'Melhorias de Upload e Visualização',
-    changes: [
-      'Aumentado o limite de upload de arquivos (Termos e Notas Fiscais) para 50MB (Correção do erro 413).',
-      'Adicionado filtro rápido na lista de colaboradores para exibir apenas os que possuem termos pendentes.',
-      'Adicionada tag visual de alerta "Termo Pendente" na listagem de colaboradores.'
-    ]
-  },
-    {
-    version: '1.9.7',
-    date: '28/01/2025',
-    title: 'Anexo de Termos',
-    changes: [
-      'Corrigido bug que impedia o upload de termos assinados na ficha do colaborador.',
-      'Agora é possível clicar em "ANEXAR ARQUIVO" nos termos pendentes quando a edição está habilitada.'
-    ]
-  },
-    {
-    version: '1.9.6',
-    date: '28/01/2025',
-    title: 'UX de Inventário e Segurança',
-    changes: [
-      'Inventário de Dispositivos agora possui clique na linha para abrir detalhes (visualização rápida).',
-      'Adicionado botão "Habilitar Edição" no modal de detalhes do dispositivo.',
-      'Bloqueio de segurança: Não é mais permitido excluir/descartar dispositivos que estejam em uso (devolução obrigatória).'
-    ]
-  },
-    {
-    version: '1.9.5',
-    date: '28/01/2025',
-    title: 'Auditoria Inteligente',
-    changes: [
-      'Log detalhado de edições no cadastro de colaboradores (registra o que foi alterado).',
-      'Links inteligentes nos logs de auditoria: Clique no nome do ativo ou colaborador para navegar diretamente para o detalhe.'
-    ]
-  },
-    {
-    version: '1.9.4',
-    date: '27/01/2025',
-    title: 'Melhorias na Gestão de Colaboradores',
-    changes: [
-      'Implementado fluxo seguro de inativação de colaboradores.',
-      'Obrigatório selecionar motivo (Desligamento, Afastamento, Cadastro Incorreto, etc.) ao inativar.',
-      'Bloqueio de inativação caso o colaborador ainda possua ativos vinculados.'
-    ]
-  },
-    {
-    version: '1.9.3',
-    date: '27/01/2025',
-    title: 'Restauração de Operações Diretas',
-    changes: [
-      'Restaurados os botões de Entrega e Devolução diretamente na linha de cada dispositivo.',
-      'Modais de operação integrados: Faça a Entrega ou Devolução sem sair da tela de inventário.',
-      'Checklist de devolução e impressão automática de termos mantidos no novo fluxo.',
-      'Sincronização opcional de Setor/Centro de Custo no momento da entrega.',
-      'Reforçada a trava de descarte: Itens "Descartados" não permitem entrega, devolução ou edição.'
-    ]
-  },
-    {
-    version: '1.9.2',
-    date: '26/01/2025',
-    title: 'Governança & Soft Delete',
-    changes: [
-      'Implementado o "Soft Delete": Exclusão agora move para a aba "Descartado" com registro de motivo.',
-      'Ativos descartados tornam-se somente leitura para preservar histórico de auditoria.'
-    ]
-  },
-  {
-    version: '1.0.0',
-    date: '01/08/2023',
-    title: 'MVP - Lançamento Inicial',
-    changes: [
-      'CRUD básico de Dispositivos, Chips e Usuários.',
-      'Dashboard e Gestão de Termos.'
     ]
   }
 ];

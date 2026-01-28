@@ -12,7 +12,6 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
     const { users } = useData();
     const navigate = useNavigate();
 
-    // Regex para capturar padrões como "Entregue para: Nome..." ou "Devolvido por: Nome..."
     const userPattern = /(Entregue para|Devolvido por):\s+([^\.]+)/i;
     const match = note.match(userPattern);
 
@@ -22,7 +21,6 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
     const nameString = match[2].trim();
     const restOfNote = note.substring(match[0].length);
 
-    // Tenta encontrar o usuário pelo nome exato
     const foundUser = users.find(u => u.fullName.toLowerCase() === nameString.toLowerCase());
 
     return (
@@ -71,9 +69,7 @@ const DeviceManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
   
-  // Identificação Única (Tag ou IMEI)
   const [idType, setIdType] = useState<'TAG' | 'IMEI'>('TAG');
-  
   const [formData, setFormData] = useState<Partial<Device>>({ status: DeviceStatus.AVAILABLE, customData: {} });
   
   // Financial/Maintenance States
@@ -104,22 +100,31 @@ const DeviceManager = () => {
     return { model, brand, type };
   };
 
-  const relevantFields = customFields.filter(cf => {
-    const { model } = getModelDetails(formData.modelId);
-    const selectedAssetType = assetTypes.find(t => t.id === model?.typeId);
-    return selectedAssetType?.customFieldIds?.includes(cf.id);
-  });
+  const getRelevantFields = () => {
+      const { model } = getModelDetails(formData.modelId);
+      const selectedAssetType = assetTypes.find(t => t.id === model?.typeId);
+      if (!selectedAssetType?.customFieldIds) return [];
+      return selectedAssetType.customFieldIds.map(id => 
+          customFields.find(cf => cf.id === id)
+      ).filter(Boolean) as CustomField[];
+  };
 
+  const relevantFields = getRelevantFields();
+
+  // --- Ordenação A-Z dos Dispositivos Filtrados ---
   const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
     const { model, brand } = getModelDetails(d.modelId);
     const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
+  }).sort((a, b) => {
+      const modelA = models.find(m => m.id === a.modelId)?.name || '';
+      const modelB = models.find(m => m.id === b.modelId)?.name || '';
+      return modelA.localeCompare(modelB);
   });
 
   const handleOpenModal = (device?: Device, viewOnly: boolean = false) => {
     setActiveTab('GENERAL');
-    // Se estiver descartado, sempre viewOnly. Senão, respeita o parametro.
     const isRetired = device?.status === DeviceStatus.RETIRED;
     setIsViewOnly(isRetired || viewOnly);
     
@@ -205,11 +210,10 @@ const DeviceManager = () => {
 
   return (
     <div className="space-y-6 relative pb-20">
-      {/* ... Header and Filters ... */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Inventário de Dispositivos</h1>
-          <p className="text-gray-500 text-sm">Gestão centralizada de ativos alinhados por cargo.</p>
+          <p className="text-gray-500 text-sm">Gestão centralizada de ativos (Ordem A-Z por Modelo).</p>
         </div>
         <div className="flex gap-2">
             <button onClick={() => setIsModelSettingsOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 font-semibold"><Settings size={18} /> Catálogo</button>
@@ -217,7 +221,6 @@ const DeviceManager = () => {
         </div>
       </div>
 
-      {/* FILTROS DE STATUS */}
       <div className="flex gap-4 border-b border-gray-200 overflow-x-auto bg-white px-4 pt-2 rounded-t-xl">
           {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
               <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${viewStatus === status ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
@@ -232,7 +235,6 @@ const DeviceManager = () => {
         <input type="text" placeholder="Pesquisar por Tag, IMEI, S/N, Código de Setor ou Modelo..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
-      {/* TABELA DE DISPOSITIVOS */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
@@ -274,19 +276,6 @@ const DeviceManager = () => {
                         {d.assetTag && <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag}</div>}
                         {d.internalCode && <div className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Setor: {d.internalCode}</div>}
                         <div className="text-[9px] text-slate-400 font-mono">SN: {d.serialNumber || '---'}</div>
-                        
-                        {d.pulsusId && (
-                            <a 
-                                href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 mt-1.5 px-2 py-1 bg-purple-50 text-purple-700 rounded-md border border-purple-100 text-[9px] font-black uppercase hover:bg-purple-100 transition-colors shadow-sm"
-                                title="Acessar Gerenciador MDM (Pulsus)"
-                            >
-                                <Smartphone size={10} className="fill-purple-200"/> Pulsus MDM <ExternalLink size={8} className="opacity-50"/>
-                            </a>
-                        )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -324,7 +313,6 @@ const DeviceManager = () => {
         </table>
       </div>
 
-      {/* MODAL FICHA DO ATIVO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
@@ -334,14 +322,6 @@ const DeviceManager = () => {
                     <h3 className="text-lg font-black text-white uppercase tracking-tighter leading-tight">
                         {editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}
                     </h3>
-                    {isViewOnly && editingId && !devices.find(d => d.id === editingId)?.status?.includes('Descartado') && (
-                        <button 
-                            onClick={() => setIsViewOnly(false)} 
-                            className="bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-full font-black uppercase hover:bg-blue-700 flex items-center gap-1 shadow-lg transition-transform active:scale-95"
-                        >
-                            <Edit2 size={12}/> Habilitar Edição
-                        </button>
-                    )}
                 </div>
                 {editingId && <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: {editingId}</span>}
               </div>
@@ -360,10 +340,10 @@ const DeviceManager = () => {
                   <form id="devForm" onSubmit={handleDeviceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div className="md:col-span-2 space-y-4">
                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos Disponíveis</label>
+                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
                              <select required disabled={isViewOnly} className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm font-bold bg-white focus:border-blue-500 outline-none transition-all" value={formData.modelId} onChange={e => setFormData({...formData, modelId: e.target.value})}>
                                  <option value="">Vincular a um modelo do catálogo...</option>
-                                 {models.map(m => <option key={m.id} value={m.id}>{brands.find(b => b.id === m.brandId)?.name} {m.name}</option>)}
+                                 {[...models].sort((a,b) => a.name.localeCompare(b.name)).map(m => <option key={m.id} value={m.id}>{brands.find(b => b.id === m.brandId)?.name} {m.name}</option>)}
                              </select>
                          </div>
                      </div>
@@ -399,7 +379,7 @@ const DeviceManager = () => {
                                 <Briefcase className="absolute left-3 top-3.5 text-slate-300" size={16}/>
                                 <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 pl-10 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                                     <option value="">Destinar a um Cargo...</option>
-                                    {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -421,8 +401,6 @@ const DeviceManager = () => {
                      )}
                   </form>
                 )}
-
-                {/* FINANCIAL and MAINTENANCE tabs remain unchanged */}
                 {activeTab === 'FINANCIAL' && (
                   <div className="space-y-8 animate-fade-in">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -443,7 +421,7 @@ const DeviceManager = () => {
                                   </div>
                               </div>
                               <div>
-                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor</label>
+                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label>
                                   <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja ou Fabricante"/>
                               </div>
                           </div>
@@ -470,7 +448,7 @@ const DeviceManager = () => {
                                   <>
                                       <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center text-slate-200 mb-4 shadow-lg border-2 border-slate-100"><Paperclip size={32}/></div>
                                       <h5 className="font-black text-slate-800 uppercase tracking-tighter">Anexo da Nota Fiscal</h5>
-                                      <p className="text-xs text-slate-400 mt-2 max-w-[200px] font-medium leading-relaxed">Importe a imagem ou PDF do comprovante para fins contábeis e garantia.</p>
+                                      <p className="text-xs text-slate-400 mt-2 font-medium leading-relaxed">Importe a imagem ou PDF.</p>
                                       {!isViewOnly && (
                                           <label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
                                               {isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>}
@@ -484,78 +462,73 @@ const DeviceManager = () => {
                       </div>
                   </div>
                 )}
-
                 {activeTab === 'MAINTENANCE' && (
                     <div className="space-y-6 animate-fade-in">
                         {!isViewOnly && (
                              <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200 space-y-4 shadow-sm">
                                 <div className="flex items-center gap-2">
                                     <div className="h-8 w-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-700"><Wrench size={16}/></div>
-                                    <h5 className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Registrar Nova Manutenção / Reparo</h5>
+                                    <h5 className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Registrar Nova Manutenção</h5>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Descrição do Serviço</label>
-                                        <input placeholder="Ex: Troca de tela, upgrade de memória, limpeza..." className="w-full border-2 border-orange-100 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/>
+                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Descrição</label>
+                                        <input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo do Reparo (R$)</label>
+                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo (R$)</label>
                                         <div className="relative">
                                             <DollarSign className="absolute left-3 top-3 text-orange-300" size={16}/>
                                             <input type="number" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" value={newMaint.cost || 0} onChange={e => setNewMaint({...newMaint, cost: Number(e.target.value)})} step="0.01"/>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Anexo (Comprovante/OS)</label>
+                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Anexo</label>
                                         <label className={`w-full flex items-center gap-3 bg-white border-2 border-dashed border-orange-200 p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
                                             <div className="h-8 w-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400">
                                                 {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
                                             </div>
                                             <span className="text-[10px] font-bold text-orange-700 uppercase truncate">
-                                                {newMaint.invoiceUrl ? 'Documento Carregado' : 'Importar OS/Nota'}
+                                                {newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}
                                             </span>
                                             <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*" />
                                         </label>
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-2">
-                                    <button onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar Manutenção</button>
+                                    <button onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar</button>
                                 </div>
                              </div>
                         )}
-                        
                         <div className="space-y-3">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico de Intervenções</h4>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
                             <div className="grid grid-cols-1 gap-3">
                                 {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
                                     <div key={m.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-orange-200 transition-all group">
                                         <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform"><Wrench size={20}/></div>
+                                            <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600"><Wrench size={20}/></div>
                                             <div>
                                                 <p className="font-bold text-slate-800 text-sm">{m.description}</p>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(m.date).toLocaleDateString()}</span>
-                                                    <span className="h-1 w-1 rounded-full bg-slate-300"></span>
                                                     <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {m.cost.toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
-                                            {m.invoiceUrl && <a href={m.invoiceUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all" title="Ver Anexo"><ExternalLink size={16}/></a>}
-                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir este registro de manutenção?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16}/></button>}
+                                            {m.invoiceUrl && <a href={m.invoiceUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"><ExternalLink size={16}/></a>}
+                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16}/></button>}
                                         </div>
                                     </div>
                                 )) : (
                                     <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100 text-slate-300"><Wrench size={24}/></div>
-                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada até o momento.</p>
+                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 )}
-
                 {activeTab === 'HISTORY' && (
                     <div className="relative border-l-4 border-slate-100 ml-4 space-y-8 py-4 animate-fade-in">
                         {getHistory(editingId || '').map(log => (
@@ -569,53 +542,48 @@ const DeviceManager = () => {
                                 <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                             </div>
                         ))}
-                        {getHistory(editingId || '').length === 0 && <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest italic">Sem registros de auditoria.</div>}
                     </div>
                 )}
             </div>
 
             <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
-                <button onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar Ficha</button>
-                {!isViewOnly && (activeTab === 'GENERAL' || activeTab === 'FINANCIAL') && <button type="submit" form="devForm" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar Registro</button>}
+                <button onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
+                {!isViewOnly && (activeTab === 'GENERAL' || activeTab === 'FINANCIAL') && <button type="submit" form="devForm" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>}
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE DESCARTE */}
       {isDeleteModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in border border-red-100">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-100">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
                           <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirma o Descarte?</h3>
-                          <p className="text-sm text-slate-400 mt-2 font-medium">O ativo será marcado como inativo e movido para a aba de histórico de descartados.</p>
                       </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Descreva o motivo (perda, roubo, sucata)..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Manter Ativo</button>
-                          <button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar</button>
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Manter</button>
+                          <button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50">Confirmar</button>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
-      {/* MODAL DE RESTAURAÇÃO */}
       {isRestoreModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-fade-in border border-indigo-100">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100"><RotateCcw size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Restaurar do Lixo?</h3>
-                          <p className="text-sm text-slate-400 mt-2 font-medium">O ativo voltará a ficar disponível para empréstimo no estoque principal.</p>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Restaurar?</h3>
                       </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da restauração..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
-                          <button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all">Restaurar</button>
+                          <button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancelar</button>
+                          <button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">Restaurar</button>
                       </div>
                   </div>
               </div>
@@ -627,7 +595,6 @@ const DeviceManager = () => {
   );
 };
 
-// SVG icons logic (History icon import was already correct, using it from lucide)
 const History = ({size}: {size: number}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>;
 
 export default DeviceManager;
