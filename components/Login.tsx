@@ -118,7 +118,8 @@ const Login = () => {
                     <Database size={12}/> Alternar para Modo de Teste
                 </button>
             )}
-            <p className="text-xs text-gray-400">Versão 2.3.1</p>
+            {/* Version incremented as per guidelines */}
+            <p className="text-xs text-gray-400">Versão 2.3.3</p>
             <p className="text-xs text-gray-300">Todos os acessos são monitorados.</p>
           </div>
         </div>

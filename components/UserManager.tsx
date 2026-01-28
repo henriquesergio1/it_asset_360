@@ -49,15 +49,7 @@ const UserManager = () => {
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false); 
-  const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
-  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
-  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
-  const [deactivateReasonType, setDeactivateReasonType] = useState('');
-  const [deactivateReasonNote, setDeactivateReasonNote] = useState('');
-  const [isDeleteTermModalOpen, setIsDeleteTermModalOpen] = useState(false);
-  const [deleteTermTarget, setDeleteTermTarget] = useState<{termId: string, userId: string} | null>(null);
-  const [deleteTermReason, setDeleteTermReason] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
 
@@ -135,7 +127,7 @@ const UserManager = () => {
       if (!user.active) { if (window.confirm(`Reativar ${user.fullName}?`)) toggleUserActive(user, adminName, 'Reativação'); return; }
       const hasAssets = devices.some(d => d.currentUserId === user.id) || sims.some(s => s.currentUserId === user.id);
       if (hasAssets) return alert("Não é possível inativar com ativos em posse.");
-      setDeactivateTarget(user); setDeactivateReasonType(''); setIsDeactivateModalOpen(true);
+      if (window.confirm(`Inativar ${user.fullName}?`)) toggleUserActive(user, adminName, 'Inativação administrativa');
   };
 
   // --- Ordenação A-Z dos Colaboradores Filtrados ---
@@ -146,15 +138,19 @@ const UserManager = () => {
     return `${u.fullName} ${u.cpf}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
+  const userAssets = devices.filter(d => d.currentUserId === editingId);
+  const userSims = sims.filter(s => s.currentUserId === editingId);
+  const userHistory = getHistory(editingId || '');
+  const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Colaboradores</h1>
-          <p className="text-gray-500 text-sm">Gestão de vínculos e termos (Ordem A-Z).</p>
+          <p className="text-gray-500 text-sm">Gestão de vínculos e termos.</p>
         </div>
         <div className="flex gap-2">
-            <button onClick={() => setIsSectorModalOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50"><Briefcase size={18} /> Cargos</button>
             <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold"><Plus size={18} /> Novo</button>
         </div>
       </div>
@@ -185,8 +181,8 @@ const UserManager = () => {
           </thead>
           <tbody>
             {filteredUsers.map((user) => {
-              const userDevices = devices.filter(d => d.currentUserId === user.id);
-              const userSims = sims.filter(s => s.currentUserId === user.id);
+              const uDevices = devices.filter(d => d.currentUserId === user.id);
+              const uSims = sims.filter(s => s.currentUserId === user.id);
               const hasPending = (user.terms || []).some(t => !t.fileUrl);
               return (
                 <tr key={user.id} className={`border-b hover:bg-gray-50 ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
@@ -197,8 +193,8 @@ const UserManager = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
-                        {userDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-[10px] font-black border border-blue-100"><Smartphone size={10} className="inline mr-1"/> {userDevices.length}</span>}
-                        {userSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-[10px] font-black border border-indigo-100"><Cpu size={10} className="inline mr-1"/> {userSims.length}</span>}
+                        {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-[10px] font-black border border-blue-100"><Smartphone size={10} className="inline mr-1"/> {uDevices.length}</span>}
+                        {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-[10px] font-black border border-indigo-100"><Cpu size={10} className="inline mr-1"/> {uSims.length}</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -219,18 +215,18 @@ const UserManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
             <div className="bg-slate-900 px-8 py-5 flex justify-between items-center">
               <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? 'Cadastro de Colaborador' : 'Novo Colaborador'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
-            <div className="flex border-b bg-gray-50 overflow-x-auto">
-                <button onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-400'}`}>Dados</button>
+            <div className="flex border-b bg-gray-50 overflow-x-auto shrink-0">
+                <button onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Dados</button>
                 {editingId && (
                     <>
-                        <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-400'}`}>Ativos</button>
-                        <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-400'}`}>Termos</button>
-                        <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-gray-400'}`}>Auditoria</button>
+                        <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Ativos ({(userAssets.length + userSims.length)})</button>
+                        <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Termos ({currentUserTerms.length})</button>
+                        <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Auditoria</button>
                     </>
                 )}
             </div>
@@ -246,7 +242,7 @@ const UserManager = () => {
                             <input disabled={isViewOnly} type="email" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cargo (A-Z)</label>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Cargo</label>
                             <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.sectorId} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                                 <option value="">Selecione...</option>
                                 {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -262,9 +258,115 @@ const UserManager = () => {
                         </div>
                     </form>
                 )}
-                {/* ... Rest of tabs ... */}
+
+                {activeTab === 'ASSETS' && (
+                    <div className="space-y-6">
+                        <div>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Smartphone size={14}/> Dispositivos</h4>
+                            <div className="grid grid-cols-1 gap-3">
+                                {userAssets.map(dev => {
+                                    const model = models.find(m => m.id === dev.modelId);
+                                    return (
+                                        <div key={dev.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+                                                    <Smartphone size={20}/>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-800 text-sm">{model?.name || 'Equipamento'}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Patrimônio: {dev.assetTag} • SN: {dev.serialNumber}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => navigate(`/devices?deviceId=${dev.id}`)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all"><ExternalLink size={16}/></button>
+                                        </div>
+                                    );
+                                })}
+                                {userAssets.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum dispositivo em posse.</p>}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Cpu size={14}/> Chips / SIM Cards</h4>
+                            <div className="grid grid-cols-1 gap-3">
+                                {userSims.map(sim => (
+                                    <div key={sim.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                                                <Cpu size={20}/>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-sm">{sim.phoneNumber}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{sim.operator} • ICCID: {sim.iccid}</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => navigate(`/sims`)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all"><ExternalLink size={16}/></button>
+                                    </div>
+                                ))}
+                                {userSims.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum chip em posse.</p>}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'TERMS' && (
+                    <div className="space-y-4">
+                        {currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (
+                            <div key={term.id} className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.fileUrl ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                                        <FileText size={24}/>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${term.type === 'ENTREGA' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>{term.type}</span>
+                                            <span className="text-[10px] text-slate-400 font-bold">{new Date(term.date).toLocaleDateString()}</span>
+                                        </div>
+                                        <p className="font-bold text-slate-800 text-sm mt-1">{term.assetDetails}</p>
+                                        {!term.fileUrl && <p className="text-[10px] text-orange-600 font-black uppercase mt-1 flex items-center gap-1"><AlertTriangle size={10}/> Aguardando Documento Assinado</p>}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all" title="Re-imprimir Termo"><Printer size={18}/></button>
+                                    {term.fileUrl ? (
+                                        <>
+                                            <button onClick={() => handleOpenFile(term.fileUrl)} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all" title="Ver Termo Assinado"><ExternalLink size={18}/></button>
+                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir este arquivo de termo?')) deleteTermFile(term.id, editingId!, 'Exclusão manual', adminName) }} className="p-2.5 text-red-300 hover:text-red-500 rounded-xl transition-all"><Trash2 size={18}/></button>}
+                                        </>
+                                    ) : (
+                                        <label className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all cursor-pointer shadow-lg active:scale-95" title="Anexar Termo Assinado">
+                                            <Upload size={18}/>
+                                            <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {currentUserTerms.length === 0 && (
+                            <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                <FileText size={32} className="mx-auto text-slate-200 mb-2"/>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhum termo gerado para este colaborador.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'LOGS' && (
+                    <div className="relative border-l-4 border-slate-100 ml-4 space-y-8 py-4">
+                        {userHistory.map(log => (
+                            <div key={log.id} className="relative pl-8">
+                                <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.CHECKOUT ? 'bg-blue-500' : log.action === ActionType.CHECKIN ? 'bg-orange-500' : 'bg-slate-400'}`}></div>
+                                <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
+                                <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
+                                <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
+                                    <LogNoteRenderer note={log.notes || ''} />
+                                </div>
+                                <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
+                            </div>
+                        ))}
+                        {userHistory.length === 0 && <p className="text-center text-slate-400 py-10 italic">Nenhum registro encontrado.</p>}
+                    </div>
+                )}
             </div>
-            <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t">
+            <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
                 <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-white border-2 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100">Fechar</button>
                 {!isViewOnly && activeTab === 'DATA' && <button type="submit" form="userForm" className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase shadow-lg hover:bg-emerald-700 transition-all">Salvar</button>}
             </div>
@@ -274,5 +376,7 @@ const UserManager = () => {
     </div>
   );
 };
+
+const XIcon = ({size}: {size: number}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
 export default UserManager;

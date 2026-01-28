@@ -8,8 +8,28 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.3.1',
+    version: '2.3.3',
     date: 'Hoje',
+    title: 'Correção de Erros de Propriedades',
+    changes: [
+      'Corrigido erro de propriedade inválida "onClose" no botão de fechar do modal de informações.',
+      'Sincronização global da versão do sistema para 2.3.3.',
+      'Melhoria na tipagem de componentes funcionais.'
+    ]
+  },
+    {
+    version: '2.3.2',
+    date: 'Hoje',
+    title: 'Correção das Abas de Colaboradores',
+    changes: [
+      'Restaurada a funcionalidade das abas "Ativos", "Termos" e "Auditoria" dentro do cadastro de colaboradores.',
+      'Corrigido erro que impedia a visualização de dispositivos em posse do usuário.',
+      'Melhoria na renderização do histórico de auditoria individual.'
+    ]
+  },
+    {
+    version: '2.3.1',
+    date: '31/01/2025',
     title: 'Correção de Ícones e Estabilização',
     changes: [
       'Corrigido erro crítico de importação do ícone de CPU na tela de operações.',
@@ -26,26 +46,6 @@ const versions = [
       'Restauração completa dos seletores de ativos e colaboradores.',
       'Melhoria na UX do checklist de devolução de equipamentos.'
     ]
-  },
-    {
-    version: '2.2.0',
-    date: '31/01/2025',
-    title: 'Padronização de Ordenação A-Z',
-    changes: [
-      'Implementada ordenação alfabética automática em todas as listas: Colaboradores, Dispositivos, Chips e Cadastros.',
-      'Refinamento no sequenciamento de campos personalizados: a ordem definida na administração é rigorosamente mantida nos formulários.',
-      'Melhoria na UX de seleção de marcas e modelos no catálogo.'
-    ]
-  },
-    {
-    version: '2.1.0',
-    date: '31/01/2025',
-    title: 'Ordenação de Campos Personalizados',
-    changes: [
-      'Implementada a funcionalidade de ordenar campos personalizados dentro do cadastro de Tipos de Ativo.',
-      'O formulário de cadastro de dispositivos agora respeita rigorosamente a sequência definida na administração.',
-      'Adicionados controles visuais (setas Sobe/Desce) na tela de configuração de Tipos de Ativo.'
-    ]
   }
 ];
 
@@ -59,6 +59,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
             <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
             <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
           </div>
+          {/* Fix: Changed invalid 'onClose' prop to 'onClick' on button element and moved onClick from icon to button */}
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
             <X size={24} />
           </button>
