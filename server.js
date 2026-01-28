@@ -280,11 +280,108 @@ app.put('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- BRANDS ---
+// --- CUSTOM FIELDS (FIXING 404) ---
+app.get('/api/custom-fields', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM CustomFields`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/custom-fields', async (req, res) => {
+    const f = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, f.id).input('Name', sql.NVarChar, f.name)
+            .query(`INSERT INTO CustomFields (Id, Name) VALUES (@Id, @Name)`);
+        await logAction(f.id, 'CustomField', 'Criação', f._adminUser, f.name);
+        res.json(f);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/custom-fields/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM CustomFields WHERE Id=@Id`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- ACCESSORY TYPES (FIXING 404) ---
+app.get('/api/accessory-types', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM AccessoryTypes`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/accessory-types', async (req, res) => {
+    const t = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, t.id).input('Name', sql.NVarChar, t.name)
+            .query(`INSERT INTO AccessoryTypes (Id, Name) VALUES (@Id, @Name)`);
+        res.json(t);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/accessory-types/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM AccessoryTypes WHERE Id=@Id`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- MAINTENANCES (FIXING 404) ---
+app.get('/api/maintenances', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, DeviceId as deviceId, Description as description, Cost as cost, Date as date, InvoiceUrl as invoiceUrl FROM MaintenanceRecords`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/maintenances', async (req, res) => {
+    const m = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, m.id).input('DeviceId', sql.NVarChar, m.deviceId).input('Description', sql.NVarChar, m.description).input('Cost', sql.Decimal(18,2), m.cost).input('Date', sql.DateTime2, m.date).input('InvoiceUrl', sql.NVarChar, m.invoiceUrl || null)
+            .query(`INSERT INTO MaintenanceRecords (Id, DeviceId, Description, Cost, Date, InvoiceUrl) VALUES (@Id, @DeviceId, @Description, @Cost, @Date, @InvoiceUrl)`);
+        await logAction(m.deviceId, 'Device', 'Envio Manutenção', m._adminUser, m.description);
+        res.json(m);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/maintenances/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM MaintenanceRecords WHERE Id=@Id`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- OTHER CRUD ENDPOINTS ---
+app.get('/api/sectors', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/sectors', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, s.id).input('Name', sql.NVarChar, s.name).query(`INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)`);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/sectors/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Sectors WHERE Id=@Id`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
 app.get('/api/brands', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, Name as name FROM Brands`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
+
 app.post('/api/brands', async (req, res) => {
     const b = req.body;
     try {
@@ -293,65 +390,22 @@ app.post('/api/brands', async (req, res) => {
         res.json(b);
     } catch (err) { res.status(500).send(err.message); }
 });
-app.put('/api/brands/:id', async (req, res) => {
-    const b = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, b.name).query(`UPDATE Brands SET Name=@Name WHERE Id=@Id`);
-        res.json(b);
-    } catch (err) { res.status(500).send(err.message); }
-});
+
 app.delete('/api/brands/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        // Check for Models
-        const check = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT TOP 1 Id FROM Models WHERE BrandId=@Id");
-        if(check.recordset.length > 0) return res.status(400).send("Bloqueado: Existem modelos vinculados a esta marca.");
         await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Brands WHERE Id=@Id`);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- MODELS ---
-app.get('/api/models', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name, BrandId as brandId, TypeId as typeId, ImageUrl as imageUrl FROM Models`); res.json(result.recordset); }
-    catch (err) { res.status(500).send(err.message); }
-});
-app.post('/api/models', async (req, res) => {
-    const m = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, m.id).input('Name', sql.NVarChar, m.name).input('BrandId', sql.NVarChar, m.brandId).input('TypeId', sql.NVarChar, m.typeId).input('ImageUrl', sql.NVarChar, m.imageUrl || null)
-            .query(`INSERT INTO Models (Id, Name, BrandId, TypeId, ImageUrl) VALUES (@Id, @Name, @BrandId, @TypeId, @ImageUrl)`);
-        res.json(m);
-    } catch (err) { res.status(500).send(err.message); }
-});
-app.put('/api/models/:id', async (req, res) => {
-    const m = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, m.name).input('BrandId', sql.NVarChar, m.brandId).input('TypeId', sql.NVarChar, m.typeId).input('ImageUrl', sql.NVarChar, m.imageUrl || null)
-            .query(`UPDATE Models SET Name=@Name, BrandId=@BrandId, TypeId=@TypeId, ImageUrl=@ImageUrl WHERE Id=@Id`);
-        res.json(m);
-    } catch (err) { res.status(500).send(err.message); }
-});
-app.delete('/api/models/:id', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const check = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT TOP 1 Id FROM Devices WHERE ModelId=@Id");
-        if(check.recordset.length > 0) return res.status(400).send("Bloqueado: Existem dispositivos vinculados a este modelo.");
-        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Models WHERE Id=@Id`);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// --- ASSET TYPES ---
 app.get('/api/asset-types', async (req, res) => {
     try {
         const result = await sql.query(`SELECT Id as id, Name as name, CustomFieldIds as customFieldIdsStr FROM AssetTypes`);
         res.json(result.recordset.map(t => ({ ...t, customFieldIds: t.customFieldIdsStr ? JSON.parse(t.customFieldIdsStr) : [] })));
     } catch (err) { res.status(500).send(err.message); }
 });
+
 app.post('/api/asset-types', async (req, res) => {
     const t = req.body;
     try {
@@ -361,65 +415,34 @@ app.post('/api/asset-types', async (req, res) => {
         res.json(t);
     } catch (err) { res.status(500).send(err.message); }
 });
-app.put('/api/asset-types/:id', async (req, res) => {
-    const t = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, t.name).input('CustomFieldIds', sql.NVarChar, JSON.stringify(t.customFieldIds || []))
-            .query(`UPDATE AssetTypes SET Name=@Name, CustomFieldIds=@CustomFieldIds WHERE Id=@Id`);
-        res.json(t);
-    } catch (err) { res.status(500).send(err.message); }
-});
+
 app.delete('/api/asset-types/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const check = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT TOP 1 Id FROM Models WHERE TypeId=@Id");
-        if(check.recordset.length > 0) return res.status(400).send("Bloqueado: Existem modelos vinculados a este tipo.");
         await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM AssetTypes WHERE Id=@Id`);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SECTORS ---
-app.get('/api/sectors', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors`); res.json(result.recordset); }
+app.get('/api/models', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name, BrandId as brandId, TypeId as typeId, ImageUrl as imageUrl FROM Models`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
-app.post('/api/sectors', async (req, res) => {
-    const s = req.body;
+
+app.post('/api/models', async (req, res) => {
+    const m = req.body;
     try {
         const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, s.id).input('Name', sql.NVarChar, s.name).query(`INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)`);
-        res.json(s);
-    } catch (err) { res.status(500).send(err.message); }
-});
-app.delete('/api/sectors/:id', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const check = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT TOP 1 Id FROM Users WHERE SectorId=@Id");
-        if(check.recordset.length > 0) return res.status(400).send("Bloqueado: Existem colaboradores vinculados a este cargo.");
-        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Sectors WHERE Id=@Id`);
-        res.json({ success: true });
+        await pool.request().input('Id', sql.NVarChar, m.id).input('Name', sql.NVarChar, m.name).input('BrandId', sql.NVarChar, m.brandId).input('TypeId', sql.NVarChar, m.typeId).input('ImageUrl', sql.NVarChar, m.imageUrl || null)
+            .query(`INSERT INTO Models (Id, Name, BrandId, TypeId, ImageUrl) VALUES (@Id, @Name, @BrandId, @TypeId, @ImageUrl)`);
+        res.json(m);
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- CUSTOM FIELDS ---
-app.get('/api/custom-fields', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM CustomFields`); res.json(result.recordset); }
-    catch (err) { res.status(500).send(err.message); }
-});
-app.post('/api/custom-fields', async (req, res) => {
-    const f = req.body;
+app.delete('/api/models/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, f.id).input('Name', sql.NVarChar, f.name).query(`INSERT INTO CustomFields (Id, Name) VALUES (@Id, @Name)`);
-        res.json(f);
-    } catch (err) { res.status(500).send(err.message); }
-});
-app.delete('/api/custom-fields/:id', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM CustomFields WHERE Id=@Id`);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Models WHERE Id=@Id`);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -429,6 +452,7 @@ app.get('/api/sims', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
+
 app.post('/api/sims', async (req, res) => {
     const s = req.body;
     try {
@@ -439,6 +463,7 @@ app.post('/api/sims', async (req, res) => {
         res.json(s);
     } catch (err) { res.status(500).send(err.message); }
 });
+
 app.put('/api/sims/:id', async (req, res) => {
     const s = req.body;
     try {
@@ -449,6 +474,7 @@ app.put('/api/sims/:id', async (req, res) => {
         res.json(s);
     } catch (err) { res.status(500).send(err.message); }
 });
+
 app.delete('/api/sims/:id', async (req, res) => {
     const { _adminUser, reason } = req.body;
     try {
@@ -459,24 +485,55 @@ app.delete('/api/sims/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- TERMS & AUDIT ---
+// --- TERMS & FILES ---
 app.get('/api/terms', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, UserId as userId, Type as type, AssetDetails as assetDetails, Date as date, FileUrl as fileUrl FROM Terms`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
+
 app.put('/api/terms/file/:id', async (req, res) => {
     const { fileUrl, _adminUser } = req.body;
     const { id } = req.params;
     try {
         const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, id).input('FileUrl', sql.NVarChar, fileUrl).query(`UPDATE Terms SET FileUrl=@FileUrl WHERE Id=@Id`);
+        await pool.request().input('Id', sql.NVarChar, id).input('FileUrl', sql.NVarChar, fileUrl)
+            .query(`UPDATE Terms SET FileUrl=@FileUrl WHERE Id=@Id`);
         await logAction(id, 'User', 'Atualização', _adminUser, `Termo assinado anexado (ID: ${id})`);
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
+
+app.delete('/api/terms/:id/file', async (req, res) => {
+    const { _adminUser, reason } = req.body;
+    const termId = req.params.id;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, termId).query(`UPDATE Terms SET FileUrl=NULL WHERE Id=@Id`);
+        await logAction(termId, 'User', 'Exclusão', _adminUser, `Termo excluído. Motivo: ${reason}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- AUDIT LOGS ---
 app.get('/api/logs', async (req, res) => {
     try { const result = await sql.query(`SELECT Id as id, AssetId as assetId, AssetType as assetType, TargetName as targetName, Action as action, Timestamp as timestamp, AdminUser as adminUser, Notes as notes, BackupData as backupData FROM AuditLogs ORDER BY Timestamp DESC`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
+});
+
+// --- SYSTEM USERS ---
+app.get('/api/system-users', async (req, res) => {
+    try { const result = await sql.query(`SELECT Id as id, Name as name, Email as email, Role as role, Password as password FROM SystemUsers`); res.json(result.recordset); }
+    catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/system-users', async (req, res) => {
+    const u = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, u.id).input('Name', sql.NVarChar, u.name).input('Email', sql.NVarChar, u.email).input('Password', sql.NVarChar, u.password).input('Role', sql.NVarChar, u.role)
+            .query(`INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@Id, @Name, @Email, @Password, @Role)`);
+        res.json(u);
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 // --- OPERATIONS (CHECKOUT / CHECKIN) ---
@@ -535,12 +592,14 @@ app.post('/api/operations/checkin', async (req, res) => {
                 if(sim) { userId = sim.CurrentUserId; assetName = `Chip ${sim.PhoneNumber}`; }
                 await transaction.request().input('Id', sql.NVarChar, assetId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Id");
             }
+            let userName = 'Desconhecido';
             if(userId) {
                 const userResult = await transaction.request().input('Id', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Id");
-                const userName = userResult.recordset[0]?.FullName || 'Desconhecido';
+                userName = userResult.recordset[0]?.FullName || 'Desconhecido';
                 await transaction.request().input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9)).input('AssetId', sql.NVarChar, userId).input('AssetType', sql.NVarChar, 'User').input('Action', sql.NVarChar, 'Devolução').input('AdminUser', sql.NVarChar, _adminUser).input('Notes', sql.NVarChar, `Devolveu: ${assetName}. Obs: ${notes}`).query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
                 await transaction.request().input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9)).input('UserId', sql.NVarChar, userId).input('Type', sql.NVarChar, 'DEVOLUCAO').input('AssetDetails', sql.NVarChar, assetName).input('Date', sql.DateTime2, new Date()).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@Id, @UserId, @Type, @AssetDetails, @Date)");
             }
+            await transaction.request().input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9)).input('AssetId', sql.NVarChar, assetId).input('AssetType', sql.NVarChar, assetType).input('Action', sql.NVarChar, 'Devolução').input('AdminUser', sql.NVarChar, _adminUser).input('Notes', sql.NVarChar, `Devolvido por: ${userName}. Obs: ${notes}`).query("INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, Notes, Timestamp) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @Notes, GETDATE())");
             await transaction.commit();
             res.json({ success: true });
         } catch (err) { await transaction.rollback(); throw err; }
