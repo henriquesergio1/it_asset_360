@@ -8,8 +8,28 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.2.0',
+    version: '2.3.1',
     date: 'Hoje',
+    title: 'Correção de Ícones e Estabilização',
+    changes: [
+      'Corrigido erro crítico de importação do ícone de CPU na tela de operações.',
+      'Sincronização de versões entre os componentes de Login e Menu Lateral.',
+      'Melhoria na consistência visual do sistema.'
+    ]
+  },
+    {
+    version: '2.3.0',
+    date: '31/01/2025',
+    title: 'Restauração da Tela de Operações',
+    changes: [
+      'Corrigido erro que ocultava o formulário de entrega e devolução.',
+      'Restauração completa dos seletores de ativos e colaboradores.',
+      'Melhoria na UX do checklist de devolução de equipamentos.'
+    ]
+  },
+    {
+    version: '2.2.0',
+    date: '31/01/2025',
     title: 'Padronização de Ordenação A-Z',
     changes: [
       'Implementada ordenação alfabética automática em todas as listas: Colaboradores, Dispositivos, Chips e Cadastros.',
@@ -25,16 +45,6 @@ const versions = [
       'Implementada a funcionalidade de ordenar campos personalizados dentro do cadastro de Tipos de Ativo.',
       'O formulário de cadastro de dispositivos agora respeita rigorosamente a sequência definida na administração.',
       'Adicionados controles visuais (setas Sobe/Desce) na tela de configuração de Tipos de Ativo.'
-    ]
-  },
-    {
-    version: '2.0.0',
-    date: '31/01/2025',
-    title: 'Governança de Exclusão e Campos Extras',
-    changes: [
-      'Adicionado botão editar nos campos extras (configurações de ativos).',
-      'Implementada trava de segurança: Não é permitido excluir Marcas, Tipos, Modelos ou Campos Extras que estejam vinculados a ativos no inventário.',
-      'Adicionada confirmação visual antes de qualquer exclusão de configuração para evitar cliques acidentais.'
     ]
   }
 ];
