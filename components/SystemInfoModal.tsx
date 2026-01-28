@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '1.9.9',
+    version: '2.0.0',
     date: 'Hoje',
+    title: 'Governança de Exclusão e Campos Extras',
+    changes: [
+      'Adicionado botão editar nos campos extras (configurações de ativos).',
+      'Implementada trava de segurança: Não é permitido excluir Marcas, Tipos, Modelos ou Campos Extras que estejam vinculados a ativos no inventário.',
+      'Adicionada confirmação visual antes de qualquer exclusão de configuração para evitar cliques acidentais.'
+    ]
+  },
+    {
+    version: '1.9.9',
+    date: '30/01/2025',
     title: 'Correção na Visualização de Termos',
     changes: [
       'Corrigido problema onde arquivos PDF assinados abriam como texto bruto (Base64) em nova aba.',

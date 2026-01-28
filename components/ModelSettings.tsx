@@ -15,7 +15,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     brands, addBrand, updateBrand, deleteBrand,
     models, addModel, updateModel, deleteModel,
     accessoryTypes, addAccessoryType, updateAccessoryType, deleteAccessoryType,
-    customFields, addCustomField, deleteCustomField
+    customFields, addCustomField, updateCustomField, deleteCustomField
   } = useData();
   const { user } = useAuth();
   
@@ -26,7 +26,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   const [editingBrand, setEditingBrand] = useState<Partial<DeviceBrand>>({ name: '' });
   const [editingAccessory, setEditingAccessory] = useState<Partial<AccessoryType>>({ name: '' });
   const [modelForm, setModelForm] = useState<Partial<DeviceModel>>({ imageUrl: '' });
-  const [newCustomField, setNewCustomField] = useState('');
+  const [editingField, setEditingField] = useState<Partial<CustomField>>({ name: '' });
   const [isUploading, setIsUploading] = useState(false);
 
   const adminName = user?.name || 'Admin';
@@ -63,7 +63,14 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     setModelForm({ imageUrl: '' });
   };
 
-  // --- CONVERSÃO PARA BASE64 (PERSISTÊNCIA REAL) ---
+  const handleFieldSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingField.name?.trim()) return;
+    if (editingField.id) updateCustomField(editingField as CustomField, adminName);
+    else addCustomField({ id: Math.random().toString(36).substr(2, 9), name: editingField.name }, adminName);
+    setEditingField({ name: '' });
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -73,22 +80,23 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
             setModelForm({ ...modelForm, imageUrl: reader.result as string });
             setIsUploading(false);
         };
-        reader.onerror = () => {
-            alert('Erro ao carregar imagem.');
-            setIsUploading(false);
-        };
+        reader.onerror = () => { alert('Erro ao carregar imagem.'); setIsUploading(false); };
         reader.readAsDataURL(file);
     }
   };
 
-  const removeImage = () => {
-      setModelForm({ ...modelForm, imageUrl: '' });
-  };
+  const removeImage = () => { setModelForm({ ...modelForm, imageUrl: '' }); };
 
   const toggleFieldInType = (fieldId: string) => {
       const currentIds = editingType.customFieldIds || [];
       if (currentIds.includes(fieldId)) setEditingType({ ...editingType, customFieldIds: currentIds.filter(id => id !== fieldId) });
       else setEditingType({ ...editingType, customFieldIds: [...currentIds, fieldId] });
+  };
+
+  const confirmDelete = (type: string, id: string, name: string, deleteFn: (id: string, adm: string) => void) => {
+      if (window.confirm(`ATENÇÃO: Deseja realmente excluir ${type} "${name}"? Esta ação não pode ser desfeita.`)) {
+          deleteFn(id, adminName);
+      }
   };
 
   return (
@@ -134,20 +142,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                             <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Foto do Equipamento</label>
                             <div className="flex items-center gap-3">
                                 <div className="h-14 w-14 bg-white rounded-lg flex items-center justify-center overflow-hidden border-2 border-slate-200 shrink-0 shadow-inner">
-                                    {modelForm.imageUrl ? (
-                                        <img src={modelForm.imageUrl} className="h-full w-full object-cover" />
-                                    ) : (
-                                        <ImageIcon className="text-gray-300" size={24}/>
-                                    )}
+                                    {modelForm.imageUrl ? <img src={modelForm.imageUrl} className="h-full w-full object-cover" /> : <ImageIcon className="text-gray-300" size={24}/>}
                                 </div>
                                 {modelForm.imageUrl ? (
-                                    <button type="button" onClick={removeImage} className="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-100 font-bold flex items-center gap-1">
-                                        <Trash2 size={14}/> Remover Foto
-                                    </button>
+                                    <button type="button" onClick={removeImage} className="text-xs bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-100 font-bold flex items-center gap-1"><Trash2 size={14}/> Remover Foto</button>
                                 ) : (
                                     <label className="cursor-pointer bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 font-bold flex items-center gap-2 shadow-sm">
-                                        {isUploading ? <RefreshCw size={16} className="animate-spin"/> : <ImageIcon size={16}/>}
-                                        Carregar Arquivo
+                                        {isUploading ? <RefreshCw size={16} className="animate-spin"/> : <ImageIcon size={16}/>} Carregar Arquivo
                                         <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                                     </label>
                                 )}
@@ -159,7 +160,6 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                         <button type="submit" className="bg-blue-600 text-white px-8 py-2.5 rounded-xl hover:bg-blue-700 flex items-center gap-2 font-bold shadow-lg transition-all active:scale-95"><Save size={18}/> Salvar Modelo</button>
                     </div>
                 </form>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {models.map(m => {
                         const brand = brands.find(b => b.id === m.brandId);
@@ -175,7 +175,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                                 </div>
                                 <div className="flex gap-1">
                                     <button onClick={() => setModelForm(m)} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                                    <button onClick={() => deleteModel(m.id, adminName)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                    <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                                 </div>
                             </div>
                         );
@@ -183,8 +183,6 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                 </div>
               </div>
             )}
-            
-            {/* Outras abas (TYPES, FIELDS, BRANDS, ACCESSORIES) permanecem com sua lógica de CRUD */}
             {activeTab === 'TYPES' && (
                 <div className="max-w-2xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Tipos de Equipamento</h4>
@@ -212,38 +210,44 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-bold text-slate-700">{t.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingType(t)} className="text-blue-400 hover:text-blue-600 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteAssetType(t.id, adminName)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
                     </div>
                 </div>
             )}
-
             {activeTab === 'FIELDS' && (
                 <div className="max-w-xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Campos Personalizados</h4>
-                    <div className="flex gap-2 mb-6">
-                        <input type="text" placeholder="Nome do Campo (ex: Memória RAM)" className="flex-1 border rounded-lg p-2" value={newCustomField} onChange={e => setNewCustomField(e.target.value)} />
-                        <button onClick={() => { if(newCustomField.trim()) { addCustomField({ id: Math.random().toString(36).substr(2, 9), name: newCustomField }, adminName); setNewCustomField(''); } }} className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 font-bold"><Plus/></button>
-                    </div>
+                    <form onSubmit={handleFieldSubmit} className="bg-indigo-50 p-5 rounded-lg border border-indigo-100 mb-6">
+                       <h5 className="font-bold text-indigo-900 mb-3">{editingField.id ? 'Editar Campo' : 'Novo Campo'}</h5>
+                       <div className="flex gap-2">
+                          <input required type="text" placeholder="Nome do Campo (ex: Memória RAM)" className="flex-1 border rounded-lg p-2" value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value})} />
+                          <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-bold shadow-md">{editingField.id ? <Save size={20}/> : <Plus/>}</button>
+                          {editingField.id && <button type="button" onClick={() => setEditingField({name: ''})} className="bg-white border text-gray-400 p-2 rounded-lg"><X size={20}/></button>}
+                       </div>
+                    </form>
                     <div className="space-y-2">
                         {customFields.map(f => (
                             <div key={f.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
                                 <span className="font-medium text-gray-700">{f.name}</span>
-                                <button onClick={() => deleteCustomField(f.id, adminName)} className="text-red-400 hover:text-red-600"><Trash2 size={18}/></button>
+                                <div className="flex gap-2">
+                                  <button onClick={() => setEditingField(f)} className="text-blue-400 hover:text-blue-600 p-1"><Edit2 size={16}/></button>
+                                  <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="text-red-300 hover:text-red-500 p-1"><Trash2 size={18}/></button>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
-
             {activeTab === 'BRANDS' && (
                 <div className="max-w-xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Marcas e Fabricantes</h4>
                     <form onSubmit={handleBrandSubmit} className="flex gap-2 mb-6">
                        <input required type="text" placeholder="Ex: Dell, Apple, Samsung..." className="flex-1 border rounded-lg p-2" value={editingBrand.name || ''} onChange={e => setEditingBrand({...editingBrand, name: e.target.value})}/>
-                       <button type="submit" className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"><Plus/></button>
+                       <button type="submit" className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">{editingBrand.id ? <Save size={20}/> : <Plus/>}</button>
+                       {editingBrand.id && <button type="button" onClick={() => setEditingBrand({name: ''})} className="bg-white border text-gray-400 p-2 rounded-lg"><X size={20}/></button>}
                     </form>
                     <div className="space-y-2">
                        {brands.map(b => (
@@ -251,20 +255,20 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-medium">{b.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingBrand(b)} className="text-blue-400 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteBrand(b.id, adminName)} className="text-red-300 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => confirmDelete('Marca', b.id, b.name, deleteBrand)} className="text-red-300 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
                     </div>
                 </div>
             )}
-
             {activeTab === 'ACCESSORIES' && (
                 <div className="max-w-xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Tipos de Acessórios</h4>
                     <form onSubmit={handleAccessorySubmit} className="flex gap-2 mb-6">
                        <input required type="text" placeholder="Ex: Carregador, Cabo USB, Mouse..." className="flex-1 border rounded-lg p-2" value={editingAccessory.name || ''} onChange={e => setEditingAccessory({...editingAccessory, name: e.target.value})}/>
-                       <button type="submit" className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"><Plus/></button>
+                       <button type="submit" className="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">{editingAccessory.id ? <Save size={20}/> : <Plus/>}</button>
+                       {editingAccessory.id && <button type="button" onClick={() => setEditingAccessory({name: ''})} className="bg-white border text-gray-400 p-2 rounded-lg"><X size={20}/></button>}
                     </form>
                     <div className="space-y-2">
                        {accessoryTypes.map(acc => (
@@ -272,7 +276,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-medium">{acc.name}</span>
                              <div className="flex gap-2">
                                  <button onClick={() => setEditingAccessory(acc)} className="text-blue-400 p-1"><Edit2 size={16}/></button>
-                                 <button onClick={() => deleteAccessoryType(acc.id, adminName)} className="text-red-300 p-1"><Trash2 size={16}/></button>
+                                 <button onClick={() => confirmDelete('Acessório', acc.id, acc.name, deleteAccessoryType)} className="text-red-300 p-1"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}

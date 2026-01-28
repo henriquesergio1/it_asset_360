@@ -84,6 +84,7 @@ export interface DataContextType {
 
   // --- Custom Fields ---
   addCustomField: (field: CustomField, adminName: string) => void;
+  updateCustomField: (field: CustomField, adminName: string) => void;
   deleteCustomField: (id: string, adminName: string) => void;
 
   // --- Manutenção ---
