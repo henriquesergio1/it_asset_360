@@ -180,6 +180,15 @@ app.post('/api/accessory-types', async (req, res) => {
         res.json(t);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.put('/api/accessory-types/:id', async (req, res) => {
+    const t = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, t.name).query(`UPDATE AccessoryTypes SET Name=@Name WHERE Id=@Id`);
+        await logAction(t.id, 'Accessory', 'Atualização', t._adminUser, t.name);
+        res.json(t);
+    } catch (err) { res.status(500).send(err.message); }
+});
 app.delete('/api/accessory-types/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -243,6 +252,15 @@ app.post('/api/brands', async (req, res) => {
         res.json(b);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.put('/api/brands/:id', async (req, res) => {
+    const b = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, b.name).query(`UPDATE Brands SET Name=@Name WHERE Id=@Id`);
+        await logAction(b.id, 'Brand', 'Atualização', b._adminUser, b.name);
+        res.json(b);
+    } catch (err) { res.status(500).send(err.message); }
+});
 app.delete('/api/brands/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -265,6 +283,16 @@ app.post('/api/asset-types', async (req, res) => {
         res.json(t);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.put('/api/asset-types/:id', async (req, res) => {
+    const t = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, t.name).input('CustomFieldIds', sql.NVarChar, JSON.stringify(t.customFieldIds || []))
+            .query(`UPDATE AssetTypes SET Name=@Name, CustomFieldIds=@CustomFieldIds WHERE Id=@Id`);
+        await logAction(t.id, 'Type', 'Atualização', t._adminUser, t.name);
+        res.json(t);
+    } catch (err) { res.status(500).send(err.message); }
+});
 app.delete('/api/asset-types/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -282,6 +310,16 @@ app.post('/api/models', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await pool.request().input('Id', sql.NVarChar, m.id).input('Name', sql.NVarChar, m.name).input('BrandId', sql.NVarChar, m.brandId).input('TypeId', sql.NVarChar, m.typeId).input('ImageUrl', sql.NVarChar, m.imageUrl || null)
             .query(`INSERT INTO Models (Id, Name, BrandId, TypeId, ImageUrl) VALUES (@Id, @Name, @BrandId, @TypeId, @ImageUrl)`);
+        res.json(m);
+    } catch (err) { res.status(500).send(err.message); }
+});
+app.put('/api/models/:id', async (req, res) => {
+    const m = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).input('Name', sql.NVarChar, m.name).input('BrandId', sql.NVarChar, m.brandId).input('TypeId', sql.NVarChar, m.typeId).input('ImageUrl', sql.NVarChar, m.imageUrl || null)
+            .query(`UPDATE Models SET Name=@Name, BrandId=@BrandId, TypeId=@TypeId, ImageUrl=@ImageUrl WHERE Id=@Id`);
+        await logAction(m.id, 'Model', 'Atualização', m._adminUser, m.name);
         res.json(m);
     } catch (err) { res.status(500).send(err.message); }
 });
