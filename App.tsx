@@ -1,5 +1,4 @@
 
-// Fix syntax error in AdminRoute definition and update version to 2.5.8
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info } from 'lucide-react';
@@ -78,7 +77,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           
           <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
              <span className="shrink-0"><Info size={14}/></span>
-             <span>Versão 2.5.8</span>
+             <span>Versão 2.5.9</span>
           </div>
 
           <div className="mb-4">

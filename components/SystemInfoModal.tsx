@@ -1,5 +1,4 @@
 
-// Add version 2.5.8 to history
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -9,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.8',
+    version: '2.5.9',
     date: 'Hoje',
+    title: 'Correção de UX e Links MDM',
+    changes: [
+      'Removida a mensagem de confirmação de salvamento ao clicar no botão "Habilitar Edição" (agora aparece apenas ao salvar).',
+      'Corrigido o posicionamento do link Pulsus na listagem: agora ao lado do botão editar.',
+      'Atualizada a URL base do MDM Pulsus para https://app.pulsus.mobi/devices/[ID].',
+      'Incremento global da versão para 2.5.9.'
+    ]
+  },
+    {
+    version: '2.5.8',
+    date: '31/01/2025',
     title: 'Correção de Rotas e Versionamento',
     changes: [
       'Corrigido erro de sintaxe nas rotas protegidas de administração.',
@@ -28,29 +38,6 @@ const versions = [
       'Atualizado link do Pulsus para o novo padrão: https://app.pulsus.mobi/devices/[ID].',
       'Corrigido comportamento dos botões em modais de visualização para evitar submissão acidental.',
       'Incremento global da versão para 2.5.7.'
-    ]
-  },
-    {
-    version: '2.5.6',
-    date: '31/01/2025',
-    title: 'Ajustes de Fluxo e Confirmação',
-    changes: [
-      'Corrigido gatilho de alerta de confirmação: agora aparece apenas ao clicar em "Salvar", não mais ao habilitar edição.',
-      'Reforçada a integridade do formulário de ativos para garantir salvamento em todas as abas (Geral, Financeiro, Manutenção).',
-      'Ajustadas mensagens de orientação nas telas de visualização para maior clareza.',
-      'Incremento global da versão para 2.5.6.'
-    ]
-  },
-    {
-    version: '2.5.5',
-    date: '31/01/2025',
-    title: 'Melhorias de UX e Correções de Documentos',
-    changes: [
-      'Corrigido erro que impedia o salvamento de anexos financeiros em dispositivos.',
-      'Implementada conversão de Base64 para Blob para visualização segura de PDFs (notas fiscais e termos).',
-      'Adicionado botão "Habilitar Edição" diretamente nas telas de visualização de colaboradores, chips e dispositivos.',
-      'Implementado alerta de confirmação obrigatório antes de salvar qualquer formulário.',
-      'Incremento global da versão para 2.5.5.'
     ]
   }
 ];

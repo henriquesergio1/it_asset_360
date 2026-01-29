@@ -220,7 +220,7 @@ const SimManager = () => {
                       <div className="flex justify-end gap-3 pt-6 border-t">
                           <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-100 rounded-xl transition-all tracking-widest border border-slate-200">Fechar</button>
                           {isViewOnly ? (
-                              <button type="button" onClick={() => setIsViewOnly(false)} className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
+                              <button type="button" onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
                                  <Edit2 size={16}/> Habilitar Edição
                               </button>
                           ) : (

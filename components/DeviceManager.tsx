@@ -37,7 +37,6 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
     );
 };
 
-// --- Colunas Disponíveis para Dispositivos ---
 const COLUMN_OPTIONS = [
     { id: 'assetTag', label: 'Patrimônio' },
     { id: 'imei', label: 'IMEI' },
@@ -59,7 +58,6 @@ const DeviceManager = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // UI States
   const [searchTerm, setSearchTerm] = useState('');
   const [viewStatus, setViewStatus] = useState<DeviceStatus | 'ALL'>('ALL'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,7 +75,6 @@ const DeviceManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
   
-  // Column Selector State with Persistance
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('device_manager_columns');
       return saved ? JSON.parse(saved) : ['assetTag', 'linkedSim'];
@@ -89,7 +86,6 @@ const DeviceManager = () => {
   const [idType, setIdType] = useState<'TAG' | 'IMEI'>('TAG');
   const [formData, setFormData] = useState<Partial<Device>>({ status: DeviceStatus.AVAILABLE, customData: {} });
   
-  // Financial/Maintenance States
   const [isUploadingNF, setIsUploadingNF] = useState(false);
   const [isUploadingMaint, setIsUploadingMaint] = useState(false);
   const [newMaint, setNewMaint] = useState<Partial<MaintenanceRecord>>({ 
@@ -107,7 +103,6 @@ const DeviceManager = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Save columns to localStorage whenever they change
   useEffect(() => {
       localStorage.setItem('device_manager_columns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
@@ -142,7 +137,6 @@ const DeviceManager = () => {
     }
   };
 
-  // Helper para abrir arquivos Base64 de forma segura
   const openBase64File = (url: string) => {
       if (!url) return;
       if (url.startsWith('data:')) {
@@ -533,8 +527,8 @@ const DeviceManager = () => {
                                 <div className="flex gap-2">
                                     <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 flex-1" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Vínculo de software"/>
                                     {formData.pulsusId && (
-                                        <a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-all flex items-center justify-center shadow-sm" title="Testar Link MDM">
-                                            <ExternalLink size={20}/>
+                                        <a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-all flex items-center justify-center shadow-sm" title="Abrir MDM Pulsus">
+                                            <ShieldCheck size={20}/>
                                         </a>
                                     )}
                                 </div>
@@ -701,7 +695,7 @@ const DeviceManager = () => {
                 <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
                     {isViewOnly ? (
-                        <button type="button" onClick={() => setIsViewOnly(false)} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2">
+                        <button type="button" onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2">
                            <Edit2 size={16}/> Habilitar Edição
                         </button>
                     ) : (
