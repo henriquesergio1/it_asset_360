@@ -247,7 +247,8 @@ const DeviceManager = () => {
         return;
     }
 
-    if (!window.confirm("Alterações estão sendo feitas e serão salvas. Deseja continuar?")) {
+    // Alerta de confirmação moveu-se para aqui (momento de salvar)
+    if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
         return;
     }
 
@@ -465,7 +466,7 @@ const DeviceManager = () => {
                         {isViewOnly && (
                             <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
                                 <Info className="text-blue-600" size={20}/>
-                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
+                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no botão azul "Habilitar Edição" abaixo para editar os dados.</p>
                             </div>
                         )}
                         <div className="md:col-span-2 space-y-4">
@@ -696,7 +697,7 @@ const DeviceManager = () => {
                            <Edit2 size={16}/> Habilitar Edição
                         </button>
                     ) : (
-                        <button type="submit" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>
+                        <button type="submit" form="devForm" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>
                     )}
                 </div>
             </form>

@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.5',
+    version: '2.5.6',
     date: 'Hoje',
+    title: 'Ajustes de Fluxo e Confirmação',
+    changes: [
+      'Corrigido gatilho de alerta de confirmação: agora aparece apenas ao clicar em "Salvar", não mais ao habilitar edição.',
+      'Reforçada a integridade do formulário de ativos para garantir salvamento em todas as abas (Geral, Financeiro, Manutenção).',
+      'Ajustadas mensagens de orientação nas telas de visualização para maior clareza.',
+      'Incremento global da versão para 2.5.6.'
+    ]
+  },
+    {
+    version: '2.5.5',
+    date: '31/01/2025',
     title: 'Melhorias de UX e Correções de Documentos',
     changes: [
       'Corrigido erro que impedia o salvamento de anexos financeiros em dispositivos.',
@@ -28,18 +39,6 @@ const versions = [
       'Resolvido erro de "Invalid Date" ao importar dispositivos com datas no formato brasileiro.',
       'Melhorada a troca entre tipos de importação, garantindo que o estado seja limpo ao alternar entre Chips e Colaboradores.',
       'Incremento global da versão para 2.5.4.'
-    ]
-  },
-    {
-    version: '2.5.3',
-    date: '31/01/2025',
-    title: 'Correção Crítica no Importador',
-    changes: [
-      'Implementada lógica completa para importação de Chips (SIM Cards).',
-      'Corrigido erro onde o importador não processava chips corretamente, tratando-os como colaboradores.',
-      'Melhorada a detecção automática de Marcas, Tipos e Modelos durante a importação de dispositivos.',
-      'Adicionado log detalhado de erros linha a linha durante o processamento de CSV.',
-      'Incremento global da versão para 2.5.3.'
     ]
   }
 ];

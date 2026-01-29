@@ -39,7 +39,8 @@ const SimManager = () => {
     e.preventDefault();
     if (isViewOnly) return;
     
-    if (!window.confirm("Alterações estão sendo feitas e serão salvas. Deseja continuar?")) {
+    // Alerta de confirmação moveu-se para aqui (momento de salvar)
+    if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
         return;
     }
 
@@ -188,7 +189,7 @@ const SimManager = () => {
                       {isViewOnly && (
                           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3 mb-2">
                               <Info className="text-blue-600" size={20}/>
-                              <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique em "Habilitar Edição" abaixo para realizar alterações.</p>
+                              <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no botão azul "Habilitar Edição" abaixo para realizar alterações.</p>
                           </div>
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
