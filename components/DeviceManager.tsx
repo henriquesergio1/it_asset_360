@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 const LogNoteRenderer = ({ note }: { note: string }) => {
@@ -247,7 +247,6 @@ const DeviceManager = () => {
         return;
     }
 
-    // Alerta de confirmação moveu-se para aqui (momento de salvar)
     if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
         return;
     }
@@ -326,7 +325,7 @@ const DeviceManager = () => {
               {visibleColumns.includes('imei') && <th className="px-6 py-4">IMEI</th>}
               {visibleColumns.includes('serial') && <th className="px-6 py-4">S/N</th>}
               {visibleColumns.includes('sectorCode') && <th className="px-6 py-4">Setor</th>}
-              {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus</th>}
+              {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus ID</th>}
               {visibleColumns.includes('linkedSim') && <th className="px-6 py-4">Chip</th>}
               {visibleColumns.includes('purchaseInfo') && <th className="px-6 py-4">Aquisição</th>}
               <th className="px-6 py-4">Status</th>
@@ -377,16 +376,7 @@ const DeviceManager = () => {
                   {visibleColumns.includes('pulsusId') && (
                     <td className="px-6 py-4 text-center">
                         {d.pulsusId ? (
-                             <a 
-                                href={`https://pulsus.cloud/devices/${d.pulsusId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="inline-flex p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                onClick={(e) => e.stopPropagation()}
-                                title={`Pulsus ID: ${d.pulsusId}`}
-                             >
-                                 <ExternalLink size={14}/>
-                             </a>
+                            <span className="text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{d.pulsusId}</span>
                         ) : <span className="text-[10px] text-slate-200">-</span>}
                     </td>
                   )}
@@ -420,6 +410,17 @@ const DeviceManager = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        {d.pulsusId && (
+                             <a 
+                                href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                                title="Abrir MDM Pulsus"
+                             >
+                                <ShieldCheck size={18}/>
+                             </a>
+                        )}
                         {isRet ? (
                             <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
                         ) : (
@@ -529,7 +530,14 @@ const DeviceManager = () => {
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">ID MDM / Pulsus</label>
-                                <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Vínculo de software"/>
+                                <div className="flex gap-2">
+                                    <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 flex-1" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Vínculo de software"/>
+                                    {formData.pulsusId && (
+                                        <a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-all flex items-center justify-center shadow-sm" title="Testar Link MDM">
+                                            <ExternalLink size={20}/>
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

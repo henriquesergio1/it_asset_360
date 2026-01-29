@@ -1,4 +1,5 @@
 
+// Add version 2.5.8 to history
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -8,8 +9,30 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.6',
+    version: '2.5.8',
     date: 'Hoje',
+    title: 'Correção de Rotas e Versionamento',
+    changes: [
+      'Corrigido erro de sintaxe nas rotas protegidas de administração.',
+      'Sincronização de versão global para 2.5.8.',
+      'Ajustes finos no layout do menu lateral.'
+    ]
+  },
+    {
+    version: '2.5.7',
+    date: '31/01/2025',
+    title: 'Link MDM Pulsus e Refinamento de UX',
+    changes: [
+      'Corrigido erro onde o alerta de salvamento aparecia ao habilitar edição (agora aparece apenas ao salvar).',
+      'Incluído link direto para o MDM Pulsus na listagem de dispositivos (ao lado do lápis de edição).',
+      'Atualizado link do Pulsus para o novo padrão: https://app.pulsus.mobi/devices/[ID].',
+      'Corrigido comportamento dos botões em modais de visualização para evitar submissão acidental.',
+      'Incremento global da versão para 2.5.7.'
+    ]
+  },
+    {
+    version: '2.5.6',
+    date: '31/01/2025',
     title: 'Ajustes de Fluxo e Confirmação',
     changes: [
       'Corrigido gatilho de alerta de confirmação: agora aparece apenas ao clicar em "Salvar", não mais ao habilitar edição.',
@@ -28,17 +51,6 @@ const versions = [
       'Adicionado botão "Habilitar Edição" diretamente nas telas de visualização de colaboradores, chips e dispositivos.',
       'Implementado alerta de confirmação obrigatório antes de salvar qualquer formulário.',
       'Incremento global da versão para 2.5.5.'
-    ]
-  },
-    {
-    version: '2.5.4',
-    date: '31/01/2025',
-    title: 'Correção de Datas e Resiliência',
-    changes: [
-      'Implementada normalização automática de datas (DD/MM/AAAA para formato ISO) no importador.',
-      'Resolvido erro de "Invalid Date" ao importar dispositivos com datas no formato brasileiro.',
-      'Melhorada a troca entre tipos de importação, garantindo que o estado seja limpo ao alternar entre Chips e Colaboradores.',
-      'Incremento global da versão para 2.5.4.'
     ]
   }
 ];

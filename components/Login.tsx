@@ -1,4 +1,5 @@
 
+// Update version to 2.5.8
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -118,7 +119,7 @@ const Login = () => {
                     <Database size={12}/> Alternar para Modo de Teste
                 </button>
             )}
-            <p className="text-xs text-gray-400">Versão 2.5.6</p>
+            <p className="text-xs text-gray-400">Versão 2.5.8</p>
             <p className="text-xs text-gray-300">Todos os acessos são monitorados.</p>
           </div>
         </div>

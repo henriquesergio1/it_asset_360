@@ -164,7 +164,6 @@ const UserManager = () => {
     e.preventDefault();
     if (isViewOnly) return;
     
-    // Alerta de confirmação moveu-se para aqui (momento de salvar)
     if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
         return;
     }
