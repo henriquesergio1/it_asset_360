@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, User, SimCard, DeviceStatus, ActionType } from '../types';
@@ -35,6 +35,40 @@ const DataImporter = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const adminName = currentUser?.name || 'Importador';
+
+  // --- Limpeza automática ao trocar o tipo de importação ---
+  useEffect(() => {
+    setAnalyzedData([]);
+    setLogs([]);
+    setStep('UPLOAD');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [importType]);
+
+  // --- Função para normalizar datas para o formato ISO (AAAA-MM-DD) ---
+  const normalizeDate = (rawDate: string): string => {
+      if (!rawDate) return new Date().toISOString().split('T')[0];
+      
+      const trimmed = rawDate.trim();
+      
+      // Se já estiver no formato AAAA-MM-DD
+      if (new RegExp('^\\d{4}-\\d{2}-\\d{2}$').test(trimmed)) {
+          return trimmed;
+      }
+      
+      // Se estiver no formato DD/MM/AAAA ou DD-MM-AAAA
+      const separator = trimmed.includes('/') ? '/' : trimmed.includes('-') ? '-' : null;
+      if (separator) {
+          const parts = trimmed.split(separator);
+          if (parts.length === 3) {
+              // Assume que se o primeiro item tem 4 dígitos, é AAAA/MM/DD
+              if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+              // Caso contrário, assume DD/MM/AAAA
+              return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+      }
+      
+      return trimmed;
+  };
 
   const mapStatus = (raw: string, hasUser: boolean): DeviceStatus => {
       if (hasUser) return DeviceStatus.IN_USE;
@@ -219,8 +253,8 @@ const DataImporter = () => {
                       sectorId: sId || linkedUser?.sectorId || null, 
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
-                      purchaseCost: parseFloat(r['Valor Pago']?.replace(',','.')) || 0,
-                      purchaseDate: r['Data Compra'] || new Date().toISOString().split('T')[0],
+                      purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
+                      purchaseDate: normalizeDate(r['Data Compra']), // Corrigido: Normaliza a data para AAAA-MM-DD
                       supplier: r['Fornecedor'],
                       customData: {}
                   };
