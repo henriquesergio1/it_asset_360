@@ -142,6 +142,23 @@ const DeviceManager = () => {
     }
   };
 
+  // Helper para abrir arquivos Base64 de forma segura
+  const openBase64File = (url: string) => {
+      if (!url) return;
+      if (url.startsWith('data:')) {
+          const parts = url.split(',');
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+          const binary = atob(parts[1]);
+          const array = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+          const blob = new Blob([array], { type: mime });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+      } else {
+          window.open(url, '_blank');
+      }
+  };
+
   const saveMaintenance = () => {
     if (!editingId || !newMaint.description) return;
     const record: MaintenanceRecord = {
@@ -229,6 +246,11 @@ const DeviceManager = () => {
         alert('É obrigatório informar ao menos uma identificação (Patrimônio ou IMEI).');
         return;
     }
+
+    if (!window.confirm("Alterações estão sendo feitas e serão salvas. Deseja continuar?")) {
+        return;
+    }
+
     if (editingId && formData.id) updateDevice(formData as Device, adminName);
     else addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
     setIsModalOpen(false);
@@ -316,7 +338,6 @@ const DeviceManager = () => {
               const { model, brand } = getModelDetails(d.modelId);
               const user = users.find(u => u.id === d.currentUserId);
               const isRet = d.status === DeviceStatus.RETIRED;
-              const cargoDestino = sectors.find(s => s.id === d.sectorId)?.name;
               const linkedSim = sims.find(s => s.id === d.linkedSimId);
 
               return (
@@ -437,240 +458,248 @@ const DeviceManager = () => {
                 <button onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 bg-white">
-                {activeTab === 'GENERAL' && (
-                  <form id="devForm" onSubmit={handleDeviceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     {isViewOnly && (
-                        <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
-                            <Info className="text-blue-600" size={20}/>
-                            <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
-                        </div>
-                     )}
-                     <div className="md:col-span-2 space-y-4">
-                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
-                             <select required disabled={isViewOnly} className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm font-bold bg-white focus:border-blue-500 outline-none transition-all" value={formData.modelId} onChange={e => setFormData({...formData, modelId: e.target.value})}>
-                                 <option value="">Vincular a um modelo do catálogo...</option>
-                                 {[...models].sort((a,b) => a.name.localeCompare(b.name)).map(m => <option key={m.id} value={m.id}>{brands.find(b => b.id === m.brandId)?.name} {m.name}</option>)}
-                             </select>
-                         </div>
-                     </div>
-                     
-                     <div className="space-y-4">
-                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm relative">
-                            <label className="block text-[10px] font-black uppercase text-blue-400 mb-3 tracking-widest">Identificação Principal</label>
-                            <div className="flex bg-blue-100/50 p-1 rounded-lg mb-4">
-                                <button type="button" onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>Patrimônio</button>
-                                <button type="button" onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>IMEI</button>
+            <form id="devForm" onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-8 bg-white">
+                    {activeTab === 'GENERAL' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {isViewOnly && (
+                            <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
+                                <Info className="text-blue-600" size={20}/>
+                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
                             </div>
-                            {idType === 'TAG' ? (
-                                <input disabled={isViewOnly} className="w-full border-2 border-blue-200 rounded-xl p-3 text-lg font-black text-blue-900 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase()})} placeholder="TI-XXXX"/>
-                            ) : (
-                                <input disabled={isViewOnly} className="w-full border-2 border-blue-200 rounded-xl p-3 text-lg font-black text-blue-900 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value})} placeholder="000.000..."/>
-                            )}
-                        </div>
-                        
-                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                             <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 ml-1 tracking-widest">Chip / SIM Card Vinculado</label>
-                             <div className="relative">
-                                 <Cpu className="absolute left-3 top-3.5 text-indigo-300" size={16}/>
-                                 <select disabled={isViewOnly} className="w-full border-2 border-indigo-200/50 rounded-xl p-3 pl-10 text-sm focus:border-indigo-500 outline-none bg-white font-bold" value={formData.linkedSimId || ''} onChange={e => setFormData({...formData, linkedSimId: e.target.value || null})}>
-                                     <option value="">Nenhum Chip Vinculado</option>
-                                     {availableSims.sort((a,b) => a.phoneNumber.localeCompare(b.phoneNumber)).map(sim => (
-                                         <option key={sim.id} value={sim.id}>{sim.phoneNumber} ({sim.operator})</option>
-                                     ))}
-                                 </select>
-                             </div>
-                             <p className="text-[9px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p>
-                        </div>
-                     </div>
-
-                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Serial Number (Fabricante)</label>
-                            <input required disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-50" value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase()})} placeholder="S/N"/>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Código de Setor</label>
-                            <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-blue-50 font-black text-blue-900" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})} placeholder="Ex: S-001, V-055..."/>
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Função Destinada</label>
-                            <div className="relative">
-                                <Briefcase className="absolute left-3 top-3.5 text-slate-300" size={16}/>
-                                <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 pl-10 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
-                                    <option value="">Destinar a um Cargo...</option>
-                                    {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        )}
+                        <div className="md:col-span-2 space-y-4">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
+                                <select required disabled={isViewOnly} className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm font-bold bg-white focus:border-blue-500 outline-none transition-all" value={formData.modelId} onChange={e => setFormData({...formData, modelId: e.target.value})}>
+                                    <option value="">Vincular a um modelo do catálogo...</option>
+                                    {[...models].sort((a,b) => a.name.localeCompare(b.name)).map(m => <option key={m.id} value={m.id}>{brands.find(b => b.id === m.brandId)?.name} {m.name}</option>)}
                                 </select>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">ID MDM / Pulsus</label>
-                            <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Vínculo de software"/>
+                        
+                        <div className="space-y-4">
+                            <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm relative">
+                                <label className="block text-[10px] font-black uppercase text-blue-400 mb-3 tracking-widest">Identificação Principal</label>
+                                <div className="flex bg-blue-100/50 p-1 rounded-lg mb-4">
+                                    <button type="button" onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>Patrimônio</button>
+                                    <button type="button" onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>IMEI</button>
+                                </div>
+                                {idType === 'TAG' ? (
+                                    <input disabled={isViewOnly} className="w-full border-2 border-blue-200 rounded-xl p-3 text-lg font-black text-blue-900 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase()})} placeholder="TI-XXXX"/>
+                                ) : (
+                                    <input disabled={isViewOnly} className="w-full border-2 border-blue-200 rounded-xl p-3 text-lg font-black text-blue-900 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value})} placeholder="000.000..."/>
+                                )}
+                            </div>
+                            
+                            <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                                <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 ml-1 tracking-widest">Chip / SIM Card Vinculado</label>
+                                <div className="relative">
+                                    <Cpu className="absolute left-3 top-3.5 text-indigo-300" size={16}/>
+                                    <select disabled={isViewOnly} className="w-full border-2 border-indigo-200/50 rounded-xl p-3 pl-10 text-sm focus:border-indigo-500 outline-none bg-white font-bold" value={formData.linkedSimId || ''} onChange={e => setFormData({...formData, linkedSimId: e.target.value || null})}>
+                                        <option value="">Nenhum Chip Vinculado</option>
+                                        {availableSims.sort((a,b) => a.phoneNumber.localeCompare(b.phoneNumber)).map(sim => (
+                                            <option key={sim.id} value={sim.id}>{sim.phoneNumber} ({sim.operator})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <p className="text-[9px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p>
+                            </div>
                         </div>
-                     </div>
 
-                     {relevantFields.length > 0 && (
-                        <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                             {relevantFields.map(field => (
-                                 <div key={field.id}>
-                                     <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">{field.name}</label>
-                                     <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-white shadow-sm" value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/>
-                                 </div>
-                             ))}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Serial Number (Fabricante)</label>
+                                <input required disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-50" value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase()})} placeholder="S/N"/>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Código de Setor</label>
+                                <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-blue-50 font-black text-blue-900" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})} placeholder="Ex: S-001, V-055..."/>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Função Destinada</label>
+                                <div className="relative">
+                                    <Briefcase className="absolute left-3 top-3.5 text-slate-300" size={16}/>
+                                    <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 pl-10 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                                        <option value="">Destinar a um Cargo...</option>
+                                        {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">ID MDM / Pulsus</label>
+                                <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50" value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value})} placeholder="Vínculo de software"/>
+                            </div>
                         </div>
-                     )}
-                  </form>
-                )}
-                {activeTab === 'FINANCIAL' && (
-                  <div className="space-y-8 animate-fade-in">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                          <div className="space-y-5">
-                              <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4>
-                              <div>
-                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label>
-                                  <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago</label>
-                                      <input type="number" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.purchaseCost || 0} onChange={e => setFormData({...formData, purchaseCost: Number(e.target.value)})} step="0.01"/>
-                                  </div>
-                                  <div>
-                                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label>
-                                      <input type="date" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.purchaseDate || ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/>
-                                  </div>
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label>
-                                  <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja ou Fabricante"/>
-                              </div>
-                          </div>
 
-                          <div className="bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                              {formData.purchaseInvoiceUrl ? (
-                                  <div className="space-y-4 w-full">
-                                      <div className="h-48 w-full bg-white rounded-2xl border-2 border-slate-100 flex items-center justify-center shadow-xl overflow-hidden group relative">
-                                          {formData.purchaseInvoiceUrl.startsWith('data:image') ? (
-                                              <img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain" alt="NF" />
-                                          ) : (
-                                              <div className="flex flex-col items-center gap-2 text-blue-600">
-                                                  <FileCode size={64}/>
-                                                  <span className="text-[10px] font-black uppercase">Documento NF-e Anexado</span>
-                                              </div>
-                                          )}
-                                      </div>
-                                      <div className="flex gap-3">
-                                          <a href={formData.purchaseInvoiceUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white border-2 border-emerald-100 text-emerald-600 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-50 flex items-center justify-center gap-2 shadow-sm transition-all"><ExternalLink size={14}/> Abrir Documento</a>
-                                          {!isViewOnly && <button onClick={() => setFormData({...formData, purchaseInvoiceUrl: ''})} className="p-3 bg-red-50 text-red-600 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-all"><Trash2 size={18}/></button>}
-                                      </div>
-                                  </div>
-                              ) : (
-                                  <>
-                                      <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center text-slate-200 mb-4 shadow-lg border-2 border-slate-100"><Paperclip size={32}/></div>
-                                      <h5 className="font-black text-slate-800 uppercase tracking-tighter">Anexo da Nota Fiscal</h5>
-                                      <p className="text-xs text-slate-400 mt-2 font-medium leading-relaxed">Importe a imagem ou PDF.</p>
-                                      {!isViewOnly && (
-                                          <label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                                              {isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>}
-                                              Escolher Arquivo
-                                              <input type="file" className="hidden" onChange={handleNFFileChange} accept="application/pdf,image/*" />
-                                          </label>
-                                      )}
-                                  </>
-                              )}
-                          </div>
-                      </div>
-                  </div>
-                )}
-                {activeTab === 'MAINTENANCE' && (
-                    <div className="space-y-6 animate-fade-in">
-                        {!isViewOnly && (
-                             <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200 space-y-4 shadow-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-8 w-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-700"><Wrench size={16}/></div>
-                                    <h5 className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Registrar Nova Manutenção</h5>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Descrição</label>
-                                        <input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/>
+                        {relevantFields.length > 0 && (
+                            <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                                {relevantFields.map(field => (
+                                    <div key={field.id}>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">{field.name}</label>
+                                        <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-white shadow-sm" value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo (R$)</label>
-                                        <div className="relative">
-                                            <DollarSign className="absolute left-3 top-3 text-orange-300" size={16}/>
-                                            <input type="number" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" value={newMaint.cost || 0} onChange={e => setNewMaint({...newMaint, cost: Number(e.target.value)})} step="0.01"/>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Anexo</label>
-                                        <label className={`w-full flex items-center gap-3 bg-white border-2 border-dashed border-orange-200 p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
-                                            <div className="h-8 w-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400">
-                                                {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
-                                            </div>
-                                            <span className="text-[10px] font-bold text-orange-700 uppercase truncate">
-                                                {newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}
-                                            </span>
-                                            <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*" />
-                                        </label>
-                                    </div>
-                                </div>
-                                <div className="flex justify-end pt-2">
-                                    <button onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar</button>
-                                </div>
-                             </div>
+                                ))}
+                            </div>
                         )}
-                        <div className="space-y-3">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
-                            <div className="grid grid-cols-1 gap-3">
-                                {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-orange-200 transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600"><Wrench size={20}/></div>
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-sm">{m.description}</p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(m.date).toLocaleDateString()}</span>
-                                                    <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {m.cost.toFixed(2)}</span>
+                    </div>
+                    )}
+                    {activeTab === 'FINANCIAL' && (
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="space-y-5">
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label>
+                                    <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago</label>
+                                        <input type="number" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.purchaseCost || 0} onChange={e => setFormData({...formData, purchaseCost: Number(e.target.value)})} step="0.01"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label>
+                                        <input type="date" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.purchaseDate || ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label>
+                                    <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja ou Fabricante"/>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-8 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                                {formData.purchaseInvoiceUrl ? (
+                                    <div className="space-y-4 w-full">
+                                        <div className="h-48 w-full bg-white rounded-2xl border-2 border-slate-100 flex items-center justify-center shadow-xl overflow-hidden group relative">
+                                            {formData.purchaseInvoiceUrl.startsWith('data:image') ? (
+                                                <img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain" alt="NF" />
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2 text-blue-600">
+                                                    <FileCode size={64}/>
+                                                    <span className="text-[10px] font-black uppercase">Documento NF-e Anexado</span>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                        <div className="flex gap-2">
-                                            {m.invoiceUrl && <a href={m.invoiceUrl} target="_blank" rel="noopener noreferrer" className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"><ExternalLink size={16}/></a>}
-                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16}/></button>}
+                                        <div className="flex gap-3">
+                                            <button type="button" onClick={() => openBase64File(formData.purchaseInvoiceUrl!)} className="flex-1 bg-white border-2 border-emerald-100 text-emerald-600 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-50 flex items-center justify-center gap-2 shadow-sm transition-all"><ExternalLink size={14}/> Abrir Documento</button>
+                                            {!isViewOnly && <button type="button" onClick={() => setFormData({...formData, purchaseInvoiceUrl: ''})} className="p-3 bg-red-50 text-red-600 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-all"><Trash2 size={18}/></button>}
                                         </div>
                                     </div>
-                                )) : (
-                                    <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p>
-                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center text-slate-200 mb-4 shadow-lg border-2 border-slate-100"><Paperclip size={32}/></div>
+                                        <h5 className="font-black text-slate-800 uppercase tracking-tighter">Anexo da Nota Fiscal</h5>
+                                        <p className="text-xs text-slate-400 mt-2 font-medium leading-relaxed">Importe a imagem ou PDF.</p>
+                                        {!isViewOnly && (
+                                            <label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                                                {isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>}
+                                                Escolher Arquivo
+                                                <input type="file" className="hidden" onChange={handleNFFileChange} accept="application/pdf,image/*" />
+                                            </label>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
                     </div>
-                )}
-                {activeTab === 'HISTORY' && (
-                    <div className="relative border-l-4 border-slate-100 ml-4 space-y-8 py-4 animate-fade-in">
-                        {getHistory(editingId || '').map(log => (
-                            <div key={log.id} className="relative pl-8">
-                                <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
-                                <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
-                                <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
-                                    <LogNoteRenderer note={log.notes || ''} />
+                    )}
+                    {activeTab === 'MAINTENANCE' && (
+                        <div className="space-y-6 animate-fade-in">
+                            {!isViewOnly && (
+                                <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200 space-y-4 shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-700"><Wrench size={16}/></div>
+                                        <h5 className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Registrar Nova Manutenção</h5>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Descrição</label>
+                                            <input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo (R$)</label>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-3 top-3 text-orange-300" size={16}/>
+                                                <input type="number" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" value={newMaint.cost || 0} onChange={e => setNewMaint({...newMaint, cost: Number(e.target.value)})} step="0.01"/>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Anexo</label>
+                                            <label className={`w-full flex items-center gap-3 bg-white border-2 border-dashed border-orange-200 p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
+                                                <div className="h-8 w-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400">
+                                                    {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
+                                                </div>
+                                                <span className="text-[10px] font-bold text-orange-700 uppercase truncate">
+                                                    {newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}
+                                                </span>
+                                                <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end pt-2">
+                                        <button type="button" onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar</button>
+                                    </div>
                                 </div>
-                                <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
+                            )}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
+                                        <div key={m.id} className="flex justify-between items-center p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-orange-200 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600"><Wrench size={20}/></div>
+                                                <div>
+                                                    <p className="font-bold text-slate-800 text-sm">{m.description}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(m.date).toLocaleDateString()}</span>
+                                                        <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {m.cost.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {m.invoiceUrl && <button type="button" onClick={() => openBase64File(m.invoiceUrl!)} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"><ExternalLink size={16}/></button>}
+                                                {!isViewOnly && <button type="button" onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16}/></button>}
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                        </div>
+                    )}
+                    {activeTab === 'HISTORY' && (
+                        <div className="relative border-l-4 border-slate-100 ml-4 space-y-8 py-4 animate-fade-in">
+                            {getHistory(editingId || '').map(log => (
+                                <div key={log.id} className="relative pl-8">
+                                    <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
+                                    <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
+                                    <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
+                                    <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
+                                        <LogNoteRenderer note={log.notes || ''} />
+                                    </div>
+                                    <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-            <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
-                <button onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
-                {!isViewOnly && (activeTab === 'GENERAL' || activeTab === 'FINANCIAL') && <button type="submit" form="devForm" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>}
-            </div>
+                <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
+                    {isViewOnly ? (
+                        <button type="button" onClick={() => setIsViewOnly(false)} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2">
+                           <Edit2 size={16}/> Habilitar Edição
+                        </button>
+                    ) : (
+                        <button type="submit" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>
+                    )}
+                </div>
+            </form>
           </div>
         </div>
       )}

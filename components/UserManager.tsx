@@ -147,17 +147,25 @@ const UserManager = () => {
   };
 
   const handleOpenFile = (fileUrl: string) => {
+      if (!fileUrl) return;
       if (fileUrl.startsWith('data:')) {
-          fetch(fileUrl).then(res => res.blob()).then(blob => {
-              const url = URL.createObjectURL(blob);
-              window.open(url, '_blank');
-          }).catch(() => alert("Erro ao abrir arquivo."));
+          const parts = fileUrl.split(',');
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+          const binary = atob(parts[1]);
+          const array = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+          const blob = new Blob([array], { type: mime });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
       } else { window.open(fileUrl, '_blank'); }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
+    if (!window.confirm("Alterações estão sendo feitas e serão salvas. Deseja continuar?")) {
+        return;
+    }
     if (editingId && formData.id) updateUser(formData as User, adminName);
     else addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
     setIsModalOpen(false);
@@ -313,7 +321,7 @@ const UserManager = () => {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
             <div className="bg-slate-900 px-8 py-5 flex justify-between items-center">
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? 'Cadastro de Colaborador' : 'Novo Colaborador'}</h3>
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Visualização de Colaborador' : 'Edição de Colaborador') : 'Novo Colaborador'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
             </div>
             <div className="flex border-b bg-gray-50 overflow-x-auto shrink-0">
@@ -332,7 +340,7 @@ const UserManager = () => {
                         {isViewOnly && (
                             <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
                                 <Info className="text-blue-600" size={20}/>
-                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
+                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique em "Habilitar Edição" abaixo para realizar alterações.</p>
                             </div>
                         )}
                         <div className="md:col-span-2">
@@ -470,7 +478,13 @@ const UserManager = () => {
             </div>
             <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
                 <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-white border-2 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100">Fechar</button>
-                {!isViewOnly && activeTab === 'DATA' && <button type="submit" form="userForm" className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase shadow-lg hover:bg-emerald-700 transition-all">Salvar</button>}
+                {isViewOnly ? (
+                    <button type="button" onClick={() => setIsViewOnly(false)} className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
+                        <Edit2 size={16}/> Habilitar Edição
+                    </button>
+                ) : (
+                    activeTab === 'DATA' && <button type="submit" form="userForm" className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase shadow-lg hover:bg-emerald-700 transition-all">Salvar</button>
+                )}
             </div>
           </div>
         </div>

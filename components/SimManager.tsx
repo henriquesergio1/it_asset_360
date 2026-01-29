@@ -38,6 +38,11 @@ const SimManager = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
+    
+    if (!window.confirm("Alterações estão sendo feitas e serão salvas. Deseja continuar?")) {
+        return;
+    }
+
     if (editingId && formData.id) {
       updateSim(formData as SimCard, adminName);
     } else {
@@ -176,14 +181,14 @@ const SimManager = () => {
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up border border-indigo-100">
                   <div className="bg-slate-900 px-8 py-5 flex justify-between items-center border-b border-white/10">
-                      <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Detalhes do Chip' : 'Editar Linha') : 'Novo Chip / SIM'}</h3>
+                      <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Visualização do Chip' : 'Edição de Linha') : 'Novo Chip / SIM'}</h3>
                       <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
                   </div>
                   <form onSubmit={handleSubmit} className="p-8 space-y-6">
                       {isViewOnly && (
                           <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3 mb-2">
                               <Info className="text-blue-600" size={20}/>
-                              <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
+                              <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique em "Habilitar Edição" abaixo para realizar alterações.</p>
                           </div>
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -214,8 +219,12 @@ const SimManager = () => {
                       
                       <div className="flex justify-end gap-3 pt-6 border-t">
                           <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-100 rounded-xl transition-all tracking-widest border border-slate-200">Fechar</button>
-                          {!isViewOnly && (
-                            <button type="submit" className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
+                          {isViewOnly ? (
+                              <button type="button" onClick={() => setIsViewOnly(false)} className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
+                                 <Edit2 size={16}/> Habilitar Edição
+                              </button>
+                          ) : (
+                              <button type="submit" className="px-8 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
                           )}
                       </div>
                   </form>

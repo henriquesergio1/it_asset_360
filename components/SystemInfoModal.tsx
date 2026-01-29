@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.4',
+    version: '2.5.5',
     date: 'Hoje',
+    title: 'Melhorias de UX e Correções de Documentos',
+    changes: [
+      'Corrigido erro que impedia o salvamento de anexos financeiros em dispositivos.',
+      'Implementada conversão de Base64 para Blob para visualização segura de PDFs (notas fiscais e termos).',
+      'Adicionado botão "Habilitar Edição" diretamente nas telas de visualização de colaboradores, chips e dispositivos.',
+      'Implementado alerta de confirmação obrigatório antes de salvar qualquer formulário.',
+      'Incremento global da versão para 2.5.5.'
+    ]
+  },
+    {
+    version: '2.5.4',
+    date: '31/01/2025',
     title: 'Correção de Datas e Resiliência',
     changes: [
       'Implementada normalização automática de datas (DD/MM/AAAA para formato ISO) no importador.',
@@ -28,16 +40,6 @@ const versions = [
       'Melhorada a detecção automática de Marcas, Tipos e Modelos durante a importação de dispositivos.',
       'Adicionado log detalhado de erros linha a linha durante o processamento de CSV.',
       'Incremento global da versão para 2.5.3.'
-    ]
-  },
-    {
-    version: '2.5.2',
-    date: '31/01/2025',
-    title: 'Persistência de Colunas',
-    changes: [
-      'A seleção de colunas nas telas de Colaboradores e Dispositivos agora é salva no navegador.',
-      'Suas preferências de visualização são mantidas mesmo após fechar o sistema ou recarregar a página.',
-      'Incremento global da versão para 2.5.2.'
     ]
   }
 ];
