@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.6.0',
+    version: '2.6.1',
     date: 'Hoje',
+    title: 'Correção de Build e Alertas UX',
+    changes: [
+      'Corrigido erro de sintaxe no App.tsx que impedia o build de produção no Docker/Portainer.',
+      'Reforçada a prevenção de disparos de alertas de confirmação ao habilitar a edição (isolamento completo).',
+      'Refinamento do espaçamento e tamanho do logo no menu lateral.',
+      'Incremento global da versão para 2.6.1.'
+    ]
+  },
+    {
+    version: '2.6.0',
+    date: '31/01/2025',
     title: 'Melhoria na Identidade Visual do Sidebar',
     changes: [
       'Novo layout vertical para o cabeçalho do menu lateral.',
@@ -28,16 +39,6 @@ const versions = [
       'Corrigido o posicionamento do link Pulsus na listagem: agora ao lado do botão editar.',
       'Atualizada a URL base do MDM Pulsus para https://app.pulsus.mobi/devices/[ID].',
       'Incremento global da versão para 2.5.9.'
-    ]
-  },
-    {
-    version: '2.5.8',
-    date: '31/01/2025',
-    title: 'Correção de Rotas e Versionamento',
-    changes: [
-      'Corrigido erro de sintaxe nas rotas protegidas de administração.',
-      'Sincronização de versão global para 2.5.8.',
-      'Ajustes finos no layout do menu lateral.'
     ]
   }
 ];

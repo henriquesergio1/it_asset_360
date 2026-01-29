@@ -448,10 +448,10 @@ const DeviceManager = () => {
             </div>
             
             <div className="flex bg-slate-50 border-b overflow-x-auto shrink-0 px-4 pt-2">
-                <button onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Geral</button>
-                <button onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Financeiro</button>
-                <button onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Manutenções</button>
-                <button onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Auditoria</button>
+                <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Geral</button>
+                <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Financeiro</button>
+                <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Manutenções</button>
+                <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
 
             <form id="devForm" onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden">
@@ -695,7 +695,7 @@ const DeviceManager = () => {
                 <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white border-2 border-slate-200 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
                     {isViewOnly ? (
-                        <button type="button" onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2">
+                        <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2">
                            <Edit2 size={16}/> Habilitar Edição
                         </button>
                     ) : (
