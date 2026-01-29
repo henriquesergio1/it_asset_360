@@ -8,8 +8,30 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.1',
+    version: '2.5.3',
     date: 'Hoje',
+    title: 'Correção Crítica no Importador',
+    changes: [
+      'Implementada lógica completa para importação de Chips (SIM Cards).',
+      'Corrigido erro onde o importador não processava chips corretamente, tratando-os como colaboradores.',
+      'Melhorada a detecção automática de Marcas, Tipos e Modelos durante a importação de dispositivos.',
+      'Adicionado log detalhado de erros linha a linha durante o processamento de CSV.',
+      'Incremento global da versão para 2.5.3.'
+    ]
+  },
+    {
+    version: '2.5.2',
+    date: '31/01/2025',
+    title: 'Persistência de Colunas',
+    changes: [
+      'A seleção de colunas nas telas de Colaboradores e Dispositivos agora é salva no navegador.',
+      'Suas preferências de visualização são mantidas mesmo após fechar o sistema ou recarregar a página.',
+      'Incremento global da versão para 2.5.2.'
+    ]
+  },
+    {
+    version: '2.5.1',
+    date: '31/01/2025',
     title: 'Correção de Ícones e Versionamento',
     changes: [
       'Corrigido erro de importação do ícone Info nas telas de Dispositivos e Colaboradores.',
@@ -26,36 +48,6 @@ const versions = [
       'Novas colunas de dados vinculados: veja o número do chip e o modelo do equipamento diretamente na lista de colaboradores.',
       'Ícone de acesso rápido ao Pulsus MDM restaurado na listagem de dispositivos.',
       'Incremento global da versão para 2.5.0.'
-    ]
-  },
-    {
-    version: '2.4.3',
-    date: '31/01/2025',
-    title: 'Correção de Rotas e Ícones',
-    changes: [
-      'Corrigido erro de sintaxe nas rotas administrativas no App.tsx que causava falha no carregamento.',
-      'Corrigido erro de importação do ícone History no inventário de dispositivos.',
-      'Incremento da versão global para 2.4.3 para manter consistência.'
-    ]
-  },
-    {
-    version: '2.4.2',
-    date: 'Ontem',
-    title: 'Correção de Sintaxe de Regex',
-    changes: [
-      'Corrigido erro crítico "Uncaught SyntaxError: missing /" ao lidar com literais de expressões regulares.',
-      'Refatorados componentes LogNoteRenderer e DataImporter para usar construtores de regex mais estáveis.',
-      'Restaurada a tag de script de entrada no index.html para garantir o bootstrap da aplicação.'
-    ]
-  },
-    {
-    version: '2.4.1',
-    date: '31/01/2025',
-    title: 'Correção de Erros de Ativos',
-    changes: [
-      'Correção dos erros de referência em uploads de arquivos de Nota Fiscal e Manutenção.',
-      'Ajuste na lógica de salvamento de registros de manutenção no inventário de dispositivos.',
-      'Sincronização global da versão do sistema para 2.4.1.'
     ]
   }
 ];

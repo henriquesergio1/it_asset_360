@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-// Fixed: Added missing Info icon to imports
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
@@ -43,7 +42,6 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
     return (<span>{action}: {targetLink || <span className="font-bold">{assetString}</span>}</span>);
 };
 
-// --- Colunas Disponíveis ---
 const COLUMN_OPTIONS = [
     { id: 'email', label: 'E-mail' },
     { id: 'cpf', label: 'CPF' },
@@ -69,8 +67,12 @@ const UserManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   
-  // Column Selector State
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sector', 'assetsCount']);
+  // Column Selector State with Persistance
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+      const saved = localStorage.getItem('user_manager_columns');
+      return saved ? JSON.parse(saved) : ['sector', 'assetsCount'];
+  });
+  
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
@@ -90,6 +92,11 @@ const UserManager = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Save columns to localStorage whenever they change
+  useEffect(() => {
+      localStorage.setItem('user_manager_columns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
   const adminName = currentUser?.name || 'Unknown';
 

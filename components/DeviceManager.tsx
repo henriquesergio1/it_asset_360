@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-// Fixed: Added missing Info icon to imports
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
@@ -78,8 +77,12 @@ const DeviceManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
   
-  // Column Selector State
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['assetTag', 'linkedSim']);
+  // Column Selector State with Persistance
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+      const saved = localStorage.getItem('device_manager_columns');
+      return saved ? JSON.parse(saved) : ['assetTag', 'linkedSim'];
+  });
+  
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +106,11 @@ const DeviceManager = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Save columns to localStorage whenever they change
+  useEffect(() => {
+      localStorage.setItem('device_manager_columns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
 
   const toggleColumn = (id: string) => {
       setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
