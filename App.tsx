@@ -39,25 +39,32 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 shadow-xl transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
         
-        {/* Logo Section */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 shrink-0">
-          <div className="flex items-center space-x-2">
-            {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
-            ) : (
-                <div className="bg-blue-600 p-2 rounded-lg">
-                    <Cpu className="text-white h-6 w-6" />
-                </div>
-            )}
-            <span className="text-xl font-bold text-white tracking-tight truncate">{settings.appName}</span>
+        {/* Logo Section - Enhanced for Large Company Names */}
+        <div className="p-6 border-b border-slate-800 shrink-0 relative">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-900/20">
+              {settings.logoUrl ? (
+                  <img src={settings.logoUrl} alt="Logo" className="h-12 w-auto object-contain" />
+              ) : (
+                  <Cpu className="text-white h-10 w-10" />
+              )}
+            </div>
+            <div className="w-full">
+              <h1 className="text-base font-bold text-white leading-tight break-words px-2 tracking-tight">
+                {settings.appName}
+              </h1>
+              <p className="text-[9px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1 opacity-70">IT Asset 360</p>
+            </div>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-gray-400 hover:text-white">
+          
+          {/* Mobile Close Button */}
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-gray-400 hover:text-white absolute top-4 right-4">
             <X size={24} />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="mt-8 flex-1 overflow-y-auto">
+        <nav className="mt-6 flex-1 overflow-y-auto">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" />
           <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" />
@@ -77,7 +84,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           
           <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
              <span className="shrink-0"><Info size={14}/></span>
-             <span>Versão 2.5.9</span>
+             <span>Versão 2.6.0</span>
           </div>
 
           <div className="mb-4">
@@ -150,7 +157,7 @@ const AppRoutes = () => {
             <Route path="/users" element={<ProtectedRoute><UserManager /></ProtectedRoute>} />
             <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
             
-            <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+            <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminPanel>} />
             
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

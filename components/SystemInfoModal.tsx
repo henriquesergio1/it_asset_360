@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.5.9',
+    version: '2.6.0',
     date: 'Hoje',
+    title: 'Melhoria na Identidade Visual do Sidebar',
+    changes: [
+      'Novo layout vertical para o cabeçalho do menu lateral.',
+      'Aumentado o tamanho do logo e container visual para melhor visibilidade.',
+      'Implementada quebra automática de linha para nomes extensos de empresas.',
+      'Adicionado subtítulo do sistema no cabeçalho do menu.',
+      'Incremento global da versão para 2.6.0.'
+    ]
+  },
+    {
+    version: '2.5.9',
+    date: '31/01/2025',
     title: 'Correção de UX e Links MDM',
     changes: [
       'Removida a mensagem de confirmação de salvamento ao clicar no botão "Habilitar Edição" (agora aparece apenas ao salvar).',
@@ -26,18 +38,6 @@ const versions = [
       'Corrigido erro de sintaxe nas rotas protegidas de administração.',
       'Sincronização de versão global para 2.5.8.',
       'Ajustes finos no layout do menu lateral.'
-    ]
-  },
-    {
-    version: '2.5.7',
-    date: '31/01/2025',
-    title: 'Link MDM Pulsus e Refinamento de UX',
-    changes: [
-      'Corrigido erro onde o alerta de salvamento aparecia ao habilitar edição (agora aparece apenas ao salvar).',
-      'Incluído link direto para o MDM Pulsus na listagem de dispositivos (ao lado do lápis de edição).',
-      'Atualizado link do Pulsus para o novo padrão: https://app.pulsus.mobi/devices/[ID].',
-      'Corrigido comportamento dos botões em modais de visualização para evitar submissão acidental.',
-      'Incremento global da versão para 2.5.7.'
     ]
   }
 ];
