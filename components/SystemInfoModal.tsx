@@ -8,43 +8,54 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.3.3',
+    version: '2.5.1',
     date: 'Hoje',
-    title: 'Correção de Erros de Propriedades',
+    title: 'Correção de Ícones e Versionamento',
     changes: [
-      'Corrigido erro de propriedade inválida "onClose" no botão de fechar do modal de informações.',
-      'Sincronização global da versão do sistema para 2.3.3.',
-      'Melhoria na tipagem de componentes funcionais.'
+      'Corrigido erro de importação do ícone Info nas telas de Dispositivos e Colaboradores.',
+      'Incremento da versão global para 2.5.1.'
     ]
   },
     {
-    version: '2.3.2',
-    date: 'Hoje',
-    title: 'Correção das Abas de Colaboradores',
-    changes: [
-      'Restaurada a funcionalidade das abas "Ativos", "Termos" e "Auditoria" dentro do cadastro de colaboradores.',
-      'Corrigido erro que impedia a visualização de dispositivos em posse do usuário.',
-      'Melhoria na renderização do histórico de auditoria individual.'
-    ]
-  },
-    {
-    version: '2.3.1',
+    version: '2.5.0',
     date: '31/01/2025',
-    title: 'Correção de Ícones e Estabilização',
+    title: 'Customização de Interface e Padronização',
     changes: [
-      'Corrigido erro crítico de importação do ícone de CPU na tela de operações.',
-      'Sincronização de versões entre os componentes de Login e Menu Lateral.',
-      'Melhoria na consistência visual do sistema.'
+      'Implementado Seletor de Colunas dinâmico nas telas de Colaboradores e Dispositivos.',
+      'Padronização de clique na linha: agora abre visualização simples. Edição restrita ao ícone de lápis.',
+      'Novas colunas de dados vinculados: veja o número do chip e o modelo do equipamento diretamente na lista de colaboradores.',
+      'Ícone de acesso rápido ao Pulsus MDM restaurado na listagem de dispositivos.',
+      'Incremento global da versão para 2.5.0.'
     ]
   },
     {
-    version: '2.3.0',
+    version: '2.4.3',
     date: '31/01/2025',
-    title: 'Restauração da Tela de Operações',
+    title: 'Correção de Rotas e Ícones',
     changes: [
-      'Corrigido erro que ocultava o formulário de entrega e devolução.',
-      'Restauração completa dos seletores de ativos e colaboradores.',
-      'Melhoria na UX do checklist de devolução de equipamentos.'
+      'Corrigido erro de sintaxe nas rotas administrativas no App.tsx que causava falha no carregamento.',
+      'Corrigido erro de importação do ícone History no inventário de dispositivos.',
+      'Incremento da versão global para 2.4.3 para manter consistência.'
+    ]
+  },
+    {
+    version: '2.4.2',
+    date: 'Ontem',
+    title: 'Correção de Sintaxe de Regex',
+    changes: [
+      'Corrigido erro crítico "Uncaught SyntaxError: missing /" ao lidar com literais de expressões regulares.',
+      'Refatorados componentes LogNoteRenderer e DataImporter para usar construtores de regex mais estáveis.',
+      'Restaurada a tag de script de entrada no index.html para garantir o bootstrap da aplicação.'
+    ]
+  },
+    {
+    version: '2.4.1',
+    date: '31/01/2025',
+    title: 'Correção de Erros de Ativos',
+    changes: [
+      'Correção dos erros de referência em uploads de arquivos de Nota Fiscal e Manutenção.',
+      'Ajuste na lógica de salvamento de registros de manutenção no inventário de dispositivos.',
+      'Sincronização global da versão do sistema para 2.4.1.'
     ]
   }
 ];
@@ -59,7 +70,6 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
             <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
             <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
           </div>
-          {/* Fix: Changed invalid 'onClose' prop to 'onClick' on button element and moved onClick from icon to button */}
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
             <X size={24} />
           </button>

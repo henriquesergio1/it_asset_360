@@ -40,7 +40,7 @@ const DataImporter = () => {
       if (hasUser) return DeviceStatus.IN_USE;
       if (!raw) return DeviceStatus.AVAILABLE;
       
-      const clean = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      const clean = raw.normalize("NFD").replace(new RegExp('[\\u0300-\\u036f]', 'g'), "").toLowerCase().trim();
       if (['disponivel', 'estoque', 'liberado', 'vago', 'livre'].includes(clean)) return DeviceStatus.AVAILABLE;
       if (['em uso', 'uso', 'atribuido', 'vinculado'].includes(clean)) return DeviceStatus.IN_USE;
       if (['manutencao', 'conserto', 'reparo'].includes(clean)) return DeviceStatus.MAINTENANCE;
@@ -79,16 +79,17 @@ const DataImporter = () => {
   };
 
   const parseAndAnalyze = (text: string) => {
-      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      // Fix: Use constructor to avoid SyntaxError
+      const lines = text.split(new RegExp('\\r?\\n')).filter(l => l.trim());
       if (lines.length < 2) return alert('Arquivo vazio ou sem dados.');
       
       const firstLine = lines[0];
       const separator = firstLine.includes(';') ? ';' : ',';
-      const headers = firstLine.split(separator).map(h => h.trim().replace(/^"|"$/g, ''));
+      const headers = firstLine.split(separator).map(h => h.trim().replace(new RegExp('^"|"$', 'g'), ''));
       
       const rows = lines.slice(1).map(line => {
           const regex = new RegExp(`${separator}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
-          const values = line.split(regex).map(v => v.trim().replace(/^"|"$/g, ''));
+          const values = line.split(regex).map(v => v.trim().replace(new RegExp('^"|"$', 'g'), ''));
           return headers.reduce((obj: any, header, index) => {
               obj[header] = values[index] || '';
               return obj;
@@ -131,7 +132,6 @@ const DataImporter = () => {
       setStep('PROCESSING');
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
 
-      // Cache para evitar recriar itens durante o mesmo lote
       const localSectors = [...sectors];
 
       const resolveSector = async (name: string): Promise<string> => {
@@ -144,7 +144,6 @@ const DataImporter = () => {
           const newSector = { id: newId, name: name.trim() };
           
           try {
-              // Chamada síncrona para garantir a FK no banco real
               await addSector(newSector, adminName);
               localSectors.push(newSector);
               return newId;
@@ -180,7 +179,6 @@ const DataImporter = () => {
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  // Resolve Hierarquia do Modelo (Simplificado para o lote)
                   const bName = r['Marca'] || 'Outros';
                   let brand = brands.find(b => b.name === bName);
                   if (!brand) { 
@@ -205,7 +203,6 @@ const DataImporter = () => {
                       model = { id: mId, name: mName, brandId: brand!.id, typeId: type!.id };
                   }
 
-                  // Vínculo com Usuário via CPF
                   const userCpf = r['CPF Colaborador']?.trim();
                   const linkedUser = userCpf ? users.find(u => u.cpf === userCpf) : null;
                   const sId = await resolveSector(r['Cargo ou Funcao']);

@@ -76,9 +76,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         <div className="p-6 border-t border-slate-800 bg-slate-950 shrink-0">
           
           <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
-             <Info size={14}/>
-             {/* Version incremented as per guidelines */}
-             <span>Versão 2.3.3</span>
+             <span className="shrink-0"><Info size={14}/></span>
+             <span>Versão 2.5.1</span>
           </div>
 
           <div className="mb-4">

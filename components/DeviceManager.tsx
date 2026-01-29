@@ -1,25 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase } from 'lucide-react';
+import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
+// Fixed: Added missing Info icon to imports
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
-// --- Helper para renderizar logs com Links ---
 const LogNoteRenderer = ({ note }: { note: string }) => {
     const { users } = useData();
     const navigate = useNavigate();
 
-    const userPattern = /(Entregue para|Devolvido por):\s+([^\.]+)/i;
+    const userPattern = new RegExp('(Entregue para|Devolvido por):\\s+([^.]+)', 'i');
     const match = note.match(userPattern);
 
     if (!match) return <span>{note}</span>;
 
     const action = match[1];
     const nameString = match[2].trim();
-    const restOfNote = note.substring(match[0].length);
 
     const foundUser = users.find(u => u.fullName.toLowerCase() === nameString.toLowerCase());
 
@@ -35,10 +34,20 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
             ) : (
                 <span className="font-bold">{nameString}</span>
             )}
-            {restOfNote}
         </span>
     );
 };
+
+// --- Colunas Disponíveis para Dispositivos ---
+const COLUMN_OPTIONS = [
+    { id: 'assetTag', label: 'Patrimônio' },
+    { id: 'imei', label: 'IMEI' },
+    { id: 'serial', label: 'S/N Fabricante' },
+    { id: 'sectorCode', label: 'Cód. Setor' },
+    { id: 'pulsusId', label: 'Pulsus ID' },
+    { id: 'linkedSim', label: 'Chip Vinculado' },
+    { id: 'purchaseInfo', label: 'Valor/Data Compra' }
+];
 
 const DeviceManager = () => {
   const { 
@@ -69,6 +78,11 @@ const DeviceManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
   
+  // Column Selector State
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['assetTag', 'linkedSim']);
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const columnRef = useRef<HTMLDivElement>(null);
+
   const [idType, setIdType] = useState<'TAG' | 'IMEI'>('TAG');
   const [formData, setFormData] = useState<Partial<Device>>({ status: DeviceStatus.AVAILABLE, customData: {} });
   
@@ -83,6 +97,60 @@ const DeviceManager = () => {
   });
 
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+        if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleColumn = (id: string) => {
+      setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const handleNFFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsUploadingNF(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, purchaseInvoiceUrl: reader.result as string });
+        setIsUploadingNF(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMaintFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsUploadingMaint(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewMaint({ ...newMaint, invoiceUrl: reader.result as string });
+        setIsUploadingMaint(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveMaintenance = () => {
+    if (!editingId || !newMaint.description) return;
+    const record: MaintenanceRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      deviceId: editingId,
+      type: newMaint.type || MaintenanceType.CORRECTIVE,
+      date: new Date().toISOString(),
+      description: newMaint.description,
+      cost: newMaint.cost || 0,
+      provider: 'Interno',
+      invoiceUrl: newMaint.invoiceUrl
+    };
+    addMaintenance(record, adminName);
+    setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE });
+  };
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const deviceId = params.get('deviceId');
     if (deviceId) {
@@ -92,6 +160,8 @@ const DeviceManager = () => {
   }, [location, devices]);
 
   const adminName = currentUser?.name || 'Sistema';
+
+  const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE || s.id === formData.linkedSimId);
 
   const getModelDetails = (modelId?: string) => {
     const model = models.find(m => m.id === modelId);
@@ -111,7 +181,6 @@ const DeviceManager = () => {
 
   const relevantFields = getRelevantFields();
 
-  // --- Ordenação A-Z dos Dispositivos Filtrados ---
   const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
     const { model, brand } = getModelDetails(d.modelId);
@@ -138,51 +207,12 @@ const DeviceManager = () => {
         status: DeviceStatus.AVAILABLE, 
         purchaseDate: new Date().toISOString().split('T')[0], 
         purchaseCost: 0, 
-        customData: {} 
+        customData: {},
+        linkedSimId: null
       });
       setIdType('TAG');
     }
     setIsModalOpen(true);
-  };
-
-  const handleNFFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-        setIsUploadingNF(true);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setFormData(prev => ({ ...prev, purchaseInvoiceUrl: reader.result as string }));
-            setIsUploadingNF(false);
-        };
-        reader.readAsDataURL(file);
-    }
-  };
-
-  const handleMaintFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          setIsUploadingMaint(true);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setNewMaint(prev => ({ ...prev, invoiceUrl: reader.result as string }));
-              setIsUploadingMaint(false);
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
-  const saveMaintenance = () => {
-      if(!newMaint.description || newMaint.cost === undefined || !editingId) return;
-      
-      addMaintenance({
-          ...newMaint,
-          id: Math.random().toString(36).substr(2, 9),
-          deviceId: editingId,
-          date: new Date().toISOString(),
-          provider: 'T.I. Interno / Externo'
-      } as MaintenanceRecord, adminName);
-
-      setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE });
   };
 
   const handleDeviceSubmit = (e: React.FormEvent) => {
@@ -216,6 +246,27 @@ const DeviceManager = () => {
           <p className="text-gray-500 text-sm">Gestão centralizada de ativos (Ordem A-Z por Modelo).</p>
         </div>
         <div className="flex gap-2">
+            <div className="relative" ref={columnRef}>
+                <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 font-semibold">
+                    <SlidersHorizontal size={18} /> Colunas
+                </button>
+                {isColumnSelectorOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+                            <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
+                            <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                        </div>
+                        <div className="p-2 space-y-1">
+                            {COLUMN_OPTIONS.map(col => (
+                                <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                    {col.label}
+                                    {visibleColumns.includes(col.id) && <Check size={14}/>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
             <button onClick={() => setIsModelSettingsOpen(true)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 font-semibold"><Settings size={18} /> Catálogo</button>
             <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold"><Plus size={18} /> Novo Ativo</button>
         </div>
@@ -240,8 +291,13 @@ const DeviceManager = () => {
           <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
             <tr>
               <th className="px-6 py-4">Foto/Modelo</th>
-              <th className="px-6 py-4">Identificação</th>
-              <th className="px-6 py-4">Destinação (Cargo)</th>
+              {visibleColumns.includes('assetTag') && <th className="px-6 py-4">Patrimônio</th>}
+              {visibleColumns.includes('imei') && <th className="px-6 py-4">IMEI</th>}
+              {visibleColumns.includes('serial') && <th className="px-6 py-4">S/N</th>}
+              {visibleColumns.includes('sectorCode') && <th className="px-6 py-4">Setor</th>}
+              {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus</th>}
+              {visibleColumns.includes('linkedSim') && <th className="px-6 py-4">Chip</th>}
+              {visibleColumns.includes('purchaseInfo') && <th className="px-6 py-4">Aquisição</th>}
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Responsável Atual</th>
               <th className="px-6 py-4 text-right">Ações</th>
@@ -253,6 +309,7 @@ const DeviceManager = () => {
               const user = users.find(u => u.id === d.currentUserId);
               const isRet = d.status === DeviceStatus.RETIRED;
               const cargoDestino = sectors.find(s => s.id === d.sectorId)?.name;
+              const linkedSim = sims.find(s => s.id === d.linkedSimId);
 
               return (
                 <tr 
@@ -271,18 +328,55 @@ const DeviceManager = () => {
                         </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-0.5">
-                        {d.assetTag && <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag}</div>}
-                        {d.internalCode && <div className="text-[10px] font-black text-blue-400 uppercase tracking-tighter">Setor: {d.internalCode}</div>}
-                        <div className="text-[9px] text-slate-400 font-mono">SN: {d.serialNumber || '---'}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">{cargoDestino || 'NÃO DEFINIDO'}</span>
-                    </div>
-                  </td>
+                  {visibleColumns.includes('assetTag') && (
+                    <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div>
+                    </td>
+                  )}
+                  {visibleColumns.includes('imei') && (
+                    <td className="px-6 py-4 font-mono text-[10px] text-slate-500">{d.imei || '---'}</td>
+                  )}
+                  {visibleColumns.includes('serial') && (
+                    <td className="px-6 py-4 font-mono text-[10px] text-slate-400">{d.serialNumber || '---'}</td>
+                  )}
+                  {visibleColumns.includes('sectorCode') && (
+                    <td className="px-6 py-4">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">{d.internalCode || '---'}</span>
+                    </td>
+                  )}
+                  {visibleColumns.includes('pulsusId') && (
+                    <td className="px-6 py-4 text-center">
+                        {d.pulsusId ? (
+                             <a 
+                                href={`https://pulsus.cloud/devices/${d.pulsusId}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="inline-flex p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                title={`Pulsus ID: ${d.pulsusId}`}
+                             >
+                                 <ExternalLink size={14}/>
+                             </a>
+                        ) : <span className="text-[10px] text-slate-200">-</span>}
+                    </td>
+                  )}
+                  {visibleColumns.includes('linkedSim') && (
+                    <td className="px-6 py-4">
+                        {linkedSim ? (
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 w-fit flex items-center gap-1">
+                                <Cpu size={10}/> {linkedSim.phoneNumber}
+                            </span>
+                        ) : <span className="text-[10px] text-slate-200">-</span>}
+                    </td>
+                  )}
+                  {visibleColumns.includes('purchaseInfo') && (
+                    <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-emerald-600">R$ {d.purchaseCost?.toFixed(2) || '0.00'}</span>
+                            <span className="text-[9px] text-slate-400">{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString() : '---'}</span>
+                        </div>
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 text-green-700 border-green-100' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 text-orange-700 border-orange-100' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 text-red-700 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{d.status}</span>
                   </td>
@@ -300,7 +394,7 @@ const DeviceManager = () => {
                             <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
                         ) : (
                             <>
-                                <button onClick={() => handleOpenModal(d)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
+                                <button onClick={() => handleOpenModal(d, false)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
                                 <button onClick={() => handleDeleteAttempt(d)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
                             </>
                         )}
@@ -338,6 +432,12 @@ const DeviceManager = () => {
             <div className="flex-1 overflow-y-auto p-8 bg-white">
                 {activeTab === 'GENERAL' && (
                   <form id="devForm" onSubmit={handleDeviceSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     {isViewOnly && (
+                        <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
+                            <Info className="text-blue-600" size={20}/>
+                            <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
+                        </div>
+                     )}
                      <div className="md:col-span-2 space-y-4">
                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
                              <label className="block text-[10px] font-black uppercase text-slate-400 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
@@ -352,8 +452,8 @@ const DeviceManager = () => {
                         <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm relative">
                             <label className="block text-[10px] font-black uppercase text-blue-400 mb-3 tracking-widest">Identificação Principal</label>
                             <div className="flex bg-blue-100/50 p-1 rounded-lg mb-4">
-                                <button type="button" onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-500'}`}>Patrimônio</button>
-                                <button type="button" onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-500'}`}>IMEI</button>
+                                <button type="button" onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>Patrimônio</button>
+                                <button type="button" onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? 'bg-white text-blue-600 shadow-sm' : 'text-blue-400 hover:text-blue-50'}`}>IMEI</button>
                             </div>
                             {idType === 'TAG' ? (
                                 <input disabled={isViewOnly} className="w-full border-2 border-blue-200 rounded-xl p-3 text-lg font-black text-blue-900 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-blue-200" value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase()})} placeholder="TI-XXXX"/>
@@ -362,13 +462,26 @@ const DeviceManager = () => {
                             )}
                         </div>
                         
-                        <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Serial Number (Fabricante)</label>
-                            <input required disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-50" value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase()})} placeholder="S/N"/>
+                        <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                             <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 ml-1 tracking-widest">Chip / SIM Card Vinculado</label>
+                             <div className="relative">
+                                 <Cpu className="absolute left-3 top-3.5 text-indigo-300" size={16}/>
+                                 <select disabled={isViewOnly} className="w-full border-2 border-indigo-200/50 rounded-xl p-3 pl-10 text-sm focus:border-indigo-500 outline-none bg-white font-bold" value={formData.linkedSimId || ''} onChange={e => setFormData({...formData, linkedSimId: e.target.value || null})}>
+                                     <option value="">Nenhum Chip Vinculado</option>
+                                     {availableSims.sort((a,b) => a.phoneNumber.localeCompare(b.phoneNumber)).map(sim => (
+                                         <option key={sim.id} value={sim.id}>{sim.phoneNumber} ({sim.operator})</option>
+                                     ))}
+                                 </select>
+                             </div>
+                             <p className="text-[9px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p>
                         </div>
                      </div>
 
                      <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Serial Number (Fabricante)</label>
+                            <input required disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-50" value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase()})} placeholder="S/N"/>
+                        </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Código de Setor</label>
                             <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-blue-50 font-black text-blue-900" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})} placeholder="Ex: S-001, V-055..."/>
@@ -594,7 +707,5 @@ const DeviceManager = () => {
     </div>
   );
 };
-
-const History = ({size}: {size: number}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>;
 
 export default DeviceManager;

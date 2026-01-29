@@ -210,19 +210,38 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const assignAsset = (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, termFile?: File) => {
     let assetNameForTerm = '';
+    const user = users.find(u => u.id === userId);
+
     if (assetType === 'Device') {
-      const dev = devices.find(d => d.id === assetId); const user = users.find(u => u.id === userId); const model = models.find(m => m.id === dev?.modelId);
+      const dev = devices.find(d => d.id === assetId); 
+      const model = models.find(m => m.id === dev?.modelId);
       assetNameForTerm = `${model?.name} (${dev?.assetTag})`;
+      
+      // Atualiza o dispositivo
       setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.IN_USE, currentUserId: userId } : d));
+      
+      // LOGS
       if (dev) logAction(ActionType.CHECKOUT, 'Device', assetId, 'Ativo', adminName, `Entregue para: ${user?.fullName}. Obs: ${notes}`);
+      
+      // Lógica de Chip Vinculado Automático
+      if (dev?.linkedSimId) {
+          const linkedSim = sims.find(s => s.id === dev.linkedSimId);
+          if (linkedSim) {
+              setSims(prev => prev.map(s => s.id === dev.linkedSimId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
+              assetNameForTerm += ` + Chip ${linkedSim.phoneNumber}`;
+              logAction(ActionType.CHECKOUT, 'Sim', dev.linkedSimId, 'SIM Vinculado', adminName, `Entregue automaticamente com Ativo ${dev.assetTag} para: ${user?.fullName}`);
+          }
+      }
+      
       if (user) logAction(ActionType.CHECKOUT, 'User', user.id, user.fullName, adminName, `Recebeu: ${assetNameForTerm}. Obs: ${notes}`);
     } else {
-      const sim = sims.find(s => s.id === assetId); const user = users.find(u => u.id === userId);
+      const sim = sims.find(s => s.id === assetId);
       assetNameForTerm = `Chip ${sim?.phoneNumber} (${sim?.operator})`;
       setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
       if (sim) logAction(ActionType.CHECKOUT, 'Sim', assetId, sim.phoneNumber, adminName, `Entregue para: ${user?.fullName}. Obs: ${notes}`);
       if (user) logAction(ActionType.CHECKOUT, 'User', user.id, user.fullName, adminName, `Recebeu: ${assetNameForTerm}. Obs: ${notes}`);
     }
+
     const fileUrl = termFile ? URL.createObjectURL(termFile) : ''; 
     const newTerm: Term = { id: Math.random().toString(36).substr(2, 9), userId, type: 'ENTREGA', assetDetails: assetNameForTerm, date: new Date().toISOString(), fileUrl };
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
@@ -231,10 +250,24 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const returnAsset = (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, termFile?: File) => {
     let userId = ''; let assetNameForTerm = '';
     if (assetType === 'Device') {
-      const dev = devices.find(d => d.id === assetId); userId = dev?.currentUserId || ''; const model = models.find(m => m.id === dev?.modelId);
-      assetNameForTerm = `${model?.name} (${dev?.assetTag})`; const user = users.find(u => u.id === userId);
+      const dev = devices.find(d => d.id === assetId); userId = dev?.currentUserId || ''; 
+      const model = models.find(m => m.id === dev?.modelId);
+      assetNameForTerm = `${model?.name} (${dev?.assetTag})`; 
+      const user = users.find(u => u.id === userId);
+      
       setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
       logAction(ActionType.CHECKIN, 'Device', assetId, 'Ativo', adminName, `Devolvido por: ${user?.fullName || 'Desconhecido'}. Obs: ${notes}`);
+      
+      // Lógica de Chip Vinculado Automático (Devolução)
+      if (dev?.linkedSimId) {
+          const linkedSim = sims.find(s => s.id === dev.linkedSimId);
+          if (linkedSim) {
+              setSims(prev => prev.map(s => s.id === dev.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+              assetNameForTerm += ` + Chip ${linkedSim.phoneNumber}`;
+              logAction(ActionType.CHECKIN, 'Sim', dev.linkedSimId, 'SIM Vinculado', adminName, `Devolvido automaticamente com Ativo ${dev.assetTag}`);
+          }
+      }
+
       if (user) logAction(ActionType.CHECKIN, 'User', user.id, user.fullName, adminName, `Devolveu: ${assetNameForTerm}. Obs: ${notes}`);
     } else {
       const sim = sims.find(s => s.id === assetId); userId = sim?.currentUserId || ''; assetNameForTerm = `Chip ${sim?.phoneNumber} (${sim?.operator})`;

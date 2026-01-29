@@ -1,23 +1,28 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning } from 'lucide-react';
+// Fixed: Added missing Info icon to imports
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 const LogNoteRenderer = ({ note }: { note: string }) => {
     const { devices, sims } = useData();
     const navigate = useNavigate();
-    const assetPattern = /(Recebeu|Devolveu):\s+([^\.]+)/i;
+    
+    const assetPattern = new RegExp('(Recebeu|Devolveu):\\s+([^.]+)', 'i');
     const match = note.match(assetPattern);
+    
     if (!match) return <span>{note}</span>;
+    
     const action = match[1];
     const assetString = match[2].trim();
-    const restOfNote = note.substring(match[0].length);
+    
     let targetLink = null;
     const foundDevice = devices.find(d => assetString.includes(d.assetTag) || (d.imei && assetString.includes(d.imei)));
+    
     if (foundDevice) {
         targetLink = (
             <span onClick={() => navigate(`/devices?deviceId=${foundDevice.id}`)} className="text-blue-600 hover:underline font-bold cursor-pointer hover:bg-blue-50 px-1 rounded">
@@ -34,8 +39,20 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
             );
         }
     }
-    return (<span>{action}: {targetLink || <span className="font-bold">{assetString}</span>}{restOfNote}</span>);
+    
+    return (<span>{action}: {targetLink || <span className="font-bold">{assetString}</span>}</span>);
 };
+
+// --- Colunas Disponíveis ---
+const COLUMN_OPTIONS = [
+    { id: 'email', label: 'E-mail' },
+    { id: 'cpf', label: 'CPF' },
+    { id: 'sector', label: 'Setor/Função' },
+    { id: 'internalCode', label: 'Cód. Setor' },
+    { id: 'assetsCount', label: 'Contagem de Ativos' },
+    { id: 'activeSims', label: 'Números de Chip' },
+    { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
+];
 
 const UserManager = () => {
   const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, getHistory, settings, updateTermFile, deleteTermFile } = useData();
@@ -45,13 +62,17 @@ const UserManager = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE'); 
-  const [filterSectorId, setFilterSectorId] = useState(''); 
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
+  
+  // Column Selector State
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sector', 'assetsCount']);
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const columnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
@@ -62,6 +83,14 @@ const UserManager = () => {
       }
   }, [location, users]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+        if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const adminName = currentUser?.name || 'Unknown';
 
   const handleOpenModal = (user?: User, viewOnly: boolean = false) => {
@@ -70,6 +99,10 @@ const UserManager = () => {
     if (user) { setEditingId(user.id); setFormData(user); }
     else { setEditingId(null); setFormData({ active: true }); }
     setIsModalOpen(true);
+  };
+
+  const toggleColumn = (id: string) => {
+      setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
   };
 
   const handleTermUpload = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,12 +163,10 @@ const UserManager = () => {
       if (window.confirm(`Inativar ${user.fullName}?`)) toggleUserActive(user, adminName, 'Inativação administrativa');
   };
 
-  // --- Ordenação A-Z dos Colaboradores Filtrados ---
   const filteredUsers = users.filter(u => {
     if (viewMode === 'ACTIVE' ? !u.active : u.active) return false;
     if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl)) return false;
-    if (filterSectorId && u.sectorId !== filterSectorId) return false;
-    return `${u.fullName} ${u.cpf}`.toLowerCase().includes(searchTerm.toLowerCase());
+    return `${u.fullName} ${u.cpf} ${u.email}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   const userAssets = devices.filter(d => d.currentUserId === editingId);
@@ -151,6 +182,27 @@ const UserManager = () => {
           <p className="text-gray-500 text-sm">Gestão de vínculos e termos.</p>
         </div>
         <div className="flex gap-2">
+            <div className="relative" ref={columnRef}>
+                <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 font-semibold">
+                    <SlidersHorizontal size={18} /> Colunas
+                </button>
+                {isColumnSelectorOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+                            <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
+                            <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                        </div>
+                        <div className="p-2 space-y-1">
+                            {COLUMN_OPTIONS.map(col => (
+                                <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                    {col.label}
+                                    {visibleColumns.includes(col.id) && <Check size={14}/>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
             <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold"><Plus size={18} /> Novo</button>
         </div>
       </div>
@@ -158,7 +210,7 @@ const UserManager = () => {
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            <input type="text" placeholder="Nome ou CPF..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Nome, CPF ou E-mail..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-xs font-bold uppercase transition-all ${showPendingOnly ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white text-gray-500'}`}>
             <FileWarning size={16}/> {showPendingOnly ? 'Exibindo Pendências' : 'Filtrar Pendências'}
@@ -174,8 +226,13 @@ const UserManager = () => {
           <thead className="bg-gray-50 text-[10px] uppercase font-black text-gray-500 border-b">
             <tr>
               <th className="px-6 py-4">Colaborador</th>
-              <th className="px-6 py-4">Ativos em Posse</th>
-              <th className="px-6 py-4">Cargo / Função</th>
+              {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
+              {visibleColumns.includes('cpf') && <th className="px-6 py-4">CPF</th>}
+              {visibleColumns.includes('sector') && <th className="px-6 py-4">Cargo / Função</th>}
+              {visibleColumns.includes('internalCode') && <th className="px-6 py-4 text-center">Setor</th>}
+              {visibleColumns.includes('assetsCount') && <th className="px-6 py-4 text-center">Ativos</th>}
+              {visibleColumns.includes('activeSims') && <th className="px-6 py-4">Chips</th>}
+              {visibleColumns.includes('devicesInfo') && <th className="px-6 py-4">Aparelhos</th>}
               <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>
@@ -185,24 +242,56 @@ const UserManager = () => {
               const uSims = sims.filter(s => s.currentUserId === user.id);
               const hasPending = (user.terms || []).some(t => !t.fileUrl);
               return (
-                <tr key={user.id} className={`border-b hover:bg-gray-50 ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
+                <tr key={user.id} onClick={() => handleOpenModal(user, true)} className={`border-b hover:bg-emerald-50/30 cursor-pointer transition-all ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
                   <td className="px-6 py-4">
-                    <div onClick={() => handleOpenModal(user, true)} className="font-bold text-gray-900 cursor-pointer hover:text-emerald-600">{user.fullName}</div>
-                    <div className="text-[10px] text-gray-400 font-mono font-bold uppercase">CPF: {user.cpf}</div>
-                    {hasPending && <span className="inline-flex items-center gap-1 mt-1 bg-orange-100 text-orange-700 text-[9px] font-black px-2 py-0.5 rounded border border-orange-200"><FileWarning size={10} /> TERMO PENDENTE</span>}
+                    <div className="font-bold text-gray-900 group-hover:text-emerald-600">{user.fullName}</div>
+                    {hasPending && <span className="inline-flex items-center gap-1 mt-1 bg-orange-100 text-orange-700 text-[8px] font-black px-1.5 py-0.5 rounded border border-orange-200">TERMO PENDENTE</span>}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                        {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-[10px] font-black border border-blue-100"><Smartphone size={10} className="inline mr-1"/> {uDevices.length}</span>}
-                        {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-[10px] font-black border border-indigo-100"><Cpu size={10} className="inline mr-1"/> {uSims.length}</span>}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded">{sectors.find(s => s.id === user.sectorId)?.name || 'Não Definido'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
+                  {visibleColumns.includes('email') && <td className="px-6 py-4 text-xs text-slate-500">{user.email || '---'}</td>}
+                  {visibleColumns.includes('cpf') && <td className="px-6 py-4 text-[10px] font-mono font-bold text-slate-400">{user.cpf}</td>}
+                  {visibleColumns.includes('sector') && (
+                    <td className="px-6 py-4">
+                        <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded truncate block max-w-[150px]">{sectors.find(s => s.id === user.sectorId)?.name || '---'}</span>
+                    </td>
+                  )}
+                  {visibleColumns.includes('internalCode') && (
+                    <td className="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase">{user.internalCode || '---'}</td>
+                  )}
+                  {visibleColumns.includes('assetsCount') && (
+                    <td className="px-6 py-4 text-center">
+                        <div className="flex gap-1 justify-center">
+                            {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-blue-100">{uDevices.length}</span>}
+                            {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-indigo-100">{uSims.length}</span>}
+                            {(uDevices.length === 0 && uSims.length === 0) && <span className="text-slate-200 text-xs">-</span>}
+                        </div>
+                    </td>
+                  )}
+                  {visibleColumns.includes('activeSims') && (
+                    <td className="px-6 py-4">
+                        <div className="flex flex-col gap-0.5">
+                            {uSims.length > 0 ? uSims.map(s => (
+                                <span key={s.id} className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded w-fit">{s.phoneNumber}</span>
+                            )) : <span className="text-[9px] text-slate-200">-</span>}
+                        </div>
+                    </td>
+                  )}
+                  {visibleColumns.includes('devicesInfo') && (
+                    <td className="px-6 py-4">
+                        <div className="flex flex-col gap-0.5">
+                            {uDevices.length > 0 ? uDevices.map(d => {
+                                const model = models.find(m => m.id === d.modelId);
+                                return (
+                                    <span key={d.id} className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 rounded truncate block max-w-[180px]">
+                                        {model?.name || 'Eq.'} ({d.assetTag})
+                                    </span>
+                                );
+                            }) : <span className="text-[9px] text-slate-200">-</span>}
+                        </div>
+                    </td>
+                  )}
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
-                        <button onClick={() => handleOpenModal(user)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={16}/></button>
+                        <button onClick={() => handleOpenModal(user, false)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={16}/></button>
                         <button onClick={() => handleToggleClick(user)} className={`p-2 rounded-xl ${user.active ? 'text-gray-400 hover:text-red-600' : 'text-green-500'}`}><Power size={16}/></button>
                     </div>
                   </td>
@@ -233,6 +322,12 @@ const UserManager = () => {
             <div className="p-8 overflow-y-auto flex-1 bg-white">
                 {activeTab === 'DATA' && (
                     <form id="userForm" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {isViewOnly && (
+                            <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-3">
+                                <Info className="text-blue-600" size={20}/>
+                                <p className="text-xs font-bold text-blue-800">Modo de visualização. Clique no ícone de lápis na listagem para editar.</p>
+                            </div>
+                        )}
                         <div className="md:col-span-2">
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Nome Completo</label>
                             <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
@@ -376,7 +471,5 @@ const UserManager = () => {
     </div>
   );
 };
-
-const XIcon = ({size}: {size: number}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
 export default UserManager;
