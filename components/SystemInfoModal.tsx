@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.3',
+    version: '2.7.4',
     date: 'Hoje',
+    title: 'Visualização Avançada do Catálogo',
+    changes: [
+      'Reformulado o layout do catálogo de modelos para lista única (full-width), otimizando a leitura de nomes longos.',
+      'Implementado campo de busca dinâmica no catálogo para agilizar a manutenção de modelos e fotos.',
+      'Ajustado o design das linhas do catálogo para maior clareza visual e facilidade de edição.',
+      'Incremento global da versão para 2.7.4.'
+    ]
+  },
+    {
+    version: '2.7.3',
+    date: '31/01/2025',
     title: 'Unificação Agressiva de Catálogo',
     changes: [
       'Implementada normalização via Slugs (removendo acentos, espaços e símbolos) para comparação de marcas e modelos.',
@@ -21,25 +32,13 @@ const versions = [
   },
     {
     version: '2.7.2',
-    date: 'Hoje',
+    date: '31/01/2025',
     title: 'Garantia de Unicidade Global',
     changes: [
       'Aperfeiçoada a lógica de resolução de modelos para verificar dados pré-existentes no sistema.',
       'Implementada comparação rigorosa considerando Marca + Modelo para evitar ambiguidades.',
       'Remoção de espaços em branco (trim) automáticos durante a comparação de registros importados.',
       'Incremento global da versão para 2.7.2.'
-    ]
-  },
-    {
-    version: '2.7.1',
-    date: '31/01/2025',
-    title: 'Correção de Unificação no Catálogo',
-    changes: [
-      'Corrigida falha na importação que criava múltiplos modelos repetidos no catálogo.',
-      'Implementado cache local de marcas, tipos e modelos durante o processamento em lote.',
-      'Melhoria na integridade dos vínculos de ativos importados.',
-      'Ajuste fino na normalização de datas durante a importação via CSV.',
-      'Incremento global da versão para 2.7.1.'
     ]
   }
 ];

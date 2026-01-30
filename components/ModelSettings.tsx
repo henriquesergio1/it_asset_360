@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { AssetType, DeviceBrand, DeviceModel, AccessoryType, CustomField } from '../types';
-import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown, Search } from 'lucide-react';
 
 interface ModelSettingsProps {
   onClose: () => void;
@@ -20,6 +20,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   const { user } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'TYPES' | 'BRANDS' | 'ACCESSORIES' | 'MODELS' | 'FIELDS'>('TYPES');
+  const [modelSearchTerm, setModelSearchTerm] = useState('');
 
   // Edit State
   const [editingType, setEditingType] = useState<Partial<AssetType>>({ name: '', customFieldIds: [] });
@@ -34,7 +35,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   // --- Helpers de Ordenação A-Z ---
   const sortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
   const sortedAssetTypes = [...assetTypes].sort((a, b) => a.name.localeCompare(b.name));
-  const sortedModels = [...models].sort((a, b) => a.name.localeCompare(b.name));
+  
+  // Modelos filtrados pela busca e ordenados A-Z
+  const filteredModels = models.filter(m => {
+      const brand = brands.find(b => b.id === m.brandId)?.name || '';
+      return `${brand} ${m.name}`.toLowerCase().includes(modelSearchTerm.toLowerCase());
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
   const sortedAccessories = [...accessoryTypes].sort((a, b) => a.name.localeCompare(b.name));
   const sortedCustomFields = [...customFields].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -139,8 +146,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
           <div className="flex-1 p-8 overflow-y-auto bg-white">
             {activeTab === 'MODELS' && (
               <div className="space-y-6">
-                <h4 className="text-xl font-bold text-gray-800">Modelos de Equipamentos</h4>
-                <form onSubmit={handleModelSubmit} className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+                <h4 className="text-xl font-bold text-gray-800">Catálogo de Modelos</h4>
+                
+                {/* Form de Cadastro */}
+                <form onSubmit={handleModelSubmit} className="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
                     <h5 className="font-bold text-gray-700 mb-4">{modelForm.id ? 'Editando Modelo' : 'Cadastrar Novo Modelo'}</h5>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nome do Modelo</label><input required type="text" className="w-full border rounded-lg p-2 text-sm" value={modelForm.name || ''} onChange={e => setModelForm({...modelForm, name: e.target.value})}/></div>
@@ -176,30 +185,52 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                         </div>
                     </div>
                     <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-                        {modelForm.id && <button type="button" onClick={() => setModelForm({ imageUrl: '' })} className="text-gray-500 font-bold px-4">Cancelar</button>}
+                        {modelForm.id && <button type="button" onClick={() => setModelForm({ imageUrl: '' })} className="text-gray-500 font-bold px-4">Cancelar Edição</button>}
                         <button type="submit" className="bg-blue-600 text-white px-8 py-2.5 rounded-xl hover:bg-blue-700 flex items-center gap-2 font-bold shadow-lg transition-all active:scale-95"><Save size={18}/> Salvar Modelo</button>
                     </div>
                 </form>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {sortedModels.map(m => {
+
+                {/* Filtro de Busca */}
+                <div className="relative mb-4">
+                    <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                    <input 
+                        type="text" 
+                        placeholder="Pesquisar por modelo ou marca..." 
+                        className="pl-10 w-full border rounded-xl py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                        value={modelSearchTerm}
+                        onChange={(e) => setModelSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                {/* Lista de Modelos (Lista Única por Linha) */}
+                <div className="flex flex-col gap-2">
+                    {filteredModels.length > 0 ? filteredModels.map(m => {
                         const brand = brands.find(b => b.id === m.brandId);
                         const type = assetTypes.find(t => t.id === m.typeId);
                         return (
-                            <div key={m.id} className="flex items-center gap-4 bg-white border border-gray-100 p-3 rounded-xl hover:shadow-md transition-shadow group">
-                                <div className="h-16 w-16 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden shrink-0 border border-slate-100 group-hover:border-blue-200 transition-colors">
-                                    {m.imageUrl ? <img src={m.imageUrl} className="h-full w-full object-cover" /> : <ImageIcon className="text-gray-200" size={24}/>}
+                            <div key={m.id} className="flex items-center gap-4 bg-white border border-gray-100 p-4 rounded-xl hover:shadow-md transition-all group border-l-4 border-l-transparent hover:border-l-blue-500">
+                                <div className="h-20 w-20 bg-slate-50 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-200 group-hover:border-blue-200 transition-colors shadow-inner">
+                                    {m.imageUrl ? <img src={m.imageUrl} className="h-full w-full object-cover" alt={m.name} /> : <ImageIcon className="text-gray-200" size={32}/>}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-gray-800 truncate">{m.name}</h4>
-                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider">{brand?.name || 'Sem Marca'} • {type?.name || 'Sem Tipo'}</p>
+                                    <h4 className="font-bold text-gray-900 text-lg leading-tight mb-1">{m.name}</h4>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 tracking-wider">{brand?.name || 'Sem Marca'}</span>
+                                        <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200 tracking-wider">{type?.name || 'Sem Tipo'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex gap-1">
-                                    <button onClick={() => setModelForm(m)} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                                    <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                <div className="flex gap-2 shrink-0">
+                                    <button onClick={() => setModelForm(m)} className="p-3 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-100" title="Editar"><Edit2 size={20}/></button>
+                                    <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-3 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100" title="Excluir"><Trash2 size={20}/></button>
                                 </div>
                             </div>
                         );
-                    })}
+                    }) : (
+                        <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                            <Layers className="mx-auto text-gray-300 mb-3" size={48} />
+                            <p className="text-gray-400 font-medium">Nenhum modelo encontrado.</p>
+                        </div>
+                    )}
                 </div>
               </div>
             )}
