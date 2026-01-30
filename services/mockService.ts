@@ -167,7 +167,7 @@ export const mockUsers: User[] = [
     address: 'Av. Paulista, 1000 - São Paulo, SP',
     email: 'carlos.silva@empresa.com.br',
     sectorId: 'sec1',
-    jobTitle: 'Gerente de Contas',
+    // Removed redundant jobTitle in favor of sectorId
     active: true,
     terms: []
   },
@@ -180,7 +180,7 @@ export const mockUsers: User[] = [
     address: 'Rua Augusta, 500 - São Paulo, SP',
     email: 'ana.pereira@empresa.com.br',
     sectorId: 'sec2',
-    jobTitle: 'Analista Financeiro',
+    // Removed redundant jobTitle in favor of sectorId
     active: true,
     terms: []
   },
@@ -192,7 +192,7 @@ export const mockUsers: User[] = [
     address: 'Rua Funchal, 200 - São Paulo, SP',
     email: 'roberto.santos@empresa.com.br',
     sectorId: 'sec1',
-    jobTitle: 'Promotor de Vendas',
+    // Removed redundant jobTitle in favor of sectorId
     active: true,
     terms: []
   }

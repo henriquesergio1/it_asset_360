@@ -16,7 +16,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     models, addModel, updateModel, deleteModel,
     accessoryTypes, addAccessoryType, updateAccessoryType, deleteAccessoryType,
     customFields, addCustomField, updateCustomField, deleteCustomField,
-    sectors, addSector, deleteSector
+    sectors, addSector, updateSector, deleteSector,
+    users, devices
   } = useData();
   const { user } = useAuth();
   
@@ -90,8 +91,11 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   const handleSectorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSector.name?.trim()) return;
-    // Note: Sectors currently only have ID and Name in DataContext/API
-    addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name }, adminName);
+    if (editingSector.id) {
+        updateSector(editingSector as UserSector, adminName);
+    } else {
+        addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name }, adminName);
+    }
     setEditingSector({ name: '' });
   };
 
@@ -236,10 +240,11 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                 <div className="max-w-2xl">
                     <h4 className="text-xl font-bold text-gray-800 mb-4">Cargos e Funções</h4>
                     <form onSubmit={handleSectorSubmit} className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-6 shadow-sm">
-                       <h5 className="font-black text-emerald-900 mb-4 uppercase text-xs tracking-widest">Adicionar Novo Cargo</h5>
+                       <h5 className="font-black text-emerald-900 mb-4 uppercase text-xs tracking-widest">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
                        <div className="flex gap-3">
                            <input required type="text" placeholder="Ex: Analista de RH, Gerente de Vendas..." className="flex-1 border-2 border-emerald-200 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 outline-none font-bold" value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value})} />
-                           <button type="submit" className="bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">Adicionar</button>
+                           <button type="submit" className="bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
+                           {editingSector.id && <button type="button" onClick={() => setEditingSector({})} className="p-3 text-slate-400 hover:text-slate-600"><X size={20}/></button>}
                        </div>
                     </form>
                     
@@ -250,7 +255,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                                 <div className="h-8 w-8 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600"><Briefcase size={16}/></div>
                                 <span className="font-bold text-slate-700">{s.name}</span>
                              </div>
-                             <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={18}/></button>
+                             <div className="flex gap-1">
+                                <button onClick={() => setEditingSector(s)} className="p-2 text-blue-400 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={18}/></button>
+                                <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={18}/></button>
+                             </div>
                           </div>
                        ))}
                     </div>

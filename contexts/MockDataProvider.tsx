@@ -147,8 +147,14 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const addSector = (sector: UserSector, adminName: string) => { setSectors(prev => [...prev, sector]); logAction(ActionType.create, 'Sector', sector.id, sector.name, adminName); };
+  const updateSector = (sector: UserSector, adminName: string) => { setSectors(prev => prev.map(s => s.id === sector.id ? sector : s)); logAction(ActionType.UPDATE, 'Sector', sector.id, sector.name, adminName); };
   const deleteSector = (id: string, adminName: string) => {
-      if (users.some(u => u.sectorId === id)) return alert('Não é possível excluir: existem usuários vinculados a este cargo.');
+      const inUseByUsers = users.some(u => u.sectorId === id);
+      const inUseByDevices = devices.some(d => d.sectorId === id);
+      if (inUseByUsers || inUseByDevices) {
+          alert('BLOQUEADO: Este cargo está em uso por colaboradores ou dispositivos. Altere os vínculos antes de excluir.');
+          return;
+      }
       setSectors(prev => prev.filter(s => s.id !== id));
       logAction(ActionType.DELETE, 'Sector', id, 'Setor', adminName);
   };
@@ -311,7 +317,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addBrand, updateBrand, deleteBrand,
     addModel, updateModel, deleteModel,
     addMaintenance, deleteMaintenance,
-    addSector, deleteSector,
+    addSector, updateSector, deleteSector,
     addAccessoryType, updateAccessoryType, deleteAccessoryType,
     addCustomField, updateCustomField, deleteCustomField
   };

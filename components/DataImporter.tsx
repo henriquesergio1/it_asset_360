@@ -247,7 +247,6 @@ const DataImporter = () => {
                       pis: formatPIS(r['PIS'] || ''), 
                       internalCode: r['Codigo de Setor'] || '',
                       sectorId: sId,
-                      jobTitle: jobName, 
                       address: r['Endereco'] || '',
                       active: true
                   };
@@ -260,7 +259,7 @@ const DataImporter = () => {
                   const mId = await resolveModel(r['Modelo'], bId, tId);
                   
                   const jobName = r['Cargo ou Funcao'] || '';
-                  const sId = await resolveSector(jobName); // NOVIDADE: Resolve o cargo para o dispositivo também
+                  const sId = await resolveSector(jobName); 
 
                   const userCpfRaw = r['CPF Colaborador']?.trim();
                   const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
@@ -274,8 +273,7 @@ const DataImporter = () => {
                       imei: r['IMEI'],
                       pulsusId: r['ID Pulsus'],
                       internalCode: r['Codigo de Setor'] || '',
-                      jobTitle: jobName, 
-                      sectorId: sId || linkedUser?.sectorId || null, // Prioriza o cargo informado no CSV ou do usuário
+                      sectorId: sId || linkedUser?.sectorId || null, 
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
@@ -351,8 +349,8 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: CPF como ID. "Cargo ou Funcao" alimenta tanto o Grupo quanto o campo textual.' : 
-                         importType === 'DEVICES' ? 'Nota: "Codigo de Setor" vai para o campo numérico (InternalCode). "Cargo ou Funcao" para o texto descritivo.' :
+                        {importType === 'USERS' ? 'Nota: CPF como ID. "Cargo ou Funcao" vincula ao ID estruturado.' : 
+                         importType === 'DEVICES' ? 'Nota: "Codigo de Setor" vai para o campo numérico (InternalCode). "Cargo ou Funcao" define o vínculo do setor.' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>
                 </div>

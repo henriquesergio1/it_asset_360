@@ -357,12 +357,11 @@ const DeviceManager = () => {
     setIsModalOpen(false);
   };
 
+  // Fixed: removed redundant jobTitle assignment
   const handleSectorChange = (val: string) => {
-      const sector = sectors.find(s => s.id === val);
       setFormData({
           ...formData,
-          sectorId: val || null,
-          jobTitle: sector ? sector.name : '' // Sincroniza o JobTitle (Texto) com o vínculo do setor
+          sectorId: val || null
       });
   };
 

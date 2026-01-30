@@ -209,7 +209,8 @@ const Operations = () => {
             if (syncAssetData && assetType === 'Device') {
                 const user = users.find(u => u.id === selectedUserId);
                 const device = devices.find(d => d.id === selectedAssetId);
-                if (user && device) await updateDevice({ ...device, sectorId: user.sectorId, jobTitle: user.jobTitle }, adminName);
+                // Fixed: removed non-existent jobTitle mapping
+                if (user && device) await updateDevice({ ...device, sectorId: user.sectorId }, adminName);
             }
 
             await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);

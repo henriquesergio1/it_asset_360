@@ -109,6 +109,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const addSector = async (s: UserSector, adm: string) => { await postData('sectors', { ...s, _adminUser: adm }); setSectors(prev => [...prev, s]); };
+  const updateSector = async (s: UserSector, adm: string) => { await putData('sectors', { ...s, _adminUser: adm }); setSectors(prev => prev.map(x => x.id === s.id ? s : x)); };
   const addAssetType = async (t: AssetType, a: string) => { await postData('asset-types', {...t, _adminUser: a}); setAssetTypes(p => [...p, t]); };
   const updateAssetType = async (t: AssetType, a: string) => { await putData('asset-types', {...t, _adminUser: a}); setAssetTypes(p => p.map(x => x.id === t.id ? t : x)); };
   const addBrand = async (b: DeviceBrand, a: string) => { await postData('brands', {...b, _adminUser: a}); setBrands(p => [...p, b]); };
@@ -131,7 +132,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addModel, updateModel, deleteModel: async (id) => { await fetch(`${API_URL}/api/models/${id}`, {method: 'DELETE'}); setModels(p => p.filter(x => x.id !== id)); },
     addMaintenance: async (m, adm) => { await postData('maintenances', {...m, _adminUser: adm}); setMaintenances(p => [...p, m]); },
     deleteMaintenance: async (id) => { await fetch(`${API_URL}/api/maintenances/${id}`, {method: 'DELETE'}); setMaintenances(p => p.filter(x => x.id !== id)); },
-    addSector, deleteSector: async (id) => { await fetch(`${API_URL}/api/sectors/${id}`, {method: 'DELETE'}); setSectors(p => p.filter(x => x.id !== id)); },
+    addSector, updateSector, deleteSector: async (id) => { await fetch(`${API_URL}/api/sectors/${id}`, {method: 'DELETE'}); fetchData(); },
     addAccessoryType: async (t, adm) => { await postData('accessory-types', {...t, _adminUser: adm}); setAccessoryTypes(p => [...p, t]); },
     updateAccessoryType: async (t, adm) => { await putData('accessory-types', {...t, _adminUser: adm}); setAccessoryTypes(p => p.map(x => x.id === t.id ? t : x)); },
     deleteAccessoryType: async (id) => { await fetch(`${API_URL}/api/accessory-types/${id}`, {method: 'DELETE'}); setAccessoryTypes(p => p.filter(x => x.id !== id)); },

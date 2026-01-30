@@ -41,6 +41,7 @@ export interface DataContextType {
   
   // CRUD Sectors
   addSector: (sector: UserSector, adminName: string) => void;
+  updateSector: (sector: UserSector, adminName: string) => void; // NOVO
   deleteSector: (id: string, adminName: string) => void;
   
   // CRUD System Users

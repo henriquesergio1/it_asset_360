@@ -70,7 +70,6 @@ export interface Device {
   status: DeviceStatus;
   currentUserId?: string | null;
   internalCode?: string; // Código de Setor
-  jobTitle?: string;     // Cargo / Função destinado ao ativo
   
   // Identificadores Fixos
   imei?: string;         
@@ -127,7 +126,6 @@ export interface User {
   address: string;
   email: string;
   sectorId: string; 
-  jobTitle: string; // Cargo / Função
   internalCode?: string; // Código de Setor
   active: boolean;
   terms?: Term[];

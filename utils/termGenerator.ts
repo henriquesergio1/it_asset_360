@@ -138,7 +138,7 @@ export const generateAndPrintTerm = ({
             <td style="font-weight: bold; color: #475569;">Cargo / Função:</td>
             <td>${sectorName || 'Não Informado'}</td>
             <td style="font-weight: bold; color: #475569;">Setor (Cód):</td>
-            <td>${user.jobTitle || '-'}</td>
+            <td>${user.internalCode || '-'}</td>
         </tr>
     </table>
   `;

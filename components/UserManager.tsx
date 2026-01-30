@@ -129,7 +129,7 @@ const UserManager = () => {
     setActiveTab('DATA');
     setIsViewOnly(viewOnly);
     if (user) { setEditingId(user.id); setFormData(user); }
-    else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', jobTitle: '', sectorId: '' }); }
+    else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', sectorId: '' }); }
     setIsModalOpen(true);
   };
 
@@ -148,7 +148,7 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  const handleReprintTerm = (term: Term) => {
+  const handleReprintTerm = (term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
       let asset: any = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));

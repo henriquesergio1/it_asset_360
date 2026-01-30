@@ -8,37 +8,35 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.8.1',
+    version: '2.8.4',
     date: 'Hoje',
-    title: 'Correção de Persistência e Vínculos',
+    title: 'Correção Crítica de Sintaxe',
     changes: [
-      'Corrigida falha na API que impedia o salvamento do campo SectorId (Cargo/Função) em dispositivos.',
-      'Aprimorado o importador de dados para vincular automaticamente o SectorId em dispositivos em estoque.',
-      'Sincronização automática entre o ID do Setor e o campo textual JobTitle no modal de edição.',
-      'Incremento global da versão para 2.8.1.'
+      'Correção de fechamento de tags na definição de rotas que causava falha no carregamento do app.',
+      'Sincronização da versão 2.8.4 em todos os módulos.',
+      'Pequenos ajustes de estabilidade na navegação.'
     ]
   },
     {
-    version: '2.8.0',
+    version: '2.8.3',
     date: '31/01/2025',
-    title: 'Gestão de Cargos e Melhorias na Importação',
+    title: 'Correção de Tipagem e Versionamento',
     changes: [
-      'Implementada aba "Cargos e Funções" no Catálogo para gestão manual de setores.',
-      'Corrigida importação de dispositivos: Campo "Cargo ou Funcao" agora alimenta o destino correto do ativo.',
-      'Corrigida importação de colaboradores: Vínculo inteligente com a tabela de cargos e preenchimento de JobTitle.',
-      'Padronização do Código de Setor no banco de dados para sincronia com Fuel360.',
-      'Incremento global da versão para 2.8.0.'
+      'Removidos resquícios do campo "jobTitle" que causavam erros de compilação.',
+      'Sincronização de versão global para 2.8.3.',
+      'Correção de exibição do Código de Setor nos termos gerados.'
     ]
   },
     {
-    version: '2.7.9',
+    version: '2.8.2',
     date: '31/01/2025',
-    title: 'Integração e Scripts de Exportação',
+    title: 'Integridade e Centralização de Cargos',
     changes: [
-      'Desenvolvido script SQL otimizado para exportação de dados para o sistema Fuel360.',
-      'Mapeamento nativo de ID Pulsus, Nome, Código de Setor e Grupos diretamente das tabelas estruturadas.',
-      'Removida a necessidade de manipulação complexa de strings (legacy Snipe-IT) no banco de dados.',
-      'Incremento global da versão para 2.7.9.'
+      'Removida redundância de campos textuais em prol de vínculos estruturados via SectorId.',
+      'Implementada edição de cargos com atualização em massa de dispositivos e colaboradores vinculados.',
+      'Adicionada proteção contra exclusão de cargos que estão sendo utilizados no inventário.',
+      'Simplificada lógica de importação para focar exclusivamente no vínculo estruturado.',
+      'Incremento global da versão para 2.8.2.'
     ]
   }
 ];
