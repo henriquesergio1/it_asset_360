@@ -45,6 +45,9 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
 const COLUMN_OPTIONS = [
     { id: 'email', label: 'E-mail' },
     { id: 'cpf', label: 'CPF' },
+    { id: 'rg', label: 'RG' },
+    { id: 'pis', label: 'PIS' },
+    { id: 'address', label: 'Endereço' },
     { id: 'sector', label: 'Setor/Função' },
     { id: 'internalCode', label: 'Cód. Setor' },
     { id: 'assetsCount', label: 'Contagem de Ativos' },
@@ -102,7 +105,7 @@ const UserManager = () => {
     setActiveTab('DATA');
     setIsViewOnly(viewOnly);
     if (user) { setEditingId(user.id); setFormData(user); }
-    else { setEditingId(null); setFormData({ active: true }); }
+    else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', jobTitle: '', sectorId: '' }); }
     setIsModalOpen(true);
   };
 
@@ -181,7 +184,7 @@ const UserManager = () => {
   const filteredUsers = users.filter(u => {
     if (viewMode === 'ACTIVE' ? !u.active : u.active) return false;
     if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl)) return false;
-    return `${u.fullName} ${u.cpf} ${u.email}`.toLowerCase().includes(searchTerm.toLowerCase());
+    return `${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   const userAssets = devices.filter(d => d.currentUserId === editingId);
@@ -225,7 +228,7 @@ const UserManager = () => {
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
-            <input type="text" placeholder="Nome, CPF ou E-mail..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Nome, CPF, RG, PIS ou E-mail..." className="pl-10 w-full border rounded-lg py-2 outline-none focus:ring-2 focus:ring-emerald-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-xs font-bold uppercase transition-all ${showPendingOnly ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white text-gray-500'}`}>
             <FileWarning size={16}/> {showPendingOnly ? 'Exibindo Pendências' : 'Filtrar Pendências'}
@@ -243,11 +246,12 @@ const UserManager = () => {
               <th className="px-6 py-4">Colaborador</th>
               {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
               {visibleColumns.includes('cpf') && <th className="px-6 py-4">CPF</th>}
+              {visibleColumns.includes('rg') && <th className="px-6 py-4">RG</th>}
+              {visibleColumns.includes('pis') && <th className="px-6 py-4">PIS</th>}
+              {visibleColumns.includes('address') && <th className="px-6 py-4">Endereço</th>}
               {visibleColumns.includes('sector') && <th className="px-6 py-4">Cargo / Função</th>}
               {visibleColumns.includes('internalCode') && <th className="px-6 py-4 text-center">Setor</th>}
               {visibleColumns.includes('assetsCount') && <th className="px-6 py-4 text-center">Ativos</th>}
-              {visibleColumns.includes('activeSims') && <th className="px-6 py-4">Chips</th>}
-              {visibleColumns.includes('devicesInfo') && <th className="px-6 py-4">Aparelhos</th>}
               <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>
@@ -264,6 +268,9 @@ const UserManager = () => {
                   </td>
                   {visibleColumns.includes('email') && <td className="px-6 py-4 text-xs text-slate-500">{user.email || '---'}</td>}
                   {visibleColumns.includes('cpf') && <td className="px-6 py-4 text-[10px] font-mono font-bold text-slate-400">{user.cpf}</td>}
+                  {visibleColumns.includes('rg') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.rg || '---'}</td>}
+                  {visibleColumns.includes('pis') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.pis || '---'}</td>}
+                  {visibleColumns.includes('address') && <td className="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">{user.address || '---'}</td>}
                   {visibleColumns.includes('sector') && (
                     <td className="px-6 py-4">
                         <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded truncate block max-w-[150px]">{sectors.find(s => s.id === user.sectorId)?.name || '---'}</span>
@@ -278,29 +285,6 @@ const UserManager = () => {
                             {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-blue-100">{uDevices.length}</span>}
                             {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-indigo-100">{uSims.length}</span>}
                             {(uDevices.length === 0 && uSims.length === 0) && <span className="text-slate-200 text-xs">-</span>}
-                        </div>
-                    </td>
-                  )}
-                  {visibleColumns.includes('activeSims') && (
-                    <td className="px-6 py-4">
-                        <div className="flex flex-col gap-0.5">
-                            {uSims.length > 0 ? uSims.map(s => (
-                                <span key={s.id} className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1 rounded w-fit">{s.phoneNumber}</span>
-                            )) : <span className="text-[9px] text-slate-200">-</span>}
-                        </div>
-                    </td>
-                  )}
-                  {visibleColumns.includes('devicesInfo') && (
-                    <td className="px-6 py-4">
-                        <div className="flex flex-col gap-0.5">
-                            {uDevices.length > 0 ? uDevices.map(d => {
-                                const model = models.find(m => m.id === d.modelId);
-                                return (
-                                    <span key={d.id} className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1 rounded truncate block max-w-[180px]">
-                                        {model?.name || 'Eq.'} ({d.assetTag})
-                                    </span>
-                                );
-                            }) : <span className="text-[9px] text-slate-200">-</span>}
                         </div>
                     </td>
                   )}
@@ -348,7 +332,7 @@ const UserManager = () => {
                             <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Email</label>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Email Corporativo</label>
                             <input disabled={isViewOnly} type="email" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/>
                         </div>
                         <div>
@@ -363,8 +347,20 @@ const UserManager = () => {
                             <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Código Setor</label>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">RG (Alfanumérico)</label>
+                            <input disabled={isViewOnly} type="text" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} placeholder="Ex: MG-12.345.678"/>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">PIS</label>
+                            <input disabled={isViewOnly} type="text" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="000.00000.00-0"/>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Código Setor Interno</label>
                             <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})}/>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Endereço Residencial Completo</label>
+                            <input disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF"/>
                         </div>
                     </form>
                 )}

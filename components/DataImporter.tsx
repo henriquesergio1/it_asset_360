@@ -81,7 +81,7 @@ const DataImporter = () => {
 
   const getTemplateHeaders = () => {
       switch(importType) {
-          case 'USERS': return 'Nome Completo;CPF;Email;RG;PIS;Codigo de Setor;Cargo ou Funcao;Endereco';
+          case 'USERS': return 'Nome Completo;CPF;RG;PIS;Email;Codigo de Setor;Cargo ou Funcao;Endereco';
           case 'DEVICES': return 'Patrimonio;Serial;IMEI;ID Pulsus;Codigo de Setor;Cargo ou Funcao;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;CPF Colaborador';
           case 'SIMS': return 'Numero;Operadora;ICCID;Plano';
           default: return '';
@@ -328,7 +328,7 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: Identificação via CPF.' : 
+                        {importType === 'USERS' ? 'Nota: Identificação via CPF. Campos RG, PIS e Endereço agora são importados.' : 
                          importType === 'DEVICES' ? 'Nota: O sistema agrupa modelos e marcas ignorando acentos, espaços e maiúsculas (Deduplicação Definitiva).' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>

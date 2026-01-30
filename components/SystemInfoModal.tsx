@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.4',
+    version: '2.7.5',
     date: 'Hoje',
+    title: 'Expansão do Cadastro de Colaboradores',
+    changes: [
+      'Adicionados campos RG, PIS e Endereço no formulário de colaboradores.',
+      'Ajustado campo RG para aceitar caracteres alfanuméricos (ex: MG-123).',
+      'Corrigida importação via CSV para preencher PIS e Endereço corretamente.',
+      'Melhoria na visibilidade de colunas no gerenciamento de usuários.',
+      'Incremento global da versão para 2.7.5.'
+    ]
+  },
+    {
+    version: '2.7.4',
+    date: '31/01/2025',
     title: 'Visualização Avançada do Catálogo',
     changes: [
       'Reformulado o layout do catálogo de modelos para lista única (full-width), otimizando a leitura de nomes longos.',
@@ -28,17 +40,6 @@ const versions = [
       'Corrigida falha onde modelos idênticos eram criados se houvesse variação de espaços ou caixa alta no CSV.',
       'Garantia de integridade: Marcas e Tipos são resolvidos antes dos modelos para evitar ambiguidades.',
       'Incremento global da versão para 2.7.3.'
-    ]
-  },
-    {
-    version: '2.7.2',
-    date: '31/01/2025',
-    title: 'Garantia de Unicidade Global',
-    changes: [
-      'Aperfeiçoada a lógica de resolução de modelos para verificar dados pré-existentes no sistema.',
-      'Implementada comparação rigorosa considerando Marca + Modelo para evitar ambiguidades.',
-      'Remoção de espaços em branco (trim) automáticos durante a comparação de registros importados.',
-      'Incremento global da versão para 2.7.2.'
     ]
   }
 ];
