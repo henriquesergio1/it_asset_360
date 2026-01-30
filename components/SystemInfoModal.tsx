@@ -8,8 +8,21 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.5',
+    version: '2.7.6',
     date: 'Hoje',
+    title: 'Padronização e Máscaras de Documentos',
+    changes: [
+      'Implementada máscara de entrada em tempo real para CPF (000.000.000-00).',
+      'Implementada máscara de entrada em tempo real para PIS (000.00000.00-0).',
+      'Adicionada normalização automática de RG (Maiúsculas e remoção de símbolos).',
+      'Garantia de formatação rigorosa tanto no cadastro manual quanto na importação de CSV.',
+      'Sanitização de dados antes da gravação no banco de dados para evitar inconsistências.',
+      'Incremento global da versão para 2.7.6.'
+    ]
+  },
+    {
+    version: '2.7.5',
+    date: '31/01/2025',
     title: 'Expansão do Cadastro de Colaboradores',
     changes: [
       'Adicionados campos RG, PIS e Endereço no formulário de colaboradores.',
@@ -28,18 +41,6 @@ const versions = [
       'Implementado campo de busca dinâmica no catálogo para agilizar a manutenção de modelos e fotos.',
       'Ajustado o design das linhas do catálogo para maior clareza visual e facilidade de edição.',
       'Incremento global da versão para 2.7.4.'
-    ]
-  },
-    {
-    version: '2.7.3',
-    date: '31/01/2025',
-    title: 'Unificação Agressiva de Catálogo',
-    changes: [
-      'Implementada normalização via Slugs (removendo acentos, espaços e símbolos) para comparação de marcas e modelos.',
-      'Substituída a busca linear por Maps de resolução em memória durante a importação (Performance e Precisão).',
-      'Corrigida falha onde modelos idênticos eram criados se houvesse variação de espaços ou caixa alta no CSV.',
-      'Garantia de integridade: Marcas e Tipos são resolvidos antes dos modelos para evitar ambiguidades.',
-      'Incremento global da versão para 2.7.3.'
     ]
   }
 ];

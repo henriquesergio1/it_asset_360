@@ -15,6 +15,23 @@ interface AnalysisResult {
     selected: boolean;
 }
 
+// Funções de Formatação Reutilizáveis
+const formatCPF = (v: string): string => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 11) v = v.substring(0, 11);
+    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+};
+
+const formatPIS = (v: string): string => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 11) v = v.substring(0, 11);
+    return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4");
+};
+
+const formatRG = (v: string): string => {
+    return v.toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+};
+
 const DataImporter = () => {
   const { 
     users, addUser, updateUser,
@@ -129,8 +146,9 @@ const DataImporter = () => {
   const analyzeRow = (row: any): AnalysisResult => {
       try {
           if (importType === 'USERS') {
-              const cpf = row['CPF']?.trim();
-              if (!cpf) throw new Error('CPF obrigatório');
+              const rawCpf = row['CPF']?.trim();
+              if (!rawCpf) throw new Error('CPF obrigatório');
+              const cpf = formatCPF(rawCpf);
               const existing = users.find(u => u.cpf === cpf);
               if (!existing) return { status: 'NEW', row, selected: true };
               return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
@@ -223,9 +241,9 @@ const DataImporter = () => {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
                       email: r['Email'] || '',
-                      cpf: r['CPF'],
-                      rg: r['RG'] || '',
-                      pis: r['PIS'] || '',
+                      cpf: formatCPF(r['CPF']), // APLICAR MÁSCARA
+                      rg: formatRG(r['RG'] || ''), // APLICAR MÁSCARA
+                      pis: formatPIS(r['PIS'] || ''), // APLICAR MÁSCARA
                       internalCode: r['Codigo de Setor'],
                       sectorId: sId,
                       jobTitle: r['Cargo ou Funcao'] || '', 
@@ -240,8 +258,9 @@ const DataImporter = () => {
                   const tId = await resolveType(r['Tipo']);
                   const mId = await resolveModel(r['Modelo'], bId, tId);
 
-                  const userCpf = r['CPF Colaborador']?.trim();
-                  const linkedUser = userCpf ? users.find(u => u.cpf === userCpf) : null;
+                  const userCpfRaw = r['CPF Colaborador']?.trim();
+                  const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
+                  const linkedUser = userCpfFormatted ? users.find(u => u.cpf === userCpfFormatted) : null;
                   const sId = await resolveSector(r['Codigo de Setor']);
 
                   const deviceData: Device = {
@@ -328,7 +347,7 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: Identificação via CPF. Campos RG, PIS e Endereço agora são importados.' : 
+                        {importType === 'USERS' ? 'Nota: Identificação via CPF. Campos RG, PIS e Endereço agora são importados e formatados.' : 
                          importType === 'DEVICES' ? 'Nota: O sistema agrupa modelos e marcas ignorando acentos, espaços e maiúsculas (Deduplicação Definitiva).' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>

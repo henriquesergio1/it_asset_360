@@ -7,6 +7,29 @@ import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
+// Funções de Máscara
+const formatCPF = (v: string): string => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 11) v = v.substring(0, 11);
+    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+            .replace(/(\d{3})(\d{3})(\d{3})/, "$1.$2.$3")
+            .replace(/(\d{3})(\d{3})/, "$1.$2")
+            .replace(/-$/, "");
+};
+
+const formatPIS = (v: string): string => {
+    v = v.replace(/\D/g, "");
+    if (v.length > 11) v = v.substring(0, 11);
+    return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4")
+            .replace(/(\d{3})(\d{5})(\d{2})/, "$1.$2.$3")
+            .replace(/(\d{3})(\d{5})/, "$1.$2")
+            .replace(/-$/, "");
+};
+
+const formatRG = (v: string): string => {
+    return v.toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+};
+
 const LogNoteRenderer = ({ note }: { note: string }) => {
     const { devices, sims } = useData();
     const navigate = useNavigate();
@@ -169,8 +192,16 @@ const UserManager = () => {
         return;
     }
 
-    if (editingId && formData.id) updateUser(formData as User, adminName);
-    else addUser({ ...formData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+    // Sanitização Final antes de gravar
+    const cleanedData = {
+        ...formData,
+        cpf: formatCPF(formData.cpf || ''),
+        rg: formatRG(formData.rg || ''),
+        pis: formatPIS(formData.pis || '')
+    };
+
+    if (editingId && formData.id) updateUser(cleanedData as User, adminName);
+    else addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
     setIsModalOpen(false);
   };
 
@@ -344,15 +375,36 @@ const UserManager = () => {
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">CPF</label>
-                            <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})}/>
+                            <input 
+                                disabled={isViewOnly} 
+                                required 
+                                className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" 
+                                value={formData.cpf || ''} 
+                                onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
+                                placeholder="000.000.000-00"
+                            />
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">RG (Alfanumérico)</label>
-                            <input disabled={isViewOnly} type="text" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} placeholder="Ex: MG-12.345.678"/>
+                            <input 
+                                disabled={isViewOnly} 
+                                type="text" 
+                                className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" 
+                                value={formData.rg || ''} 
+                                onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})} 
+                                placeholder="Ex: MG12345678"
+                            />
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">PIS</label>
-                            <input disabled={isViewOnly} type="text" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="000.00000.00-0"/>
+                            <input 
+                                disabled={isViewOnly} 
+                                type="text" 
+                                className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm font-mono bg-slate-50" 
+                                value={formData.pis || ''} 
+                                onChange={e => setFormData({...formData, pis: formatPIS(e.target.value)})} 
+                                placeholder="000.00000.00-0"
+                            />
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-gray-400 mb-1">Código Setor Interno</label>
