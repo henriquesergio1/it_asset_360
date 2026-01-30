@@ -20,6 +20,7 @@ const formatCPF = (v: string): string => {
 const formatPIS = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
+    // Padrão PIS: 000.00000.00-0
     return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4")
             .replace(/(\d{3})(\d{5})(\d{2})/, "$1.$2.$3")
             .replace(/(\d{3})(\d{5})/, "$1.$2")
@@ -487,7 +488,7 @@ const UserManager = () => {
                                     {term.fileUrl ? (
                                         <>
                                             <button onClick={() => handleOpenFile(term.fileUrl)} className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all" title="Ver Termo Assinado"><ExternalLink size={18}/></button>
-                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir este arquivo de termo?')) deleteTermFile(term.id, editingId!, 'Exclusão manual', adminName) }} className="p-2.5 text-red-300 hover:text-red-500 rounded-xl transition-all"><Trash2 size={18}/></button>}
+                                            {!isViewOnly && <button onClick={() => { if(window.confirm('Excluir este arquivo de termo?')) deleteTermFile(term.id, editingId!, 'Exclusão manual', adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18}/></button>}
                                         </>
                                     ) : (
                                         <label className="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all cursor-pointer shadow-lg active:scale-95" title="Anexar Termo Assinado">

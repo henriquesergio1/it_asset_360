@@ -19,12 +19,15 @@ interface AnalysisResult {
 const formatCPF = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
+    if (v.length < 11) return v;
     return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 
 const formatPIS = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
+    if (v.length < 11) return v;
+    // Padrão PIS: 000.00000.00-0
     return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4");
 };
 
@@ -241,9 +244,9 @@ const DataImporter = () => {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
                       email: r['Email'] || '',
-                      cpf: formatCPF(r['CPF']), // APLICAR MÁSCARA
-                      rg: formatRG(r['RG'] || ''), // APLICAR MÁSCARA
-                      pis: formatPIS(r['PIS'] || ''), // APLICAR MÁSCARA
+                      cpf: formatCPF(r['CPF']), 
+                      rg: formatRG(r['RG'] || ''),
+                      pis: formatPIS(r['PIS'] || ''), 
                       internalCode: r['Codigo de Setor'],
                       sectorId: sId,
                       jobTitle: r['Cargo ou Funcao'] || '', 

@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.6',
+    version: '2.7.7',
     date: 'Hoje',
+    title: 'Correção Crítica na API de Usuários',
+    changes: [
+      'Corrigida falha na API (server.js) que impedia a gravação e atualização do campo PIS no banco SQL Server.',
+      'Aprimorada a lógica de formatação de PIS no importador de CSV para garantir o padrão 000.00000.00-0.',
+      'Sincronizados os mapeamentos de dados entre Frontend e Backend para todos os campos de colaboradores.',
+      'Incremento global da versão para 2.7.7.'
+    ]
+  },
+    {
+    version: '2.7.6',
+    date: '31/01/2025',
     title: 'Padronização e Máscaras de Documentos',
     changes: [
       'Implementada máscara de entrada em tempo real para CPF (000.000.000-00).',
@@ -30,17 +41,6 @@ const versions = [
       'Corrigida importação via CSV para preencher PIS e Endereço corretamente.',
       'Melhoria na visibilidade de colunas no gerenciamento de usuários.',
       'Incremento global da versão para 2.7.5.'
-    ]
-  },
-    {
-    version: '2.7.4',
-    date: '31/01/2025',
-    title: 'Visualização Avançada do Catálogo',
-    changes: [
-      'Reformulado o layout do catálogo de modelos para lista única (full-width), otimizando a leitura de nomes longos.',
-      'Implementado campo de busca dinâmica no catálogo para agilizar a manutenção de modelos e fotos.',
-      'Ajustado o design das linhas do catálogo para maior clareza visual e facilidade de edição.',
-      'Incremento global da versão para 2.7.4.'
     ]
   }
 ];
