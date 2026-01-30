@@ -97,7 +97,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
                                 className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 border-b border-slate-50 last:border-0 ${value === opt.value ? 'bg-indigo-50' : ''}`}
                             >
                                 <div className="font-bold text-slate-800 text-sm">{opt.label}</div>
-                                {opt.subLabel && <div className="text-[10px] text-slate-500 font-mono uppercase">{opt.subLabel}</div>}
+                                {opt.subLabel && <div className="text-[10px] text-gray-500 font-mono uppercase">{opt.subLabel}</div>}
                             </div>
                         )) : (
                             <div className="px-4 py-8 text-center text-slate-400 text-xs italic">Nenhum resultado.</div>
@@ -355,6 +355,15 @@ const DeviceManager = () => {
     if (editingId && formData.id) updateDevice(formData as Device, adminName);
     else addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
     setIsModalOpen(false);
+  };
+
+  const handleSectorChange = (val: string) => {
+      const sector = sectors.find(s => s.id === val);
+      setFormData({
+          ...formData,
+          sectorId: val || null,
+          jobTitle: sector ? sector.name : '' // Sincroniza o JobTitle (Texto) com o vínculo do setor
+      });
   };
 
   const handleDeleteAttempt = (device: Device) => {
@@ -622,7 +631,7 @@ const DeviceManager = () => {
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Função Destinada</label>
                                 <div className="relative">
                                     <Briefcase className="absolute left-3 top-3.5 text-slate-300" size={16}/>
-                                    <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 pl-10 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                                    <select disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 pl-10 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={formData.sectorId || ''} onChange={e => handleSectorChange(e.target.value)}>
                                         <option value="">Destinar a um Cargo...</option>
                                         {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>

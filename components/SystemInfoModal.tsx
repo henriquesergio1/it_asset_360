@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.8.0',
+    version: '2.8.1',
     date: 'Hoje',
+    title: 'Correção de Persistência e Vínculos',
+    changes: [
+      'Corrigida falha na API que impedia o salvamento do campo SectorId (Cargo/Função) em dispositivos.',
+      'Aprimorado o importador de dados para vincular automaticamente o SectorId em dispositivos em estoque.',
+      'Sincronização automática entre o ID do Setor e o campo textual JobTitle no modal de edição.',
+      'Incremento global da versão para 2.8.1.'
+    ]
+  },
+    {
+    version: '2.8.0',
+    date: '31/01/2025',
     title: 'Gestão de Cargos e Melhorias na Importação',
     changes: [
       'Implementada aba "Cargos e Funções" no Catálogo para gestão manual de setores.',
@@ -28,17 +39,6 @@ const versions = [
       'Mapeamento nativo de ID Pulsus, Nome, Código de Setor e Grupos diretamente das tabelas estruturadas.',
       'Removida a necessidade de manipulação complexa de strings (legacy Snipe-IT) no banco de dados.',
       'Incremento global da versão para 2.7.9.'
-    ]
-  },
-    {
-    version: '2.7.8',
-    date: '31/01/2025',
-    title: 'Busca Inteligente de Chips',
-    changes: [
-      'Implementada busca dinâmica com filtragem em tempo real para o vínculo de chips em dispositivos.',
-      'Melhoria na usabilidade do formulário de edição de ativos (Dropdown pesquisável).',
-      'Refinamento visual nos seletores do módulo de inventário.',
-      'Incremento global da versão para 2.7.8.'
     ]
   }
 ];

@@ -258,13 +258,14 @@ const DataImporter = () => {
                   const bId = await resolveBrand(r['Marca']);
                   const tId = await resolveType(r['Tipo']);
                   const mId = await resolveModel(r['Modelo'], bId, tId);
+                  
+                  const jobName = r['Cargo ou Funcao'] || '';
+                  const sId = await resolveSector(jobName); // NOVIDADE: Resolve o cargo para o dispositivo também
 
                   const userCpfRaw = r['CPF Colaborador']?.trim();
                   const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
                   const linkedUser = userCpfFormatted ? users.find(u => u.cpf === userCpfFormatted) : null;
                   
-                  // No dispositivo, Código de Setor vai para internalCode (ex: 101) 
-                  // e Cargo ou Funcao vai para jobTitle (ex: Gerente de Contas)
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       modelId: mId,
@@ -273,8 +274,8 @@ const DataImporter = () => {
                       imei: r['IMEI'],
                       pulsusId: r['ID Pulsus'],
                       internalCode: r['Codigo de Setor'] || '',
-                      jobTitle: r['Cargo ou Funcao'] || '', 
-                      sectorId: linkedUser?.sectorId || null, 
+                      jobTitle: jobName, 
+                      sectorId: sId || linkedUser?.sectorId || null, // Prioriza o cargo informado no CSV ou do usuário
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
