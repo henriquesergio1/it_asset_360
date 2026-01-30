@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.7',
+    version: '2.7.8',
     date: 'Hoje',
+    title: 'Busca Inteligente de Chips',
+    changes: [
+      'Implementada busca dinâmica com filtragem em tempo real para o vínculo de chips em dispositivos.',
+      'Melhoria na usabilidade do formulário de edição de ativos (Dropdown pesquisável).',
+      'Refinamento visual nos seletores do módulo de inventário.',
+      'Incremento global da versão para 2.7.8.'
+    ]
+  },
+    {
+    version: '2.7.7',
+    date: '31/01/2025',
     title: 'Correção Crítica na API de Usuários',
     changes: [
       'Corrigida falha na API (server.js) que impedia a gravação e atualização do campo PIS no banco SQL Server.',
@@ -29,18 +40,6 @@ const versions = [
       'Garantia de formatação rigorosa tanto no cadastro manual quanto na importação de CSV.',
       'Sanitização de dados antes da gravação no banco de dados para evitar inconsistências.',
       'Incremento global da versão para 2.7.6.'
-    ]
-  },
-    {
-    version: '2.7.5',
-    date: '31/01/2025',
-    title: 'Expansão do Cadastro de Colaboradores',
-    changes: [
-      'Adicionados campos RG, PIS e Endereço no formulário de colaboradores.',
-      'Ajustado campo RG para aceitar caracteres alfanuméricos (ex: MG-123).',
-      'Corrigida importação via CSV para preencher PIS e Endereço corretamente.',
-      'Melhoria na visibilidade de colunas no gerenciamento de usuários.',
-      'Incremento global da versão para 2.7.5.'
     ]
   }
 ];

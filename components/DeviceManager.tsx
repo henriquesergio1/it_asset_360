@@ -4,8 +4,110 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown } from 'lucide-react';
 import ModelSettings from './ModelSettings';
+
+// --- SUB-COMPONENTE: SearchableDropdown ---
+interface Option {
+    value: string;
+    label: string;
+    subLabel?: string;
+}
+
+interface SearchableDropdownProps {
+    options: Option[];
+    value: string;
+    onChange: (val: string) => void;
+    placeholder: string;
+    icon?: React.ReactNode;
+    disabled?: boolean;
+}
+
+const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value, onChange, placeholder, icon, disabled }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const filteredOptions = options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (opt.subLabel && opt.subLabel.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    const selectedOption = options.find(o => o.value === value);
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <div 
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`w-full p-3 border-2 rounded-xl flex items-center justify-between cursor-pointer bg-white transition-all
+                    ${disabled ? 'bg-slate-100 cursor-not-allowed text-gray-400 border-slate-200' : 'hover:border-indigo-400 border-indigo-200/50'}
+                    ${isOpen ? 'ring-4 ring-indigo-100 border-indigo-500' : ''}
+                `}
+            >
+                <div className="flex items-center gap-3 overflow-hidden">
+                    {icon && <span className="text-indigo-300 shrink-0">{icon}</span>}
+                    <div className="flex flex-col truncate">
+                         {selectedOption ? (
+                             <>
+                                <span className="text-gray-900 font-bold text-sm truncate">{selectedOption.label}</span>
+                                {selectedOption.subLabel && <span className="text-[10px] text-gray-500 truncate font-mono uppercase">{selectedOption.subLabel}</span>}
+                             </>
+                         ) : (
+                             <span className="text-gray-400 text-sm">{placeholder}</span>
+                         )}
+                    </div>
+                </div>
+                <ChevronDown size={16} className={`text-indigo-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute z-[120] mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50 flex items-center gap-2 sticky top-0">
+                        <Search size={14} className="text-slate-400 ml-2" />
+                        <input 
+                            type="text" 
+                            className="flex-1 bg-transparent outline-none text-sm text-slate-700 placeholder-slate-400 py-1"
+                            placeholder="Buscar..."
+                            autoFocus
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                        <div 
+                            onClick={() => { onChange(''); setIsOpen(false); setSearchTerm(''); }}
+                            className="px-4 py-3 cursor-pointer hover:bg-slate-50 border-b border-slate-50 text-red-500 font-bold text-xs uppercase"
+                        >
+                            Nenhum Chip Vinculado
+                        </div>
+                        {filteredOptions.length > 0 ? filteredOptions.map(opt => (
+                            <div 
+                                key={opt.value}
+                                onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
+                                className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 border-b border-slate-50 last:border-0 ${value === opt.value ? 'bg-indigo-50' : ''}`}
+                            >
+                                <div className="font-bold text-slate-800 text-sm">{opt.label}</div>
+                                {opt.subLabel && <div className="text-[10px] text-slate-500 font-mono uppercase">{opt.subLabel}</div>}
+                            </div>
+                        )) : (
+                            <div className="px-4 py-8 text-center text-slate-400 text-xs italic">Nenhum resultado.</div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const LogNoteRenderer = ({ note }: { note: string }) => {
     const { users } = useData();
@@ -181,6 +283,11 @@ const DeviceManager = () => {
   const adminName = currentUser?.name || 'Sistema';
 
   const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE || s.id === formData.linkedSimId);
+  const simOptions: Option[] = availableSims.map(s => ({
+      value: s.id,
+      label: s.phoneNumber,
+      subLabel: s.operator
+  })).sort((a,b) => a.label.localeCompare(b.label));
 
   const getModelDetails = (modelId?: string) => {
     const model = models.find(m => m.id === modelId);
@@ -489,16 +596,15 @@ const DeviceManager = () => {
                             </div>
                             
                             <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                                <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 ml-1 tracking-widest">Chip / SIM Card Vinculado</label>
-                                <div className="relative">
-                                    <Cpu className="absolute left-3 top-3.5 text-indigo-300" size={16}/>
-                                    <select disabled={isViewOnly} className="w-full border-2 border-indigo-200/50 rounded-xl p-3 pl-10 text-sm focus:border-indigo-500 outline-none bg-white font-bold" value={formData.linkedSimId || ''} onChange={e => setFormData({...formData, linkedSimId: e.target.value || null})}>
-                                        <option value="">Nenhum Chip Vinculado</option>
-                                        {availableSims.sort((a,b) => a.phoneNumber.localeCompare(b.phoneNumber)).map(sim => (
-                                            <option key={sim.id} value={sim.id}>{sim.phoneNumber} ({sim.operator})</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                <label className="block text-[10px] font-black uppercase text-indigo-400 mb-2 ml-1 tracking-widest">Chip / SIM Card Vinculado</label>
+                                <SearchableDropdown 
+                                    disabled={isViewOnly}
+                                    options={simOptions}
+                                    value={formData.linkedSimId || ''}
+                                    onChange={val => setFormData({...formData, linkedSimId: val || null})}
+                                    placeholder="Pesquisar chip por número ou operadora..."
+                                    icon={<Cpu size={18}/>}
+                                />
                                 <p className="text-[9px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p>
                             </div>
                         </div>
