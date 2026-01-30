@@ -58,6 +58,16 @@ const DataImporter = () => {
       return trimmed;
   };
 
+  const toSlug = (text: string): string => {
+      if (!text) return '';
+      return text.toString()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "")
+          .trim();
+  };
+
   const mapStatus = (raw: string, hasUser: boolean): DeviceStatus => {
       if (hasUser) return DeviceStatus.IN_USE;
       if (!raw) return DeviceStatus.AVAILABLE;
@@ -150,55 +160,56 @@ const DataImporter = () => {
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
       setLogs([]);
 
-      // Caches locais robustos: carregam tudo o que JÁ EXISTE no sistema antes de começar o lote
-      const localSectors = [...sectors];
-      const localBrands = [...brands];
-      const localTypes = [...assetTypes];
-      const localModels = [...models];
+      // RESOLUTION CACHES (MAPS) - Garantia definitiva de unicidade
+      const sectorMap = new Map<string, string>(); // slug -> id
+      sectors.forEach(s => sectorMap.set(toSlug(s.name), s.id));
+
+      const brandMap = new Map<string, string>(); // slug -> id
+      brands.forEach(b => brandMap.set(toSlug(b.name), b.id));
+
+      const typeMap = new Map<string, string>(); // slug -> id
+      assetTypes.forEach(t => typeMap.set(toSlug(t.name), t.id));
+
+      const modelMap = new Map<string, string>(); // brandId_slug -> id
+      models.forEach(m => modelMap.set(`${m.brandId}_${toSlug(m.name)}`, m.id));
 
       const resolveSector = async (name: string): Promise<string> => {
           if (!name) return '';
-          const norm = name.trim().toLowerCase();
-          const existing = localSectors.find(s => s.name.trim().toLowerCase() === norm);
-          if (existing) return existing.id;
+          const slug = toSlug(name);
+          if (sectorMap.has(slug)) return sectorMap.get(slug)!;
           const newId = Math.random().toString(36).substr(2, 9);
-          const newSector = { id: newId, name: name.trim() };
-          await addSector(newSector, adminName);
-          localSectors.push(newSector);
+          await addSector({ id: newId, name: name.trim() }, adminName);
+          sectorMap.set(slug, newId);
           return newId;
       };
 
       const resolveBrand = async (name: string): Promise<string> => {
-          const norm = (name || 'Outros').trim().toLowerCase();
-          const existing = localBrands.find(b => b.name.trim().toLowerCase() === norm);
-          if (existing) return existing.id;
+          const cleanName = (name || 'Outros').trim();
+          const slug = toSlug(cleanName);
+          if (brandMap.has(slug)) return brandMap.get(slug)!;
           const newId = Math.random().toString(36).substr(2, 9);
-          const newBrand = { id: newId, name: (name || 'Outros').trim() };
-          await addBrand(newBrand, adminName);
-          localBrands.push(newBrand);
+          await addBrand({ id: newId, name: cleanName }, adminName);
+          brandMap.set(slug, newId);
           return newId;
       };
 
       const resolveType = async (name: string): Promise<string> => {
-          const norm = (name || 'Outros').trim().toLowerCase();
-          const existing = localTypes.find(t => t.name.trim().toLowerCase() === norm);
-          if (existing) return existing.id;
+          const cleanName = (name || 'Outros').trim();
+          const slug = toSlug(cleanName);
+          if (typeMap.has(slug)) return typeMap.get(slug)!;
           const newId = Math.random().toString(36).substr(2, 9);
-          const newType = { id: newId, name: (name || 'Outros').trim(), customFieldIds: [] };
-          await addAssetType(newType, adminName);
-          localTypes.push(newType);
+          await addAssetType({ id: newId, name: cleanName, customFieldIds: [] }, adminName);
+          typeMap.set(slug, newId);
           return newId;
       };
 
       const resolveModel = async (name: string, bId: string, tId: string): Promise<string> => {
-          const norm = (name || 'Padrão').trim().toLowerCase();
-          // VERIFICAÇÃO CRÍTICA: Busca por Nome E Marca para garantir unicidade absoluta
-          const existing = localModels.find(m => m.name.trim().toLowerCase() === norm && m.brandId === bId);
-          if (existing) return existing.id;
+          const cleanName = (name || 'Padrão').trim();
+          const slugKey = `${bId}_${toSlug(cleanName)}`;
+          if (modelMap.has(slugKey)) return modelMap.get(slugKey)!;
           const newId = Math.random().toString(36).substr(2, 9);
-          const newModel = { id: newId, name: (name || 'Padrão').trim(), brandId: bId, typeId: tId };
-          await addModel(newModel, adminName);
-          localModels.push(newModel);
+          await addModel({ id: newId, name: cleanName, brandId: bId, typeId: tId }, adminName);
+          modelMap.set(slugKey, newId);
           return newId;
       };
 
@@ -225,10 +236,8 @@ const DataImporter = () => {
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  // Resolve marcas e tipos primeiro
                   const bId = await resolveBrand(r['Marca']);
                   const tId = await resolveType(r['Tipo']);
-                  // Resolve o modelo baseado na marca encontrada acima
                   const mId = await resolveModel(r['Modelo'], bId, tId);
 
                   const userCpf = r['CPF Colaborador']?.trim();
@@ -290,7 +299,7 @@ const DataImporter = () => {
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <Database className="text-blue-600"/> Importador de Dados
                 </h3>
-                <p className="text-sm text-gray-500">Selecione a categoria e importe via CSV.</p>
+                <p className="text-sm text-gray-500">Unificação inteligente de modelos e marcas via Slugs.</p>
             </div>
             {step !== 'UPLOAD' && (
                 <button onClick={handleStartNew} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-bold">
@@ -319,8 +328,8 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: Identificação via CPF. Cargos inexistentes serão criados automaticamente.' : 
-                         importType === 'DEVICES' ? 'Nota: Identificação via Patrimônio ou IMEI. Marcas e Modelos existentes no banco de dados serão automaticamente reutilizados.' :
+                        {importType === 'USERS' ? 'Nota: Identificação via CPF.' : 
+                         importType === 'DEVICES' ? 'Nota: O sistema agrupa modelos e marcas ignorando acentos, espaços e maiúsculas (Deduplicação Definitiva).' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>
                 </div>

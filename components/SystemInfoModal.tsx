@@ -8,6 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.7.3',
+    date: 'Hoje',
+    title: 'Unificação Agressiva de Catálogo',
+    changes: [
+      'Implementada normalização via Slugs (removendo acentos, espaços e símbolos) para comparação de marcas e modelos.',
+      'Substituída a busca linear por Maps de resolução em memória durante a importação (Performance e Precisão).',
+      'Corrigida falha onde modelos idênticos eram criados se houvesse variação de espaços ou caixa alta no CSV.',
+      'Garantia de integridade: Marcas e Tipos são resolvidos antes dos modelos para evitar ambiguidades.',
+      'Incremento global da versão para 2.7.3.'
+    ]
+  },
+    {
     version: '2.7.2',
     date: 'Hoje',
     title: 'Garantia de Unicidade Global',
@@ -28,18 +40,6 @@ const versions = [
       'Melhoria na integridade dos vínculos de ativos importados.',
       'Ajuste fino na normalização de datas durante a importação via CSV.',
       'Incremento global da versão para 2.7.1.'
-    ]
-  },
-    {
-    version: '2.7.0',
-    date: '31/01/2025',
-    title: 'Gestão Inteligente de Acessórios',
-    changes: [
-      'Implementada seleção de acessórios durante a entrega de dispositivos.',
-      'Acessórios vinculados são persistidos no dispositivo durante o uso.',
-      'Checklist de devolução agora é dinâmico: mostra apenas os itens que foram entregues ao colaborador.',
-      'Melhoria visual na tela de operações com ícones de pacote para acessórios.',
-      'Incremento global da versão para 2.7.0.'
     ]
   }
 ];
