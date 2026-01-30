@@ -15,7 +15,6 @@ interface AnalysisResult {
     selected: boolean;
 }
 
-// Funções de Formatação Reutilizáveis
 const formatCPF = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
@@ -27,7 +26,6 @@ const formatPIS = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
     if (v.length < 11) return v;
-    // Padrão PIS: 000.00000.00-0
     return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4");
 };
 
@@ -181,17 +179,16 @@ const DataImporter = () => {
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
       setLogs([]);
 
-      // RESOLUTION CACHES (MAPS) - Garantia definitiva de unicidade
-      const sectorMap = new Map<string, string>(); // slug -> id
+      const sectorMap = new Map<string, string>();
       sectors.forEach(s => sectorMap.set(toSlug(s.name), s.id));
 
-      const brandMap = new Map<string, string>(); // slug -> id
+      const brandMap = new Map<string, string>();
       brands.forEach(b => brandMap.set(toSlug(b.name), b.id));
 
-      const typeMap = new Map<string, string>(); // slug -> id
+      const typeMap = new Map<string, string>();
       assetTypes.forEach(t => typeMap.set(toSlug(t.name), t.id));
 
-      const modelMap = new Map<string, string>(); // brandId_slug -> id
+      const modelMap = new Map<string, string>();
       models.forEach(m => modelMap.set(`${m.brandId}_${toSlug(m.name)}`, m.id));
 
       const resolveSector = async (name: string): Promise<string> => {
@@ -239,7 +236,8 @@ const DataImporter = () => {
           const r = item.row;
           try {
               if (importType === 'USERS') {
-                  const sId = await resolveSector(r['Cargo ou Funcao']);
+                  const jobName = r['Cargo ou Funcao'] || '';
+                  const sId = await resolveSector(jobName);
                   const userData: User = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
@@ -247,9 +245,9 @@ const DataImporter = () => {
                       cpf: formatCPF(r['CPF']), 
                       rg: formatRG(r['RG'] || ''),
                       pis: formatPIS(r['PIS'] || ''), 
-                      internalCode: r['Codigo de Setor'],
+                      internalCode: r['Codigo de Setor'] || '',
                       sectorId: sId,
-                      jobTitle: r['Cargo ou Funcao'] || '', 
+                      jobTitle: jobName, 
                       address: r['Endereco'] || '',
                       active: true
                   };
@@ -264,8 +262,9 @@ const DataImporter = () => {
                   const userCpfRaw = r['CPF Colaborador']?.trim();
                   const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
                   const linkedUser = userCpfFormatted ? users.find(u => u.cpf === userCpfFormatted) : null;
-                  const sId = await resolveSector(r['Codigo de Setor']);
-
+                  
+                  // No dispositivo, Código de Setor vai para internalCode (ex: 101) 
+                  // e Cargo ou Funcao vai para jobTitle (ex: Gerente de Contas)
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       modelId: mId,
@@ -273,8 +272,9 @@ const DataImporter = () => {
                       serialNumber: r['Serial'] || r['Patrimonio'],
                       imei: r['IMEI'],
                       pulsusId: r['ID Pulsus'],
-                      internalCode: r['Codigo de Setor'],
-                      sectorId: sId || linkedUser?.sectorId || null, 
+                      internalCode: r['Codigo de Setor'] || '',
+                      jobTitle: r['Cargo ou Funcao'] || '', 
+                      sectorId: linkedUser?.sectorId || null, 
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
@@ -321,7 +321,7 @@ const DataImporter = () => {
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <Database className="text-blue-600"/> Importador de Dados
                 </h3>
-                <p className="text-sm text-gray-500">Unificação inteligente de modelos e marcas via Slugs.</p>
+                <p className="text-sm text-gray-500">Mapeamento inteligente de cargos, funções e identificadores.</p>
             </div>
             {step !== 'UPLOAD' && (
                 <button onClick={handleStartNew} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-bold">
@@ -350,8 +350,8 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: Identificação via CPF. Campos RG, PIS e Endereço agora são importados e formatados.' : 
-                         importType === 'DEVICES' ? 'Nota: O sistema agrupa modelos e marcas ignorando acentos, espaços e maiúsculas (Deduplicação Definitiva).' :
+                        {importType === 'USERS' ? 'Nota: CPF como ID. "Cargo ou Funcao" alimenta tanto o Grupo quanto o campo textual.' : 
+                         importType === 'DEVICES' ? 'Nota: "Codigo de Setor" vai para o campo numérico (InternalCode). "Cargo ou Funcao" para o texto descritivo.' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>
                 </div>

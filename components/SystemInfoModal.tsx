@@ -8,38 +8,37 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.8',
+    version: '2.8.0',
     date: 'Hoje',
+    title: 'Gestão de Cargos e Melhorias na Importação',
+    changes: [
+      'Implementada aba "Cargos e Funções" no Catálogo para gestão manual de setores.',
+      'Corrigida importação de dispositivos: Campo "Cargo ou Funcao" agora alimenta o destino correto do ativo.',
+      'Corrigida importação de colaboradores: Vínculo inteligente com a tabela de cargos e preenchimento de JobTitle.',
+      'Padronização do Código de Setor no banco de dados para sincronia com Fuel360.',
+      'Incremento global da versão para 2.8.0.'
+    ]
+  },
+    {
+    version: '2.7.9',
+    date: '31/01/2025',
+    title: 'Integração e Scripts de Exportação',
+    changes: [
+      'Desenvolvido script SQL otimizado para exportação de dados para o sistema Fuel360.',
+      'Mapeamento nativo de ID Pulsus, Nome, Código de Setor e Grupos diretamente das tabelas estruturadas.',
+      'Removida a necessidade de manipulação complexa de strings (legacy Snipe-IT) no banco de dados.',
+      'Incremento global da versão para 2.7.9.'
+    ]
+  },
+    {
+    version: '2.7.8',
+    date: '31/01/2025',
     title: 'Busca Inteligente de Chips',
     changes: [
       'Implementada busca dinâmica com filtragem em tempo real para o vínculo de chips em dispositivos.',
       'Melhoria na usabilidade do formulário de edição de ativos (Dropdown pesquisável).',
       'Refinamento visual nos seletores do módulo de inventário.',
       'Incremento global da versão para 2.7.8.'
-    ]
-  },
-    {
-    version: '2.7.7',
-    date: '31/01/2025',
-    title: 'Correção Crítica na API de Usuários',
-    changes: [
-      'Corrigida falha na API (server.js) que impedia a gravação e atualização do campo PIS no banco SQL Server.',
-      'Aprimorada a lógica de formatação de PIS no importador de CSV para garantir o padrão 000.00000.00-0.',
-      'Sincronizados os mapeamentos de dados entre Frontend e Backend para todos os campos de colaboradores.',
-      'Incremento global da versão para 2.7.7.'
-    ]
-  },
-    {
-    version: '2.7.6',
-    date: '31/01/2025',
-    title: 'Padronização e Máscaras de Documentos',
-    changes: [
-      'Implementada máscara de entrada em tempo real para CPF (000.000.000-00).',
-      'Implementada máscara de entrada em tempo real para PIS (000.00000.00-0).',
-      'Adicionada normalização automática de RG (Maiúsculas e remoção de símbolos).',
-      'Garantia de formatação rigorosa tanto no cadastro manual quanto na importação de CSV.',
-      'Sanitização de dados antes da gravação no banco de dados para evitar inconsistências.',
-      'Incremento global da versão para 2.7.6.'
     ]
   }
 ];
