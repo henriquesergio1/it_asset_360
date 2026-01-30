@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Device, User, SimCard, DeviceStatus, ActionType } from '../types';
+import { Device, User, SimCard, DeviceStatus, ActionType, DeviceBrand, AssetType, DeviceModel } from '../types';
 import { Download, Upload, CheckCircle, AlertTriangle, AlertCircle, Loader2, Database, RefreshCw, X } from 'lucide-react';
 
 type ImportType = 'USERS' | 'DEVICES' | 'SIMS';
@@ -36,7 +36,6 @@ const DataImporter = () => {
 
   const adminName = currentUser?.name || 'Importador';
 
-  // --- Limpeza automática ao trocar o tipo de importação ---
   useEffect(() => {
     setAnalyzedData([]);
     setLogs([]);
@@ -44,42 +43,29 @@ const DataImporter = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [importType]);
 
-  // --- Função para normalizar datas para o formato ISO (AAAA-MM-DD) ---
   const normalizeDate = (rawDate: string): string => {
       if (!rawDate) return new Date().toISOString().split('T')[0];
-      
       const trimmed = rawDate.trim();
-      
-      // Se já estiver no formato AAAA-MM-DD
-      if (new RegExp('^\\d{4}-\\d{2}-\\d{2}$').test(trimmed)) {
-          return trimmed;
-      }
-      
-      // Se estiver no formato DD/MM/AAAA ou DD-MM-AAAA
+      if (new RegExp('^\\d{4}-\\d{2}-\\d{2}$').test(trimmed)) return trimmed;
       const separator = trimmed.includes('/') ? '/' : trimmed.includes('-') ? '-' : null;
       if (separator) {
           const parts = trimmed.split(separator);
           if (parts.length === 3) {
-              // Assume que se o primeiro item tem 4 dígitos, é AAAA/MM/DD
               if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-              // Caso contrário, assume DD/MM/AAAA
               return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
           }
       }
-      
       return trimmed;
   };
 
   const mapStatus = (raw: string, hasUser: boolean): DeviceStatus => {
       if (hasUser) return DeviceStatus.IN_USE;
       if (!raw) return DeviceStatus.AVAILABLE;
-      
       const clean = raw.normalize("NFD").replace(new RegExp('[\\u0300-\\u036f]', 'g'), "").toLowerCase().trim();
       if (['disponivel', 'estoque', 'liberado', 'vago', 'livre'].includes(clean)) return DeviceStatus.AVAILABLE;
       if (['em uso', 'uso', 'atribuido', 'vinculado'].includes(clean)) return DeviceStatus.IN_USE;
       if (['manutencao', 'conserto', 'reparo'].includes(clean)) return DeviceStatus.MAINTENANCE;
       if (['descarte', 'descartado', 'sucata', 'baixado'].includes(clean)) return DeviceStatus.RETIRED;
-      
       return DeviceStatus.AVAILABLE;
   };
 
@@ -115,11 +101,9 @@ const DataImporter = () => {
   const parseAndAnalyze = (text: string) => {
       const lines = text.split(new RegExp('\\r?\\n')).filter(l => l.trim());
       if (lines.length < 2) return alert('Arquivo vazio ou sem dados.');
-      
       const firstLine = lines[0];
       const separator = firstLine.includes(';') ? ';' : ',';
       const headers = firstLine.split(separator).map(h => h.trim().replace(new RegExp('^"|"$', 'g'), ''));
-      
       const rows = lines.slice(1).map(line => {
           const regex = new RegExp(`${separator}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
           const values = line.split(regex).map(v => v.trim().replace(new RegExp('^"|"$', 'g'), ''));
@@ -128,7 +112,6 @@ const DataImporter = () => {
               return obj;
           }, {});
       });
-
       setAnalyzedData(rows.map(row => analyzeRow(row)));
       setStep('ANALYSIS');
   };
@@ -167,25 +150,56 @@ const DataImporter = () => {
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
       setLogs([]);
 
+      // Caches locais robustos: carregam tudo o que JÁ EXISTE no sistema antes de começar o lote
       const localSectors = [...sectors];
+      const localBrands = [...brands];
+      const localTypes = [...assetTypes];
+      const localModels = [...models];
 
       const resolveSector = async (name: string): Promise<string> => {
           if (!name) return '';
           const norm = name.trim().toLowerCase();
-          const existing = localSectors.find(s => s.name.toLowerCase() === norm);
+          const existing = localSectors.find(s => s.name.trim().toLowerCase() === norm);
           if (existing) return existing.id;
-          
           const newId = Math.random().toString(36).substr(2, 9);
           const newSector = { id: newId, name: name.trim() };
-          
-          try {
-              await addSector(newSector, adminName);
-              localSectors.push(newSector);
-              return newId;
-          } catch (e) {
-              console.error("Erro ao criar cargo:", e);
-              return '';
-          }
+          await addSector(newSector, adminName);
+          localSectors.push(newSector);
+          return newId;
+      };
+
+      const resolveBrand = async (name: string): Promise<string> => {
+          const norm = (name || 'Outros').trim().toLowerCase();
+          const existing = localBrands.find(b => b.name.trim().toLowerCase() === norm);
+          if (existing) return existing.id;
+          const newId = Math.random().toString(36).substr(2, 9);
+          const newBrand = { id: newId, name: (name || 'Outros').trim() };
+          await addBrand(newBrand, adminName);
+          localBrands.push(newBrand);
+          return newId;
+      };
+
+      const resolveType = async (name: string): Promise<string> => {
+          const norm = (name || 'Outros').trim().toLowerCase();
+          const existing = localTypes.find(t => t.name.trim().toLowerCase() === norm);
+          if (existing) return existing.id;
+          const newId = Math.random().toString(36).substr(2, 9);
+          const newType = { id: newId, name: (name || 'Outros').trim(), customFieldIds: [] };
+          await addAssetType(newType, adminName);
+          localTypes.push(newType);
+          return newId;
+      };
+
+      const resolveModel = async (name: string, bId: string, tId: string): Promise<string> => {
+          const norm = (name || 'Padrão').trim().toLowerCase();
+          // VERIFICAÇÃO CRÍTICA: Busca por Nome E Marca para garantir unicidade absoluta
+          const existing = localModels.find(m => m.name.trim().toLowerCase() === norm && m.brandId === bId);
+          if (existing) return existing.id;
+          const newId = Math.random().toString(36).substr(2, 9);
+          const newModel = { id: newId, name: (name || 'Padrão').trim(), brandId: bId, typeId: tId };
+          await addModel(newModel, adminName);
+          localModels.push(newModel);
+          return newId;
       };
 
       for (let i = 0; i < toProcess.length; i++) {
@@ -194,8 +208,6 @@ const DataImporter = () => {
           try {
               if (importType === 'USERS') {
                   const sId = await resolveSector(r['Cargo ou Funcao']);
-                  if (!sId) throw new Error(`Não foi possível definir o cargo: ${r['Cargo ou Funcao']}`);
-
                   const userData: User = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       fullName: r['Nome Completo'],
@@ -209,42 +221,23 @@ const DataImporter = () => {
                       address: r['Endereco'] || '',
                       active: true
                   };
-                  
                   item.status === 'NEW' ? await addUser(userData, adminName) : await updateUser(userData, adminName);
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  const bName = r['Marca'] || 'Outros';
-                  let brand = brands.find(b => b.name.toLowerCase() === bName.toLowerCase());
-                  if (!brand) { 
-                      const bId = Math.random().toString(36).substr(2,9);
-                      await addBrand({id: bId, name: bName}, adminName);
-                      brand = { id: bId, name: bName };
-                  }
-
-                  const tName = r['Tipo'] || 'Outros';
-                  let type = assetTypes.find(t => t.name.toLowerCase() === tName.toLowerCase());
-                  if (!type) {
-                      const tId = Math.random().toString(36).substr(2,9);
-                      await addAssetType({id: tId, name: tName}, adminName);
-                      type = { id: tId, name: tName };
-                  }
-
-                  const mName = r['Modelo'] || 'Padrão';
-                  let model = models.find(m => m.name.toLowerCase() === mName.toLowerCase() && m.brandId === brand?.id);
-                  if (!model) {
-                      const mId = Math.random().toString(36).substr(2,9);
-                      await addModel({id: mId, name: mName, brandId: brand!.id, typeId: type!.id}, adminName);
-                      model = { id: mId, name: mName, brandId: brand!.id, typeId: type!.id };
-                  }
+                  // Resolve marcas e tipos primeiro
+                  const bId = await resolveBrand(r['Marca']);
+                  const tId = await resolveType(r['Tipo']);
+                  // Resolve o modelo baseado na marca encontrada acima
+                  const mId = await resolveModel(r['Modelo'], bId, tId);
 
                   const userCpf = r['CPF Colaborador']?.trim();
                   const linkedUser = userCpf ? users.find(u => u.cpf === userCpf) : null;
-                  const sId = await resolveSector(r['Cargo ou Funcao']);
+                  const sId = await resolveSector(r['Codigo de Setor']);
 
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
-                      modelId: model!.id,
+                      modelId: mId,
                       assetTag: r['Patrimonio'],
                       serialNumber: r['Serial'] || r['Patrimonio'],
                       imei: r['IMEI'],
@@ -254,11 +247,10 @@ const DataImporter = () => {
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
-                      purchaseDate: normalizeDate(r['Data Compra']), // Corrigido: Normaliza a data para AAAA-MM-DD
+                      purchaseDate: normalizeDate(r['Data Compra']),
                       supplier: r['Fornecedor'],
                       customData: {}
                   };
-
                   item.status === 'NEW' ? await addDevice(deviceData, adminName) : await updateDevice(deviceData, adminName);
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               }
@@ -272,7 +264,6 @@ const DataImporter = () => {
                       status: DeviceStatus.AVAILABLE,
                       currentUserId: null
                   };
-
                   item.status === 'NEW' ? await addSim(simData, adminName) : await updateSim(simData, adminName);
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               }
@@ -329,7 +320,7 @@ const DataImporter = () => {
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
                         {importType === 'USERS' ? 'Nota: Identificação via CPF. Cargos inexistentes serão criados automaticamente.' : 
-                         importType === 'DEVICES' ? 'Nota: Identificação via Patrimônio ou IMEI. Marcas e Modelos serão criados se necessário.' :
+                         importType === 'DEVICES' ? 'Nota: Identificação via Patrimônio ou IMEI. Marcas e Modelos existentes no banco de dados serão automaticamente reutilizados.' :
                          'Nota: Identificação via Número do Chip.'}
                     </p>
                 </div>

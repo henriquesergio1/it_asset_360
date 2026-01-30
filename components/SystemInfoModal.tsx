@@ -8,8 +8,31 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.7.0',
+    version: '2.7.2',
     date: 'Hoje',
+    title: 'Garantia de Unicidade Global',
+    changes: [
+      'Aperfeiçoada a lógica de resolução de modelos para verificar dados pré-existentes no sistema.',
+      'Implementada comparação rigorosa considerando Marca + Modelo para evitar ambiguidades.',
+      'Remoção de espaços em branco (trim) automáticos durante a comparação de registros importados.',
+      'Incremento global da versão para 2.7.2.'
+    ]
+  },
+    {
+    version: '2.7.1',
+    date: '31/01/2025',
+    title: 'Correção de Unificação no Catálogo',
+    changes: [
+      'Corrigida falha na importação que criava múltiplos modelos repetidos no catálogo.',
+      'Implementado cache local de marcas, tipos e modelos durante o processamento em lote.',
+      'Melhoria na integridade dos vínculos de ativos importados.',
+      'Ajuste fino na normalização de datas durante a importação via CSV.',
+      'Incremento global da versão para 2.7.1.'
+    ]
+  },
+    {
+    version: '2.7.0',
+    date: '31/01/2025',
     title: 'Gestão Inteligente de Acessórios',
     changes: [
       'Implementada seleção de acessórios durante a entrega de dispositivos.',
@@ -17,29 +40,6 @@ const versions = [
       'Checklist de devolução agora é dinâmico: mostra apenas os itens que foram entregues ao colaborador.',
       'Melhoria visual na tela de operações com ícones de pacote para acessórios.',
       'Incremento global da versão para 2.7.0.'
-    ]
-  },
-    {
-    version: '2.6.1',
-    date: '31/01/2025',
-    title: 'Correção de Build e Alertas UX',
-    changes: [
-      'Corrigido erro de sintaxe no App.tsx que impedia o build de produção no Docker/Portainer.',
-      'Reforçada a prevenção de disparos de alertas de confirmação ao habilitar a edição (isolamento completo).',
-      'Refinamento do espaçamento e tamanho do logo no menu lateral.',
-      'Incremento global da versão para 2.6.1.'
-    ]
-  },
-    {
-    version: '2.6.0',
-    date: '31/01/2025',
-    title: 'Melhoria na Identidade Visual do Sidebar',
-    changes: [
-      'Novo layout vertical para o cabeçalho do menu lateral.',
-      'Aumentado o tamanho do logo e container visual para melhor visibilidade.',
-      'Implementada quebra automática de linha para nomes extensos de empresas.',
-      'Adicionado subtítulo do sistema no cabeçalho do menu.',
-      'Incremento global da versão para 2.6.0.'
     ]
   }
 ];
