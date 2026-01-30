@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory } from '../types';
 
 export interface DataContextType {
   devices: Device[];
@@ -52,8 +52,8 @@ export interface DataContextType {
   updateSettings: (settings: SystemSettings, adminName: string) => void;
 
   // Operations
-  assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, termFile?: File) => void;
-  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, termFile?: File, returnedChecklist?: Record<string, boolean>) => void;
+  assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
+  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>) => void;
   
   // Term Management
   updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;

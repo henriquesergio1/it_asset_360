@@ -2,9 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { DeviceStatus, Device, SimCard, ReturnChecklist } from '../types';
-/* Added missing Cpu import to fix "Cannot find name 'Cpu'" errors */
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu } from 'lucide-react';
+import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 type OperationType = 'CHECKOUT' | 'CHECKIN';
@@ -108,7 +107,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
 };
 
 const Operations = () => {
-  const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors, updateDevice } = useData();
+  const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors, updateDevice, accessoryTypes } = useData();
   const { user: currentUser } = useAuth();
   
   const [activeTab, setActiveTab] = useState<OperationType>('CHECKOUT');
@@ -120,14 +119,11 @@ const Operations = () => {
   const [isProcessed, setIsProcessed] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
-  const [checklist, setChecklist] = useState<ReturnChecklist>({
-      'Equipamento Principal': true,
-      'Carregador / Fonte': true,
-      'Cabo USB': true,
-      'Capa / Case': true,
-      'Chip SIM Card': false,
-      'Manual / Caixa': false
-  });
+  // Acessórios selecionados para a entrega
+  const [selectedAccessoryTypeIds, setSelectedAccessoryTypeIds] = useState<string[]>([]);
+
+  // Checklist dinâmico baseado no dispositivo
+  const [checklist, setChecklist] = useState<ReturnChecklist>({ 'Equipamento Principal': true });
 
   const [lastOperation, setLastOperation] = useState<{
       userId: string;
@@ -143,14 +139,31 @@ const Operations = () => {
   const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE);
   const inUseSims = sims.filter(s => s.status === DeviceStatus.IN_USE);
 
+  // Efeito para carregar o checklist de devolução dinamicamente
   useEffect(() => {
       if (activeTab === 'CHECKIN' && assetType === 'Device' && selectedAssetId) {
           const dev = devices.find(d => d.id === selectedAssetId);
-          setChecklist(prev => ({ ...prev, 'Chip SIM Card': !!dev?.linkedSimId }));
+          if (dev) {
+              const newChecklist: ReturnChecklist = { 'Equipamento Principal': true };
+              
+              // Adiciona os acessórios que o dispositivo REALMENTE possui (vinculados na entrega)
+              dev.accessories?.forEach(acc => {
+                  newChecklist[acc.name] = true;
+              });
+
+              // Adiciona o Chip SIM se houver um vinculado
+              if (dev.linkedSimId) {
+                  newChecklist['Chip SIM Card'] = true;
+              }
+
+              setChecklist(newChecklist);
+          }
+      } else if (activeTab === 'CHECKOUT') {
+          // Reseta acessórios ao trocar para entrega
+          setSelectedAccessoryTypeIds([]);
       }
   }, [selectedAssetId, activeTab, assetType, devices]);
 
-  // --- Ordenação A-Z nos Ativos do Dropdown ---
   const assetOptions: Option[] = (activeTab === 'CHECKOUT' 
     ? (assetType === 'Device' 
         ? availableDevices.map(d => ({ value: d.id, label: `${models.find(m => m.id === d.modelId)?.name || 'Ativo'} - ${d.assetTag}`, subLabel: `SN: ${d.serialNumber}` })) 
@@ -160,7 +173,6 @@ const Operations = () => {
         : inUseSims.map(s => ({ value: s.id, label: `${s.phoneNumber} - ${s.operator}`, subLabel: `ICCID: ${s.iccid}` })))
   ).sort((a,b) => a.label.localeCompare(b.label));
 
-  // --- Ordenação A-Z nos Usuários do Dropdown ---
   const userOptions: Option[] = users.filter(u => u.active).map(u => ({ value: u.id, label: u.fullName, subLabel: u.email }))
     .sort((a,b) => a.label.localeCompare(b.label));
 
@@ -182,16 +194,27 @@ const Operations = () => {
     }
 
     try {
-        if (activeTab === 'CHECKOUT' && syncAssetData && assetType === 'Device') {
-            const user = users.find(u => u.id === selectedUserId);
-            const device = devices.find(d => d.id === selectedAssetId);
-            if (user && device) await updateDevice({ ...device, sectorId: user.sectorId, jobTitle: user.jobTitle }, adminName);
-        }
-
         if (activeTab === 'CHECKOUT') {
-            await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName);
+            // Mapeia os acessórios selecionados para a estrutura final
+            const deliveryAccessories: DeviceAccessory[] = selectedAccessoryTypeIds.map(typeId => {
+                const type = accessoryTypes.find(t => t.id === typeId);
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    deviceId: selectedAssetId,
+                    accessoryTypeId: typeId,
+                    name: type?.name || 'Acessório'
+                };
+            });
+
+            if (syncAssetData && assetType === 'Device') {
+                const user = users.find(u => u.id === selectedUserId);
+                const device = devices.find(d => d.id === selectedAssetId);
+                if (user && device) await updateDevice({ ...device, sectorId: user.sectorId, jobTitle: user.jobTitle }, adminName);
+            }
+
+            await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
         } else {
-            await returnAsset(assetType, selectedAssetId, notes, adminName);
+            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist);
         }
 
         setLastOperation({ 
@@ -241,12 +264,17 @@ const Operations = () => {
       });
   };
 
+  const toggleAccessory = (id: string) => {
+      setSelectedAccessoryTypeIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
   const resetProcess = () => { 
       setIsProcessed(false); 
       setSelectedAssetId(''); 
       setSelectedUserId(''); 
       setNotes(''); 
       setLastOperation(null); 
+      setSelectedAccessoryTypeIds([]);
   };
 
   if (isProcessed) {
@@ -319,22 +347,50 @@ const Operations = () => {
               </div>
 
               {activeTab === 'CHECKOUT' && (
-                  <div className="space-y-6 animate-fade-in">
-                      <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black">2</div>
-                          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Quem está recebendo?</h3>
+                  <div className="space-y-8 animate-fade-in">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black">2</div>
+                            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Quem está recebendo?</h3>
+                        </div>
+                        <SearchableDropdown 
+                            options={userOptions} 
+                            value={selectedUserId} 
+                            onChange={setSelectedUserId} 
+                            placeholder="Pesquise o colaborador pelo nome ou CPF..."
+                            icon={<UserIcon size={18}/>}
+                        />
+                        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                            <input type="checkbox" id="sync" checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded text-blue-600 border-blue-200"/>
+                            <label htmlFor="sync" className="text-xs font-bold text-blue-800 cursor-pointer">Sincronizar cargo do colaborador automaticamente com o ativo</label>
+                        </div>
                       </div>
-                      <SearchableDropdown 
-                        options={userOptions} 
-                        value={selectedUserId} 
-                        onChange={setSelectedUserId} 
-                        placeholder="Pesquise o colaborador pelo nome ou CPF..."
-                        icon={<UserIcon size={18}/>}
-                      />
-                      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                          <input type="checkbox" id="sync" checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded text-blue-600 border-blue-200"/>
-                          <label htmlFor="sync" className="text-xs font-bold text-blue-800 cursor-pointer">Sincronizar cargo do colaborador automaticamente com o ativo</label>
-                      </div>
+
+                      {assetType === 'Device' && selectedAssetId && (
+                        <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black">3</div>
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Acessórios Entregues</h3>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                {accessoryTypes.map(acc => (
+                                    <button 
+                                        key={acc.id} 
+                                        onClick={() => toggleAccessory(acc.id)}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-sm' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                                    >
+                                        <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-300'}`}>
+                                            {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase truncate">{acc.name}</span>
+                                    </button>
+                                ))}
+                                {accessoryTypes.length === 0 && (
+                                    <p className="col-span-full text-xs text-slate-400 italic bg-slate-50 p-4 rounded-xl border border-dashed text-center">Nenhum tipo de acessório cadastrado nas configurações.</p>
+                                )}
+                            </div>
+                        </div>
+                      )}
                   </div>
               )}
 
@@ -344,6 +400,7 @@ const Operations = () => {
                             <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">2</div>
                             <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Conferência de Devolução</h3>
                         </div>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 italic">* Listando apenas itens entregues a este dispositivo</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 p-6 rounded-3xl border border-orange-100">
                             {Object.keys(checklist).map(item => (
                                 <button key={item} onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? 'bg-white border-orange-500 text-orange-900 shadow-sm' : 'bg-transparent border-slate-200 text-slate-400'}`}>
@@ -357,7 +414,9 @@ const Operations = () => {
 
               <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? 'bg-blue-600' : 'bg-orange-600'}`}>{activeTab === 'CHECKOUT' ? '3' : (assetType === 'Device' ? '3' : '2')}</div>
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? 'bg-blue-600' : 'bg-orange-600'}`}>
+                          {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? '3' : '2')}
+                      </div>
                       <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Observações Adicionais</h3>
                   </div>
                   <textarea 

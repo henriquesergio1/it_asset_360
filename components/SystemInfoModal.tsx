@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.6.1',
+    version: '2.7.0',
     date: 'Hoje',
+    title: 'Gestão Inteligente de Acessórios',
+    changes: [
+      'Implementada seleção de acessórios durante a entrega de dispositivos.',
+      'Acessórios vinculados são persistidos no dispositivo durante o uso.',
+      'Checklist de devolução agora é dinâmico: mostra apenas os itens que foram entregues ao colaborador.',
+      'Melhoria visual na tela de operações com ícones de pacote para acessórios.',
+      'Incremento global da versão para 2.7.0.'
+    ]
+  },
+    {
+    version: '2.6.1',
+    date: '31/01/2025',
     title: 'Correção de Build e Alertas UX',
     changes: [
       'Corrigido erro de sintaxe no App.tsx que impedia o build de produção no Docker/Portainer.',
@@ -28,17 +40,6 @@ const versions = [
       'Implementada quebra automática de linha para nomes extensos de empresas.',
       'Adicionado subtítulo do sistema no cabeçalho do menu.',
       'Incremento global da versão para 2.6.0.'
-    ]
-  },
-    {
-    version: '2.5.9',
-    date: '31/01/2025',
-    title: 'Correção de UX e Links MDM',
-    changes: [
-      'Removida a mensagem de confirmação de salvamento ao clicar no botão "Habilitar Edição" (agora aparece apenas ao salvar).',
-      'Corrigido o posicionamento do link Pulsus na listagem: agora ao lado do botão editar.',
-      'Atualizada a URL base do MDM Pulsus para https://app.pulsus.mobi/devices/[ID].',
-      'Incremento global da versão para 2.5.9.'
     ]
   }
 ];

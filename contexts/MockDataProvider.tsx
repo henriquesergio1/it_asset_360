@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -190,7 +190,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addAccessoryType = (type: AccessoryType, adminName: string) => { setAccessoryTypes(prev => [...prev, type]); logAction(ActionType.create, 'Accessory', type.id, type.name, adminName); };
   const updateAccessoryType = (type: AccessoryType, adminName: string) => { setAccessoryTypes(prev => prev.map(t => t.id === type.id ? type : t)); logAction(ActionType.UPDATE, 'Accessory', type.id, type.name, adminName); };
   const deleteAccessoryType = (id: string, adminName: string) => {
-      // Checa se algum dispositivo possui acessório deste tipo
       if (devices.some(d => d.accessories?.some(a => a.accessoryTypeId === id))) return alert('Não é possível excluir: este acessório está sendo utilizado por dispositivos no inventário.');
       setAccessoryTypes(prev => prev.filter(t => t.id !== id));
       logAction(ActionType.DELETE, 'Accessory', id, 'Tipo Acessório', adminName);
@@ -208,7 +207,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addMaintenance = (record: MaintenanceRecord, adminName: string) => { setMaintenances(prev => [...prev, record]); logAction(ActionType.MAINTENANCE_START, 'Device', record.deviceId, record.description, adminName, `Custo: ${record.cost}`); };
   const deleteMaintenance = (id: string, adminName: string) => { setMaintenances(prev => prev.filter(m => m.id !== id)); logAction(ActionType.DELETE, 'Device', id, 'Registro Manutenção', adminName); };
 
-  const assignAsset = (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, termFile?: File) => {
+  const assignAsset = (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => {
     let assetNameForTerm = '';
     const user = users.find(u => u.id === userId);
 
@@ -217,13 +216,19 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const model = models.find(m => m.id === dev?.modelId);
       assetNameForTerm = `${model?.name} (${dev?.assetTag})`;
       
-      // Atualiza o dispositivo
-      setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.IN_USE, currentUserId: userId } : d));
+      // Atualiza o dispositivo incluindo os acessórios vinculados
+      setDevices(prev => prev.map(d => d.id === assetId ? { 
+          ...d, 
+          status: DeviceStatus.IN_USE, 
+          currentUserId: userId,
+          accessories: accessories || [] 
+      } : d));
       
-      // LOGS
-      if (dev) logAction(ActionType.CHECKOUT, 'Device', assetId, 'Ativo', adminName, `Entregue para: ${user?.fullName}. Obs: ${notes}`);
+      const accessoryNames = accessories?.map(a => a.name).join(', ');
+      const accessoryNote = accessoryNames ? ` com acessórios: ${accessoryNames}` : '';
       
-      // Lógica de Chip Vinculado Automático
+      if (dev) logAction(ActionType.CHECKOUT, 'Device', assetId, 'Ativo', adminName, `Entregue para: ${user?.fullName}. Obs: ${notes}${accessoryNote}`);
+      
       if (dev?.linkedSimId) {
           const linkedSim = sims.find(s => s.id === dev.linkedSimId);
           if (linkedSim) {
@@ -233,7 +238,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
       }
       
-      if (user) logAction(ActionType.CHECKOUT, 'User', user.id, user.fullName, adminName, `Recebeu: ${assetNameForTerm}. Obs: ${notes}`);
+      if (user) logAction(ActionType.CHECKOUT, 'User', user.id, user.fullName, adminName, `Recebeu: ${assetNameForTerm}. Obs: ${notes}${accessoryNote}`);
     } else {
       const sim = sims.find(s => s.id === assetId);
       assetNameForTerm = `Chip ${sim?.phoneNumber} (${sim?.operator})`;
@@ -242,12 +247,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (user) logAction(ActionType.CHECKOUT, 'User', user.id, user.fullName, adminName, `Recebeu: ${assetNameForTerm}. Obs: ${notes}`);
     }
 
-    const fileUrl = termFile ? URL.createObjectURL(termFile) : ''; 
-    const newTerm: Term = { id: Math.random().toString(36).substr(2, 9), userId, type: 'ENTREGA', assetDetails: assetNameForTerm, date: new Date().toISOString(), fileUrl };
+    const newTerm: Term = { id: Math.random().toString(36).substr(2, 9), userId, type: 'ENTREGA', assetDetails: assetNameForTerm, date: new Date().toISOString(), fileUrl: '' };
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
   };
 
-  const returnAsset = (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, termFile?: File) => {
+  const returnAsset = (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>) => {
     let userId = ''; let assetNameForTerm = '';
     if (assetType === 'Device') {
       const dev = devices.find(d => d.id === assetId); userId = dev?.currentUserId || ''; 
@@ -255,10 +259,17 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       assetNameForTerm = `${model?.name} (${dev?.assetTag})`; 
       const user = users.find(u => u.id === userId);
       
-      setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
-      logAction(ActionType.CHECKIN, 'Device', assetId, 'Ativo', adminName, `Devolvido por: ${user?.fullName || 'Desconhecido'}. Obs: ${notes}`);
+      // Limpa os acessórios ao retornar o dispositivo
+      setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null, accessories: [] } : d));
       
-      // Lógica de Chip Vinculado Automático (Devolução)
+      let checkStr = '';
+      if (returnedChecklist) {
+          const items = Object.entries(returnedChecklist).map(([k, v]) => `${k}: ${v ? 'OK' : 'PENDENTE'}`).join(', ');
+          checkStr = ` | Conferência: ${items}`;
+      }
+
+      logAction(ActionType.CHECKIN, 'Device', assetId, 'Ativo', adminName, `Devolvido por: ${user?.fullName || 'Desconhecido'}. Obs: ${notes}${checkStr}`);
+      
       if (dev?.linkedSimId) {
           const linkedSim = sims.find(s => s.id === dev.linkedSimId);
           if (linkedSim) {
@@ -268,7 +279,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
       }
 
-      if (user) logAction(ActionType.CHECKIN, 'User', user.id, user.fullName, adminName, `Devolveu: ${assetNameForTerm}. Obs: ${notes}`);
+      if (user) logAction(ActionType.CHECKIN, 'User', user.id, user.fullName, adminName, `Devolveu: ${assetNameForTerm}. Obs: ${notes}${checkStr}`);
     } else {
       const sim = sims.find(s => s.id === assetId); userId = sim?.currentUserId || ''; assetNameForTerm = `Chip ${sim?.phoneNumber} (${sim?.operator})`;
       const user = users.find(u => u.id === userId); setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
@@ -276,8 +287,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (user) logAction(ActionType.CHECKIN, 'User', user.id, user.fullName, adminName, `Devolveu: ${assetNameForTerm}. Obs: ${notes}`);
     }
     if (userId) {
-        const fileUrl = termFile ? URL.createObjectURL(termFile) : '';
-        const newTerm: Term = { id: Math.random().toString(36).substr(2, 9), userId, type: 'DEVOLUCAO', assetDetails: assetNameForTerm, date: new Date().toISOString(), fileUrl };
+        const newTerm: Term = { id: Math.random().toString(36).substr(2, 9), userId, type: 'DEVOLUCAO', assetDetails: assetNameForTerm, date: new Date().toISOString(), fileUrl: '' };
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
     }
   };
