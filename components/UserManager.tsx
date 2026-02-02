@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info } from 'lucide-react';
+import { User, UserSector, ActionType, Device, SimCard, Term, AccountType } from '../types';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Eye, EyeOff, Lock } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 // Funções de Máscara
@@ -74,13 +74,11 @@ const COLUMN_OPTIONS = [
     { id: 'address', label: 'Endereço' },
     { id: 'sector', label: 'Setor/Função' },
     { id: 'internalCode', label: 'Cód. Setor' },
-    { id: 'assetsCount', label: 'Contagem de Ativos' },
-    { id: 'activeSims', label: 'Números de Chip' },
-    { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
+    { id: 'assetsCount', label: 'Ativos' }
 ];
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, getHistory, settings, updateTermFile, deleteTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, getHistory, settings, updateTermFile, deleteTermFile, accounts } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -90,10 +88,15 @@ const UserManager = () => {
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false); 
-  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
+  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'SOFTWARE' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [reasonText, setReasonText] = useState('');
+  const [pendingAction, setPendingAction] = useState<null | { type: 'UPDATE' | 'TOGGLE', user?: User }>(null);
+
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('user_manager_columns');
       return saved ? JSON.parse(saved) : ['sector', 'assetsCount'];
@@ -101,6 +104,10 @@ const UserManager = () => {
   
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
+
+  const togglePassword = (id: string) => {
+      setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
@@ -148,7 +155,7 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  const handleReprintTerm = (term) => {
+  const handleReprintTerm = (term: any) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
       let asset: any = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
@@ -188,29 +195,59 @@ const UserManager = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
-    
-    if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
+
+    if (editingId) {
+        setPendingAction({ type: 'UPDATE' });
+        setReasonText('');
+        setIsReasonModalOpen(true);
+    } else {
+        const cleanedData = {
+            ...formData,
+            cpf: formatCPF(formData.cpf || ''),
+            rg: formatRG(formData.rg || ''),
+            pis: formatPIS(formData.pis || '')
+        };
+        addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+        setIsModalOpen(false);
+    }
+  };
+
+  const handleConfirmReason = () => {
+    if (!reasonText.trim()) {
+        alert('Por favor, informe o motivo da alteração.');
         return;
     }
 
-    // Sanitização Final antes de gravar
-    const cleanedData = {
-        ...formData,
-        cpf: formatCPF(formData.cpf || ''),
-        rg: formatRG(formData.rg || ''),
-        pis: formatPIS(formData.pis || '')
-    };
+    if (pendingAction?.type === 'UPDATE') {
+        const cleanedData = {
+            ...formData,
+            cpf: formatCPF(formData.cpf || ''),
+            rg: formatRG(formData.rg || ''),
+            pis: formatPIS(formData.pis || '')
+        };
+        updateUser(cleanedData as User, adminName, reasonText);
+        setIsModalOpen(false);
+    } else if (pendingAction?.type === 'TOGGLE' && pendingAction.user) {
+        toggleUserActive(pendingAction.user, adminName, reasonText);
+    }
 
-    if (editingId && formData.id) updateUser(cleanedData as User, adminName);
-    else addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
-    setIsModalOpen(false);
+    setIsReasonModalOpen(false);
+    setPendingAction(null);
   };
 
   const handleToggleClick = (user: User) => {
-      if (!user.active) { if (window.confirm(`Reativar ${user.fullName}?`)) toggleUserActive(user, adminName, 'Reativação'); return; }
+      if (!user.active) {
+          setPendingAction({ type: 'TOGGLE', user });
+          setReasonText('');
+          setIsReasonModalOpen(true);
+          return;
+      }
       const hasAssets = devices.some(d => d.currentUserId === user.id) || sims.some(s => s.currentUserId === user.id);
       if (hasAssets) return alert("Não é possível inativar com ativos em posse.");
-      if (window.confirm(`Inativar ${user.fullName}?`)) toggleUserActive(user, adminName, 'Inativação administrativa');
+      
+      setPendingAction({ type: 'TOGGLE', user });
+      setReasonText('');
+      setIsReasonModalOpen(true);
   };
 
   const filteredUsers = users.filter(u => {
@@ -221,6 +258,7 @@ const UserManager = () => {
 
   const userAssets = devices.filter(d => d.currentUserId === editingId);
   const userSims = sims.filter(s => s.currentUserId === editingId);
+  const userAccounts = accounts.filter(a => a.userId === editingId);
   const userHistory = getHistory(editingId || '');
   const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
 
@@ -345,6 +383,7 @@ const UserManager = () => {
                 {editingId && (
                     <>
                         <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Ativos ({(userAssets.length + userSims.length)})</button>
+                        <button onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Contas/Acessos ({userAccounts.length})</button>
                         <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Termos ({currentUserTerms.length})</button>
                         <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Auditoria</button>
                     </>
@@ -466,6 +505,52 @@ const UserManager = () => {
                     </div>
                 )}
 
+                {activeTab === 'SOFTWARE' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Lock size={14}/> Contas & Acessos Diretos</h4>
+                        {userAccounts.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {userAccounts.map(acc => (
+                                    <div key={acc.id} className="p-5 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-emerald-200 transition-all">
+                                        <div className="flex items-center gap-4 mb-3">
+                                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                                {acc.type === AccountType.EMAIL ? <Mail size={20}/> : <Lock size={20}/>}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800">{acc.name}</p>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{acc.type}</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2 pt-2 border-t border-slate-50">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-400 font-medium">Login:</span>
+                                                <span className="font-bold text-slate-700">{acc.login}</span>
+                                            </div>
+                                            {(acc.password || acc.licenseKey) && (
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-400 font-medium">{acc.licenseKey ? 'Chave:' : 'Senha:'}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border text-emerald-600 font-bold">
+                                                            {showPasswords[acc.id] ? (acc.licenseKey || acc.password) : '••••••••'}
+                                                        </span>
+                                                        <button type="button" onClick={() => togglePassword(acc.id)} className="text-slate-400 hover:text-emerald-600 transition-colors">
+                                                            {showPasswords[acc.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma conta vinculada individualmente a este colaborador.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {activeTab === 'TERMS' && (
                     <div className="space-y-4">
                         {currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (
@@ -526,7 +611,7 @@ const UserManager = () => {
                 )}
             </div>
             <div className="bg-slate-50 px-8 py-5 flex justify-end gap-3 border-t shrink-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-white border-2 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100">Fechar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl bg-white border-2 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all border-slate-200">Fechar</button>
                 {isViewOnly ? (
                     <button type="button" onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2">
                         <Edit2 size={16}/> Habilitar Edição
@@ -537,6 +622,26 @@ const UserManager = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL DE JUSTIFICATIVA OBRIGATÓRIA (SALVAR EDIÇÃO) */}
+      {isReasonModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-emerald-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500 mb-4 shadow-inner border border-emerald-100"><Info size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Justificativa</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo desta alteração para fins de auditoria.</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 focus:border-emerald-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da alteração..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => { setIsReasonModalOpen(false); setPendingAction(null); }} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Cancelar</button>
+                          <button onClick={handleConfirmReason} disabled={!reasonText.trim()} className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 disabled:opacity-50 transition-all">Confirmar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );

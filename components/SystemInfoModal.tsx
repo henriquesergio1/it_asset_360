@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.8.4',
+    version: '2.9.0',
     date: 'Hoje',
+    title: 'Módulo de Software & Contas',
+    changes: [
+      'Lançado novo módulo para gestão de E-mails, Contas Google, ERP e Licenças Office.',
+      'Suporte a armazenamento de senhas com visualização segura (ocultar/mostrar).',
+      'Vínculo de licenças diretamente a Dispositivos, Colaboradores ou Setores.',
+      'Sincronização global da versão para 2.9.0.'
+    ]
+  },
+    {
+    version: '2.8.4',
+    date: '31/01/2025',
     title: 'Correção Crítica de Sintaxe',
     changes: [
       'Correção de fechamento de tags na definição de rotas que causava falha no carregamento do app.',
@@ -25,18 +36,6 @@ const versions = [
       'Removidos resquícios do campo "jobTitle" que causavam erros de compilação.',
       'Sincronização de versão global para 2.8.3.',
       'Correção de exibição do Código de Setor nos termos gerados.'
-    ]
-  },
-    {
-    version: '2.8.2',
-    date: '31/01/2025',
-    title: 'Integridade e Centralização de Cargos',
-    changes: [
-      'Removida redundância de campos textuais em prol de vínculos estruturados via SectorId.',
-      'Implementada edição de cargos com atualização em massa de dispositivos e colaboradores vinculados.',
-      'Adicionada proteção contra exclusão de cargos que estão sendo utilizados no inventário.',
-      'Simplificada lógica de importação para focar exclusivamente no vínculo estruturado.',
-      'Incremento global da versão para 2.8.2.'
     ]
   }
 ];

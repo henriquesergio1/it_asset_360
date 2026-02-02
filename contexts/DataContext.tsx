@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount } from '../types';
 
 export interface DataContextType {
   devices: Device[];
@@ -17,37 +17,42 @@ export interface DataContextType {
   maintenances: MaintenanceRecord[];
   sectors: UserSector[];
   accessoryTypes: AccessoryType[];
-  customFields: CustomField[]; // Novo
+  customFields: CustomField[]; 
+  accounts: SoftwareAccount[];
 
   loading?: boolean;
   error?: string | null;
   
   // CRUD Dispositivos
   addDevice: (device: Device, adminName: string) => void;
-  updateDevice: (device: Device, adminName: string) => void;
+  updateDevice: (device: Device, adminName: string, reason: string) => void;
   deleteDevice: (id: string, adminName: string, reason: string) => void;
-  // Função para restaurar dispositivos que foram marcados como descartados
   restoreDevice: (id: string, adminName: string, reason: string) => void;
   
   // CRUD Sims
   addSim: (sim: SimCard, adminName: string) => void;
-  updateSim: (sim: SimCard, adminName: string) => void;
+  updateSim: (sim: SimCard, adminName: string, reason: string) => void;
   deleteSim: (id: string, adminName: string, reason: string) => void;
   
   // CRUD Users
   addUser: (user: User, adminName: string) => void;
-  updateUser: (user: User, adminName: string, notes?: string) => void; // Updated signature
-  toggleUserActive: (user: User, adminName: string, reason?: string) => void;
+  updateUser: (user: User, adminName: string, reason: string) => void; 
+  toggleUserActive: (user: User, adminName: string, reason: string) => void;
   
   // CRUD Sectors
   addSector: (sector: UserSector, adminName: string) => void;
-  updateSector: (sector: UserSector, adminName: string) => void; // NOVO
+  updateSector: (sector: UserSector, adminName: string) => void; 
   deleteSector: (id: string, adminName: string) => void;
+
+  // CRUD Accounts
+  addAccount: (account: SoftwareAccount, adminName: string) => void;
+  updateAccount: (account: SoftwareAccount, adminName: string, reason: string) => void;
+  deleteAccount: (id: string, adminName: string, reason: string) => void;
   
   // CRUD System Users
   addSystemUser: (user: SystemUser, adminName: string) => void;
-  updateSystemUser: (user: SystemUser, adminName: string) => void;
-  deleteSystemUser: (id: string, adminName: string) => void;
+  updateSystemUser: (user: SystemUser, adminName: string, reason: string) => void;
+  deleteSystemUser: (id: string, adminName: string, reason: string) => void;
 
   // Settings
   updateSettings: (settings: SystemSettings, adminName: string) => void;
@@ -66,13 +71,13 @@ export interface DataContextType {
   clearLogs: () => void;
   restoreItem: (logId: string, adminName: string) => void;
 
-  // --- Gestão de Configurações (CRUDs Completos) ---
+  // --- Gestão de Configurações ---
   addAssetType: (type: AssetType, adminName: string) => void;
-  updateAssetType: (type: AssetType, adminName: string) => void; // Added Update
+  updateAssetType: (type: AssetType, adminName: string) => void; 
   deleteAssetType: (id: string, adminName: string) => void;
 
   addBrand: (brand: DeviceBrand, adminName: string) => void;
-  updateBrand: (brand: DeviceBrand, adminName: string) => void; // Added Update
+  updateBrand: (brand: DeviceBrand, adminName: string) => void; 
   deleteBrand: (id: string, adminName: string) => void;
 
   addModel: (model: DeviceModel, adminName: string) => void;
@@ -80,7 +85,7 @@ export interface DataContextType {
   deleteModel: (id: string, adminName: string) => void;
 
   addAccessoryType: (type: AccessoryType, adminName: string) => void;
-  updateAccessoryType: (type: AccessoryType, adminName: string) => void; // Added Update
+  updateAccessoryType: (type: AccessoryType, adminName: string) => void; 
   deleteAccessoryType: (id: string, adminName: string) => void;
 
   // --- Custom Fields ---

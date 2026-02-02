@@ -21,6 +21,12 @@ const AdminPanel = () => {
   const [settingsForm, setSettingsForm] = useState(settings);
   const [msg, setMsg] = useState('');
   
+  // Reason States
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [reasonText, setReasonText] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   // App Mode State
   const [currentMode, setCurrentMode] = useState('mock');
   
@@ -68,12 +74,40 @@ const AdminPanel = () => {
   const handleUserSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId && userForm.id) {
-        const userToUpdate = { ...userForm } as SystemUser;
-        updateSystemUser(userToUpdate, currentUser?.name || 'Admin');
+        setReasonText('');
+        setIsReasonModalOpen(true);
     } else {
         addSystemUser({ ...userForm, id: Math.random().toString(36).substr(2, 9) } as SystemUser, currentUser?.name || 'Admin');
+        setIsModalOpen(false);
     }
+  };
+
+  const handleConfirmUpdateReason = () => {
+    if (!reasonText.trim()) {
+        alert('Por favor, informe o motivo da alteração.');
+        return;
+    }
+    updateSystemUser(userForm as SystemUser, currentUser?.name || 'Admin', reasonText);
+    setIsReasonModalOpen(false);
     setIsModalOpen(false);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setPendingDeleteId(id);
+    setReasonText('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!reasonText.trim()) {
+        alert('Por favor, informe o motivo da exclusão.');
+        return;
+    }
+    if (pendingDeleteId) {
+        deleteSystemUser(pendingDeleteId, currentUser?.name || 'Admin', reasonText);
+        setIsDeleteModalOpen(false);
+        setPendingDeleteId(null);
+    }
   };
 
   // Handler for Settings
@@ -285,7 +319,7 @@ const AdminPanel = () => {
                                     <div className="flex justify-end gap-2">
                                         <button onClick={() => handleOpenModal(u)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Edit2 size={16}/></button>
                                         {u.id !== currentUser?.id && (
-                                            <button onClick={() => deleteSystemUser(u.id, currentUser?.name || 'Admin')} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button>
+                                            <button onClick={() => handleDeleteClick(u.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button>
                                         )}
                                     </div>
                                 </td>
@@ -605,6 +639,47 @@ const AdminPanel = () => {
           </div>
         </div>
       )}
+
+      {/* MODAL DE JUSTIFICATIVA OBRIGATÓRIA (SALVAR EDIÇÃO USUÁRIO) */}
+      {isReasonModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-blue-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Info size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Justificativa</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da alteração de acesso para auditoria.</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da alteração..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Cancelar</button>
+                          <button onClick={handleConfirmUpdateReason} disabled={!reasonText.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all">Confirmar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Modal de Exclusão de Usuário */}
+      {isDeleteModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-red-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Remover Acesso?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da exclusão deste acesso.</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da exclusão..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Manter</button>
+                          <button onClick={handleConfirmDelete} disabled={!reasonText.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+      {activeTab === 'IMPORT' && <DataImporter />}
     </div>
   );
 };

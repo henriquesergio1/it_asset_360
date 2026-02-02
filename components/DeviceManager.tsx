@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType } from '../types';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Lock, Key, Eye, EyeOff, Globe } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -154,7 +154,7 @@ const DeviceManager = () => {
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
     users, models, brands, assetTypes, sims, customFields, sectors,
     maintenances, addMaintenance, deleteMaintenance,
-    getHistory
+    getHistory, accounts
   } = useData();
   const { user: currentUser } = useAuth();
   const location = useLocation();
@@ -172,10 +172,14 @@ const DeviceManager = () => {
   const [restoreTargetId, setRestoreTargetId] = useState<string | null>(null);
   const [restoreReason, setRestoreReason] = useState('');
 
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [reasonText, setReasonText] = useState('');
+
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'SOFTWARE' | 'HISTORY'>('GENERAL');
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('device_manager_columns');
@@ -196,6 +200,10 @@ const DeviceManager = () => {
       invoiceUrl: '',
       type: MaintenanceType.CORRECTIVE 
   });
+
+  const togglePassword = (id: string) => {
+      setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -348,16 +356,25 @@ const DeviceManager = () => {
         return;
     }
 
-    if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
+    if (editingId) {
+        setReasonText('');
+        setIsReasonModalOpen(true);
+    } else {
+        addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
+        setIsModalOpen(false);
+    }
+  };
+
+  const handleConfirmUpdateReason = () => {
+    if (!reasonText.trim()) {
+        alert('Por favor, informe o motivo da alteração.');
         return;
     }
-
-    if (editingId && formData.id) updateDevice(formData as Device, adminName);
-    else addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
+    updateDevice(formData as Device, adminName, reasonText);
+    setIsReasonModalOpen(false);
     setIsModalOpen(false);
   };
 
-  // Fixed: removed redundant jobTitle assignment
   const handleSectorChange = (val: string) => {
       setFormData({
           ...formData,
@@ -376,6 +393,7 @@ const DeviceManager = () => {
   };
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
+  const deviceAccounts = accounts.filter(a => a.deviceId === editingId);
 
   return (
     <div className="space-y-6 relative pb-20">
@@ -565,6 +583,7 @@ const DeviceManager = () => {
             <div className="flex bg-slate-50 border-b overflow-x-auto shrink-0 px-4 pt-2">
                 <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Geral</button>
                 <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Financeiro</button>
+                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Software/Licenças</button>
                 <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Manutenções</button>
                 <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
@@ -722,6 +741,51 @@ const DeviceManager = () => {
                         </div>
                     </div>
                     )}
+                    {activeTab === 'SOFTWARE' && (
+                        <div className="space-y-4 animate-fade-in">
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Lock size={14}/> Licenças & Software</h4>
+                            {deviceAccounts.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {deviceAccounts.map(acc => (
+                                        <div key={acc.id} className="p-5 bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-blue-200 transition-all">
+                                            <div className="flex items-center gap-4 mb-3">
+                                                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.OFFICE ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                    {acc.type === AccountType.OFFICE ? <FileText size={20}/> : <Lock size={20}/>}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-800">{acc.name}</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{acc.type}</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2 pt-2 border-t border-slate-50">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-slate-400 font-medium">Login:</span>
+                                                    <span className="font-bold text-slate-700">{acc.login}</span>
+                                                </div>
+                                                {(acc.password || acc.licenseKey) && (
+                                                    <div className="flex justify-between items-center text-xs">
+                                                        <span className="text-slate-400 font-medium">{acc.licenseKey ? 'Chave:' : 'Senha:'}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-mono bg-slate-50 px-2 py-0.5 rounded border text-blue-600 font-bold">
+                                                                {showPasswords[acc.id] ? (acc.licenseKey || acc.password) : '••••••••'}
+                                                            </span>
+                                                            <button type="button" onClick={() => togglePassword(acc.id)} className="text-slate-400 hover:text-blue-600 transition-colors">
+                                                                {showPasswords[acc.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma licença vinculada a este dispositivo.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {activeTab === 'MAINTENANCE' && (
                         <div className="space-y-6 animate-fade-in">
                             {!isViewOnly && (
@@ -821,18 +885,39 @@ const DeviceManager = () => {
         </div>
       )}
 
+      {/* MODAL DE JUSTIFICATIVA OBRIGATÓRIA (SALVAR EDIÇÃO) */}
+      {isReasonModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-blue-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Info size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Justificativa de Alteração</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da alteração deste registro para auditoria.</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da alteração..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Cancelar</button>
+                          <button onClick={handleConfirmUpdateReason} disabled={!reasonText.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all">Confirmar e Salvar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {isDeleteModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-100">
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-red-100">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirma o Descarte?</h3>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Confirma o Descarte?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo do descarte para auditoria.</p>
                       </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo do descarte..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} autoFocus></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Manter</button>
-                          <button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50">Confirmar</button>
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Manter Ativo</button>
+                          <button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar Descarte</button>
                       </div>
                   </div>
               </div>
@@ -840,17 +925,18 @@ const DeviceManager = () => {
       )}
 
       {isRestoreModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100">
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-indigo-100">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100"><RotateCcw size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Restaurar?</h3>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Restaurar Ativo?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da restauração para auditoria.</p>
                       </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da restauração..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)} autoFocus></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancelar</button>
-                          <button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg">Restaurar</button>
+                          <button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Cancelar</button>
+                          <button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all">Confirmar Restauro</button>
                       </div>
                   </div>
               </div>

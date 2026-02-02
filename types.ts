@@ -6,17 +6,42 @@ export enum DeviceStatus {
   RETIRED = 'Descartado'
 }
 
+export enum AccountType {
+  EMAIL = 'E-mail',
+  GOOGLE = 'Google Account',
+  ERP = 'Licença ERP',
+  OFFICE = 'Pacote Office',
+  OTHER = 'Outros'
+}
+
+export interface SoftwareAccount {
+  id: string;
+  name: string; // Nome amigável (ex: Office 365 Pro)
+  type: AccountType;
+  login: string;
+  password?: string;
+  licenseKey?: string;
+  status: 'Ativo' | 'Inativo';
+  
+  // Vínculos
+  userId?: string | null;
+  deviceId?: string | null;
+  sectorId?: string | null;
+  
+  notes?: string;
+}
+
 // Campos Personalizados
 export interface CustomField {
   id: string;
-  name: string; // Label visual (ex: Memória RAM, ID Flexx)
+  name: string; 
 }
 
 // Configurações Dinâmicas (Tipo de Ativo)
 export interface AssetType {
   id: string;
   name: string;
-  customFieldIds?: string[]; // IDs dos campos vinculados a este tipo
+  customFieldIds?: string[]; 
 }
 
 export interface DeviceBrand {
@@ -69,18 +94,13 @@ export interface Device {
   assetTag: string; 
   status: DeviceStatus;
   currentUserId?: string | null;
-  internalCode?: string; // Código de Setor
+  internalCode?: string; 
   
-  // Identificadores Fixos
   imei?: string;         
   pulsusId?: string;
-  
-  // Dados Personalizados
   customData?: Record<string, string>; 
-
   sectorId?: string;     
   costCenter?: string;   
-
   linkedSimId?: string | null;
   accessories?: DeviceAccessory[]; 
 
@@ -126,7 +146,7 @@ export interface User {
   address: string;
   email: string;
   sectorId: string; 
-  internalCode?: string; // Código de Setor
+  internalCode?: string; 
   active: boolean;
   terms?: Term[];
   hasPendingIssues?: boolean; 
@@ -172,7 +192,7 @@ export enum ActionType {
 export interface AuditLog {
   id: string;
   assetId: string;
-  assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory' | 'CustomField';
+  assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory' | 'CustomField' | 'Account';
   targetName?: string;
   action: ActionType;
   timestamp: string;
