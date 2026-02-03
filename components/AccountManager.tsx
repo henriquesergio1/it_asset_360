@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SoftwareAccount, AccountType, DeviceStatus } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Shield, Key, FileText, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Info, Lock, Globe } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Shield, Key, FileText, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Info, Lock, Globe, Save, AlertTriangle } from 'lucide-react';
 
 const AccountManager = () => {
   const { accounts, addAccount, updateAccount, deleteAccount, users, devices, sectors } = useData();
@@ -15,6 +15,13 @@ const AccountManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [editReason, setEditReason] = useState('');
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+
   const [formData, setFormData] = useState<Partial<SoftwareAccount>>({
       type: AccountType.EMAIL,
       status: 'Ativo'
@@ -42,14 +49,41 @@ const AccountManager = () => {
       if (!formData.login || !formData.name) return;
 
       if (editingId) {
-          updateAccount(formData as SoftwareAccount, adminName);
+          setEditReason('');
+          setIsReasonModalOpen(true);
       } else {
           addAccount({
               ...formData,
               id: Math.random().toString(36).substr(2, 9)
           } as SoftwareAccount, adminName);
+          setIsModalOpen(false);
       }
+  };
+
+  const confirmEdit = () => {
+      if (!editReason.trim()) {
+          alert('Por favor, informe o motivo da alteração.');
+          return;
+      }
+      updateAccount({ ...formData, notes: (formData.notes || '') + ` [Alteração: ${editReason}]` } as SoftwareAccount, adminName);
+      setIsReasonModalOpen(false);
       setIsModalOpen(false);
+  };
+
+  const handleDeleteClick = (id: string) => {
+      setDeleteTargetId(id);
+      setDeleteReason('');
+      setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+      if (!deleteReason.trim()) {
+          alert('Por favor, informe o motivo da exclusão.');
+          return;
+      }
+      // Passando o motivo no adminName para auditoria se necessário
+      deleteAccount(deleteTargetId!, `${adminName} (Motivo: ${deleteReason})`);
+      setIsDeleteModalOpen(false);
   };
 
   const filteredAccounts = accounts.filter(acc => {
@@ -167,7 +201,7 @@ const AccountManager = () => {
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-1">
                                 <button onClick={() => handleOpenModal(acc)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
-                                <button onClick={() => { if(window.confirm('Excluir este registro?')) deleteAccount(acc.id, adminName); }} className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                <button onClick={() => handleDeleteClick(acc.id)} className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
                             </div>
                         </td>
                     </tr>
@@ -268,6 +302,46 @@ const AccountManager = () => {
                           <button type="submit" className="px-10 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95">Salvar Registro</button>
                       </div>
                   </form>
+              </div>
+          </div>
+      )}
+
+      {/* NOVO MODAL: Motivo da Alteração */}
+      {isReasonModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100"><Save size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirmar Alterações?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da alteração para auditoria:</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Voltar</button>
+                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50">Salvar Alterações</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* NOVO MODAL: Motivo da Exclusão */}
+      {isDeleteModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirmar Exclusão?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da exclusão:</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da remoção..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Cancelar</button>
+                          <button onClick={confirmDelete} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50">Confirmar Exclusão</button>
+                      </div>
+                  </div>
               </div>
           </div>
       )}

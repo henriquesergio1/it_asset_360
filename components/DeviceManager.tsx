@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -171,6 +171,10 @@ const DeviceManager = () => {
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [restoreTargetId, setRestoreTargetId] = useState<string | null>(null);
   const [restoreReason, setRestoreReason] = useState('');
+
+  // Novo modal de motivo para alteração
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [editReason, setEditReason] = useState('');
 
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
@@ -348,16 +352,28 @@ const DeviceManager = () => {
         return;
     }
 
-    if (!window.confirm("Deseja salvar as alterações realizadas neste registro?")) {
+    if (editingId) {
+        setEditReason('');
+        setIsReasonModalOpen(true);
+    } else {
+        addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
+        setIsModalOpen(false);
+    }
+  };
+
+  const confirmEdit = () => {
+    if (!editReason.trim()) {
+        alert('Por favor, informe o motivo da alteração.');
         return;
     }
-
-    if (editingId && formData.id) updateDevice(formData as Device, adminName);
-    else addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName);
+    // No mockDataProvider e prodDataProvider, o adminName já é passado, 
+    // podemos anexar o motivo ao nome do admin ou se a função suportar, passar como parâmetro extra.
+    // Como queremos manter o sistema exatamente como está, vamos usar a função existente.
+    updateDevice(formData as Device, `${adminName} (Motivo: ${editReason})`);
+    setIsReasonModalOpen(false);
     setIsModalOpen(false);
   };
 
-  // Fixed: removed redundant jobTitle assignment
   const handleSectorChange = (val: string) => {
       setFormData({
           ...formData,
@@ -819,6 +835,26 @@ const DeviceManager = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* NOVO MODAL: Motivo da Alteração */}
+      {isReasonModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-blue-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Save size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Confirmar Alterações?</h3>
+                          <p className="text-xs text-slate-400 mt-2">Informe o motivo da alteração para auditoria:</p>
+                      </div>
+                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:border-blue-300 outline-none mb-6 transition-all" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Voltar</button>
+                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 disabled:opacity-50">Salvar Alterações</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
       )}
 
       {isDeleteModalOpen && (
