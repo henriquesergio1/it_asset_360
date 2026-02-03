@@ -30,7 +30,7 @@ async function runMigrations(pool) {
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Brands') CREATE TABLE Brands (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AssetTypes') CREATE TABLE AssetTypes (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL, CustomFieldIds NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Models') CREATE TABLE Models (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL, BrandId NVARCHAR(50), TypeId NVARCHAR(50), ImageUrl NVARCHAR(MAX));
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users') CREATE TABLE Users (Id NVARCHAR(50) PRIMARY KEY, FullName NVARCHAR(100) NOT NULL, Email NVARCHAR(100) NOT NULL, SectorId NVARCHAR(50), InternalCode NVARCHAR(50), Active BIT DEFAULT 1);
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users') CREATE TABLE Users (Id NVARCHAR(50) PRIMARY KEY, FullName NVARCHAR(100) NOT NULL, Email NVARCHAR(100) NOT NULL, SectorId NVARCHAR(50), InternalCode NVARCHAR(50), Active BIT DEFAULT 1, Cpf NVARCHAR(20), Rg NVARCHAR(20), Pis NVARCHAR(20), Address NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SimCards') CREATE TABLE SimCards (Id NVARCHAR(50) PRIMARY KEY, PhoneNumber NVARCHAR(50) NOT NULL, Operator NVARCHAR(50), Iccid NVARCHAR(50), PlanDetails NVARCHAR(100), Status NVARCHAR(50) NOT NULL, CurrentUserId NVARCHAR(50) NULL);
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices') CREATE TABLE Devices (Id NVARCHAR(50) PRIMARY KEY, AssetTag NVARCHAR(50), Status NVARCHAR(50) NOT NULL, ModelId NVARCHAR(50), SerialNumber NVARCHAR(50), InternalCode NVARCHAR(50), Imei NVARCHAR(50), PulsusId NVARCHAR(50), CurrentUserId NVARCHAR(50) NULL, SectorId NVARCHAR(50), CostCenter NVARCHAR(50), LinkedSimId NVARCHAR(50) NULL, PurchaseDate DATE, PurchaseCost DECIMAL(18,2), InvoiceNumber NVARCHAR(50), Supplier NVARCHAR(100), PurchaseInvoiceUrl NVARCHAR(MAX), CustomData NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SoftwareAccounts') CREATE TABLE SoftwareAccounts (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Type NVARCHAR(50), Login NVARCHAR(200), Password NVARCHAR(MAX), LicenseKey NVARCHAR(MAX), Status NVARCHAR(20), UserId NVARCHAR(50), DeviceId NVARCHAR(50), SectorId NVARCHAR(50), Notes NVARCHAR(MAX));
@@ -39,7 +39,6 @@ async function runMigrations(pool) {
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemUsers') CREATE TABLE SystemUsers (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Email NVARCHAR(100), Password NVARCHAR(100), Role NVARCHAR(20));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AccessoryTypes') CREATE TABLE AccessoryTypes (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CustomFields') CREATE TABLE CustomFields (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100) NOT NULL);
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories') CREATE TABLE DeviceAccessories (Id NVARCHAR(50) PRIMARY KEY, DeviceId NVARCHAR(50) NOT NULL, AccessoryTypeId NVARCHAR(50) NOT NULL, Name NVARCHAR(100));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords') CREATE TABLE MaintenanceRecords (Id NVARCHAR(50) PRIMARY KEY, DeviceId NVARCHAR(50) NOT NULL, Description NVARCHAR(MAX), Cost DECIMAL(18,2), Date DATETIME2, Type NVARCHAR(50), Provider NVARCHAR(100), InvoiceUrl NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Terms') CREATE TABLE Terms (Id NVARCHAR(50) PRIMARY KEY, UserId NVARCHAR(50), Type NVARCHAR(20), AssetDetails NVARCHAR(255), Date DATETIME2, FileUrl NVARCHAR(MAX));
     `;
@@ -113,6 +112,14 @@ app.put('/api/devices/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+app.delete('/api/devices/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Devices WHERE Id=@Id`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
 // --- USERS ---
 app.get('/api/users', async (req, res) => {
     try {
@@ -144,6 +151,46 @@ app.put('/api/users/:id', async (req, res) => {
             .query(`UPDATE Users SET FullName=@FullName, Email=@Email, Cpf=@Cpf, Rg=@Rg, Pis=@Pis, Address=@Address, InternalCode=@InternalCode, SectorId=@SectorId, Active=@Active WHERE Id=@Id`);
         await logAction(u.id, 'User', u._reason ? (u.active ? 'Ativação' : 'Inativação') : 'Atualização', u._adminUser, u.fullName, u._reason || u._notes);
         res.json(u);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- SECTORS ---
+app.get('/api/sectors', async (req, res) => {
+    try {
+        const result = await sql.query(`SELECT Id as id, Name as name FROM Sectors ORDER BY Name ASC`);
+        res.json(result.recordset);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.post('/api/sectors', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, s.id)
+            .input('Name', sql.NVarChar, s.name)
+            .query(`INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)`);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/sectors/:id', async (req, res) => {
+    const s = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Name', sql.NVarChar, s.name)
+            .query(`UPDATE Sectors SET Name=@Name WHERE Id=@Id`);
+        res.json(s);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/sectors/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Sectors WHERE Id=@Id`);
+        res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -203,16 +250,19 @@ app.post('/api/models', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 app.delete('/api/models/:id', async (req, res) => {
-    try { await sql.connect(dbConfig); await sql.query(`DELETE FROM Models WHERE Id='${req.params.id}'`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Models WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
 });
 
 app.get('/api/brands', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Brands`); res.json(result.recordset); }
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM Brands ORDER BY Name ASC`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
 app.post('/api/brands', async (req, res) => {
     const b = req.body;
-    try { await sql.connect(dbConfig); await sql.query(`INSERT INTO Brands (Id, Name) VALUES ('${b.id}', '${b.name}')`); res.json(b); } catch (e) { res.status(500).send(e.message); }
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, b.id).input('Name', sql.NVarChar, b.name).query(`INSERT INTO Brands (Id, Name) VALUES (@Id, @Name)`); res.json(b); } catch (e) { res.status(500).send(e.message); }
+});
+app.delete('/api/brands/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM Brands WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
 });
 
 app.get('/api/asset-types', async (req, res) => {
@@ -230,6 +280,9 @@ app.post('/api/asset-types', async (req, res) => {
         res.json(t);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.delete('/api/asset-types/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM AssetTypes WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
+});
 
 // --- ACCOUNTS ---
 app.get('/api/accounts', async (req, res) => {
@@ -246,6 +299,9 @@ app.post('/api/accounts', async (req, res) => {
         res.json(a);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.delete('/api/accounts/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM SoftwareAccounts WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
+});
 
 // --- MAINTENANCES ---
 app.get('/api/maintenances', async (req, res) => {
@@ -260,6 +316,9 @@ app.post('/api/maintenances', async (req, res) => {
             .query(`INSERT INTO MaintenanceRecords (Id, DeviceId, Type, Date, Description, Cost, Provider, InvoiceUrl) VALUES (@Id, @DeviceId, @Type, @Date, @Description, @Cost, @Provider, @InvoiceUrl)`);
         res.json(m);
     } catch (err) { res.status(500).send(err.message); }
+});
+app.delete('/api/maintenances/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM MaintenanceRecords WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
 });
 
 // --- SYSTEM USERS ---
@@ -276,6 +335,9 @@ app.post('/api/system-users', async (req, res) => {
         res.json(u);
     } catch (err) { res.status(500).send(err.message); }
 });
+app.delete('/api/system-users/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM SystemUsers WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
+});
 
 // --- TERMS ---
 app.get('/api/terms', async (req, res) => {
@@ -291,23 +353,37 @@ app.put('/api/terms/file', async (req, res) => {
         res.json({success:true});
     } catch (err) { res.status(500).send(err.message); }
 });
+app.delete('/api/terms/:id/file', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query(`UPDATE Terms SET FileUrl=NULL WHERE Id=@Id`);
+        res.json({success:true});
+    } catch (err) { res.status(500).send(err.message); }
+});
 
 // --- ACCESSORIES & CUSTOM FIELDS ---
 app.get('/api/accessory-types', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM AccessoryTypes`); res.json(result.recordset); }
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM AccessoryTypes ORDER BY Name ASC`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
 app.post('/api/accessory-types', async (req, res) => {
     const t = req.body;
-    try { await sql.connect(dbConfig); await sql.query(`INSERT INTO AccessoryTypes (Id, Name) VALUES ('${t.id}', '${t.name}')`); res.json(t); } catch (e) { res.status(500).send(e.message); }
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, t.id).input('Name', sql.NVarChar, t.name).query(`INSERT INTO AccessoryTypes (Id, Name) VALUES (@Id, @Name)`); res.json(t); } catch (e) { res.status(500).send(e.message); }
 });
+app.delete('/api/accessory-types/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM AccessoryTypes WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
+});
+
 app.get('/api/custom-fields', async (req, res) => {
-    try { const result = await sql.query(`SELECT Id as id, Name as name FROM CustomFields`); res.json(result.recordset); }
+    try { const result = await sql.query(`SELECT Id as id, Name as name FROM CustomFields ORDER BY Name ASC`); res.json(result.recordset); }
     catch (err) { res.status(500).send(err.message); }
 });
 app.post('/api/custom-fields', async (req, res) => {
     const f = req.body;
-    try { await sql.connect(dbConfig); await sql.query(`INSERT INTO CustomFields (Id, Name) VALUES ('${f.id}', '${f.name}')`); res.json(f); } catch (e) { res.status(500).send(e.message); }
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, f.id).input('Name', sql.NVarChar, f.name).query(`INSERT INTO CustomFields (Id, Name) VALUES (@Id, @Name)`); res.json(f); } catch (e) { res.status(500).send(e.message); }
+});
+app.delete('/api/custom-fields/:id', async (req, res) => {
+    try { const pool = await sql.connect(dbConfig); await pool.request().input('Id', sql.NVarChar, req.params.id).query(`DELETE FROM CustomFields WHERE Id=@Id`); res.json({success:true}); } catch (e) { res.status(500).send(e.message); }
 });
 
 // --- OPERATIONS (CHECKOUT / CHECKIN) ---
@@ -367,7 +443,6 @@ app.post('/api/restore', async (req, res) => {
         const log = logRes.recordset[0];
         if (!log || !log.BackupData) return res.status(404).send('Backup não encontrado.');
         
-        const data = JSON.parse(log.BackupData);
         // Lógica de restauração baseada no AssetType (simplificada)
         await logAction(log.AssetId, log.AssetType, 'Restauração', _adminUser, log.TargetName, 'Restaurado via painel admin');
         res.json({ success: true });
