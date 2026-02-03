@@ -18,41 +18,41 @@ export interface DataContextType {
   sectors: UserSector[];
   accessoryTypes: AccessoryType[];
   customFields: CustomField[]; 
-  accounts: SoftwareAccount[];
+  accounts: SoftwareAccount[]; // NOVO
 
   loading?: boolean;
   error?: string | null;
   
   // CRUD Dispositivos
   addDevice: (device: Device, adminName: string) => void;
-  updateDevice: (device: Device, adminName: string, reason: string) => void;
+  updateDevice: (device: Device, adminName: string) => void;
   deleteDevice: (id: string, adminName: string, reason: string) => void;
   restoreDevice: (id: string, adminName: string, reason: string) => void;
   
   // CRUD Sims
   addSim: (sim: SimCard, adminName: string) => void;
-  updateSim: (sim: SimCard, adminName: string, reason: string) => void;
+  updateSim: (sim: SimCard, adminName: string) => void;
   deleteSim: (id: string, adminName: string, reason: string) => void;
   
   // CRUD Users
   addUser: (user: User, adminName: string) => void;
-  updateUser: (user: User, adminName: string, reason: string) => void; 
-  toggleUserActive: (user: User, adminName: string, reason: string) => void;
+  updateUser: (user: User, adminName: string, notes?: string) => void; 
+  toggleUserActive: (user: User, adminName: string, reason?: string) => void;
   
   // CRUD Sectors
   addSector: (sector: UserSector, adminName: string) => void;
   updateSector: (sector: UserSector, adminName: string) => void; 
   deleteSector: (id: string, adminName: string) => void;
 
-  // CRUD Accounts
+  // CRUD Accounts (NOVO)
   addAccount: (account: SoftwareAccount, adminName: string) => void;
-  updateAccount: (account: SoftwareAccount, adminName: string, reason: string) => void;
-  deleteAccount: (id: string, adminName: string, reason: string) => void;
+  updateAccount: (account: SoftwareAccount, adminName: string) => void;
+  deleteAccount: (id: string, adminName: string) => void;
   
   // CRUD System Users
   addSystemUser: (user: SystemUser, adminName: string) => void;
-  updateSystemUser: (user: SystemUser, adminName: string, reason: string) => void;
-  deleteSystemUser: (id: string, adminName: string, reason: string) => void;
+  updateSystemUser: (user: SystemUser, adminName: string) => void;
+  deleteSystemUser: (id: string, adminName: string) => void;
 
   // Settings
   updateSettings: (settings: SystemSettings, adminName: string) => void;

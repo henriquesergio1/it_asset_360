@@ -74,10 +74,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     logAction(ActionType.create, 'Device', device.id, model?.name || 'Unknown', adminName, `Tag: ${device.assetTag}`);
   };
 
-  const updateDevice = (device: Device, adminName: string, reason: string) => {
+  const updateDevice = (device: Device, adminName: string) => {
     setDevices(prev => prev.map(d => d.id === device.id ? device : d));
     const model = models.find(m => m.id === device.modelId);
-    logAction(ActionType.UPDATE, 'Device', device.id, model?.name || 'Unknown', adminName, `Motivo: ${reason}`);
+    logAction(ActionType.UPDATE, 'Device', device.id, model?.name || 'Unknown', adminName);
   };
 
   const deleteDevice = (id: string, adminName: string, reason: string) => {
@@ -93,20 +93,20 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const addSim = (sim: SimCard, adminName: string) => { setSims(prev => [...prev, sim]); logAction(ActionType.create, 'Sim', sim.id, sim.phoneNumber, adminName); };
-  const updateSim = (sim: SimCard, adminName: string, reason: string) => { setSims(prev => prev.map(s => s.id === sim.id ? sim : s)); logAction(ActionType.UPDATE, 'Sim', sim.id, sim.phoneNumber, adminName, `Motivo: ${reason}`); };
+  const updateSim = (sim: SimCard, adminName: string) => { setSims(prev => prev.map(s => s.id === sim.id ? sim : s)); logAction(ActionType.UPDATE, 'Sim', sim.id, sim.phoneNumber, adminName); };
   const deleteSim = (id: string, adminName: string, reason: string) => { setSims(prev => prev.filter(s => s.id !== id)); const sim = sims.find(s => s.id === id); if (sim) logAction(ActionType.DELETE, 'Sim', id, sim.phoneNumber, adminName, `Motivo: ${reason}`); };
 
   const addUser = (user: User, adminName: string) => { setUsers(prev => [...prev, user]); logAction(ActionType.create, 'User', user.id, user.fullName, adminName); };
-  const updateUser = (user: User, adminName: string, reason: string) => { setUsers(prev => prev.map(u => u.id === user.id ? user : u)); logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName, `Motivo: ${reason}`); };
-  const toggleUserActive = (user: User, adminName: string, reason: string) => {
+  const updateUser = (user: User, adminName: string, notes?: string) => { setUsers(prev => prev.map(u => u.id === user.id ? user : u)); logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName, notes); };
+  const toggleUserActive = (user: User, adminName: string, reason?: string) => {
     const updatedUser = { ...user, active: !user.active };
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
-    logAction(updatedUser.active ? ActionType.ACTIVATE : ActionType.INACTIVATE, 'User', user.id, user.fullName, adminName, `Motivo: ${reason}`);
+    logAction(updatedUser.active ? ActionType.ACTIVATE : ActionType.INACTIVATE, 'User', user.id, user.fullName, adminName, reason);
   };
 
   const addAccount = (acc: SoftwareAccount, adminName: string) => { setAccounts(prev => [...prev, acc]); logAction(ActionType.create, 'Account', acc.id, acc.login, adminName, acc.name); };
-  const updateAccount = (acc: SoftwareAccount, adminName: string, reason: string) => { setAccounts(prev => prev.map(a => a.id === acc.id ? acc : a)); logAction(ActionType.UPDATE, 'Account', acc.id, acc.login, adminName, `Motivo: ${reason}`); };
-  const deleteAccount = (id: string, adminName: string, reason: string) => { const acc = accounts.find(a => a.id === id); setAccounts(prev => prev.filter(a => a.id !== id)); if (acc) logAction(ActionType.DELETE, 'Account', id, acc.login, adminName, `Motivo: ${reason}`); };
+  const updateAccount = (acc: SoftwareAccount, adminName: string) => { setAccounts(prev => prev.map(a => a.id === acc.id ? acc : a)); logAction(ActionType.UPDATE, 'Account', acc.id, acc.login, adminName, acc.name); };
+  const deleteAccount = (id: string, adminName: string) => { const acc = accounts.find(a => a.id === id); setAccounts(prev => prev.filter(a => a.id !== id)); if (acc) logAction(ActionType.DELETE, 'Account', id, acc.login, adminName); };
 
   const addSector = (sector: UserSector, adminName: string) => { setSectors(prev => [...prev, sector]); logAction(ActionType.create, 'Sector', sector.id, sector.name, adminName); };
   const updateSector = (sector: UserSector, adminName: string) => { setSectors(prev => prev.map(s => s.id === sector.id ? sector : s)); logAction(ActionType.UPDATE, 'Sector', sector.id, sector.name, adminName); };
@@ -120,11 +120,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
+    // Fix: add missing sector CRUD functions
     addSector, updateSector, deleteSector,
     addAccount, updateAccount, deleteAccount,
     addSystemUser: (u, adm) => { setSystemUsers(p => [...p, u]); },
-    updateSystemUser: (u, adm, reason) => { setSystemUsers(p => p.map(x => x.id === u.id ? u : x)); logAction(ActionType.UPDATE, 'System', u.id, u.name, adm, `Motivo: ${reason}`); },
-    deleteSystemUser: (id, adm, reason) => { const u = systemUsers.find(x => x.id === id); setSystemUsers(p => p.filter(x => x.id !== id)); if (u) logAction(ActionType.DELETE, 'System', id, u.name, adm, `Motivo: ${reason}`); },
+    updateSystemUser: (u, adm) => { setSystemUsers(p => p.map(x => x.id === u.id ? u : x)); },
+    deleteSystemUser: (id, adm) => { setSystemUsers(p => p.filter(x => x.id !== id)); },
     updateSettings,
     assignAsset: (at, aid, uid, n, adm) => { /* logic */ },
     returnAsset: (at, aid, n, adm) => { /* logic */ },

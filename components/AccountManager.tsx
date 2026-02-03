@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SoftwareAccount, AccountType, DeviceStatus } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Shield, Key, FileText, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Info, Lock, Globe, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Shield, Key, FileText, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Info, Lock, Globe } from 'lucide-react';
 
 const AccountManager = () => {
   const { accounts, addAccount, updateAccount, deleteAccount, users, devices, sectors } = useData();
@@ -15,11 +15,6 @@ const AccountManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   
-  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
-  const [reasonText, setReasonText] = useState('');
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
   const [formData, setFormData] = useState<Partial<SoftwareAccount>>({
       type: AccountType.EMAIL,
       status: 'Ativo'
@@ -47,43 +42,14 @@ const AccountManager = () => {
       if (!formData.login || !formData.name) return;
 
       if (editingId) {
-          setReasonText('');
-          setIsReasonModalOpen(true);
+          updateAccount(formData as SoftwareAccount, adminName);
       } else {
           addAccount({
               ...formData,
               id: Math.random().toString(36).substr(2, 9)
           } as SoftwareAccount, adminName);
-          setIsModalOpen(false);
       }
-  };
-
-  const handleConfirmUpdateReason = () => {
-    if (!reasonText.trim()) {
-        alert('Por favor, informe o motivo da alteração.');
-        return;
-    }
-    updateAccount(formData as SoftwareAccount, adminName, reasonText);
-    setIsReasonModalOpen(false);
-    setIsModalOpen(false);
-  };
-
-  const handleDeleteClick = (id: string) => {
-      setPendingDeleteId(id);
-      setReasonText('');
-      setIsDeleteModalOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-      if (!reasonText.trim()) {
-          alert('Por favor, informe o motivo da exclusão.');
-          return;
-      }
-      if (pendingDeleteId) {
-          deleteAccount(pendingDeleteId, adminName, reasonText);
-          setIsDeleteModalOpen(false);
-          setPendingDeleteId(null);
-      }
+      setIsModalOpen(false);
   };
 
   const filteredAccounts = accounts.filter(acc => {
@@ -201,7 +167,7 @@ const AccountManager = () => {
                         <td className="px-6 py-4 text-right">
                             <div className="flex justify-end gap-1">
                                 <button onClick={() => handleOpenModal(acc)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
-                                <button onClick={() => handleDeleteClick(acc.id)} className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                <button onClick={() => { if(window.confirm('Excluir este registro?')) deleteAccount(acc.id, adminName); }} className="p-2 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
                             </div>
                         </td>
                     </tr>
@@ -302,46 +268,6 @@ const AccountManager = () => {
                           <button type="submit" className="px-10 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95">Salvar Registro</button>
                       </div>
                   </form>
-              </div>
-          </div>
-      )}
-
-      {/* MODAL DE JUSTIFICATIVA OBRIGATÓRIA (SALVAR EDIÇÃO) */}
-      {isReasonModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-up border border-indigo-100">
-                  <div className="p-8">
-                      <div className="flex flex-col items-center text-center mb-6">
-                          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Info size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Justificativa</h3>
-                          <p className="text-xs text-slate-400 mt-2">Informe o motivo desta alteração para fins de auditoria.</p>
-                      </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da alteração..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
-                      <div className="flex gap-4">
-                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Cancelar</button>
-                          <button onClick={handleConfirmUpdateReason} disabled={!reasonText.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all">Confirmar</button>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* Modal de Exclusão */}
-      {isDeleteModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-red-100">
-                  <div className="p-8">
-                      <div className="flex flex-col items-center text-center mb-6">
-                          <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter leading-tight">Remover Conta/Licença?</h3>
-                          <p className="text-xs text-slate-400 mt-2">Esta ação é permanente. Informe o motivo abaixo:</p>
-                      </div>
-                      <textarea className="w-full border-2 border-slate-100 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:border-red-300 outline-none mb-6 transition-all" rows={3} placeholder="Motivo da exclusão..." value={reasonText} onChange={(e) => setReasonText(e.target.value)} autoFocus></textarea>
-                      <div className="flex gap-4">
-                          <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-200">Manter</button>
-                          <button onClick={handleConfirmDelete} disabled={!reasonText.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 transition-all disabled:opacity-50">Confirmar</button>
-                      </div>
-                  </div>
               </div>
           </div>
       )}
