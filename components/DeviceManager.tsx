@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save } from 'lucide-react';
+import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType } from '../types';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -153,7 +153,7 @@ const DeviceManager = () => {
   const { 
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
     users, models, brands, assetTypes, sims, customFields, sectors,
-    maintenances, addMaintenance, deleteMaintenance,
+    maintenances, addMaintenance, deleteMaintenance, accounts,
     getHistory
   } = useData();
   const { user: currentUser } = useAuth();
@@ -179,7 +179,7 @@ const DeviceManager = () => {
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'HISTORY'>('GENERAL');
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'SOFTWARE' | 'HISTORY'>('GENERAL');
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('device_manager_columns');
@@ -188,6 +188,7 @@ const DeviceManager = () => {
   
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   const [idType, setIdType] = useState<'TAG' | 'IMEI'>('TAG');
   const [formData, setFormData] = useState<Partial<Device>>({ status: DeviceStatus.AVAILABLE, customData: {} });
@@ -366,9 +367,6 @@ const DeviceManager = () => {
         alert('Por favor, informe o motivo da alteração.');
         return;
     }
-    // No mockDataProvider e prodDataProvider, o adminName já é passado, 
-    // podemos anexar o motivo ao nome do admin ou se a função suportar, passar como parâmetro extra.
-    // Como queremos manter o sistema exatamente como está, vamos usar a função existente.
     updateDevice(formData as Device, `${adminName} (Motivo: ${editReason})`);
     setIsReasonModalOpen(false);
     setIsModalOpen(false);
@@ -392,6 +390,7 @@ const DeviceManager = () => {
   };
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
+  const deviceAccounts = accounts.filter(a => a.deviceId === editingId);
 
   return (
     <div className="space-y-6 relative pb-20">
@@ -579,10 +578,11 @@ const DeviceManager = () => {
             </div>
             
             <div className="flex bg-slate-50 border-b overflow-x-auto shrink-0 px-4 pt-2">
-                <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Geral</button>
-                <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Financeiro</button>
-                <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Manutenções</button>
-                <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Auditoria</button>
+                <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Geral</button>
+                <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Financeiro</button>
+                <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Manutenções</button>
+                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Software/Acessos</button>
+                <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
 
             <form id="devForm" onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden">
@@ -802,6 +802,44 @@ const DeviceManager = () => {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+                    {activeTab === 'SOFTWARE' && (
+                        <div className="space-y-4 animate-fade-in">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças e Contas Vinculadas</h4>
+                            <div className="grid grid-cols-1 gap-3">
+                                {deviceAccounts.length > 0 ? deviceAccounts.map(acc => (
+                                    <div key={acc.id} className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner 
+                                                ${acc.type === AccountType.EMAIL ? 'bg-blue-50 text-blue-600' : 
+                                                acc.type === AccountType.OFFICE ? 'bg-orange-50 text-orange-600' :
+                                                acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                {acc.type === AccountType.EMAIL ? <Mail size={24}/> : 
+                                                 acc.type === AccountType.OFFICE ? <FileText size={24}/> :
+                                                 acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 text-sm">{acc.name}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{acc.login}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-slate-100 px-2 py-1 rounded font-mono text-[10px] text-slate-700 min-w-[80px] text-center">
+                                                {showPasswords[acc.id] ? (acc.password || acc.licenseKey || '---') : '••••••••'}
+                                            </div>
+                                            <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                                {showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                        <Globe size={32} className="mx-auto text-slate-200 mb-2"/>
+                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhum software vinculado a este dispositivo.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

@@ -43,8 +43,7 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- No modo de produção real, o index.tsx é compilado em um bundle. 
-         Se estiver rodando direto via node/nginx, certifique-se que o build do react-scripts foi gerado. -->
-    <script type="module" src="index.tsx"></script>
+    <!-- O script do index.tsx foi removido daqui para evitar conflitos em produção. 
+         O processo de build do react-scripts injeta automaticamente os scripts necessários. -->
   </body>
 </html>

@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { User, UserSector, ActionType, Device, SimCard, Term } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save } from 'lucide-react';
+import { User, UserSector, ActionType, Device, SimCard, Term, AccountType } from '../types';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 // Funções de Máscara
@@ -80,7 +80,7 @@ const COLUMN_OPTIONS = [
 ];
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, getHistory, settings, updateTermFile, deleteTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,7 +92,7 @@ const UserManager = () => {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [editReason, setEditReason] = useState('');
   const [isViewOnly, setIsViewOnly] = useState(false); 
-  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
+  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'SOFTWARE' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   
@@ -103,6 +103,7 @@ const UserManager = () => {
   
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
@@ -150,7 +151,7 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  const handleReprintTerm = (term) => {
+  const handleReprintTerm = (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
       let asset: any = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
@@ -244,6 +245,9 @@ const UserManager = () => {
   const userSims = sims.filter(s => s.currentUserId === editingId);
   const userHistory = getHistory(editingId || '');
   const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
+  
+  // Filtrar software: do usuário OU do setor ao qual ele pertence
+  const userAccounts = accounts.filter(a => a.userId === editingId || (a.sectorId === formData.sectorId && a.sectorId));
 
   return (
     <div className="space-y-6">
@@ -366,6 +370,7 @@ const UserManager = () => {
                 {editingId && (
                     <>
                         <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Ativos ({(userAssets.length + userSims.length)})</button>
+                        <button onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Software/Acessos</button>
                         <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Termos ({currentUserTerms.length})</button>
                         <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Auditoria</button>
                     </>
@@ -483,6 +488,47 @@ const UserManager = () => {
                                 ))}
                                 {userSims.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum chip em posse.</p>}
                             </div>
+                        </div>
+                    </div>
+                )}
+                
+                {activeTab === 'SOFTWARE' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças e Acessos (Diretos e Departamento)</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                            {userAccounts.length > 0 ? userAccounts.map(acc => (
+                                <div key={acc.id} className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner 
+                                            ${acc.type === AccountType.EMAIL ? 'bg-blue-50 text-blue-600' : 
+                                            acc.type === AccountType.OFFICE ? 'bg-orange-50 text-orange-600' :
+                                            acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                            {acc.type === AccountType.EMAIL ? <Mail size={24}/> : 
+                                             acc.type === AccountType.OFFICE ? <FileText size={24}/> :
+                                             acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-800 text-sm">{acc.name}</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                                {acc.login} {acc.sectorId && <span className="text-emerald-600 ml-1">• DEPARTAMENTO</span>}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-slate-100 px-2 py-1 rounded font-mono text-[10px] text-slate-700 min-w-[80px] text-center">
+                                            {showPasswords[acc.id] ? (acc.password || acc.licenseKey || '---') : '••••••••'}
+                                        </div>
+                                        <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors">
+                                            {showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}
+                                        </button>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                    <Globe size={32} className="mx-auto text-slate-200 mb-2"/>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhum software ou conta vinculada.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
