@@ -370,7 +370,7 @@ const UserManager = () => {
                 {editingId && (
                     <>
                         <button onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Ativos ({(userAssets.length + userSims.length)})</button>
-                        <button onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Software/Acessos</button>
+                        <button onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Software ({userAccounts.length})</button>
                         <button onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Termos ({currentUserTerms.length})</button>
                         <button onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 bg-white' : 'border-transparent text-gray-400'}`}>Auditoria</button>
                     </>
@@ -538,7 +538,7 @@ const UserManager = () => {
                         {currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (
                             <div key={term.id} className="p-5 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between group hover:border-emerald-200 transition-all">
                                 <div className="flex items-center gap-4">
-                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.fileUrl ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.fileUrl ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-700'}`}>
                                         <FileText size={24}/>
                                     </div>
                                     <div>
