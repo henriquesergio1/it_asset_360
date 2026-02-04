@@ -168,7 +168,7 @@ const Operations = () => {
             const chip = sims.find(s => s.id === d.linkedSimId);
             return { 
                 value: d.id, 
-                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'} - ${d.assetTag}`, 
+                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'}${d.assetTag ? ` - ${d.assetTag}` : ''}`, 
                 subLabel: `S/N: ${d.serialNumber}${chip ? ` • Linha: ${chip.phoneNumber}` : ''}` 
             };
         }) 
@@ -180,7 +180,7 @@ const Operations = () => {
             const chip = sims.find(s => s.id === d.linkedSimId);
             return { 
                 value: d.id, 
-                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'} - ${d.assetTag}`, 
+                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'}${d.assetTag ? ` - ${d.assetTag}` : ''}`, 
                 subLabel: `S/N: ${d.serialNumber}${chip ? ` • Linha: ${chip.phoneNumber}` : ''} • Com: ${user?.fullName || 'Usuário'}` 
             };
         }) 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -8,8 +7,27 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.9.1',
+    version: '2.9.3',
     date: 'Hoje',
+    title: 'Correção de Sintaxe e Estabilidade',
+    changes: [
+      'Correção de erro de fechamento de tag na rota administrativa (App.tsx).',
+      'Sincronização global da versão para 2.9.3.'
+    ]
+  },
+    {
+    version: '2.9.2',
+    date: 'Hoje',
+    title: 'Ajuste de Interface Operacional',
+    changes: [
+      'Remoção da exibição literal "null" quando o patrimônio de um ativo está vazio na tela de Operações.',
+      'Melhoria na legibilidade da lista de busca por IMEI/Modelo.',
+      'Sincronização global da versão para 2.9.2.'
+    ]
+  },
+    {
+    version: '2.9.1',
+    date: '31/01/2025',
     title: 'Restauração de API & Estabilidade',
     changes: [
       'Correção total de rotas API no servidor Node.js (CRUD completo para todos os módulos).',
@@ -26,15 +44,6 @@ const versions = [
       'Lançado novo módulo para gestão de E-mails, Contas Google, ERP e Licenças Office.',
       'Suporte a armazenamento de senhas com visualização segura (ocultar/mostrar).',
       'Vínculo de licenças diretamente a Dispositivos, Colaboradores ou Setores.'
-    ]
-  },
-    {
-    version: '2.8.4',
-    date: '31/01/2025',
-    title: 'Correção Crítica de Sintaxe',
-    changes: [
-      'Correção de fechamento de tags na definição de rotas que causava falha no carregamento do app.',
-      'Pequenos ajustes de estabilidade na navegação.'
     ]
   }
 ];
