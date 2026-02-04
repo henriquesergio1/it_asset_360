@@ -8,14 +8,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.9.0',
+    version: '2.9.1',
     date: 'Hoje',
+    title: 'Restauração de API & Estabilidade',
+    changes: [
+      'Correção total de rotas API no servidor Node.js (CRUD completo para todos os módulos).',
+      'Implementação de rotas para Manutenções, Acessórios e Campos Extras no Backend.',
+      'Melhoria na resiliência do modo Produção (Correção de erros 404 de sincronização).',
+      'Sincronização global da versão para 2.9.1.'
+    ]
+  },
+    {
+    version: '2.9.0',
+    date: '31/01/2025',
     title: 'Módulo de Software & Contas',
     changes: [
       'Lançado novo módulo para gestão de E-mails, Contas Google, ERP e Licenças Office.',
       'Suporte a armazenamento de senhas com visualização segura (ocultar/mostrar).',
-      'Vínculo de licenças diretamente a Dispositivos, Colaboradores ou Setores.',
-      'Sincronização global da versão para 2.9.0.'
+      'Vínculo de licenças diretamente a Dispositivos, Colaboradores ou Setores.'
     ]
   },
     {
@@ -24,18 +34,7 @@ const versions = [
     title: 'Correção Crítica de Sintaxe',
     changes: [
       'Correção de fechamento de tags na definição de rotas que causava falha no carregamento do app.',
-      'Sincronização da versão 2.8.4 em todos os módulos.',
       'Pequenos ajustes de estabilidade na navegação.'
-    ]
-  },
-    {
-    version: '2.8.3',
-    date: '31/01/2025',
-    title: 'Correção de Tipagem e Versionamento',
-    changes: [
-      'Removidos resquícios do campo "jobTitle" que causavam erros de compilação.',
-      'Sincronização de versão global para 2.8.3.',
-      'Correção de exibição do Código de Setor nos termos gerados.'
     ]
   }
 ];

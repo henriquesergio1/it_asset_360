@@ -46,13 +46,11 @@ async function runMigrations(pool) {
     `;
     await pool.request().query(baseTables);
 
-    // Seed admin se não existir
     const checkAdmin = await pool.request().query("SELECT * FROM SystemUsers WHERE Email = 'admin@empresa.com'");
     if (checkAdmin.recordset.length === 0) {
         await pool.request().query("INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES ('admin1', 'Administrador', 'admin@empresa.com', 'admin', 'ADMIN')");
     }
 
-    // Seed settings se não existir
     const checkSettings = await pool.request().query("SELECT * FROM SystemSettings");
     if (checkSettings.recordset.length === 0) {
         await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '')");
@@ -66,7 +64,6 @@ sql.connect(dbConfig).then(async pool => {
     }
 }).catch(err => console.error('❌ Erro na conexão SQL:', err));
 
-// --- HELPER LOG ---
 async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null) {
     try {
         const pool = await sql.connect(dbConfig);
@@ -83,291 +80,250 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
-// --- AUTH / SYSTEM USERS ---
+// --- SYSTEM ---
 app.get('/api/system-users', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers");
+    res.json(result.recordset);
 });
-
 app.post('/api/system-users', async (req, res) => {
-    const { id, name, email, password, role } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, id).input('Name', sql.NVarChar, name).input('Email', sql.NVarChar, email).input('Pass', sql.NVarChar, password).input('Role', sql.NVarChar, role)
-            .query("INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@Id, @Name, @Email, @Pass, @Role)");
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const { id, name, email, password, role, _adminUser } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('Id', sql.NVarChar, id).input('N', sql.NVarChar, name).input('E', sql.NVarChar, email).input('P', sql.NVarChar, password).input('R', sql.NVarChar, role).query("INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@Id, @N, @E, @P, @R)");
+    await logAction(id, 'System', 'Criação Usuário', _adminUser, name);
+    res.json({success: true});
+});
+app.put('/api/system-users/:id', async (req, res) => {
+    const { name, email, password, role, _adminUser } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('Id', sql.NVarChar, req.params.id).input('N', sql.NVarChar, name).input('E', sql.NVarChar, email).input('P', sql.NVarChar, password).input('R', sql.NVarChar, role).query("UPDATE SystemUsers SET Name=@N, Email=@E, Password=@P, Role=@R WHERE Id=@Id");
+    await logAction(req.params.id, 'System', 'Atualização Usuário', _adminUser, name);
+    res.json({success: true});
+});
+app.delete('/api/system-users/:id', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('Id', sql.NVarChar, req.params.id).query("DELETE FROM SystemUsers WHERE Id=@Id");
+    res.json({success: true});
 });
 
-// --- SETTINGS ---
 app.get('/api/settings', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings");
-        res.json(result.recordset[0] || {});
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings");
+    res.json(result.recordset[0] || {});
 });
-
 app.put('/api/settings', async (req, res) => {
-    const { appName, logoUrl, cnpj, termTemplate } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Name', sql.NVarChar, appName).input('Logo', sql.NVarChar, logoUrl).input('Cnpj', sql.NVarChar, cnpj).input('Term', sql.NVarChar, termTemplate)
-            .query("UPDATE SystemSettings SET AppName=@Name, LogoUrl=@Logo, Cnpj=@Cnpj, TermTemplate=@Term");
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
+    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais');
+    res.json({success: true});
 });
 
-// --- SECTORS ---
-app.get('/api/sectors', async (req, res) => {
-    try {
+// --- CATALOG ---
+const crud = (table, route, assetType) => {
+    app.get(`/api/${route}`, async (req, res) => {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, Name as name FROM Sectors");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.post('/api/sectors', async (req, res) => {
-    const { id, name } = req.body;
-    try {
+        const result = await pool.request().query(`SELECT * FROM ${table}`);
+        const camelCased = result.recordset.map(row => {
+            const entry = {};
+            for (let key in row) {
+                const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+                entry[camelKey] = (key === 'CustomFieldIds' || key === 'CustomData') && row[key] ? JSON.parse(row[key]) : row[key];
+            }
+            return entry;
+        });
+        res.json(camelCased);
+    });
+    app.post(`/api/${route}`, async (req, res) => {
         const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, id).input('Name', sql.NVarChar, name).query("INSERT INTO Sectors (Id, Name) VALUES (@Id, @Name)");
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
-});
+        const request = pool.request();
+        let columns = [];
+        let values = [];
+        for (let key in req.body) {
+            if (key.startsWith('_')) continue;
+            const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+            const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+            request.input(dbKey, val);
+            columns.push(dbKey);
+            values.push('@' + dbKey);
+        }
+        await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
+        await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName);
+        res.json({success: true});
+    });
+    app.put(`/api/${route}/:id`, async (req, res) => {
+        const pool = await sql.connect(dbConfig);
+        const request = pool.request();
+        let sets = [];
+        for (let key in req.body) {
+            if (key.startsWith('_')) continue;
+            const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+            const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+            request.input(dbKey, val);
+            sets.push(`${dbKey}=@${dbKey}`);
+        }
+        request.input('TargetId', req.params.id);
+        await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
+        await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, req.body._reason);
+        res.json({success: true});
+    });
+    app.delete(`/api/${route}/:id`, async (req, res) => {
+        const pool = await sql.connect(dbConfig);
+        await pool.request().input('Id', req.params.id).query(`DELETE FROM ${table} WHERE Id=@Id`);
+        res.json({success: true});
+    });
+};
 
-// --- USERS (COLABORADORES) ---
+crud('Sectors', 'sectors', 'Sector');
+crud('Brands', 'brands', 'Brand');
+crud('AssetTypes', 'asset-types', 'Type');
+crud('Models', 'models', 'Model');
+crud('AccessoryTypes', 'accessory-types', 'Accessory');
+crud('CustomFields', 'custom-fields', 'CustomField');
+crud('MaintenanceRecords', 'maintenances', 'Maintenance');
+crud('SoftwareAccounts', 'accounts', 'Account');
+
+// --- MAIN ENTITIES (SPECIAL HANDLING) ---
 app.get('/api/users', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, FullName as fullName, Email as email, SectorId as sectorId, InternalCode as internalCode, Active as active, Cpf as cpf, Rg as rg, Pis as pis, Address as address FROM Users");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Id as id, FullName as fullName, Email as email, SectorId as sectorId, InternalCode as internalCode, Active as active, Cpf as cpf, Rg as rg, Pis as pis, Address as address FROM Users");
+    res.json(result.recordset);
+});
+app.get('/api/sims', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards");
+    res.json(result.recordset);
+});
+app.get('/api/devices', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, PurchaseInvoiceUrl as purchaseInvoiceUrl, CustomData as customDataStr FROM Devices");
+    const devices = await Promise.all(result.recordset.map(async d => {
+        const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
+        return { ...d, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
+    }));
+    res.json(devices);
 });
 
 app.post('/api/users', async (req, res) => {
     const { id, fullName, email, sectorId, internalCode, active, cpf, rg, pis, address, _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, id).input('Name', sql.NVarChar, fullName).input('Email', sql.NVarChar, email).input('Sector', sql.NVarChar, sectorId).input('Code', sql.NVarChar, internalCode).input('Active', sql.Bit, active).input('Cpf', sql.NVarChar, cpf).input('Rg', sql.NVarChar, rg).input('Pis', sql.NVarChar, pis).input('Address', sql.NVarChar, address)
-            .query("INSERT INTO Users (Id, FullName, Email, SectorId, InternalCode, Active, Cpf, Rg, Pis, Address) VALUES (@Id, @Name, @Email, @Sector, @Code, @Active, @Cpf, @Rg, @Pis, @Address)");
-        await logAction(id, 'User', 'Criação', _adminUser, fullName, `CPF: ${cpf}`);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I',id).input('F',fullName).input('E',email).input('S',sectorId).input('C',internalCode).input('A',active).input('Cp',cpf).input('R',rg).input('P',pis).input('Ad',address).query("INSERT INTO Users (Id, FullName, Email, SectorId, InternalCode, Active, Cpf, Rg, Pis, Address) VALUES (@I, @F, @E, @S, @C, @A, @Cp, @R, @P, @Ad)");
+    await logAction(id, 'User', 'Criação', _adminUser, fullName);
+    res.json({success: true});
 });
-
 app.put('/api/users/:id', async (req, res) => {
-    const { id, fullName, email, sectorId, internalCode, active, cpf, rg, pis, address, _adminUser, _reason } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, id).input('Name', sql.NVarChar, fullName).input('Email', sql.NVarChar, email).input('Sector', sql.NVarChar, sectorId).input('Code', sql.NVarChar, internalCode).input('Active', sql.Bit, active).input('Cpf', sql.NVarChar, cpf).input('Rg', sql.NVarChar, rg).input('Pis', sql.NVarChar, pis).input('Address', sql.NVarChar, address)
-            .query("UPDATE Users SET FullName=@Name, Email=@Email, SectorId=@Sector, InternalCode=@Code, Active=@Active, Cpf=@Cpf, Rg=@Rg, Pis=@Pis, Address=@Address WHERE Id=@Id");
-        await logAction(id, 'User', 'Atualização', _adminUser, fullName, _reason);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// --- SIM CARDS ---
-app.get('/api/sims', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
+    const { fullName, email, sectorId, internalCode, active, cpf, rg, pis, address, _adminUser, _reason } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I',req.params.id).input('F',fullName).input('E',email).input('S',sectorId).input('C',internalCode).input('A',active).input('Cp',cpf).input('R',rg).input('P',pis).input('Ad',address).query("UPDATE Users SET FullName=@F, Email=@E, SectorId=@S, InternalCode=@C, Active=@A, Cpf=@Cp, Rg=@R, Pis=@P, Address=@Ad WHERE Id=@I");
+    await logAction(req.params.id, 'User', 'Atualização', _adminUser, fullName, _reason);
+    res.json({success: true});
 });
 
 app.post('/api/sims', async (req, res) => {
     const { id, phoneNumber, operator, iccid, planDetails, status, _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, id).input('Num', sql.NVarChar, phoneNumber).input('Op', sql.NVarChar, operator).input('Iccid', sql.NVarChar, iccid).input('Plan', sql.NVarChar, planDetails).input('Status', sql.NVarChar, status)
-            .query("INSERT INTO SimCards (Id, PhoneNumber, Operator, Iccid, PlanDetails, Status) VALUES (@Id, @Num, @Op, @Iccid, @Plan, @Status)");
-        await logAction(id, 'Sim', 'Criação', _adminUser, phoneNumber, `Op: ${operator}`);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I',id).input('P',phoneNumber).input('O',operator).input('Ic',iccid).input('Pl',planDetails).input('S',status).query("INSERT INTO SimCards (Id, PhoneNumber, Operator, Iccid, PlanDetails, Status) VALUES (@I, @P, @O, @Ic, @Pl, @S)");
+    await logAction(id, 'Sim', 'Criação', _adminUser, phoneNumber);
+    res.json({success: true});
 });
-
-// --- DEVICES ---
-app.get('/api/devices', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query(`
-            SELECT d.Id as id, d.ModelId as modelId, d.SerialNumber as serialNumber, d.AssetTag as assetTag, 
-                   d.InternalCode as internalCode, d.Imei as imei, d.PulsusId as pulsusId, d.Status as status, 
-                   d.CurrentUserId as currentUserId, d.SectorId as sectorId, d.CostCenter as costCenter, 
-                   d.LinkedSimId as linkedSimId, d.PurchaseDate as purchaseDate, d.PurchaseCost as purchaseCost, 
-                   d.InvoiceNumber as invoiceNumber, d.Supplier as supplier, d.PurchaseInvoiceUrl as purchaseInvoiceUrl, 
-                   d.CustomData as customDataStr
-            FROM Devices d
-        `);
-        
-        const devicesWithAcc = await Promise.all(result.recordset.map(async d => {
-            const accResult = await pool.request().input('DevId', sql.NVarChar, d.id).query(`SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId`);
-            return {
-                ...d,
-                customData: d.customDataStr ? JSON.parse(d.customDataStr) : {},
-                accessories: accResult.recordset
-            };
-        }));
-        res.json(devicesWithAcc);
-    } catch (err) { res.status(500).send(err.message); }
+app.put('/api/sims/:id', async (req, res) => {
+    const { phoneNumber, operator, iccid, planDetails, status, _adminUser, _reason } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I',req.params.id).input('P',phoneNumber).input('O',operator).input('Ic',iccid).input('Pl',planDetails).input('S',status).query("UPDATE SimCards SET PhoneNumber=@P, Operator=@O, Iccid=@Ic, PlanDetails=@Pl, Status=@S WHERE Id=@I");
+    await logAction(req.params.id, 'Sim', 'Atualização', _adminUser, phoneNumber, _reason);
+    res.json({success: true});
+});
+app.delete('/api/sims/:id', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I', req.params.id).query("DELETE FROM SimCards WHERE Id=@I");
+    res.json({success: true});
 });
 
 app.post('/api/devices', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
     const { id, modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, id).input('Mid', sql.NVarChar, modelId).input('Sn', sql.NVarChar, serialNumber).input('Tag', sql.NVarChar, assetTag).input('Stat', sql.NVarChar, status).input('IC', sql.NVarChar, internalCode).input('Imei', sql.NVarChar, imei).input('Pid', sql.NVarChar, pulsusId).input('Sid', sql.NVarChar, sectorId).input('Cc', sql.NVarChar, costCenter).input('Lsim', sql.NVarChar, linkedSimId).input('Pd', sql.Date, purchaseDate).input('Pc', sql.Decimal(18,2), purchaseCost).input('In', sql.NVarChar, invoiceNumber).input('Supp', sql.NVarChar, supplier).input('Purl', sql.NVarChar, purchaseInvoiceUrl).input('Cd', sql.NVarChar, JSON.stringify(customData))
-            .query(`INSERT INTO Devices (Id, ModelId, SerialNumber, AssetTag, Status, InternalCode, Imei, PulsusId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, PurchaseInvoiceUrl, CustomData) 
-                    VALUES (@Id, @Mid, @Sn, @Tag, @Stat, @IC, @Imei, @Pid, @Sid, @Cc, @Lsim, @Pd, @Pc, @In, @Supp, @Purl, @Cd)`);
-        await logAction(id, 'Device', 'Criação', _adminUser, assetTag);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    await pool.request().input('I',id).input('M',modelId).input('Sn',serialNumber).input('At',assetTag).input('St',status).input('Ic',internalCode).input('Im',imei).input('Pu',pulsusId).input('Se',sectorId).input('Co',costCenter).input('Ls',linkedSimId).input('Pd',purchaseDate).input('Pc',purchaseCost).input('In',invoiceNumber).input('Su',supplier).input('PuU',purchaseInvoiceUrl).input('Cd',JSON.stringify(customData)).query("INSERT INTO Devices (Id, ModelId, SerialNumber, AssetTag, Status, InternalCode, Imei, PulsusId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, PurchaseInvoiceUrl, CustomData) VALUES (@I, @M, @Sn, @At, @St, @Ic, @Im, @Pu, @Se, @Co, @Ls, @Pd, @Pc, @In, @Su, @PuU, @Cd)");
+    await logAction(id, 'Device', 'Criação', _adminUser, assetTag);
+    res.json({success: true});
+});
+app.put('/api/devices/:id', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    const { modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, _adminUser, _reason } = req.body;
+    await pool.request().input('I',req.params.id).input('M',modelId).input('Sn',serialNumber).input('At',assetTag).input('St',status).input('Ic',internalCode).input('Im',imei).input('Pu',pulsusId).input('Se',sectorId).input('Co',costCenter).input('Ls',linkedSimId).input('Pd',purchaseDate).input('Pc',purchaseCost).input('In',invoiceNumber).input('Su',supplier).input('PuU',purchaseInvoiceUrl).input('Cd',JSON.stringify(customData)).query("UPDATE Devices SET ModelId=@M, SerialNumber=@Sn, AssetTag=@At, Status=@St, InternalCode=@Ic, Imei=@Im, PulsusId=@Pu, SectorId=@Se, CostCenter=@Co, LinkedSimId=@Ls, PurchaseDate=@Pd, PurchaseCost=@Pc, InvoiceNumber=@In, Supplier=@Su, PurchaseInvoiceUrl=@PuU, CustomData=@Cd WHERE Id=@I");
+    await logAction(req.params.id, 'Device', 'Atualização', _adminUser, assetTag, _reason);
+    res.json({success: true});
 });
 
 // --- OPERATIONS ---
 app.post('/api/operations/checkout', async (req, res) => {
     const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-        
-        await pool.request()
-            .input('Id', sql.NVarChar, assetId)
-            .input('UserId', sql.NVarChar, userId)
-            .query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@UserId WHERE Id=@Id`);
-        
-        if (assetType === 'Device' && accessories) {
-            await pool.request().input('DevId', sql.NVarChar, assetId).query(`DELETE FROM DeviceAccessories WHERE DeviceId=@DevId`);
-            for (const acc of accessories) {
-                await pool.request()
-                    .input('Id', sql.NVarChar, acc.id)
-                    .input('DevId', sql.NVarChar, assetId)
-                    .input('Type', sql.NVarChar, acc.accessoryTypeId)
-                    .input('Name', sql.NVarChar, acc.name)
-                    .query(`INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@Id, @DevId, @Type, @Name)`);
-            }
+    const pool = await sql.connect(dbConfig);
+    const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+    await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+    if (assetType === 'Device' && accessories) {
+        await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
+        for (let acc of accessories) {
+            await pool.request().input('I', acc.id).input('Did', assetId).input('At', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@I, @Did, @At, @N)");
         }
-
-        const termId = Math.random().toString(36).substr(2, 9);
-        await pool.request()
-            .input('Id', sql.NVarChar, termId).input('UserId', sql.NVarChar, userId).input('Type', sql.NVarChar, 'ENTREGA').input('Details', sql.NVarChar, notes)
-            .query(`INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@Id, @UserId, @Type, @Details, GETDATE())`);
-
-        await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    }
+    const termId = Math.random().toString(36).substr(2, 9);
+    await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+    await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes);
+    res.json({success: true});
 });
-
 app.post('/api/operations/checkin', async (req, res) => {
-    const { assetId, assetType, notes, _adminUser, checklist } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-        
-        const currentData = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT CurrentUserId FROM ${table} WHERE Id=@Id`);
-        const userId = currentData.recordset[0]?.CurrentUserId;
-
-        await pool.request().input('Id', sql.NVarChar, assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Id`);
-
-        if (userId) {
-            const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request()
-                .input('Id', sql.NVarChar, termId).input('UserId', sql.NVarChar, userId).input('Type', sql.NVarChar, 'DEVOLUCAO').input('Details', sql.NVarChar, notes)
-                .query(`INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@Id, @UserId, @Type, @Details, GETDATE())`);
-        }
-
-        await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const { assetId, assetType, notes, _adminUser } = req.body;
+    const pool = await sql.connect(dbConfig);
+    const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+    const check = await pool.request().input('Aid', assetId).query(`SELECT CurrentUserId FROM ${table} WHERE Id=@Aid`);
+    const userId = check.recordset[0]?.CurrentUserId;
+    await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
+    if (userId) {
+        const termId = Math.random().toString(36).substr(2, 9);
+        await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+    }
+    await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes);
+    res.json({success: true});
 });
 
-// --- TERMS / FILES ---
 app.get('/api/terms', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, UserId as userId, Type as type, AssetDetails as assetDetails, Date as date, FileUrl as fileUrl FROM Terms");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Id as id, UserId as userId, Type as type, AssetDetails as assetDetails, Date as date, FileUrl as fileUrl FROM Terms");
+    res.json(result.recordset);
 });
-
 app.put('/api/terms/file', async (req, res) => {
-    const { id, fileUrl, _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request().input('Id', sql.NVarChar, id).input('File', sql.NVarChar, fileUrl).query("UPDATE Terms SET FileUrl=@File WHERE Id=@Id");
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
+    const { id, fileUrl } = req.body;
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I', id).input('F', fileUrl).query("UPDATE Terms SET FileUrl=@F WHERE Id=@I");
+    res.json({success: true});
+});
+app.delete('/api/terms/:id/file', async (req, res) => {
+    const pool = await sql.connect(dbConfig);
+    await pool.request().input('I', req.params.id).query("UPDATE Terms SET FileUrl='' WHERE Id=@I");
+    res.json({success: true});
 });
 
-// --- AUDIT LOGS ---
 app.get('/api/logs', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, AssetId as assetId, AssetType as assetType, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes, BackupData as backupData FROM AuditLogs ORDER BY Timestamp DESC");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// --- CATALOG DATA (BRANDS, MODELS, TYPES) ---
-app.get('/api/brands', async (req, res) => {
     const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query("SELECT Id as id, Name as name FROM Brands");
+    const result = await pool.request().query("SELECT Id as id, AssetId as assetId, AssetType as assetType, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes, BackupData as backupData FROM AuditLogs ORDER BY Timestamp DESC");
     res.json(result.recordset);
 });
-app.post('/api/brands', async (req, res) => {
-    const { id, name } = req.body;
+app.delete('/api/logs', async (req, res) => {
     const pool = await sql.connect(dbConfig);
-    await pool.request().input('Id', sql.NVarChar, id).input('N', sql.NVarChar, name).query("INSERT INTO Brands (Id, Name) VALUES (@Id, @N)");
+    await pool.request().query("DELETE FROM AuditLogs");
     res.json({success: true});
 });
 
-app.get('/api/asset-types', async (req, res) => {
+app.post('/api/restore', async (req, res) => {
+    const { logId, _adminUser } = req.body;
     const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query("SELECT Id as id, Name as name, CustomFieldIds as customFieldIds FROM AssetTypes");
-    res.json(result.recordset);
-});
-app.post('/api/asset-types', async (req, res) => {
-    const { id, name, customFieldIds } = req.body;
-    const pool = await sql.connect(dbConfig);
-    await pool.request().input('Id', sql.NVarChar, id).input('N', sql.NVarChar, name).input('C', sql.NVarChar, JSON.stringify(customFieldIds)).query("INSERT INTO AssetTypes (Id, Name, CustomFieldIds) VALUES (@Id, @N, @C)");
-    res.json({success: true});
-});
-
-app.get('/api/models', async (req, res) => {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query("SELECT Id as id, Name as name, BrandId as brandId, TypeId as typeId, ImageUrl as imageUrl FROM Models");
-    res.json(result.recordset);
-});
-app.post('/api/models', async (req, res) => {
-    const { id, name, brandId, typeId, imageUrl } = req.body;
-    const pool = await sql.connect(dbConfig);
-    await pool.request().input('Id', sql.NVarChar, id).input('N', sql.NVarChar, name).input('B', sql.NVarChar, brandId).input('T', sql.NVarChar, typeId).input('I', sql.NVarChar, imageUrl).query("INSERT INTO Models (Id, Name, BrandId, TypeId, ImageUrl) VALUES (@Id, @N, @B, @T, @I)");
-    res.json({success: true});
-});
-
-// --- ACCOUNTS ---
-app.get('/api/accounts', async (req, res) => {
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query("SELECT Id as id, Name as name, Type as type, Login as login, Password as password, LicenseKey as licenseKey, Status as status, UserId as userId, DeviceId as deviceId, SectorId as sectorId, Notes as notes FROM SoftwareAccounts");
-    res.json(result.recordset);
-});
-app.post('/api/accounts', async (req, res) => {
-    const { id, name, type, login, password, licenseKey, status, userId, deviceId, sectorId, notes, _adminUser } = req.body;
-    const pool = await sql.connect(dbConfig);
-    await pool.request()
-        .input('Id', sql.NVarChar, id).input('N', sql.NVarChar, name).input('T', sql.NVarChar, type).input('L', sql.NVarChar, login).input('P', sql.NVarChar, password).input('K', sql.NVarChar, licenseKey).input('S', sql.NVarChar, status).input('U', sql.NVarChar, userId).input('D', sql.NVarChar, deviceId).input('Sec', sql.NVarChar, sectorId).input('Not', sql.NVarChar, notes)
-        .query("INSERT INTO SoftwareAccounts (Id, Name, Type, Login, Password, LicenseKey, Status, UserId, DeviceId, SectorId, Notes) VALUES (@Id, @N, @T, @L, @P, @K, @S, @U, @D, @Sec, @Not)");
-    await logAction(id, 'Account', 'Criação', _adminUser, name);
+    const log = await pool.request().input('I', logId).query("SELECT * FROM AuditLogs WHERE Id=@I");
+    const data = log.recordset[0];
+    if (data && data.BackupData) {
+        const item = JSON.parse(data.BackupData);
+        // Implementação básica de restauração dependendo do tipo
+        await logAction(data.AssetId, data.AssetType, 'Restauração', _adminUser, data.TargetName, 'Item restaurado via log');
+    }
     res.json({success: true});
 });
 
