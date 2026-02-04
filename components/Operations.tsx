@@ -28,7 +28,6 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -51,36 +50,35 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
         <div className="relative" ref={wrapperRef}>
             <div 
                 onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`w-full p-3 border rounded-lg flex items-center justify-between cursor-pointer bg-white transition-all
-                    ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:border-blue-400'}
-                    ${isOpen ? 'ring-2 ring-blue-100 border-blue-500' : 'border-gray-300 shadow-sm'}
+                className={`w-full p-3 border rounded-xl flex items-center justify-between cursor-pointer bg-white transition-all
+                    ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:border-blue-400 border-slate-200'}
+                    ${isOpen ? 'ring-4 ring-blue-100 border-blue-500' : 'shadow-sm'}
                 `}
             >
                 <div className="flex items-center gap-3 overflow-hidden">
-                    {icon && <span className="text-gray-400 shrink-0">{icon}</span>}
+                    {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
                     <div className="flex flex-col truncate">
                          {selectedOption ? (
                              <>
-                                <span className="text-gray-900 font-medium truncate">{selectedOption.label}</span>
-                                {selectedOption.subLabel && <span className="text-[10px] text-gray-500 truncate font-mono">{selectedOption.subLabel}</span>}
+                                <span className="text-gray-900 font-bold text-sm truncate">{selectedOption.label}</span>
+                                {selectedOption.subLabel && <span className="text-[10px] text-gray-500 truncate font-mono uppercase tracking-tighter">{selectedOption.subLabel}</span>}
                              </>
                          ) : (
-                             <span className="text-gray-500">{placeholder}</span>
+                             <span className="text-gray-400 text-sm">{placeholder}</span>
                          )}
                     </div>
                 </div>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
-                    <div className="p-2 border-b border-gray-100 bg-gray-50 flex items-center gap-2 sticky top-0">
-                        <Search size={14} className="text-gray-400 ml-2" />
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-64 overflow-hidden flex flex-col animate-fade-in">
+                    <div className="p-2 border-b border-gray-100 bg-slate-50 flex items-center gap-2 sticky top-0">
+                        <Search size={14} className="text-slate-400 ml-2" />
                         <input 
-                            ref={inputRef}
                             type="text" 
-                            className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
-                            placeholder="Filtrar..."
+                            className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400 py-1"
+                            placeholder="Buscar por IMEI, Tag, Modelo ou Linha..."
                             autoFocus
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -91,13 +89,13 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
                             <div 
                                 key={opt.value}
                                 onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
-                                className={`px-4 py-3 cursor-pointer hover:bg-blue-50 border-b border-gray-50 last:border-0 ${value === opt.value ? 'bg-blue-50' : ''}`}
+                                className={`px-4 py-3 cursor-pointer hover:bg-blue-50 border-b border-slate-50 last:border-0 ${value === opt.value ? 'bg-blue-50' : ''}`}
                             >
                                 <div className="font-bold text-gray-800 text-sm">{opt.label}</div>
-                                {opt.subLabel && <div className="text-[10px] text-gray-500 font-mono">{opt.subLabel}</div>}
+                                {opt.subLabel && <div className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">{opt.subLabel}</div>}
                             </div>
                         )) : (
-                            <div className="px-4 py-8 text-center text-gray-400 text-xs italic">Nenhum resultado.</div>
+                            <div className="px-4 py-8 text-center text-slate-400 text-xs italic">Nenhum resultado encontrado.</div>
                         )}
                     </div>
                 </div>
@@ -119,10 +117,7 @@ const Operations = () => {
   const [isProcessed, setIsProcessed] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
-  // Acessórios selecionados para a entrega
   const [selectedAccessoryTypeIds, setSelectedAccessoryTypeIds] = useState<string[]>([]);
-
-  // Checklist dinâmico baseado no dispositivo
   const [checklist, setChecklist] = useState<ReturnChecklist>({ 'Equipamento Principal': true });
 
   const [lastOperation, setLastOperation] = useState<{
@@ -134,42 +129,61 @@ const Operations = () => {
       notes: string;
   } | null>(null);
 
-  const availableDevices = devices.filter(d => d.status === DeviceStatus.AVAILABLE);
-  const inUseDevices = devices.filter(d => d.status === DeviceStatus.IN_USE);
-  const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE);
-  const inUseSims = sims.filter(s => s.status === DeviceStatus.IN_USE);
-
-  // Efeito para carregar o checklist de devolução dinamicamente
+  // Efeito para carregar o checklist de devolução dinamicamente baseado no que o dispositivo possui
   useEffect(() => {
       if (activeTab === 'CHECKIN' && assetType === 'Device' && selectedAssetId) {
           const dev = devices.find(d => d.id === selectedAssetId);
           if (dev) {
               const newChecklist: ReturnChecklist = { 'Equipamento Principal': true };
               
-              // Adiciona os acessórios que o dispositivo REALMENTE possui (vinculados na entrega)
-              dev.accessories?.forEach(acc => {
-                  newChecklist[acc.name] = true;
-              });
+              // Adiciona os acessórios que o dispositivo REALMENTE possui (salvos no cadastro dele)
+              if (dev.accessories && dev.accessories.length > 0) {
+                  dev.accessories.forEach(acc => {
+                      newChecklist[acc.name] = true;
+                  });
+              }
 
               // Adiciona o Chip SIM se houver um vinculado
               if (dev.linkedSimId) {
-                  newChecklist['Chip SIM Card'] = true;
+                  const chip = sims.find(s => s.id === dev.linkedSimId);
+                  newChecklist[`Chip SIM Card (${chip?.phoneNumber || 'Vinculado'})`] = true;
               }
 
               setChecklist(newChecklist);
           }
       } else if (activeTab === 'CHECKOUT') {
-          // Reseta acessórios ao trocar para entrega
           setSelectedAccessoryTypeIds([]);
       }
-  }, [selectedAssetId, activeTab, assetType, devices]);
+  }, [selectedAssetId, activeTab, assetType, devices, sims]);
+
+  const availableDevices = devices.filter(d => d.status === DeviceStatus.AVAILABLE);
+  const inUseDevices = devices.filter(d => d.status === DeviceStatus.IN_USE);
+  const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE);
+  const inUseSims = sims.filter(s => s.status === DeviceStatus.IN_USE);
 
   const assetOptions: Option[] = (activeTab === 'CHECKOUT' 
     ? (assetType === 'Device' 
-        ? availableDevices.map(d => ({ value: d.id, label: `${models.find(m => m.id === d.modelId)?.name || 'Ativo'} - ${d.assetTag}`, subLabel: `SN: ${d.serialNumber}` })) 
+        ? availableDevices.map(d => {
+            const model = models.find(m => m.id === d.modelId);
+            const chip = sims.find(s => s.id === d.linkedSimId);
+            return { 
+                value: d.id, 
+                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'} - ${d.assetTag}`, 
+                subLabel: `S/N: ${d.serialNumber}${chip ? ` • Linha: ${chip.phoneNumber}` : ''}` 
+            };
+        }) 
         : availableSims.map(s => ({ value: s.id, label: `${s.phoneNumber} - ${s.operator}`, subLabel: `ICCID: ${s.iccid}` })))
     : (assetType === 'Device' 
-        ? inUseDevices.map(d => ({ value: d.id, label: `${models.find(m => m.id === d.modelId)?.name || 'Ativo'} - ${d.assetTag}`, subLabel: `Com: ${users.find(u => u.id === d.currentUserId)?.fullName || 'Doador'}` })) 
+        ? inUseDevices.map(d => {
+            const model = models.find(m => m.id === d.modelId);
+            const user = users.find(u => u.id === d.currentUserId);
+            const chip = sims.find(s => s.id === d.linkedSimId);
+            return { 
+                value: d.id, 
+                label: `${d.imei ? `[IMEI: ${d.imei}] ` : ''}${model?.name || 'Ativo'} - ${d.assetTag}`, 
+                subLabel: `S/N: ${d.serialNumber}${chip ? ` • Linha: ${chip.phoneNumber}` : ''} • Com: ${user?.fullName || 'Usuário'}` 
+            };
+        }) 
         : inUseSims.map(s => ({ value: s.id, label: `${s.phoneNumber} - ${s.operator}`, subLabel: `ICCID: ${s.iccid}` })))
   ).sort((a,b) => a.label.localeCompare(b.label));
 
@@ -195,7 +209,6 @@ const Operations = () => {
 
     try {
         if (activeTab === 'CHECKOUT') {
-            // Mapeia os acessórios selecionados para a estrutura final
             const deliveryAccessories: DeviceAccessory[] = selectedAccessoryTypeIds.map(typeId => {
                 const type = accessoryTypes.find(t => t.id === typeId);
                 return {
@@ -209,7 +222,6 @@ const Operations = () => {
             if (syncAssetData && assetType === 'Device') {
                 const user = users.find(u => u.id === selectedUserId);
                 const device = devices.find(d => d.id === selectedAssetId);
-                // Fixed: removed non-existent jobTitle mapping
                 if (user && device) await updateDevice({ ...device, sectorId: user.sectorId }, adminName);
             }
 
@@ -341,7 +353,7 @@ const Operations = () => {
                         options={assetOptions} 
                         value={selectedAssetId} 
                         onChange={setSelectedAssetId} 
-                        placeholder={assetType === 'Device' ? "Selecione o dispositivo pelo Patrimônio ou Modelo..." : "Selecione a linha pelo Número ou Operadora..."}
+                        placeholder={assetType === 'Device' ? "Selecione o dispositivo pelo IMEI, Patrimônio ou Modelo..." : "Selecione a linha pelo Número ou Operadora..."}
                         icon={assetType === 'Device' ? <Smartphone size={18}/> : <Cpu size={18}/>}
                       />
                   </div>
@@ -386,9 +398,6 @@ const Operations = () => {
                                         <span className="text-[10px] font-black uppercase truncate">{acc.name}</span>
                                     </button>
                                 ))}
-                                {accessoryTypes.length === 0 && (
-                                    <p className="col-span-full text-xs text-slate-400 italic bg-slate-50 p-4 rounded-xl border border-dashed text-center">Nenhum tipo de acessório cadastrado nas configurações.</p>
-                                )}
                             </div>
                         </div>
                       )}
@@ -401,12 +410,23 @@ const Operations = () => {
                             <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">2</div>
                             <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Conferência de Devolução</h3>
                         </div>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 italic">* Listando apenas itens entregues a este dispositivo</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 p-6 rounded-3xl border border-orange-100">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-4 italic">
+                            Marque os itens que foram devolvidos fisicamente pelo colaborador:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 p-6 rounded-3xl border border-orange-100 shadow-inner">
                             {Object.keys(checklist).map(item => (
-                                <button key={item} onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? 'bg-white border-orange-500 text-orange-900 shadow-sm' : 'bg-transparent border-slate-200 text-slate-400'}`}>
-                                    <span className="text-[10px] font-black uppercase">{item}</span>
-                                    {checklist[item] ? <CheckSquare size={18} className="text-orange-600" /> : <X size={18} />}
+                                <button 
+                                    key={item} 
+                                    onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
+                                    className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all shadow-sm ${checklist[item] ? 'bg-white border-orange-500 text-orange-900' : 'bg-slate-100/50 border-slate-200 text-slate-400 opacity-70'}`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-400'}`}>
+                                            {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase text-left">{item}</span>
+                                    </div>
+                                    {checklist[item] ? <CheckSquare size={20} className="text-orange-600" /> : <X size={20} />}
                                 </button>
                             ))}
                         </div>

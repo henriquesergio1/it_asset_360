@@ -120,17 +120,79 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
-    // Fix: add missing sector CRUD functions
     addSector, updateSector, deleteSector,
     addAccount, updateAccount, deleteAccount,
     addSystemUser: (u, adm) => { setSystemUsers(p => [...p, u]); },
     updateSystemUser: (u, adm) => { setSystemUsers(p => p.map(x => x.id === u.id ? u : x)); },
     deleteSystemUser: (id, adm) => { setSystemUsers(p => p.filter(x => x.id !== id)); },
     updateSettings,
-    assignAsset: (at, aid, uid, n, adm) => { /* logic */ },
-    returnAsset: (at, aid, n, adm) => { /* logic */ },
-    updateTermFile: (tid, uid, furl, adm) => { /* logic */ },
-    deleteTermFile: (tid, uid, r, adm) => { /* logic */ },
+    assignAsset: (assetType, assetId, userId, notes, adminName, accessories) => {
+        if (assetType === 'Device') {
+            setDevices(prev => prev.map(d => d.id === assetId ? { 
+                ...d, 
+                status: DeviceStatus.IN_USE, 
+                currentUserId: userId,
+                accessories: accessories // Persiste acessórios no dispositivo
+            } : d));
+            const dev = devices.find(d => d.id === assetId);
+            const user = users.find(u => u.id === userId);
+            
+            // Gerar registro do termo
+            const termId = Math.random().toString(36).substr(2, 9);
+            const newTerm: Term = {
+                id: termId,
+                userId: userId,
+                type: 'ENTREGA',
+                assetDetails: `${dev?.assetTag} - ${models.find(m => m.id === dev?.modelId)?.name}`,
+                date: new Date().toISOString(),
+                fileUrl: ''
+            };
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+            logAction(ActionType.CHECKOUT, 'Device', assetId, dev?.assetTag || 'Ativo', adminName, notes);
+        } else {
+            setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
+            const sim = sims.find(s => s.id === assetId);
+            logAction(ActionType.CHECKOUT, 'Sim', assetId, sim?.phoneNumber || 'Chip', adminName, notes);
+        }
+    },
+    returnAsset: (assetType, assetId, notes, adminName, checklist) => {
+        if (assetType === 'Device') {
+            const dev = devices.find(d => d.id === assetId);
+            const userId = dev?.currentUserId;
+            
+            setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
+            
+            if (userId) {
+                const termId = Math.random().toString(36).substr(2, 9);
+                const newTerm: Term = {
+                    id: termId,
+                    userId: userId,
+                    type: 'DEVOLUCAO',
+                    assetDetails: `${dev?.assetTag} - ${models.find(m => m.id === dev?.modelId)?.name}`,
+                    date: new Date().toISOString(),
+                    fileUrl: ''
+                };
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+            }
+            logAction(ActionType.CHECKIN, 'Device', assetId, dev?.assetTag || 'Ativo', adminName, notes);
+        } else {
+            setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+            const sim = sims.find(s => s.id === assetId);
+            logAction(ActionType.CHECKIN, 'Sim', assetId, sim?.phoneNumber || 'Chip', adminName, notes);
+        }
+    },
+    updateTermFile: (tid, uid, furl, adm) => { 
+        setUsers(prev => prev.map(u => u.id === uid ? {
+            ...u,
+            terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: furl } : t)
+        } : u));
+    },
+    deleteTermFile: (tid, uid, r, adm) => {
+        setUsers(prev => prev.map(u => u.id === uid ? {
+            ...u,
+            terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: '' } : t)
+        } : u));
+    },
     getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs,
     restoreItem,
