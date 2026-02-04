@@ -117,8 +117,8 @@ const Login = () => {
                     <Database size={12}/> Alternar para Modo de Teste
                 </button>
             )}
-            {/* PATCH 2.9.3: Version update */}
-            <p className="text-xs text-gray-400">Versão 2.9.3</p>
+            {/* PATCH 2.9.4: Version update */}
+            <p className="text-xs text-gray-400">Versão 2.9.4</p>
             <p className="text-xs text-gray-300">Todos os acessos são monitorados.</p>
           </div>
         </div>

@@ -131,10 +131,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    // Fix: add accounts and its CRUD functions to value object
     accounts, addAccount, updateAccount, deleteAccount,
     addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, updateSettings,
-    assignAsset: async (at, aid, uid, n, adm) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm }); fetchData(); },
+    assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(); },
     returnAsset: async (at, aid, n, adm) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm }); fetchData(); },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },

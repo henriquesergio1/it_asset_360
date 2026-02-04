@@ -7,6 +7,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.9.4',
+    date: 'Hoje',
+    title: 'Correção de Persistência de Acessórios',
+    changes: [
+      'Correção no Provedor de Dados de Produção para enviar acessórios selecionados durante o Checkout.',
+      'Sincronização global da versão para 2.9.4.'
+    ]
+  },
+    {
     version: '2.9.3',
     date: 'Hoje',
     title: 'Correção de Sintaxe e Estabilidade',
