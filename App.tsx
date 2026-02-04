@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe } from 'lucide-react';
@@ -82,8 +83,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         <div className="p-6 border-t border-slate-800 bg-slate-950 shrink-0">
           <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full">
              <span className="shrink-0"><Info size={14}/></span>
-             {/* PATCH 2.9.4: Version update */}
-             <span>Versão 2.9.4</span>
+             {/* PATCH 2.9.5: Version update */}
+             <span>Versão 2.9.5</span>
           </div>
           <button onClick={logout} className="flex items-center space-x-3 text-gray-400 hover:text-white cursor-pointer transition-colors w-full pt-4 border-t border-slate-800">
             <LogOut size={20} />

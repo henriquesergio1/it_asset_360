@@ -242,7 +242,9 @@ const UserManager = () => {
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   const userAssets = devices.filter(d => d.currentUserId === editingId);
-  const userSims = sims.filter(s => s.currentUserId === editingId);
+  const linkedSimIds = userAssets.map(d => d.linkedSimId).filter(Boolean) as string[];
+  const userSims = sims.filter(s => s.currentUserId === editingId || linkedSimIds.includes(s.id));
+  
   const userHistory = getHistory(editingId || '');
   const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
   
@@ -315,7 +317,8 @@ const UserManager = () => {
           <tbody>
             {filteredUsers.map((user) => {
               const uDevices = devices.filter(d => d.currentUserId === user.id);
-              const uSims = sims.filter(s => s.currentUserId === user.id);
+              const uLinkedSimIds = uDevices.map(d => d.linkedSimId).filter(Boolean) as string[];
+              const uSims = sims.filter(s => s.currentUserId === user.id || uLinkedSimIds.includes(s.id));
               const hasPending = (user.terms || []).some(t => !t.fileUrl);
               return (
                 <tr key={user.id} onClick={() => handleOpenModal(user, true)} className={`border-b hover:bg-emerald-50/30 cursor-pointer transition-all ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
@@ -472,20 +475,26 @@ const UserManager = () => {
                         <div>
                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Cpu size={14}/> Chips / SIM Cards</h4>
                             <div className="grid grid-cols-1 gap-3">
-                                {userSims.map(sim => (
-                                    <div key={sim.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
-                                                <Cpu size={20}/>
+                                {userSims.map(sim => {
+                                    const deviceWithThisSim = userAssets.find(d => d.linkedSimId === sim.id);
+                                    return (
+                                        <div key={sim.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                                                    <Cpu size={20}/>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-800 text-sm">{sim.phoneNumber}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                                        {sim.operator} • ICCID: {sim.iccid}
+                                                        {deviceWithThisSim && <span className="text-blue-600 ml-1 font-bold">• ATRELADO AO {deviceWithThisSim.assetTag}</span>}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-slate-800 text-sm">{sim.phoneNumber}</p>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{sim.operator} • ICCID: {sim.iccid}</p>
-                                            </div>
+                                            <button onClick={() => navigate(`/sims`)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all"><ExternalLink size={16}/></button>
                                         </div>
-                                        <button onClick={() => navigate(`/sims`)} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all"><ExternalLink size={16}/></button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {userSims.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum chip em posse.</p>}
                             </div>
                         </div>

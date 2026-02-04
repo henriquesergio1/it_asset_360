@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -6,6 +7,16 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.9.5',
+    date: 'Hoje',
+    title: 'Melhoria na Visibilidade de Ativos',
+    changes: [
+      'Aba de Ativos do Colaborador agora exibe chips atrelados aos dispositivos em posse.',
+      'Contagem de chips na tabela principal de Colaboradores agora reflete chips atrelados e diretos.',
+      'Sincronização global da versão para 2.9.5.'
+    ]
+  },
     {
     version: '2.9.4',
     date: 'Hoje',
@@ -43,16 +54,6 @@ const versions = [
       'Implementação de rotas para Manutenções, Acessórios e Campos Extras no Backend.',
       'Melhoria na resiliência do modo Produção (Correção de erros 404 de sincronização).',
       'Sincronização global da versão para 2.9.1.'
-    ]
-  },
-    {
-    version: '2.9.0',
-    date: '31/01/2025',
-    title: 'Módulo de Software & Contas',
-    changes: [
-      'Lançado novo módulo para gestão de E-mails, Contas Google, ERP e Licenças Office.',
-      'Suporte a armazenamento de senhas com visualização segura (ocultar/mostrar).',
-      'Vínculo de licenças diretamente a Dispositivos, Colaboradores ou Setores.'
     ]
   }
 ];
