@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.9.9',
+    version: '2.10.0',
     date: 'Hoje',
+    title: 'Vínculo Automático de Chips via CSV',
+    changes: [
+      'Adicionado campo "Número da Linha" na importação de dispositivos.',
+      'O sistema agora localiza e vincula o chip automaticamente ao dispositivo se o número existir no cadastro.',
+      'Melhoria na legibilidade dos logs de importação para avisos de chips não localizados.',
+      'Sincronização global da versão.'
+    ]
+  },
+    {
+    version: '2.9.9',
+    date: '03/02/2025',
     title: 'Correção Crítica: Unicidade na Importação',
     changes: [
       'Implementação de rastreio de duplicatas dentro do mesmo lote de importação CSV.',
@@ -28,17 +39,6 @@ const versions = [
       'Implementação de validação de unicidade para Número de Linha em chips.',
       'Melhoria no analisador de CSV para detectar conflitos de campos secundários antes da importação.',
       'Alertas detalhados ao tentar cadastrar registros duplicados manualmente.'
-    ]
-  },
-    {
-    version: '2.9.7',
-    date: '03/02/2025',
-    title: 'Auditoria 360 & Rastreabilidade de Custódia',
-    changes: [
-      'Implementação de Snapshots Técnicos (Antes/Depois) em todas as edições.',
-      'Nova "Linha do Tempo de Posse" em Dispositivos, permitindo rastrear todos os colaboradores passados.',
-      'Registro detalhado de quem recebeu e devolveu cada ativo com data e hora exatas.',
-      'Visualizador de Auditoria comparativo na aba Administração destacando campos alterados.'
     ]
   }
 ];

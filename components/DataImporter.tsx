@@ -105,7 +105,7 @@ const DataImporter = () => {
   const getTemplateHeaders = () => {
       switch(importType) {
           case 'USERS': return 'Nome Completo;CPF;RG;PIS;Email;Codigo de Setor;Cargo ou Funcao;Endereco';
-          case 'DEVICES': return 'Patrimonio;Serial;IMEI;ID Pulsus;Codigo de Setor;Cargo ou Funcao;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;CPF Colaborador';
+          case 'DEVICES': return 'Patrimonio;Serial;IMEI;ID Pulsus;Codigo de Setor;Cargo ou Funcao;Modelo;Marca;Tipo;Status;Valor Pago;Data Compra;Fornecedor;CPF Colaborador;Numero da Linha';
           case 'SIMS': return 'Numero;Operadora;ICCID;Plano';
           default: return '';
       }
@@ -359,6 +359,19 @@ const DataImporter = () => {
                   // Usar o ID limpo para busca de usuário se CPF formatado existir
                   const linkedUser = userCpfFormatted ? users.find(u => cleanId(u.cpf) === cleanId(userCpfFormatted)) : null;
                   
+                  // Resolver vínculo de Chip via "Número da Linha"
+                  const simNumRaw = r['Numero da Linha']?.trim();
+                  let resolvedSimId = null;
+                  if (simNumRaw) {
+                      const simNumClean = cleanId(simNumRaw);
+                      const foundSim = sims.find(s => cleanId(s.phoneNumber) === simNumClean);
+                      if (foundSim) {
+                          resolvedSimId = foundSim.id;
+                      } else {
+                          setLogs(prev => [...prev, `Aviso na linha ${i+2}: Chip com número ${simNumRaw} não localizado no cadastro.`]);
+                      }
+                  }
+
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
                       modelId: mId,
@@ -370,6 +383,7 @@ const DataImporter = () => {
                       sectorId: sId || linkedUser?.sectorId || null, 
                       status: mapStatus(r['Status'], !!linkedUser),
                       currentUserId: linkedUser?.id || null,
+                      linkedSimId: resolvedSimId,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
                       purchaseDate: normalizeDate(r['Data Compra']),
                       supplier: r['Fornecedor'],
@@ -444,7 +458,7 @@ const DataImporter = () => {
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
                         {importType === 'USERS' ? 'Nota: CPF como ID. Unicidade validada para CPF, RG e PIS.' : 
-                         importType === 'DEVICES' ? 'Nota: Unicidade validada para Patrimônio e IMEI.' :
+                         importType === 'DEVICES' ? 'Nota: Unicidade validada para Patrimônio e IMEI. "Número da Linha" vincula chip automaticamente.' :
                          'Nota: Identificação única via Número do Chip.'}
                     </p>
                 </div>
