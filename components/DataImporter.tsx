@@ -362,15 +362,20 @@ const DataImporter = () => {
                   // Resolver vínculo de Chip via "Número da Linha"
                   const simNumRaw = r['Numero da Linha']?.trim();
                   let resolvedSimId = null;
+                  let foundSim = null;
+
                   if (simNumRaw) {
                       const simNumClean = cleanId(simNumRaw);
-                      const foundSim = sims.find(s => cleanId(s.phoneNumber) === simNumClean);
+                      foundSim = sims.find(s => cleanId(s.phoneNumber) === simNumClean);
                       if (foundSim) {
                           resolvedSimId = foundSim.id;
                       } else {
                           setLogs(prev => [...prev, `Aviso na linha ${i+2}: Chip com número ${simNumRaw} não localizado no cadastro.`]);
                       }
                   }
+
+                  const deviceStatus = mapStatus(r['Status'], !!linkedUser);
+                  const currentUserId = linkedUser?.id || null;
 
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
@@ -381,15 +386,28 @@ const DataImporter = () => {
                       pulsusId: r['ID Pulsus'],
                       internalCode: r['Codigo de Setor'] || '',
                       sectorId: sId || linkedUser?.sectorId || null, 
-                      status: mapStatus(r['Status'], !!linkedUser),
-                      currentUserId: linkedUser?.id || null,
+                      status: deviceStatus,
+                      currentUserId: currentUserId,
                       linkedSimId: resolvedSimId,
                       purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
                       purchaseDate: normalizeDate(r['Data Compra']),
                       supplier: r['Fornecedor'],
                       customData: {}
                   };
+
+                  // Salvar o Dispositivo
                   item.status === 'NEW' ? await addDevice(deviceData, adminName) : await updateDevice(deviceData, adminName);
+                  
+                  // SYNC CHIP STATUS: Se encontrou o chip, sincroniza o status dele com o do aparelho
+                  if (foundSim && resolvedSimId) {
+                      const updatedSim: SimCard = {
+                          ...foundSim,
+                          status: deviceStatus, // Se o aparelho está em uso, o chip também fica em uso
+                          currentUserId: currentUserId // Atrela ao mesmo colaborador
+                      };
+                      await updateSim(updatedSim, `${adminName} (Sinc. Importação)`);
+                  }
+
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               }
               else if (importType === 'SIMS') {

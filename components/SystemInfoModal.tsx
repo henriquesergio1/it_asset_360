@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.0',
+    version: '2.10.1',
     date: 'Hoje',
+    title: 'Correção: Sincronização de Status de Chip',
+    changes: [
+      'Garantia de que o status do chip seja atualizado para "Em Uso" quando vinculado a um dispositivo alocado durante a importação CSV.',
+      'Sincronização automática do colaborador (currentUserId) entre o dispositivo e o chip vinculado no ato da importação.',
+      'Melhoria na integridade visual do cadastro de chips após cargas em lote.'
+    ]
+  },
+    {
+    version: '2.10.0',
+    date: '03/02/2025',
     title: 'Vínculo Automático de Chips via CSV',
     changes: [
       'Adicionado campo "Número da Linha" na importação de dispositivos.',
@@ -27,18 +37,6 @@ const versions = [
       'Validação rigorosa de campos secundários (RG, PIS, IMEI) contra o banco e contra o lote.',
       'Normalização de strings (limpeza de pontos/traços) antes de qualquer comparação de unicidade.',
       'Bloqueio de importação de linhas conflitantes com erro detalhado no log.'
-    ]
-  },
-    {
-    version: '2.9.8',
-    date: '03/02/2025',
-    title: 'Integridade e Unicidade de Dados',
-    changes: [
-      'Implementação de validação de unicidade para CPF, RG e PIS em colaboradores.',
-      'Implementação de validação de unicidade para Patrimônio e IMEI em dispositivos.',
-      'Implementação de validação de unicidade para Número de Linha em chips.',
-      'Melhoria no analisador de CSV para detectar conflitos de campos secundários antes da importação.',
-      'Alertas detalhados ao tentar cadastrar registros duplicados manualmente.'
     ]
   }
 ];
