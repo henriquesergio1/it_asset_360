@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { User, UserSector, ActionType, Device, SimCard, Term, AccountType } from '../types';
+import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
@@ -20,7 +20,6 @@ const formatCPF = (v: string): string => {
 const formatPIS = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
-    // Padrão PIS: 000.00000.00-0
     return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4")
             .replace(/(\d{3})(\d{5})(\d{2})/, "$1.$2.$3")
             .replace(/(\d{3})(\d{5})/, "$1.$2")
@@ -31,10 +30,34 @@ const formatRG = (v: string): string => {
     return v.toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
 };
 
-const LogNoteRenderer = ({ note }: { note: string }) => {
+const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const { devices, sims } = useData();
     const navigate = useNavigate();
+    const note = log.notes || '';
     
+    // Se for um log de atualização com diff
+    if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
+        try {
+            const prev = log.previousData ? JSON.parse(log.previousData) : {};
+            const next = log.newData ? JSON.parse(log.newData) : {};
+            const diffs = Object.keys(next).filter(k => !k.startsWith('_') && JSON.stringify(prev[k]) !== JSON.stringify(next[k]));
+            
+            if (diffs.length > 0) {
+                return (
+                    <div className="space-y-1">
+                        <div className="font-bold text-[10px] text-blue-600 uppercase mb-1">Campos Alterados:</div>
+                        <div className="flex flex-wrap gap-1">
+                            {diffs.map(d => (
+                                <span key={d} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-black uppercase text-slate-500 shadow-sm">{d}</span>
+                            ))}
+                        </div>
+                        {note && <div className="mt-2 text-slate-500 font-medium">Motivo: {note}</div>}
+                    </div>
+                );
+            }
+        } catch (e) { console.error("Error parsing diff in user history", e); }
+    }
+
     const assetPattern = new RegExp('(Recebeu|Devolveu):\\s+([^.]+)', 'i');
     const match = note.match(assetPattern);
     
@@ -248,7 +271,6 @@ const UserManager = () => {
   const userHistory = getHistory(editingId || '');
   const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
   
-  // Filtrar software: do usuário OU do setor ao qual ele pertence
   const userAccounts = accounts.filter(a => a.userId === editingId || (a.sectorId === formData.sectorId && a.sectorId));
 
   return (
@@ -514,6 +536,7 @@ const UserManager = () => {
                                             acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
                                             {acc.type === AccountType.EMAIL ? <Mail size={24}/> : 
                                              acc.type === AccountType.OFFICE ? <FileText size={24}/> :
+                                             // Fixed: Changed ActionType.ERP to AccountType.ERP
                                              acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
                                         </div>
                                         <div>
@@ -591,8 +614,8 @@ const UserManager = () => {
                                 <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.CHECKOUT ? 'bg-blue-500' : log.action === ActionType.CHECKIN ? 'bg-orange-500' : 'bg-slate-400'}`}></div>
                                 <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
                                 <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
-                                    <LogNoteRenderer note={log.notes || ''} />
+                                <div className="text-xs text-slate-600 italic bg-slate-50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 shadow-sm">
+                                    <LogNoteRenderer log={log} />
                                 </div>
                                 <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                             </div>

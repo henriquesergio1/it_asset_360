@@ -1,6 +1,6 @@
 
 -- Script Completo de Criação de Tabelas - IT Asset 360
--- Versão 2.2 (Código Interno Padronizado em Devices e Users)
+-- Versão 2.3 (Auditoria Detalhada)
 
 -- Configurações e Sistema
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings')
@@ -78,7 +78,7 @@ CREATE TABLE Users (
     Email NVARCHAR(100) NOT NULL,
     SectorId NVARCHAR(50),
     JobTitle NVARCHAR(100),
-    InternalCode NVARCHAR(50), -- PADRONIZAÇÃO
+    InternalCode NVARCHAR(50), 
     Active BIT DEFAULT 1,
     HasPendingIssues BIT DEFAULT 0, 
     PendingIssuesNote NVARCHAR(MAX), 
@@ -104,7 +104,7 @@ CREATE TABLE Devices (
     ModelId NVARCHAR(50), 
     SerialNumber NVARCHAR(50),
     AssetTag NVARCHAR(50),
-    InternalCode NVARCHAR(50), -- PADRONIZAÇÃO
+    InternalCode NVARCHAR(50), 
     
     -- Identificadores Especiais (Mantidos por uso intensivo na UI)
     Imei NVARCHAR(50),
@@ -173,7 +173,9 @@ CREATE TABLE AuditLogs (
     Timestamp DATETIME2 DEFAULT GETDATE(),
     Notes NVARCHAR(MAX),
     AdminUser NVARCHAR(100),
-    BackupData NVARCHAR(MAX)
+    BackupData NVARCHAR(MAX),
+    PreviousData NVARCHAR(MAX), -- NOVO
+    NewData NVARCHAR(MAX)      -- NOVO
 );
 
 -- Seed Minimal

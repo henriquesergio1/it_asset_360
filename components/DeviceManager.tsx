@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key } from 'lucide-react';
+import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
+// Fixed: Added 'Users' to lucide-react imports
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, Users } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -109,9 +110,33 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
     );
 };
 
-const LogNoteRenderer = ({ note }: { note: string }) => {
+const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const { users } = useData();
     const navigate = useNavigate();
+    const note = log.notes || '';
+
+    // Detalhes técnicos se houver diff
+    if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
+        try {
+            const prev = log.previousData ? JSON.parse(log.previousData) : {};
+            const next = log.newData ? JSON.parse(log.newData) : {};
+            const diffs = Object.keys(next).filter(k => !k.startsWith('_') && JSON.stringify(prev[k]) !== JSON.stringify(next[k]));
+            
+            if (diffs.length > 0) {
+                return (
+                    <div className="space-y-1">
+                        <div className="font-bold text-[10px] text-blue-600 uppercase mb-1">Alterações detectadas:</div>
+                        <div className="flex flex-wrap gap-1">
+                            {diffs.map(d => (
+                                <span key={d} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-black uppercase text-slate-500 shadow-sm">{d}</span>
+                            ))}
+                        </div>
+                        {note && <div className="mt-2 text-slate-500 font-medium">Observação: {note}</div>}
+                    </div>
+                );
+            }
+        } catch (e) { console.error("Error parsing log diff", e); }
+    }
 
     const userPattern = new RegExp('(Entregue para|Devolvido por):\\s+([^.]+)', 'i');
     const match = note.match(userPattern);
@@ -136,6 +161,75 @@ const LogNoteRenderer = ({ note }: { note: string }) => {
                 <span className="font-bold">{nameString}</span>
             )}
         </span>
+    );
+};
+
+// --- COMPONENTE: PossessionHistory (Rastreabilidade) ---
+const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
+    const { getHistory } = useData();
+    const history = getHistory(deviceId);
+    
+    // Filtrar apenas ações de Checkout e Checkin para montar a cadeia de custódia
+    const chain = history
+        .filter(l => l.action === ActionType.CHECKOUT || l.action === ActionType.CHECKIN)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    if (chain.length === 0) {
+        return (
+            <div className="text-center py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                <History size={48} className="mx-auto text-slate-300 mb-4 opacity-50"/>
+                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhum registro de posse encontrado para este dispositivo.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 animate-fade-in">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+                <ShieldCheck size={14}/> Cadeia de Custódia (Rastreabilidade Total)
+            </h4>
+            
+            <div className="relative border-l-2 border-slate-100 ml-6 space-y-10 py-2">
+                {chain.map((log, idx) => {
+                    let userName = 'Desconhecido';
+                    try {
+                        const data = log.action === ActionType.CHECKOUT 
+                            ? JSON.parse(log.newData || '{}') 
+                            : JSON.parse(log.previousData || '{}');
+                        userName = data.userName || log.notes?.split(': ')[1] || 'Colaborador';
+                    } catch(e) {}
+
+                    return (
+                        <div key={log.id} className="relative pl-10">
+                            <div className={`absolute -left-[11px] top-0 h-5 w-5 rounded-full border-4 border-white shadow-md flex items-center justify-center 
+                                ${log.action === ActionType.CHECKOUT ? 'bg-blue-600' : 'bg-orange-500'}`}>
+                                {log.action === ActionType.CHECKOUT ? <UserCheck size={10} className="text-white"/> : <UserX size={10} className="text-white"/>}
+                            </div>
+                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 transition-all">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${log.action === ActionType.CHECKOUT ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
+                                        {log.action === ActionType.CHECKOUT ? 'RECEBEU' : 'DEVOLVEU'}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-slate-400 font-bold">{new Date(log.timestamp).toLocaleString()}</span>
+                                </div>
+                                <p className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    <Users size={14} className="text-slate-400"/> {userName}
+                                </p>
+                                {log.notes && <p className="text-xs text-slate-500 mt-2 italic bg-slate-50 p-2 rounded-lg border-l-2 border-slate-200">{log.notes}</p>}
+                                <div className="mt-3 text-[9px] font-black text-slate-300 uppercase tracking-tighter">Registrado por: {log.adminUser}</div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                <Info size={18} className="text-blue-500 shrink-0"/>
+                <p className="text-[10px] text-blue-700 font-medium leading-relaxed uppercase">
+                    Esta linha do tempo exibe a rastreabilidade completa do ativo. Cada entrada representa uma transferência de responsabilidade jurídica registrada no sistema.
+                </p>
+            </div>
+        </div>
     );
 };
 
@@ -179,7 +273,7 @@ const DeviceManager = () => {
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'SOFTWARE' | 'HISTORY'>('GENERAL');
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'SOFTWARE' | 'CUSTODY' | 'HISTORY'>('GENERAL');
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('device_manager_columns');
@@ -367,7 +461,7 @@ const DeviceManager = () => {
         alert('Por favor, informe o motivo da alteração.');
         return;
     }
-    updateDevice(formData as Device, `${adminName} (Motivo: ${editReason})`);
+    updateDevice(formData as Device, adminName);
     setIsReasonModalOpen(false);
     setIsModalOpen(false);
   };
@@ -582,6 +676,7 @@ const DeviceManager = () => {
                 <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Financeiro</button>
                 <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Manutenções ({deviceMaintenances.length})</button>
                 <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Software ({deviceAccounts.length})</button>
+                <button type="button" onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Cadeia de Custódia</button>
                 <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
 
@@ -843,6 +938,9 @@ const DeviceManager = () => {
                             </div>
                         </div>
                     )}
+                    {activeTab === 'CUSTODY' && (
+                        <PossessionHistory deviceId={editingId || ''} />
+                    )}
                     {activeTab === 'HISTORY' && (
                         <div className="relative border-l-4 border-slate-100 ml-4 space-y-8 py-4 animate-fade-in">
                             {getHistory(editingId || '').map(log => (
@@ -850,8 +948,8 @@ const DeviceManager = () => {
                                     <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
                                     <div className="text-[10px] text-slate-400 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
                                     <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{log.action}</div>
-                                    <div className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg mt-1 border-l-2 border-slate-200">
-                                        <LogNoteRenderer note={log.notes || ''} />
+                                    <div className="text-xs text-slate-600 italic bg-slate-50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 shadow-sm">
+                                        <LogNoteRenderer log={log} />
                                     </div>
                                     <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                                 </div>

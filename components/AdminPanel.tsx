@@ -2,10 +2,107 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { SystemUser, SystemRole, ActionType } from '../types';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw } from 'lucide-react';
+import { SystemUser, SystemRole, ActionType, AuditLog } from '../types';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { generateAndPrintTerm } from '../utils/termGenerator';
+
+// --- SUB-COMPONENTE: AuditDetailModal ---
+const AuditDetailModal = ({ log, onClose }: { log: AuditLog, onClose: () => void }) => {
+    let diffs: { field: string, old: any, new: any }[] = [];
+    
+    try {
+        const prev = log.previousData ? JSON.parse(log.previousData) : null;
+        const next = log.newData ? JSON.parse(log.newData) : null;
+
+        if (prev && next) {
+            const allKeys = Array.from(new Set([...Object.keys(prev), ...Object.keys(next)]));
+            allKeys.forEach(key => {
+                if (key.startsWith('_')) return; // ignorar campos de sistema
+                
+                const val1 = JSON.stringify(prev[key]);
+                const val2 = JSON.stringify(next[key]);
+                
+                if (val1 !== val2) {
+                    diffs.push({
+                        field: key,
+                        old: prev[key],
+                        new: next[key]
+                    });
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Erro ao processar diff", e);
+    }
+
+    const formatValue = (v: any) => {
+        if (v === null || v === undefined) return <span className="text-slate-300 italic text-[10px]">vazio</span>;
+        if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+        if (typeof v === 'object') return <span className="text-[10px] font-mono text-slate-400 break-all">{JSON.stringify(v)}</span>;
+        return String(v);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[85vh]">
+                <div className="bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 className="text-lg font-black text-white uppercase tracking-tighter">Detalhes da Auditoria</h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{log.action} em {new Date(log.timestamp).toLocaleString()}</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={24}/></button>
+                </div>
+                
+                <div className="p-8 overflow-y-auto">
+                    <div className="mb-6 grid grid-cols-2 gap-4">
+                        <div className="bg-slate-50 p-3 rounded-xl border">
+                            <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Realizado por</span>
+                            <span className="font-bold text-slate-800 text-sm">{log.adminUser}</span>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border">
+                            <span className="block text-[10px] font-black text-slate-400 uppercase mb-1">Item Afetado</span>
+                            <span className="font-bold text-slate-800 text-sm">[{log.assetType}] {log.targetName}</span>
+                        </div>
+                    </div>
+
+                    {diffs.length > 0 ? (
+                        <div className="border rounded-2xl overflow-hidden shadow-inner">
+                            <table className="w-full text-xs text-left">
+                                <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 border-b">
+                                    <tr>
+                                        <th className="px-4 py-3">Campo</th>
+                                        <th className="px-4 py-3">Valor Anterior</th>
+                                        <th className="px-4 py-3">Novo Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {diffs.map((d, i) => (
+                                        <tr key={i} className="hover:bg-slate-50">
+                                            <td className="px-4 py-3 font-bold text-slate-700 capitalize">{d.field}</td>
+                                            <td className="px-4 py-3 text-red-600 bg-red-50/30 line-through decoration-red-300">{formatValue(d.old)}</td>
+                                            <td className="px-4 py-3 text-emerald-700 bg-emerald-50/30 font-bold">{formatValue(d.new)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <Info size={32} className="mx-auto text-slate-300 mb-2"/>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhuma mudança de valor detectada nos campos principais.</p>
+                            {log.notes && <p className="mt-4 text-xs font-medium text-slate-600">Observação: {log.notes}</p>}
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-slate-50 px-8 py-5 border-t flex justify-end">
+                    <button onClick={onClose} className="px-8 py-3 bg-slate-800 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-black transition-all">Fechar Detalhes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const AdminPanel = () => {
   const { systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs, clearLogs, restoreItem } = useData();
@@ -27,6 +124,10 @@ const AdminPanel = () => {
   // Template Logic State
   const [activeTemplateType, setActiveTemplateType] = useState<'DELIVERY' | 'RETURN'>('DELIVERY');
   
+  // Auditoria Detalhada
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [logSearch, setLogSearch] = useState('');
+
   // Track focused textarea for insertions
   const [activeField, setActiveField] = useState<'declaration' | 'clauses'>('declaration');
   const declRef = useRef<HTMLTextAreaElement>(null);
@@ -126,15 +227,17 @@ const AdminPanel = () => {
       }
   };
 
+  const filteredLogs = logs.filter(l => 
+    `${l.adminUser} ${l.targetName} ${l.action} ${l.notes || ''}`.toLowerCase().includes(logSearch.toLowerCase())
+  );
+
   // --- PREVIEW HANDLER ---
   const handlePreview = () => {
-      // 1. Create temporary settings with current text (even if not saved)
       const tempSettings = {
           ...settingsForm,
           termTemplate: JSON.stringify(termConfig)
       };
 
-      // 2. Mock Data
       const mockUser = {
           id: 'preview_u',
           fullName: 'João da Silva (Exemplo)',
@@ -151,7 +254,6 @@ const AdminPanel = () => {
           status: 'Em Uso'
       };
 
-      // 3. Generate
       generateAndPrintTerm({
           user: mockUser as any,
           asset: mockAsset as any,
@@ -166,7 +268,6 @@ const AdminPanel = () => {
       });
   };
 
-  // --- RICH TEXT HELPERS ---
   const insertTag = (tagStart: string, tagEnd: string) => {
       const textarea = activeField === 'declaration' ? declRef.current : clausesRef.current;
       if (!textarea) return;
@@ -209,83 +310,84 @@ const AdminPanel = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Administração do Sistema</h1>
-        <p className="text-gray-500 text-sm">Gerencie acessos, configurações e auditoria.</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Administração do Sistema</h1>
+          <p className="text-gray-500 text-sm">Gerencie acessos, configurações e auditoria estruturada.</p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 overflow-x-auto">
+      <div className="flex border-b border-gray-200 overflow-x-auto bg-white px-2 pt-2 rounded-t-xl shadow-sm">
         <button 
             onClick={() => setActiveTab('USERS')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
         >
-            <Shield size={18} /> Acesso
+            <Shield size={16} /> Acesso
         </button>
         <button 
             onClick={() => setActiveTab('SETTINGS')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
         >
-            <Settings size={18} /> Geral
+            <Settings size={16} /> Geral
         </button>
         <button 
             onClick={() => setActiveTab('IMPORT')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
         >
-            <UploadCloud size={18} /> Importação
+            <UploadCloud size={16} /> Importação
         </button>
         <button 
             onClick={() => setActiveTab('TEMPLATE')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
         >
-            <FileText size={18} /> Editor de Termos
+            <FileText size={16} /> Editor de Termos
         </button>
         <button 
             onClick={() => setActiveTab('LOGS')}
-            className={`flex items-center gap-2 px-6 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-400 hover:text-gray-700'}`}
         >
-            <Activity size={18} /> Auditoria
+            <Activity size={16} /> Auditoria Detalhada
         </button>
       </div>
 
-      {/* --- USERS TAB --- */}
       {activeTab === 'USERS' && (
         <div className="space-y-4 animate-fade-in">
-            <div className="flex justify-between items-center bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <div className="flex justify-between items-center bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm">
                 <div>
-                    <h3 className="font-bold text-blue-900">Controle de Acesso</h3>
-                    <p className="text-sm text-blue-700">Cadastre quem pode acessar este painel.</p>
+                    <h3 className="font-black text-blue-900 uppercase tracking-tighter text-lg">Controle de Acesso</h3>
+                    <p className="text-sm text-blue-700 font-medium">Gerenciamento de operadores e administradores do painel.</p>
                 </div>
-                <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm text-sm">
-                    <Plus size={16} /> Novo Usuário
+                <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95 font-black uppercase text-xs tracking-widest">
+                    <Plus size={18} /> Novo Usuário
                 </button>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-sm text-left text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <table className="w-full text-sm text-left">
+                    <thead className="text-[10px] font-black text-gray-500 uppercase bg-gray-50 border-b tracking-widest">
                         <tr>
-                            <th className="px-6 py-3">Nome</th>
-                            <th className="px-6 py-3">Email (Login)</th>
-                            <th className="px-6 py-3">Função</th>
-                            <th className="px-6 py-3 text-right">Ações</th>
+                            <th className="px-6 py-4">Nome</th>
+                            <th className="px-6 py-4">Email / Login</th>
+                            <th className="px-6 py-4 text-center">Permissão</th>
+                            <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y">
                         {systemUsers.map(u => (
-                            <tr key={u.id} className="border-b hover:bg-gray-50">
-                                <td className="px-6 py-4 font-medium text-gray-900">{u.name}</td>
-                                <td className="px-6 py-4">{u.email}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${u.role === SystemRole.ADMIN ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                            <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
+                                <td className="px-6 py-4 font-bold text-gray-900">{u.name}</td>
+                                <td className="px-6 py-4 text-slate-500">{u.email}</td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${u.role === SystemRole.ADMIN ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
                                         {u.role}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button onClick={() => handleOpenModal(u)} className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Edit2 size={16}/></button>
+                                        <button onClick={() => handleOpenModal(u)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={16}/></button>
                                         {u.id !== currentUser?.id && (
-                                            <button onClick={() => deleteSystemUser(u.id, currentUser?.name || 'Admin')} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={16}/></button>
+                                            <button onClick={() => deleteSystemUser(u.id, currentUser?.name || 'Admin')} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={16}/></button>
                                         )}
                                     </div>
                                 </td>
@@ -297,309 +399,273 @@ const AdminPanel = () => {
         </div>
       )}
 
-      {/* --- IMPORT TAB (NEW) --- */}
-      {activeTab === 'IMPORT' && (
-          <DataImporter />
-      )}
+      {activeTab === 'IMPORT' && <DataImporter />}
 
-      {/* --- SETTINGS TAB --- */}
       {activeTab === 'SETTINGS' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
-            {/* Visual Settings */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-6">Personalização Visual</h3>
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-6 flex items-center gap-2">
+                    <Settings className="text-blue-600"/> Personalização Visual
+                </h3>
                 <form onSubmit={handleSettingsSubmit} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa / Razão Social</label>
-                            <input 
-                                type="text" 
-                                value={settingsForm.appName}
-                                onChange={(e) => setSettingsForm({...settingsForm, appName: e.target.value})}
-                                className="w-full border rounded-lg p-2.5"
-                                placeholder="Minha Empresa S.A."
-                            />
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Nome da Empresa</label>
+                            <input type="text" value={settingsForm.appName} onChange={(e) => setSettingsForm({...settingsForm, appName: e.target.value})} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" placeholder="Razão Social"/>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ da Empresa</label>
-                            <input 
-                                type="text" 
-                                value={settingsForm.cnpj || ''}
-                                onChange={(e) => setSettingsForm({...settingsForm, cnpj: e.target.value})}
-                                className="w-full border rounded-lg p-2.5"
-                                placeholder="00.000.000/0000-00"
-                            />
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">CNPJ</label>
+                            <input type="text" value={settingsForm.cnpj || ''} onChange={(e) => setSettingsForm({...settingsForm, cnpj: e.target.value})} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" placeholder="00.000.000/0000-00"/>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">URL da Logo (Cabeçalho e Termos)</label>
-                        <input 
-                            type="text" 
-                            value={settingsForm.logoUrl}
-                            onChange={(e) => setSettingsForm({...settingsForm, logoUrl: e.target.value})}
-                            className="w-full border rounded-lg p-2.5"
-                            placeholder="https://..."
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Recomendado: Imagem PNG transparente.</p>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">URL Logotipo (PNG Recomendado)</label>
+                        <input type="text" value={settingsForm.logoUrl} onChange={(e) => setSettingsForm({...settingsForm, logoUrl: e.target.value})} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50" placeholder="https://seu-site.com/logo.png"/>
                     </div>
                     
                     {settingsForm.logoUrl && (
-                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center">
-                            <img src={settingsForm.logoUrl} alt="Preview" className="h-12 object-contain" />
+                        <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center">
+                            <img src={settingsForm.logoUrl} alt="Preview" className="h-16 object-contain" />
                         </div>
                     )}
 
-                    {msg && <div className="text-green-600 text-sm font-medium bg-green-50 p-3 rounded">{msg}</div>}
+                    {msg && <div className="text-emerald-700 text-xs font-black uppercase bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-center animate-fade-in">{msg}</div>}
 
-                    <button type="submit" className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium">
-                        <Save size={18} /> Salvar Alterações
+                    <button type="submit" className="w-full flex items-center justify-center gap-3 bg-blue-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-blue-700 transition-all active:scale-95">
+                        <Save size={20} /> Salvar Configurações
                     </button>
                 </form>
             </div>
 
-            {/* Data Source Settings */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Database size={20} className="text-blue-600"/> Fonte de Dados & Manutenção
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter mb-6 flex items-center gap-2">
+                    <Database className="text-indigo-600"/> Fonte de Dados
                 </h3>
                 
-                <div className={`p-4 rounded-lg border mb-6 ${currentMode === 'prod' ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
-                    <div className="flex items-start gap-3">
-                        {currentMode === 'prod' ? <Server className="text-green-600 mt-1" /> : <FileCode className="text-orange-600 mt-1" />}
+                <div className={`p-6 rounded-2xl border-2 mb-8 shadow-inner ${currentMode === 'prod' ? 'bg-emerald-50 border-emerald-100' : 'bg-orange-50 border-orange-100'}`}>
+                    <div className="flex items-start gap-4">
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-sm ${currentMode === 'prod' ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
+                            {currentMode === 'prod' ? <Server size={24}/> : <FileCode size={24}/>}
+                        </div>
                         <div>
-                            <p className={`font-bold ${currentMode === 'prod' ? 'text-green-800' : 'text-orange-800'}`}>
-                                {currentMode === 'prod' ? 'Modo: PRODUÇÃO (Real)' : 'Modo: DESENVOLVIMENTO (Mock)'}
+                            <p className={`font-black uppercase text-xs tracking-widest ${currentMode === 'prod' ? 'text-emerald-800' : 'text-orange-800'}`}>
+                                Modo: {currentMode === 'prod' ? 'PRODUÇÃO (SQL Real)' : 'MOCK (Teste Local)'}
                             </p>
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-xs text-slate-500 mt-2 font-medium leading-relaxed">
                                 {currentMode === 'prod' 
-                                    ? 'O sistema está conectado à API Backend e gravando no SQL Server.' 
-                                    : 'O sistema está usando dados temporários em memória. As alterações serão perdidas ao recarregar.'}
+                                    ? 'Conexão ativa com o SQL Server. Todos os dados são permanentes e reais.' 
+                                    : 'Ambiente de testes. Dados são temporários e resetados ao recarregar a página.'}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="border-t pt-6 space-y-4">
-                    <button 
-                        onClick={toggleAppMode}
-                        className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-colors ${currentMode === 'mock' ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-500 hover:bg-orange-600'}`}
-                    >
-                        {currentMode === 'mock' ? 'Mudar para Modo REAL (SQL Server)' : 'Mudar para Modo MOCK (Teste)'}
+                <div className="space-y-4">
+                    <button onClick={toggleAppMode} className={`w-full py-4 px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] text-white shadow-lg transition-all active:scale-95 ${currentMode === 'mock' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                        {currentMode === 'mock' ? 'Alternar para Modo SQL Server' : 'Alternar para Modo de Teste'}
                     </button>
 
-                    <div className="pt-4 border-t">
-                        <button 
-                            onClick={handleClearLogs}
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
-                        >
+                    <div className="pt-6 mt-6 border-t border-slate-100">
+                        <button onClick={handleClearLogs} className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] text-red-600 border-2 border-red-100 hover:bg-red-50 transition-all">
                             <Trash2 size={18}/> Limpar Logs e Auditoria
                         </button>
+                        <p className="text-[9px] text-red-400 font-bold text-center mt-3 uppercase tracking-tighter">* Esta ação não pode ser revertida.</p>
                     </div>
                 </div>
             </div>
           </div>
       )}
 
-      {/* --- TEMPLATE TAB (STRUCTURED EDITOR) --- */}
       {activeTab === 'TEMPLATE' && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-in flex flex-col h-full min-h-[600px]">
-              <div className="flex justify-between items-center mb-6 shrink-0">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 animate-fade-in flex flex-col h-full min-h-[600px]">
+              <div className="flex justify-between items-center mb-8 shrink-0">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Editor de Documentos</h3>
-                    <p className="text-sm text-gray-500">Personalize o texto jurídico dos termos. Use a barra de ferramentas para formatação.</p>
+                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Editor de Documentos</h3>
+                    <p className="text-sm text-gray-500 font-medium">Personalize os termos de responsabilidade jurídica.</p>
                   </div>
-                  <div className="flex gap-2">
-                      <button onClick={handlePreview} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 shadow-sm font-medium transition-colors">
-                          <Eye size={18} /> Visualizar Exemplo
+                  <div className="flex gap-3">
+                      <button onClick={handlePreview} className="flex items-center gap-2 bg-white border-2 border-slate-100 text-slate-600 px-6 py-3 rounded-xl hover:bg-slate-50 shadow-sm font-black uppercase text-xs tracking-widest transition-all active:scale-95">
+                          <Eye size={18} /> Prévia
                       </button>
-                      <button onClick={handleTermSave} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm font-medium transition-colors">
+                      <button onClick={handleTermSave} className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 shadow-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">
                           <Save size={18} /> Salvar Textos
                       </button>
                   </div>
               </div>
 
-              {/* Template Switcher */}
-              <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-                  <button 
-                    onClick={() => setActiveTemplateType('DELIVERY')}
-                    className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'DELIVERY' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                      <FileText size={16}/> Termo de Entrega
+              <div className="flex gap-2 mb-8 bg-slate-100 p-1.5 rounded-2xl w-fit shadow-inner">
+                  <button onClick={() => setActiveTemplateType('DELIVERY')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTemplateType === 'DELIVERY' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-400 hover:bg-slate-200'}`}>
+                      <FileText size={18}/> Termo Entrega
                   </button>
-                  <button 
-                    onClick={() => setActiveTemplateType('RETURN')}
-                    className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTemplateType === 'RETURN' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                      <ArrowLeftRight size={16}/> Termo de Devolução
+                  <button onClick={() => setActiveTemplateType('RETURN')} className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 ${activeTemplateType === 'RETURN' ? 'bg-white text-orange-700 shadow-md' : 'text-slate-400 hover:bg-slate-200'}`}>
+                      <ArrowLeftRight size={18}/> Termo Devolução
                   </button>
               </div>
 
-              {/* TOOLBAR */}
-              <div className="flex flex-wrap items-center gap-2 bg-gray-100 p-2 rounded-t-lg border-b border-gray-300">
-                  <span className="text-xs font-bold text-gray-500 uppercase mr-2 pl-2">Formatação:</span>
-                  <button onClick={() => insertTag('<strong>', '</strong>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-bold" title="Negrito"><Bold size={16}/></button>
-                  <button onClick={() => insertTag('<em>', '</em>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 italic" title="Itálico"><Italic size={16}/></button>
-                  <div className="w-px h-5 bg-gray-300 mx-1"></div>
-                  <button onClick={() => insertTag('<h3>', '</h3>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Título da Seção"><Heading1 size={16}/></button>
-                  <button onClick={() => insertTag('<p>', '</p>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 font-serif text-xs font-bold" title="Parágrafo">¶</button>
-                  <div className="w-px h-5 bg-gray-300 mx-1"></div>
-                  <button onClick={() => insertTag('<br>', '')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700 text-xs font-bold" title="Quebra de Linha">BR</button>
-                  <button onClick={() => insertTag('<ul><li>', '</li></ul>')} className="p-1.5 hover:bg-gray-200 rounded text-gray-700" title="Lista"><List size={16}/></button>
-                  
-                  <div className="flex-1"></div>
-                  <span className="text-xs font-bold text-gray-500 uppercase mr-2">Variáveis:</span>
-                  <button onClick={() => insertVariable('{NOME_EMPRESA}')} className="px-2 py-1 bg-white border rounded text-xs hover:bg-blue-50 text-blue-700">Empresa</button>
-                  <button onClick={() => insertVariable('{CNPJ}')} className="px-2 py-1 bg-white border rounded text-xs hover:bg-blue-50 text-blue-700">CNPJ</button>
+              <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-3 rounded-t-2xl border border-slate-200 border-b-0 shadow-inner">
+                  <span className="text-[10px] font-black text-slate-400 uppercase mr-3 pl-2 tracking-widest">Ferramentas:</span>
+                  <button onClick={() => insertTag('<strong>', '</strong>')} className="p-2 hover:bg-white rounded-xl text-slate-700 font-bold border border-transparent hover:border-slate-200" title="Negrito"><Bold size={18}/></button>
+                  <button onClick={() => insertTag('<em>', '</em>')} className="p-2 hover:bg-white rounded-xl text-slate-700 italic border border-transparent hover:border-slate-200" title="Itálico"><Italic size={18}/></button>
+                  <div className="w-px h-6 bg-slate-300 mx-2"></div>
+                  <button onClick={() => insertTag('<h3>', '</h3>')} className="p-2 hover:bg-white rounded-xl text-slate-700 border border-transparent hover:border-slate-200" title="Título"><Heading1 size={18}/></button>
+                  <button onClick={() => insertTag('<p>', '</p>')} className="p-2 hover:bg-white rounded-xl text-slate-700 font-bold border border-transparent hover:border-slate-200" title="Parágrafo">P</button>
+                  <div className="w-px h-6 bg-slate-300 mx-2"></div>
+                  <button onClick={() => insertVariable('{NOME_EMPRESA}')} className="px-3 py-1.5 bg-white border-2 border-blue-100 rounded-lg text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors">EMPRESA</button>
+                  <button onClick={() => insertVariable('{CNPJ}')} className="px-3 py-1.5 bg-white border-2 border-blue-100 rounded-lg text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors">CNPJ</button>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 border border-t-0 p-6 rounded-b-lg border-gray-300">
-                  
-                  {/* Left Column: Declaration */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1 border border-slate-200 p-8 rounded-b-2xl shadow-sm bg-white">
                   <div className="flex flex-col h-full">
-                      <div className="flex items-center gap-2 mb-2">
-                          <span className="bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded text-xs">1</span>
-                          <h4 className="font-bold text-gray-700">Declaração Inicial (Topo)</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                          <span className="h-6 w-6 flex items-center justify-center bg-slate-900 text-white font-black rounded-lg text-[10px]">1</span>
+                          <h4 className="font-black text-slate-700 uppercase text-xs tracking-widest">Declaração Inicial</h4>
                       </div>
-                      <p className="text-xs text-gray-500 mb-2">
-                          Este texto aparece logo após os dados do colaborador. Clique na caixa para ativar a barra de ferramentas.
-                      </p>
-                      <textarea 
-                          ref={declRef}
-                          onFocus={() => setActiveField('declaration')}
-                          className={`w-full h-40 p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none ${activeField === 'declaration' ? 'border-blue-400 bg-white' : 'border-gray-300 bg-gray-50'}`}
-                          value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.declaration : termConfig.return.declaration}
-                          onChange={(e) => updateConfig('declaration', e.target.value)}
-                          placeholder="Digite o texto de declaração aqui..."
-                      />
+                      <textarea ref={declRef} onFocus={() => setActiveField('declaration')} className={`w-full h-48 p-6 border-2 rounded-2xl focus:ring-4 outline-none text-sm resize-none transition-all leading-relaxed ${activeField === 'declaration' ? 'border-blue-400 bg-white ring-blue-50' : 'border-slate-100 bg-slate-50'}`} value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.declaration : termConfig.return.declaration} onChange={(e) => updateConfig('declaration', e.target.value)} placeholder="Texto jurídico de abertura..."/>
                       
-                      {/* Visual Placeholder for Assets Table */}
-                      <div className="my-6 border-y-2 border-dashed border-gray-200 py-6 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded">
-                          <List size={32} className="mb-2 opacity-20"/>
-                          <span className="text-xs font-bold uppercase tracking-wider">[ Área Fixa: Tabela de Ativos e Acessórios ]</span>
-                          <span className="text-[10px]">Gerada automaticamente pelo sistema</span>
+                      <div className="my-8 border-y-4 border-dotted border-slate-100 py-8 flex flex-col items-center justify-center text-slate-300 bg-slate-50/30 rounded-2xl">
+                          <List size={40} className="mb-3 opacity-20"/>
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em]">[ Tabela de Itens e Acessórios ]</span>
+                          <span className="text-[9px] font-bold mt-2 opacity-60">GERADA AUTOMATICAMENTE PELO SISTEMA</span>
                       </div>
                   </div>
 
-                  {/* Right Column: Clauses */}
                   <div className="flex flex-col h-full">
-                      <div className="flex items-center gap-2 mb-2">
-                          <span className="bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded text-xs">2</span>
-                          <h4 className="font-bold text-gray-700">Cláusulas e Condições (Base)</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                          <span className="h-6 w-6 flex items-center justify-center bg-slate-900 text-white font-black rounded-lg text-[10px]">2</span>
+                          <h4 className="font-black text-slate-700 uppercase text-xs tracking-widest">Cláusulas e Condições</h4>
                       </div>
-                      <p className="text-xs text-gray-500 mb-2">
-                          Use <strong>&lt;h3&gt;</strong> para títulos e <strong>&lt;strong&gt;</strong> para negrito.
-                      </p>
-                      <textarea 
-                          ref={clausesRef}
-                          onFocus={() => setActiveField('clauses')}
-                          className={`w-full flex-1 p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none min-h-[300px] font-mono leading-relaxed ${activeField === 'clauses' ? 'border-blue-400 bg-white' : 'border-gray-300 bg-gray-50'}`}
-                          value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.clauses : termConfig.return.clauses}
-                          onChange={(e) => updateConfig('clauses', e.target.value)}
-                          placeholder="Digite as cláusulas contratuais aqui..."
-                      />
+                      <textarea ref={clausesRef} onFocus={() => setActiveField('clauses')} className={`w-full flex-1 p-6 border-2 rounded-2xl focus:ring-4 outline-none text-sm resize-none min-h-[350px] font-mono leading-relaxed transition-all ${activeField === 'clauses' ? 'border-blue-400 bg-white ring-blue-50' : 'border-slate-100 bg-slate-50'}`} value={activeTemplateType === 'DELIVERY' ? termConfig.delivery.clauses : termConfig.return.clauses} onChange={(e) => updateConfig('clauses', e.target.value)} placeholder="Cláusulas contratuais detalhadas..."/>
                   </div>
-
               </div>
-
-              {msg && <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-lg text-center font-bold text-sm animate-fade-in">{msg}</div>}
           </div>
       )}
 
-      {/* --- LOGS TAB --- */}
       {activeTab === 'LOGS' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
-             <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                 <h3 className="font-bold text-gray-700">Histórico Completo de Alterações</h3>
-                 <span className="text-xs text-gray-500">Últimos 100 registros</span>
+          <div className="space-y-4 animate-fade-in">
+             <div className="flex flex-col md:flex-row gap-4 mb-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-3.5 text-slate-400" size={18}/>
+                    <input type="text" placeholder="Filtrar por Admin, Item, Ação ou Notas..." className="w-full pl-12 pr-6 py-3.5 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 shadow-sm font-medium text-sm" value={logSearch} onChange={e => setLogSearch(e.target.value)}/>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl px-6 py-3 flex items-center gap-3">
+                    <Activity size={20} className="text-blue-600"/>
+                    <div>
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Auditoria Ativa</p>
+                        <p className="text-sm font-bold text-blue-900">{filteredLogs.length} eventos listados</p>
+                    </div>
+                </div>
              </div>
-             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3">Data/Hora</th>
-                            <th className="px-6 py-3">Usuário (Admin)</th>
-                            <th className="px-6 py-3">Ação</th>
-                            <th className="px-6 py-3">Item Afetado</th>
-                            <th className="px-6 py-3">Detalhes</th>
-                            <th className="px-6 py-3">Opções</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {logs.slice(0, 100).map(log => (
-                            <tr key={log.id} className="border-b hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
-                                <td className="px-6 py-4 font-medium text-gray-900">{log.adminUser}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold 
-                                        ${log.action === ActionType.create ? 'bg-green-100 text-green-700' : 
-                                          log.action === ActionType.DELETE ? 'bg-red-100 text-red-700' : 
-                                          log.action === ActionType.RESTORE ? 'bg-indigo-100 text-indigo-700' :
-                                          log.action === ActionType.UPDATE ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
-                                        {log.action}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className="text-gray-400 text-xs mr-1">[{log.assetType}]</span>
-                                    {log.targetName || log.assetId}
-                                </td>
-                                <td className="px-6 py-4 text-gray-500 truncate max-w-xs" title={log.notes}>{log.notes || '-'}</td>
-                                <td className="px-6 py-4">
-                                    {log.action === ActionType.DELETE && log.backupData && (
-                                        <button 
-                                            onClick={() => handleRestore(log.id)}
-                                            className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-100 border border-indigo-200"
-                                            title="Restaurar este item excluído"
-                                        >
-                                            <RotateCcw size={12}/> Restaurar
-                                        </button>
-                                    )}
-                                </td>
+
+             <div className="bg-white rounded-2xl shadow-xl border overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-[10px] font-black text-slate-500 uppercase bg-slate-50 border-b tracking-widest">
+                            <tr>
+                                <th className="px-6 py-4">Data/Hora</th>
+                                <th className="px-6 py-4">Operador</th>
+                                <th className="px-6 py-4">Ação</th>
+                                <th className="px-6 py-4">Item Afetado</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {filteredLogs.slice(0, 100).map(log => {
+                                const hasDiff = log.previousData || log.newData;
+                                return (
+                                    <tr key={log.id} className="hover:bg-blue-50/20 transition-colors group">
+                                        <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold text-slate-400">
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-200">{log.adminUser.charAt(0)}</div>
+                                                <span className="font-bold text-slate-800">{log.adminUser}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border 
+                                                ${log.action === ActionType.create ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                                                  log.action === ActionType.DELETE ? 'bg-red-50 text-red-700 border-red-100' : 
+                                                  log.action === ActionType.RESTORE ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                  log.action === ActionType.UPDATE ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                                {log.action}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">[{log.assetType}]</span>
+                                                <span className="font-bold text-slate-700 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {hasDiff ? (
+                                                <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border border-blue-100 shadow-sm animate-pulse">
+                                                    <Info size={12}/> Detalhado
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-300 text-[10px] font-bold uppercase italic">Básico</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex justify-end gap-2">
+                                                {hasDiff && (
+                                                    <button onClick={() => setSelectedLog(log)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white border-2 border-blue-100 text-blue-600 px-3 py-1.5 rounded-xl hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm">
+                                                        <Search size={14}/> Ver Alteração
+                                                    </button>
+                                                )}
+                                                {log.action === ActionType.DELETE && log.backupData && (
+                                                    <button onClick={() => handleRestore(log.id)} className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100" title="Restaurar item excluído">
+                                                        <RotateCcw size={14}/> Restaurar
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
              </div>
           </div>
       )}
+
+      {/* --- MODAL FOR LOG DETAILS --- */}
+      {selectedLog && <AuditDetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />}
 
       {/* --- MODAL FOR USER EDIT --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-white">{editingId ? 'Editar Usuário' : 'Novo Usuário de Sistema'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20}/></button>
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up border border-blue-100">
+            <div className="bg-slate-900 px-8 py-5 flex justify-between items-center border-b border-white/10">
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? 'Editar Usuário' : 'Novo Usuário de Sistema'}</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={24}/></button>
             </div>
-            <form onSubmit={handleUserSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleUserSubmit} className="p-8 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                <input required type="text" className="w-full border rounded-lg p-2" value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})} />
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Nome Completo</label>
+                <input required type="text" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">E-mail (Login)</label>
-                <input required type="email" className="w-full border rounded-lg p-2" value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})} />
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">E-mail (Login)</label>
+                <input required type="email" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50" value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha {editingId && '(Deixe em branco para manter)'}</label>
-                <input 
-                    type="password" 
-                    className="w-full border rounded-lg p-2" 
-                    value={userForm.password || ''} 
-                    onChange={e => setUserForm({...userForm, password: e.target.value})} 
-                    required={!editingId}
-                />
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Senha {editingId && '(Vazio para manter)'}</label>
+                <input type="password" className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 font-mono" value={userForm.password || ''} onChange={e => setUserForm({...userForm, password: e.target.value})} required={!editingId}/>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Permissão</label>
-                <select className="w-full border rounded-lg p-2" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
-                    <option value={SystemRole.OPERATOR}>Operador (Visualizar/Entregar)</option>
-                    <option value={SystemRole.ADMIN}>Administrador (Total)</option>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Nível de Permissão</label>
+                <select className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 font-bold" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
+                    <option value={SystemRole.OPERATOR}>Operador (Gestão diária)</option>
+                    <option value={SystemRole.ADMIN}>Administrador (Controle Total)</option>
                 </select>
               </div>
               
-              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Salvar</button>
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
+                <button type="submit" className="px-10 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95">Salvar Acesso</button>
               </div>
             </form>
           </div>

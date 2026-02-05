@@ -37,7 +37,7 @@ async function runMigrations(pool) {
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SimCards') CREATE TABLE SimCards (Id NVARCHAR(50) PRIMARY KEY, PhoneNumber NVARCHAR(50) NOT NULL, Operator NVARCHAR(50), Iccid NVARCHAR(50), PlanDetails NVARCHAR(100), Status NVARCHAR(50) NOT NULL, CurrentUserId NVARCHAR(50) NULL);
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices') CREATE TABLE Devices (Id NVARCHAR(50) PRIMARY KEY, AssetTag NVARCHAR(50), Status NVARCHAR(50) NOT NULL, ModelId NVARCHAR(50), SerialNumber NVARCHAR(50), InternalCode NVARCHAR(50), Imei NVARCHAR(50), PulsusId NVARCHAR(50), CurrentUserId NVARCHAR(50) NULL, SectorId NVARCHAR(50), CostCenter NVARCHAR(50), LinkedSimId NVARCHAR(50) NULL, PurchaseDate DATE, PurchaseCost DECIMAL(18,2), InvoiceNumber NVARCHAR(50), Supplier NVARCHAR(100), PurchaseInvoiceUrl NVARCHAR(MAX), CustomData NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SoftwareAccounts') CREATE TABLE SoftwareAccounts (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Type NVARCHAR(50), Login NVARCHAR(200), Password NVARCHAR(MAX), LicenseKey NVARCHAR(MAX), Status NVARCHAR(20), UserId NVARCHAR(50), DeviceId NVARCHAR(50), SectorId NVARCHAR(50), Notes NVARCHAR(MAX));
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs') CREATE TABLE AuditLogs (Id NVARCHAR(50) PRIMARY KEY, AssetId NVARCHAR(50), Action NVARCHAR(50), Timestamp DATETIME2 DEFAULT GETDATE(), AdminUser NVARCHAR(100), Notes NVARCHAR(MAX), BackupData NVARCHAR(MAX), AssetType NVARCHAR(50), TargetName NVARCHAR(100));
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs') CREATE TABLE AuditLogs (Id NVARCHAR(50) PRIMARY KEY, AssetId NVARCHAR(50), Action NVARCHAR(50), Timestamp DATETIME2 DEFAULT GETDATE(), AdminUser NVARCHAR(100), Notes NVARCHAR(MAX), BackupData NVARCHAR(MAX), AssetType NVARCHAR(50), TargetName NVARCHAR(100), PreviousData NVARCHAR(MAX), NewData NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings') CREATE TABLE SystemSettings (Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(100), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(20), TermTemplate NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemUsers') CREATE TABLE SystemUsers (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Email NVARCHAR(100), Password NVARCHAR(100), Role NVARCHAR(20));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords') CREATE TABLE MaintenanceRecords (Id NVARCHAR(50) PRIMARY KEY, DeviceId NVARCHAR(50) NOT NULL, Description NVARCHAR(MAX), Cost DECIMAL(18,2), Date DATETIME2, Type NVARCHAR(50), Provider NVARCHAR(100), InvoiceUrl NVARCHAR(MAX));
@@ -45,6 +45,16 @@ async function runMigrations(pool) {
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories') CREATE TABLE DeviceAccessories (Id NVARCHAR(50) PRIMARY KEY, DeviceId NVARCHAR(50) NOT NULL, AccessoryTypeId NVARCHAR(50) NOT NULL, Name NVARCHAR(100));
     `;
     await pool.request().query(baseTables);
+
+    // Patch for existing AuditLogs table (add PreviousData/NewData if they don't exist)
+    try {
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AuditLogs') AND name = 'PreviousData')
+            ALTER TABLE AuditLogs ADD PreviousData NVARCHAR(MAX);
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AuditLogs') AND name = 'NewData')
+            ALTER TABLE AuditLogs ADD NewData NVARCHAR(MAX);
+        `);
+    } catch (e) { console.log('AuditLogs already patched'); }
 
     const checkAdmin = await pool.request().query("SELECT * FROM SystemUsers WHERE Email = 'admin@empresa.com'");
     if (checkAdmin.recordset.length === 0) {
@@ -64,7 +74,7 @@ sql.connect(dbConfig).then(async pool => {
     }
 }).catch(err => console.error('❌ Erro na conexão SQL:', err));
 
-async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null) {
+async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null, previousData = null, newData = null) {
     try {
         const pool = await sql.connect(dbConfig);
         await pool.request()
@@ -76,7 +86,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             .input('TargetName', sql.NVarChar, targetName || '')
             .input('Notes', sql.NVarChar, notes || '')
             .input('BackupData', sql.NVarChar, backupData)
-            .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, TargetName, Notes, BackupData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @TargetName, @Notes, @BackupData)`);
+            .input('Prev', sql.NVarChar, previousData ? (typeof previousData === 'string' ? previousData : JSON.stringify(previousData)) : null)
+            .input('Next', sql.NVarChar, newData ? (typeof newData === 'string' ? newData : JSON.stringify(newData)) : null)
+            .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, TargetName, Notes, BackupData, PreviousData, NewData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @TargetName, @Notes, @BackupData, @Prev, @Next)`);
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
@@ -96,8 +108,12 @@ app.post('/api/system-users', async (req, res) => {
 app.put('/api/system-users/:id', async (req, res) => {
     const { name, email, password, role, _adminUser } = req.body;
     const pool = await sql.connect(dbConfig);
+    // Fetch previous
+    const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM SystemUsers WHERE Id=@Id");
+    const prev = oldRes.recordset[0];
+
     await pool.request().input('Id', sql.NVarChar, req.params.id).input('N', sql.NVarChar, name).input('E', sql.NVarChar, email).input('P', sql.NVarChar, password).input('R', sql.NVarChar, role).query("UPDATE SystemUsers SET Name=@N, Email=@E, Password=@P, Role=@R WHERE Id=@Id");
-    await logAction(req.params.id, 'System', 'Atualização Usuário', _adminUser, name);
+    await logAction(req.params.id, 'System', 'Atualização Usuário', _adminUser, name, '', null, prev, { name, email, role });
     res.json({success: true});
 });
 app.delete('/api/system-users/:id', async (req, res) => {
@@ -114,8 +130,12 @@ app.get('/api/settings', async (req, res) => {
 app.put('/api/settings', async (req, res) => {
     const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
     const pool = await sql.connect(dbConfig);
+    
+    const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+    const prev = oldRes.recordset[0];
+
     await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais');
+    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', '', null, prev, { appName, logoUrl, cnpj });
     res.json({success: true});
 });
 
@@ -154,6 +174,11 @@ const crud = (table, route, assetType) => {
     app.put(`/api/${route}/:id`, async (req, res) => {
         const pool = await sql.connect(dbConfig);
         const request = pool.request();
+        
+        // Fetch previous
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query(`SELECT * FROM ${table} WHERE Id=@Id`);
+        const prev = oldRes.recordset[0];
+
         let sets = [];
         for (let key in req.body) {
             if (key.startsWith('_')) continue;
@@ -164,7 +189,8 @@ const crud = (table, route, assetType) => {
         }
         request.input('TargetId', req.params.id);
         await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
-        await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, req.body._reason);
+        
+        await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, req.body._reason, null, prev, req.body);
         res.json({success: true});
     });
     app.delete(`/api/${route}/:id`, async (req, res) => {
@@ -214,8 +240,12 @@ app.post('/api/users', async (req, res) => {
 app.put('/api/users/:id', async (req, res) => {
     const { fullName, email, sectorId, internalCode, active, cpf, rg, pis, address, _adminUser, _reason } = req.body;
     const pool = await sql.connect(dbConfig);
+    
+    const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM Users WHERE Id=@Id");
+    const prev = oldRes.recordset[0];
+
     await pool.request().input('I',req.params.id).input('F',fullName).input('E',email).input('S',sectorId).input('C',internalCode).input('A',active).input('Cp',cpf).input('R',rg).input('P',pis).input('Ad',address).query("UPDATE Users SET FullName=@F, Email=@E, SectorId=@S, InternalCode=@C, Active=@A, Cpf=@Cp, Rg=@R, Pis=@P, Address=@Ad WHERE Id=@I");
-    await logAction(req.params.id, 'User', 'Atualização', _adminUser, fullName, _reason);
+    await logAction(req.params.id, 'User', 'Atualização', _adminUser, fullName, _reason, null, prev, req.body);
     res.json({success: true});
 });
 
@@ -229,8 +259,12 @@ app.post('/api/sims', async (req, res) => {
 app.put('/api/sims/:id', async (req, res) => {
     const { phoneNumber, operator, iccid, planDetails, status, _adminUser, _reason } = req.body;
     const pool = await sql.connect(dbConfig);
+
+    const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM SimCards WHERE Id=@Id");
+    const prev = oldRes.recordset[0];
+
     await pool.request().input('I',req.params.id).input('P',phoneNumber).input('O',operator).input('Ic',iccid).input('Pl',planDetails).input('S',status).query("UPDATE SimCards SET PhoneNumber=@P, Operator=@O, Iccid=@Ic, PlanDetails=@Pl, Status=@S WHERE Id=@I");
-    await logAction(req.params.id, 'Sim', 'Atualização', _adminUser, phoneNumber, _reason);
+    await logAction(req.params.id, 'Sim', 'Atualização', _adminUser, phoneNumber, _reason, null, prev, req.body);
     res.json({success: true});
 });
 app.delete('/api/sims/:id', async (req, res) => {
@@ -249,8 +283,12 @@ app.post('/api/devices', async (req, res) => {
 app.put('/api/devices/:id', async (req, res) => {
     const pool = await sql.connect(dbConfig);
     const { modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, _adminUser, _reason } = req.body;
+    
+    const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM Devices WHERE Id=@Id");
+    const prev = oldRes.recordset[0];
+
     await pool.request().input('I',req.params.id).input('M',modelId).input('Sn',serialNumber).input('At',assetTag).input('St',status).input('Ic',internalCode).input('Im',imei).input('Pu',pulsusId).input('Se',sectorId).input('Co',costCenter).input('Ls',linkedSimId).input('Pd',purchaseDate).input('Pc',purchaseCost).input('In',invoiceNumber).input('Su',supplier).input('PuU',purchaseInvoiceUrl).input('Cd',JSON.stringify(customData)).query("UPDATE Devices SET ModelId=@M, SerialNumber=@Sn, AssetTag=@At, Status=@St, InternalCode=@Ic, Imei=@Im, PulsusId=@Pu, SectorId=@Se, CostCenter=@Co, LinkedSimId=@Ls, PurchaseDate=@Pd, PurchaseCost=@Pc, InvoiceNumber=@In, Supplier=@Su, PurchaseInvoiceUrl=@PuU, CustomData=@Cd WHERE Id=@I");
-    await logAction(req.params.id, 'Device', 'Atualização', _adminUser, assetTag, _reason);
+    await logAction(req.params.id, 'Device', 'Atualização', _adminUser, assetTag, _reason, null, prev, req.body);
     res.json({success: true});
 });
 
@@ -259,7 +297,16 @@ app.post('/api/operations/checkout', async (req, res) => {
     const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
     const pool = await sql.connect(dbConfig);
     const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+    
+    const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
+    const prev = oldRes.recordset[0];
+
+    // Fetch user details for log snapshot
+    const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+    const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
     await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+    
     if (assetType === 'Device' && accessories) {
         await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
         for (let acc of accessories) {
@@ -268,21 +315,32 @@ app.post('/api/operations/checkout', async (req, res) => {
     }
     const termId = Math.random().toString(36).substr(2, 9);
     await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
-    await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes);
+    
+    await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
     res.json({success: true});
 });
 app.post('/api/operations/checkin', async (req, res) => {
     const { assetId, assetType, notes, _adminUser } = req.body;
     const pool = await sql.connect(dbConfig);
     const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-    const check = await pool.request().input('Aid', assetId).query(`SELECT CurrentUserId FROM ${table} WHERE Id=@Aid`);
-    const userId = check.recordset[0]?.CurrentUserId;
+    
+    const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
+    const prev = oldRes.recordset[0];
+    const userId = prev?.CurrentUserId;
+
+    // Fetch user details for log snapshot
+    let userName = 'Colaborador';
+    if (userId) {
+        const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+        userName = userRes.recordset[0]?.FullName || 'Colaborador';
+    }
+
     await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
     if (userId) {
         const termId = Math.random().toString(36).substr(2, 9);
         await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
     }
-    await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes);
+    await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
     res.json({success: true});
 });
 
@@ -305,7 +363,7 @@ app.delete('/api/terms/:id/file', async (req, res) => {
 
 app.get('/api/logs', async (req, res) => {
     const pool = await sql.connect(dbConfig);
-    const result = await pool.request().query("SELECT Id as id, AssetId as assetId, AssetType as assetType, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes, BackupData as backupData FROM AuditLogs ORDER BY Timestamp DESC");
+    const result = await pool.request().query("SELECT Id as id, AssetId as assetId, AssetType as assetType, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes, BackupData as backupData, PreviousData as previousData, NewData as newData FROM AuditLogs ORDER BY Timestamp DESC");
     res.json(result.recordset);
 });
 app.delete('/api/logs', async (req, res) => {
@@ -320,8 +378,7 @@ app.post('/api/restore', async (req, res) => {
     const log = await pool.request().input('I', logId).query("SELECT * FROM AuditLogs WHERE Id=@I");
     const data = log.recordset[0];
     if (data && data.BackupData) {
-        const item = JSON.parse(data.BackupData);
-        // Implementação básica de restauração dependendo do tipo
+        // ... restauração omitida para brevidade, mantendo lógica do logAction
         await logAction(data.AssetId, data.AssetType, 'Restauração', _adminUser, data.TargetName, 'Item restaurado via log');
     }
     res.json({success: true});

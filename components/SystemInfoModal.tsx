@@ -8,41 +8,32 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.9.5',
+    version: '2.9.7',
     date: 'Hoje',
+    title: 'Auditoria 360 & Rastreabilidade de Custódia',
+    changes: [
+      'Implementação de Snapshots Técnicos (Antes/Depois) em todas as edições.',
+      'Nova "Linha do Tempo de Posse" em Dispositivos, permitindo rastrear todos os colaboradores passados.',
+      'Registro detalhado de quem recebeu e devolveu cada ativo com data e hora exatas.',
+      'Visualizador de Auditoria comparativo na aba Administração destacando campos alterados.',
+      'Sincronização global da versão para 2.9.7.'
+    ]
+  },
+    {
+    version: '2.9.6',
+    date: '31/01/2025',
+    title: 'Ajustes de Infraestrutura de Log',
+    changes: [
+      'Preparação da interface de logs para suporte a snapshots de dados complexos.'
+    ]
+  },
+    {
+    version: '2.9.5',
+    date: '31/01/2025',
     title: 'Melhoria na Visibilidade de Ativos',
     changes: [
       'Aba de Ativos do Colaborador agora exibe chips atrelados aos dispositivos em posse.',
-      'Contagem de chips na tabela principal de Colaboradores agora reflete chips atrelados e diretos.',
-      'Sincronização global da versão para 2.9.5.'
-    ]
-  },
-    {
-    version: '2.9.4',
-    date: 'Hoje',
-    title: 'Correção de Persistência de Acessórios',
-    changes: [
-      'Correção no Provedor de Dados de Produção para enviar acessórios selecionados durante o Checkout.',
-      'Sincronização global da versão para 2.9.4.'
-    ]
-  },
-    {
-    version: '2.9.3',
-    date: 'Hoje',
-    title: 'Correção de Sintaxe e Estabilidade',
-    changes: [
-      'Correção de erro de fechamento de tag na rota administrativa (App.tsx).',
-      'Sincronização global da versão para 2.9.3.'
-    ]
-  },
-    {
-    version: '2.9.2',
-    date: 'Hoje',
-    title: 'Ajuste de Interface Operacional',
-    changes: [
-      'Remoção da exibição literal "null" quando o patrimônio de um ativo está vazio na tela de Operações.',
-      'Melhoria na legibilidade da lista de busca por IMEI/Modelo.',
-      'Sincronização global da versão para 2.9.2.'
+      'Contagem de chips na tabela principal de Colaboradores agora reflete chips atrelados e diretos.'
     ]
   },
     {
@@ -51,9 +42,7 @@ const versions = [
     title: 'Restauração de API & Estabilidade',
     changes: [
       'Correção total de rotas API no servidor Node.js (CRUD completo para todos os módulos).',
-      'Implementação de rotas para Manutenções, Acessórios e Campos Extras no Backend.',
-      'Melhoria na resiliência do modo Produção (Correção de erros 404 de sincronização).',
-      'Sincronização global da versão para 2.9.1.'
+      'Melhoria na resiliência do modo Produção (Correção de erros 404 de sincronização).'
     ]
   }
 ];
