@@ -151,15 +151,34 @@ const DataImporter = () => {
               if (!rawCpf) throw new Error('CPF obrigatório');
               const cpf = formatCPF(rawCpf);
               const existing = users.find(u => u.cpf === cpf);
-              if (!existing) return { status: 'NEW', row, selected: true };
-              return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
+              
+              if (existing) return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
+
+              // Verificar RG e PIS secundários se o CPF for novo
+              const rawRg = formatRG(row['RG'] || '');
+              if (rawRg && users.some(u => formatRG(u.rg) === rawRg)) throw new Error(`O RG ${rawRg} já pertence a outro colaborador no sistema.`);
+
+              const rawPis = formatPIS(row['PIS'] || '');
+              if (rawPis && users.some(u => formatPIS(u.pis || '') === rawPis)) throw new Error(`O PIS ${rawPis} já pertence a outro colaborador no sistema.`);
+
+              return { status: 'NEW', row, selected: true };
           } else if (importType === 'DEVICES') {
               const tag = row['Patrimonio']?.trim();
               const imei = row['IMEI']?.trim();
               if (!tag && !imei) throw new Error('Patrimônio ou IMEI obrigatório');
-              const existing = devices.find(d => (tag && d.assetTag === tag) || (imei && d.imei === imei));
-              if (!existing) return { status: 'NEW', row, selected: true };
-              return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
+              
+              const existingByTag = tag ? devices.find(d => d.assetTag === tag) : null;
+              const existingByImei = imei ? devices.find(d => d.imei === imei) : null;
+
+              if (existingByTag || existingByImei) {
+                  return { 
+                      status: 'CONFLICT', 
+                      row, 
+                      existingId: (existingByTag || existingByImei)?.id, 
+                      selected: true 
+                  };
+              }
+              return { status: 'NEW', row, selected: true };
           } else if (importType === 'SIMS') {
               const num = row['Numero']?.trim();
               if (!num) throw new Error('Número é obrigatório');

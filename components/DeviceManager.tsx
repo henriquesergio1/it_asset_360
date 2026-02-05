@@ -447,6 +447,22 @@ const DeviceManager = () => {
         return;
     }
 
+    // Validação de unicidade
+    if (formData.assetTag) {
+        const dupTag = devices.find(d => d.assetTag === formData.assetTag && d.id !== editingId);
+        if (dupTag) {
+            alert(`FALHA DE UNICIDADE:\n\nO número de patrimônio ${formData.assetTag} já está cadastrado para outro dispositivo.`);
+            return;
+        }
+    }
+    if (formData.imei) {
+        const dupImei = devices.find(d => d.imei === formData.imei && d.id !== editingId);
+        if (dupImei) {
+            alert(`FALHA DE UNICIDADE:\n\nO IMEI ${formData.imei} já está cadastrado para outro dispositivo.`);
+            return;
+        }
+    }
+
     if (editingId) {
         setEditReason('');
         setIsReasonModalOpen(true);
@@ -675,9 +691,9 @@ const DeviceManager = () => {
                 <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Geral</button>
                 <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Financeiro</button>
                 <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Manutenções ({deviceMaintenances.length})</button>
-                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Software ({deviceAccounts.length})</button>
-                <button type="button" onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Cadeia de Custódia</button>
-                <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Auditoria</button>
+                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Software ({deviceAccounts.length})</button>
+                <button type="button" onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Cadeia de Custódia</button>
+                <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 bg-white shadow-sm' : 'border-transparent text-gray-400 hover:text-slate-600'}`}>Auditoria</button>
             </div>
 
             <form id="devForm" onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden">

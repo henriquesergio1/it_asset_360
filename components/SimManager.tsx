@@ -41,6 +41,14 @@ const SimManager = () => {
     e.preventDefault();
     if (isViewOnly) return;
 
+    if (formData.phoneNumber) {
+        const dupPhone = sims.find(s => s.phoneNumber === formData.phoneNumber && s.id !== editingId);
+        if (dupPhone) {
+            alert(`FALHA DE UNICIDADE:\n\nO número de linha ${formData.phoneNumber} já está cadastrado no sistema.`);
+            return;
+        }
+    }
+
     if (editingId) {
         setEditReason('');
         setIsReasonModalOpen(true);

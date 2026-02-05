@@ -211,9 +211,37 @@ const UserManager = () => {
       } else { window.open(fileUrl, '_blank'); }
   };
 
+  // Verificação de unicidade
+  const checkUniqueness = (data: Partial<User>) => {
+      const cleanedCpf = formatCPF(data.cpf || '');
+      const cleanedRg = formatRG(data.rg || '');
+      const cleanedPis = formatPIS(data.pis || '');
+
+      const duplicateCpf = users.find(u => u.cpf === cleanedCpf && u.id !== editingId);
+      if (duplicateCpf) return `O CPF ${cleanedCpf} já está cadastrado para o colaborador: ${duplicateCpf.fullName}.`;
+
+      if (cleanedRg) {
+          const duplicateRg = users.find(u => formatRG(u.rg) === cleanedRg && u.id !== editingId);
+          if (duplicateRg) return `O RG ${cleanedRg} já está cadastrado para o colaborador: ${duplicateRg.fullName}.`;
+      }
+
+      if (cleanedPis) {
+          const duplicatePis = users.find(u => formatPIS(u.pis || '') === cleanedPis && u.id !== editingId);
+          if (duplicatePis) return `O PIS ${cleanedPis} já está cadastrado para o colaborador: ${duplicatePis.fullName}.`;
+      }
+
+      return null;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewOnly) return;
+
+    const uniquenessError = checkUniqueness(formData);
+    if (uniquenessError) {
+        alert(`FALHA DE INTEGRIDADE:\n\n${uniquenessError}`);
+        return;
+    }
 
     if (editingId) {
         setEditReason('');
@@ -536,7 +564,6 @@ const UserManager = () => {
                                             acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
                                             {acc.type === AccountType.EMAIL ? <Mail size={24}/> : 
                                              acc.type === AccountType.OFFICE ? <FileText size={24}/> :
-                                             // Fixed: Changed ActionType.ERP to AccountType.ERP
                                              acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
                                         </div>
                                         <div>
