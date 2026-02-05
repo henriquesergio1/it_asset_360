@@ -15,6 +15,11 @@ interface AnalysisResult {
     selected: boolean;
 }
 
+// Helper para normalizar identificadores (remover formatação)
+const cleanId = (v: string): string => {
+    return v ? v.toString().replace(/\D/g, "").trim() : "";
+};
+
 const formatCPF = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
@@ -132,6 +137,7 @@ const DataImporter = () => {
       const firstLine = lines[0];
       const separator = firstLine.includes(';') ? ';' : ',';
       const headers = firstLine.split(separator).map(h => h.trim().replace(new RegExp('^"|"$', 'g'), ''));
+      
       const rows = lines.slice(1).map(line => {
           const regex = new RegExp(`${separator}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
           const values = line.split(regex).map(v => v.trim().replace(new RegExp('^"|"$', 'g'), ''));
@@ -140,49 +146,116 @@ const DataImporter = () => {
               return obj;
           }, {});
       });
-      setAnalyzedData(rows.map(row => analyzeRow(row)));
+
+      // Rastreamento de duplicidades no lote atual
+      const batchSeen = {
+          cpfs: new Set<string>(),
+          rgs: new Set<string>(),
+          piss: new Set<string>(),
+          tags: new Set<string>(),
+          imeis: new Set<string>(),
+          numbers: new Set<string>()
+      };
+
+      const results = rows.map(row => analyzeRow(row, batchSeen));
+      setAnalyzedData(results);
       setStep('ANALYSIS');
   };
 
-  const analyzeRow = (row: any): AnalysisResult => {
+  const analyzeRow = (row: any, batchSeen: any): AnalysisResult => {
       try {
           if (importType === 'USERS') {
               const rawCpf = row['CPF']?.trim();
               if (!rawCpf) throw new Error('CPF obrigatório');
-              const cpf = formatCPF(rawCpf);
-              const existing = users.find(u => u.cpf === cpf);
               
-              if (existing) return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
-
-              // Verificar RG e PIS secundários se o CPF for novo
+              const cpf = formatCPF(rawCpf);
+              const cpfClean = cleanId(cpf);
+              
               const rawRg = formatRG(row['RG'] || '');
-              if (rawRg && users.some(u => formatRG(u.rg) === rawRg)) throw new Error(`O RG ${rawRg} já pertence a outro colaborador no sistema.`);
-
+              const rgClean = rawRg; // RG alfanumérico não limpa tudo, apenas normaliza
+              
               const rawPis = formatPIS(row['PIS'] || '');
-              if (rawPis && users.some(u => formatPIS(u.pis || '') === rawPis)) throw new Error(`O PIS ${rawPis} já pertence a outro colaborador no sistema.`);
+              const pisClean = cleanId(rawPis);
+
+              // 1. Verificar duplicidade dentro do próprio CSV (lote)
+              if (batchSeen.cpfs.has(cpfClean)) throw new Error(`CPF duplicado no arquivo: ${cpf}`);
+              if (rgClean && batchSeen.rgs.has(rgClean)) throw new Error(`RG duplicado no arquivo: ${rawRg}`);
+              if (pisClean && batchSeen.piss.has(pisClean)) throw new Error(`PIS duplicado no arquivo: ${rawPis}`);
+
+              // 2. Verificar duplicidade contra o sistema
+              const existingByCpf = users.find(u => cleanId(u.cpf) === cpfClean);
+              
+              // Se o CPF já existe, será uma atualização (CONFLICT)
+              if (existingByCpf) {
+                  // Mesmo sendo atualização, os outros campos únicos (RG, PIS) se mudarem não podem conflitar com OUTROS usuários
+                  if (rgClean && users.some(u => u.id !== existingByCpf.id && formatRG(u.rg) === rgClean)) {
+                      throw new Error(`Conflito: O RG ${rawRg} já pertence a outro colaborador cadastrado.`);
+                  }
+                  if (pisClean && users.some(u => u.id !== existingByCpf.id && cleanId(u.pis || '') === pisClean)) {
+                      throw new Error(`Conflito: O PIS ${rawPis} já pertence a outro colaborador cadastrado.`);
+                  }
+
+                  // Adicionar ao rastreio do lote para evitar que uma linha futura aponte para o mesmo ID ilegalmente
+                  batchSeen.cpfs.add(cpfClean);
+                  if (rgClean) batchSeen.rgs.add(rgClean);
+                  if (pisClean) batchSeen.piss.add(pisClean);
+                  return { status: 'CONFLICT', row, existingId: existingByCpf.id, selected: true };
+              }
+
+              // Se o CPF é novo, RG e PIS também devem ser novos no sistema
+              if (rgClean && users.some(u => formatRG(u.rg) === rgClean)) throw new Error(`O RG ${rawRg} já pertence a um colaborador no sistema.`);
+              if (pisClean && users.some(u => cleanId(u.pis || '') === pisClean)) throw new Error(`O PIS ${rawPis} já pertence a um colaborador no sistema.`);
+
+              // Registrar vistos no lote
+              batchSeen.cpfs.add(cpfClean);
+              if (rgClean) batchSeen.rgs.add(rgClean);
+              if (pisClean) batchSeen.piss.add(pisClean);
 
               return { status: 'NEW', row, selected: true };
+
           } else if (importType === 'DEVICES') {
               const tag = row['Patrimonio']?.trim();
               const imei = row['IMEI']?.trim();
               if (!tag && !imei) throw new Error('Patrimônio ou IMEI obrigatório');
               
+              // Verificar duplicidade no arquivo
+              if (tag && batchSeen.tags.has(tag)) throw new Error(`Patrimônio duplicado no arquivo: ${tag}`);
+              if (imei && batchSeen.imeis.has(imei)) throw new Error(`IMEI duplicado no arquivo: ${imei}`);
+
               const existingByTag = tag ? devices.find(d => d.assetTag === tag) : null;
               const existingByImei = imei ? devices.find(d => d.imei === imei) : null;
 
-              if (existingByTag || existingByImei) {
-                  return { 
-                      status: 'CONFLICT', 
-                      row, 
-                      existingId: (existingByTag || existingByImei)?.id, 
-                      selected: true 
-                  };
+              // Se existir por Tag ou IMEI, é um CONFLICT (atualização)
+              const existing = existingByTag || existingByImei;
+              if (existing) {
+                  // Se localizou por Tag, mas o IMEI no CSV pertence a OUTRO dispositivo -> Erro
+                  if (imei && existingByImei && existingByImei.id !== existing.id) {
+                      throw new Error(`Conflito: O IMEI ${imei} pertence a outro dispositivo (Tag: ${existingByImei.assetTag}).`);
+                  }
+                  
+                  if (tag) batchSeen.tags.add(tag);
+                  if (imei) batchSeen.imeis.add(imei);
+                  return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
               }
+
+              // Se é novo, garantir que nem a Tag nem o IMEI existem
+              if (tag && devices.some(d => d.assetTag === tag)) throw new Error(`Patrimônio ${tag} já existe no sistema.`);
+              if (imei && devices.some(d => d.imei === imei)) throw new Error(`IMEI ${imei} já existe no sistema.`);
+
+              if (tag) batchSeen.tags.add(tag);
+              if (imei) batchSeen.imeis.add(imei);
               return { status: 'NEW', row, selected: true };
+
           } else if (importType === 'SIMS') {
-              const num = row['Numero']?.trim();
-              if (!num) throw new Error('Número é obrigatório');
-              const existing = sims.find(s => s.phoneNumber === num);
+              const numRaw = row['Numero']?.trim();
+              if (!numRaw) throw new Error('Número é obrigatório');
+              
+              const numClean = cleanId(numRaw);
+              if (batchSeen.numbers.has(numClean)) throw new Error(`Número duplicado no arquivo: ${numRaw}`);
+
+              const existing = sims.find(s => cleanId(s.phoneNumber) === numClean);
+              
+              batchSeen.numbers.add(numClean);
               if (!existing) return { status: 'NEW', row, selected: true };
               return { status: 'CONFLICT', row, existingId: existing.id, selected: true };
           }
@@ -198,6 +271,7 @@ const DataImporter = () => {
       setProgress({ current: 0, total: toProcess.length, created: 0, updated: 0, errors: 0 });
       setLogs([]);
 
+      // Cache de mapas para evitar buscas repetitivas
       const sectorMap = new Map<string, string>();
       sectors.forEach(s => sectorMap.set(toSlug(s.name), s.id));
 
@@ -282,7 +356,8 @@ const DataImporter = () => {
 
                   const userCpfRaw = r['CPF Colaborador']?.trim();
                   const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
-                  const linkedUser = userCpfFormatted ? users.find(u => u.cpf === userCpfFormatted) : null;
+                  // Usar o ID limpo para busca de usuário se CPF formatado existir
+                  const linkedUser = userCpfFormatted ? users.find(u => cleanId(u.cpf) === cleanId(userCpfFormatted)) : null;
                   
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
@@ -368,9 +443,9 @@ const DataImporter = () => {
                         </label>
                     </div>
                     <p className="text-[11px] text-gray-400 text-center max-w-md italic">
-                        {importType === 'USERS' ? 'Nota: CPF como ID. "Cargo ou Funcao" vincula ao ID estruturado.' : 
-                         importType === 'DEVICES' ? 'Nota: "Codigo de Setor" vai para o campo numérico (InternalCode). "Cargo ou Funcao" define o vínculo do setor.' :
-                         'Nota: Identificação via Número do Chip.'}
+                        {importType === 'USERS' ? 'Nota: CPF como ID. Unicidade validada para CPF, RG e PIS.' : 
+                         importType === 'DEVICES' ? 'Nota: Unicidade validada para Patrimônio e IMEI.' :
+                         'Nota: Identificação única via Número do Chip.'}
                     </p>
                 </div>
             </div>
@@ -396,7 +471,7 @@ const DataImporter = () => {
                         </thead>
                         <tbody>
                             {analyzedData.map((item, idx) => (
-                                <tr key={idx} className="border-b hover:bg-blue-50/30 transition-colors">
+                                <tr key={idx} className={`border-b hover:bg-blue-50/30 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20' : ''}`}>
                                     <td className="px-6 py-3 font-mono font-bold text-blue-900">
                                         {importType === 'USERS' ? item.row['CPF'] : 
                                          importType === 'DEVICES' ? (item.row['Patrimonio'] || item.row['IMEI']) : 
@@ -409,7 +484,7 @@ const DataImporter = () => {
                                     </td>
                                     <td className="px-6 py-3 text-gray-500 font-bold uppercase text-[10px]">
                                         {item.status === 'ERROR' ? (
-                                            <span className="text-red-500">{item.errorMsg}</span>
+                                            <span className="text-red-600 flex items-center gap-1"><AlertCircle size={12}/> {item.errorMsg}</span>
                                         ) : (
                                             importType === 'USERS' ? item.row['Nome Completo'] :
                                             importType === 'DEVICES' ? `${item.row['Marca']} ${item.row['Modelo']}` :
@@ -421,8 +496,8 @@ const DataImporter = () => {
                         </tbody>
                     </table>
                 </div>
-                <button onClick={executeImport} className="mt-4 bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all">
-                    Iniciar Processamento ({analyzedData.filter(i => i.selected && i.status !== 'ERROR').length} itens)
+                <button onClick={executeImport} disabled={analyzedData.every(i => !i.selected || i.status === 'ERROR')} className="mt-4 bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:grayscale">
+                    Iniciar Processamento ({analyzedData.filter(i => i.selected && i.status !== 'ERROR').length} itens válidos)
                 </button>
             </div>
         )}
@@ -451,7 +526,7 @@ const DataImporter = () => {
                 <button onClick={handleStartNew} className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95">Nova Importação</button>
                 {logs.length > 0 && (
                     <div className="w-full max-w-xl bg-red-50 p-4 rounded-xl text-left text-xs text-red-700 border border-red-200 overflow-y-auto max-h-40 shadow-sm font-mono">
-                        <p className="font-bold mb-2 uppercase text-[10px]">Logs de Erro:</p>
+                        <p className="font-bold mb-2 uppercase text-[10px]">Logs de Erro Detalhados:</p>
                         <ul className="list-decimal pl-6 space-y-1">{logs.map((l, i) => <li key={i}>{l}</li>)}</ul>
                     </div>
                 )}

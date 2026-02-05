@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.9.8',
+    version: '2.9.9',
     date: 'Hoje',
+    title: 'Correção Crítica: Unicidade na Importação',
+    changes: [
+      'Implementação de rastreio de duplicatas dentro do mesmo lote de importação CSV.',
+      'Validação rigorosa de campos secundários (RG, PIS, IMEI) contra o banco e contra o lote.',
+      'Normalização de strings (limpeza de pontos/traços) antes de qualquer comparação de unicidade.',
+      'Bloqueio de importação de linhas conflitantes com erro detalhado no log.'
+    ]
+  },
+    {
+    version: '2.9.8',
+    date: '03/02/2025',
     title: 'Integridade e Unicidade de Dados',
     changes: [
       'Implementação de validação de unicidade para CPF, RG e PIS em colaboradores.',
@@ -27,26 +38,7 @@ const versions = [
       'Implementação de Snapshots Técnicos (Antes/Depois) em todas as edições.',
       'Nova "Linha do Tempo de Posse" em Dispositivos, permitindo rastrear todos os colaboradores passados.',
       'Registro detalhado de quem recebeu e devolveu cada ativo com data e hora exatas.',
-      'Visualizador de Auditoria comparativo na aba Administração destacando campos alterados.',
-      'Sincronização global da versão para 2.9.7.'
-    ]
-  },
-    {
-    version: '2.9.5',
-    date: '31/01/2025',
-    title: 'Melhoria na Visibilidade de Ativos',
-    changes: [
-      'Aba de Ativos do Colaborador agora exibe chips atrelados aos dispositivos em posse.',
-      'Contagem de chips na tabela principal de Colaboradores agora reflete chips atrelados e diretos.'
-    ]
-  },
-    {
-    version: '2.9.1',
-    date: '31/01/2025',
-    title: 'Restauração de API & Estabilidade',
-    changes: [
-      'Correção total de rotas API no servidor Node.js (CRUD completo para todos os módulos).',
-      'Melhoria na resiliência do modo Produção (Correção de erros 404 de sincronização).'
+      'Visualizador de Auditoria comparativo na aba Administração destacando campos alterados.'
     ]
   }
 ];
