@@ -347,21 +347,49 @@ const DataImporter = () => {
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  const bId = await resolveBrand(r['Marca']);
-                  const tId = await resolveType(r['Tipo']);
-                  const mId = await resolveModel(r['Modelo'], bId, tId);
-                  
-                  const jobName = r['Cargo ou Funcao'] || '';
-                  const sId = await resolveSector(jobName); 
+                  // --- SMART MERGE LOGIC ---
+                  const existingDevice = item.existingId ? devices.find(d => d.id === item.existingId) : null;
 
-                  const userCpfRaw = r['CPF Colaborador']?.trim();
-                  const userCpfFormatted = userCpfRaw ? formatCPF(userCpfRaw) : null;
-                  // Usar o ID limpo para busca de usuário se CPF formatado existir
-                  const linkedUser = userCpfFormatted ? users.find(u => cleanId(u.cpf) === cleanId(userCpfFormatted)) : null;
+                  // 1. Resolver Marcas/Modelos apenas se houver valor no CSV ou se for novo
+                  let bId = existingDevice?.modelId ? models.find(m => m.id === existingDevice.modelId)?.brandId : '';
+                  let tId = existingDevice?.modelId ? models.find(m => m.id === existingDevice.modelId)?.typeId : '';
+                  let mId = existingDevice?.modelId || '';
+
+                  if (r['Marca'] || r['Tipo'] || r['Modelo']) {
+                      const finalBrandName = r['Marca'] || (bId ? brands.find(b => b.id === bId)?.name : 'Outros');
+                      bId = await resolveBrand(finalBrandName);
+                      
+                      const finalTypeName = r['Tipo'] || (tId ? assetTypes.find(t => t.id === tId)?.name : 'Outros');
+                      tId = await resolveType(finalTypeName);
+                      
+                      const finalModelName = r['Modelo'] || (mId ? models.find(m => m.id === mId)?.name : 'Padrão');
+                      mId = await resolveModel(finalModelName, bId!, tId!);
+                  }
                   
-                  // Resolver vínculo de Chip via "Número da Linha"
+                  // 2. Setor (Cargo)
+                  let sId = existingDevice?.sectorId || '';
+                  if (r['Cargo ou Funcao']) {
+                      sId = await resolveSector(r['Cargo ou Funcao']);
+                  }
+
+                  // 3. Colaborador (Vínculo)
+                  const userCpfRaw = r['CPF Colaborador']?.trim();
+                  let currentUserId = existingDevice?.currentUserId || null;
+                  let linkedUser = null;
+                  
+                  if (userCpfRaw) {
+                      const userCpfFormatted = formatCPF(userCpfRaw);
+                      linkedUser = users.find(u => cleanId(u.cpf) === cleanId(userCpfFormatted));
+                      if (linkedUser) {
+                          currentUserId = linkedUser.id;
+                      } else {
+                          setLogs(prev => [...prev, `Aviso na linha ${i+2}: CPF ${userCpfRaw} não localizado. Vínculo ignorado.`]);
+                      }
+                  }
+                  
+                  // 4. Chip (Vínculo)
                   const simNumRaw = r['Numero da Linha']?.trim();
-                  let resolvedSimId = null;
+                  let resolvedSimId = existingDevice?.linkedSimId || null;
                   let foundSim = null;
 
                   if (simNumRaw) {
@@ -370,42 +398,46 @@ const DataImporter = () => {
                       if (foundSim) {
                           resolvedSimId = foundSim.id;
                       } else {
-                          setLogs(prev => [...prev, `Aviso na linha ${i+2}: Chip com número ${simNumRaw} não localizado no cadastro.`]);
+                          setLogs(prev => [...prev, `Aviso na linha ${i+2}: Chip ${simNumRaw} não localizado. Vínculo ignorado.`]);
                       }
                   }
 
-                  const deviceStatus = mapStatus(r['Status'], !!linkedUser);
-                  const currentUserId = linkedUser?.id || null;
+                  // 5. Status
+                  const csvStatus = r['Status']?.trim();
+                  const deviceStatus = csvStatus ? mapStatus(csvStatus, !!linkedUser || !!currentUserId) : (existingDevice?.status || mapStatus('', !!currentUserId));
 
                   const deviceData: Device = {
                       id: item.status === 'NEW' ? Math.random().toString(36).substr(2, 9) : item.existingId!,
-                      modelId: mId,
-                      assetTag: r['Patrimonio'],
-                      serialNumber: r['Serial'] || r['Patrimonio'],
-                      imei: r['IMEI'],
-                      pulsusId: r['ID Pulsus'],
-                      internalCode: r['Codigo de Setor'] || '',
-                      sectorId: sId || linkedUser?.sectorId || null, 
+                      modelId: mId || (existingDevice?.modelId || ''),
+                      assetTag: r['Patrimonio'] || (existingDevice?.assetTag || ''),
+                      serialNumber: r['Serial'] || (existingDevice?.serialNumber || r['Patrimonio'] || ''),
+                      imei: r['IMEI'] || (existingDevice?.imei || ''),
+                      pulsusId: r['ID Pulsus'] || (existingDevice?.pulsusId || ''),
+                      internalCode: r['Codigo de Setor'] || (existingDevice?.internalCode || ''),
+                      sectorId: sId || (linkedUser?.sectorId || existingDevice?.sectorId || null), 
                       status: deviceStatus,
                       currentUserId: currentUserId,
                       linkedSimId: resolvedSimId,
-                      purchaseCost: parseFloat(r['Valor Pago']?.toString().replace(',','.')) || 0,
-                      purchaseDate: normalizeDate(r['Data Compra']),
-                      supplier: r['Fornecedor'],
-                      customData: {}
+                      purchaseCost: r['Valor Pago'] ? parseFloat(r['Valor Pago'].toString().replace(',','.')) : (existingDevice?.purchaseCost || 0),
+                      purchaseDate: r['Data Compra'] ? normalizeDate(r['Data Compra']) : (existingDevice?.purchaseDate || new Date().toISOString().split('T')[0]),
+                      supplier: r['Fornecedor'] || (existingDevice?.supplier || ''),
+                      customData: existingDevice?.customData || {}
                   };
 
                   // Salvar o Dispositivo
                   item.status === 'NEW' ? await addDevice(deviceData, adminName) : await updateDevice(deviceData, adminName);
                   
-                  // SYNC CHIP STATUS: Se encontrou o chip, sincroniza o status dele com o do aparelho
-                  if (foundSim && resolvedSimId) {
-                      const updatedSim: SimCard = {
-                          ...foundSim,
-                          status: deviceStatus, // Se o aparelho está em uso, o chip também fica em uso
-                          currentUserId: currentUserId // Atrela ao mesmo colaborador
-                      };
-                      await updateSim(updatedSim, `${adminName} (Sinc. Importação)`);
+                  // SYNC CHIP STATUS: Se encontrou o chip novo ou existia, sincroniza
+                  if (resolvedSimId) {
+                      const simToSync = sims.find(s => s.id === resolvedSimId);
+                      if (simToSync) {
+                          const updatedSim: SimCard = {
+                              ...simToSync,
+                              status: deviceStatus,
+                              currentUserId: currentUserId
+                          };
+                          await updateSim(updatedSim, `${adminName} (Sinc. Importação)`);
+                      }
                   }
 
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));

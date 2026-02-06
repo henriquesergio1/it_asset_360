@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.9',
+    version: '2.10.10',
     date: 'Hoje',
+    title: 'Logic: Smart CSV Merge for Devices',
+    changes: [
+      'Implementada lógica de mesclagem inteligente (Smart Merge) na importação de dispositivos.',
+      'Preservação automática de dados existentes (Marca, Modelo, SN, NF) caso colunas estejam vazias no arquivo CSV.',
+      'Sincronização imediata de status e vínculo de Chip SIM durante a importação em lote.',
+      'Melhoria na detecção de vínculos via CPF durante processamento massivo.'
+    ]
+  },
+    {
+    version: '2.10.9',
+    date: '04/02/2025',
     title: 'UI/UX: Menu Lateral Retrátil',
     changes: [
       'Implementada funcionalidade de contrair/expandir o menu lateral para otimização de espaço em tela.',
@@ -26,16 +37,6 @@ const versions = [
       'Corrigida falha no backend que impedia a gravação do colaborador responsável (CurrentUserId) durante a importação e edição direta.',
       'Sincronização imediata entre os ativos do estoque e a visualização do colaborador.',
       'Garantia de que vínculos criados via importação CSV de dispositivos persistam após o recarregamento da página.'
-    ]
-  },
-    {
-    version: '2.10.7',
-    date: '04/02/2025',
-    title: 'Correção: Escopo de Navegação',
-    changes: [
-      'Corrigida a declaração da função navigate no gerenciador de colaboradores para evitar erro de escopo.',
-      'Sincronização global do número da versão em todos os pontos de exibição do sistema.',
-      'Ajustes de tipagem interna para melhor conformidade com o strict mode.'
     ]
   }
 ];
