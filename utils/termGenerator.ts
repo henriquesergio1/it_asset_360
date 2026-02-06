@@ -15,7 +15,7 @@ interface GenerateTermProps {
   notes?: string;
 }
 
-// Layout Fixo Profissional Otimizado para A4 (Versão 2.10.13 - Precise Single Page Balance)
+// Layout Fixo Profissional Otimizado para A4 (Versão 2.10.14 - Precision Localization)
 const getFixedLayout = (
     settings: SystemSettings, 
     content: {
@@ -134,7 +134,7 @@ export const generateAndPrintTerm = ({
         </tr>
         <tr>
             <td style="font-weight: bold; padding: 3px 0;">Cargo / Função:</td>
-            <td style="padding: 3px 0;">${sectorName || 'Não Informado'}</td>
+            <td style="padding: 4px 0;">${sectorName || 'Não Informado'}</td>
             <td style="font-weight: bold; padding: 3px 0;">Setor:</td>
             <td style="padding: 3px 0;">${user.internalCode || '-'}</td>
         </tr>
@@ -233,10 +233,10 @@ export const generateAndPrintTerm = ({
     </table>
   `;
 
-  // 3. Assinaturas (Equilibradas)
+  // 3. Assinaturas (Equilibradas - Localizadas em SJC)
   const signatures = `
     <div style="margin-top: 25px; page-break-inside: avoid; color: #000;">
-        <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São Paulo, ${today}</p>
+        <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São José dos Campos, ${today}</p>
         
         <div style="width: 60%; margin: 0 auto; text-align: center;">
             <div style="border-top: 1.5px solid #000; padding-top: 6px;">

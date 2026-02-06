@@ -8,8 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.13',
+    version: '2.10.14',
     date: 'Hoje',
+    title: 'Localization: Updated terms city',
+    changes: [
+      'Alteração da cidade padrão no rodapé dos termos para "São José dos Campos".',
+      'Manutenção da integridade de layout para impressão em página única A4.'
+    ]
+  },
+    {
+    version: '2.10.13',
+    date: '04/02/2025',
     title: 'Print: Auto-Balanced A4 Single Page',
     changes: [
       'Ajuste dinâmico de fontes e margens para garantir que termos caibam em 1 página A4.',
@@ -27,18 +36,6 @@ const versions = [
       'Aumento no tamanho das fontes de cláusulas e declarações para melhor legibilidade em papel.',
       'Remoção do fechamento automático da janela de impressão, permitindo leitura do documento após a ação.',
       'Reforço de contraste (preto puro #000) nos textos jurídicos e descritivos.'
-    ]
-  },
-    {
-    version: '2.10.11',
-    date: '04/02/2025',
-    title: 'Print: High-density A4 Layout',
-    changes: [
-      'Otimização completa do layout dos termos para impressão em folha A4 única.',
-      'Padronização de todos os textos em preto puro (#000) para máxima legibilidade.',
-      'Redução estratégica de margens e line-height para acomodar termos de entrega extensos.',
-      'Preservação visual dos destaques coloridos (azul, laranja e cinza) em fundos e bordas.',
-      'Ajuste automático de fechamento da janela de impressão após a ação do usuário.'
     ]
   }
 ];
