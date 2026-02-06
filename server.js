@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.10.14', 
+        version: '2.10.15', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -427,9 +427,10 @@ app.get('/api/terms', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-app.put('/api/terms/file', async (req, res) => {
+app.put('/api/terms/file/:id', async (req, res) => {
     try {
-        const { id, fileUrl } = req.body;
+        const { fileUrl } = req.body;
+        const id = req.params.id;
         const pool = await sql.connect(dbConfig);
         await pool.request().input('I', id).input('F', fileUrl).query("UPDATE Terms SET FileUrl=@F WHERE Id=@I");
         res.json({success: true});

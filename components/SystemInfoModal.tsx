@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.14',
+    version: '2.10.15',
     date: 'Hoje',
+    title: 'Bugfix: Term Attachment API Route',
+    changes: [
+      'Correção de erro 404 ao anexar termos PDF no ambiente de produção.',
+      'Alinhamento do endpoint no backend para suportar IDs de termos via parâmetros de URL.',
+      'Ajuste na consistência entre ProdDataProvider e o servidor SQL.'
+    ]
+  },
+    {
+    version: '2.10.14',
+    date: '05/02/2025',
     title: 'Localization: Updated terms city',
     changes: [
       'Alteração da cidade padrão no rodapé dos termos para "São José dos Campos".',
@@ -25,17 +35,6 @@ const versions = [
       'Redução do padding de tabelas e espaçamento entre seções para evitar quebra de página.',
       'Otimização do tamanho do logotipo e cabeçalho para maior aproveitamento vertical.',
       'Texto padronizado em preto puro com foco em legibilidade de alto contraste.'
-    ]
-  },
-    {
-    version: '2.10.12',
-    date: '04/02/2025',
-    title: 'Print: Balanced A4 Layout & Persistence',
-    changes: [
-      'Otimização do preenchimento vertical nos termos (line-height e margens ampliadas) para melhor uso da página A4.',
-      'Aumento no tamanho das fontes de cláusulas e declarações para melhor legibilidade em papel.',
-      'Remoção do fechamento automático da janela de impressão, permitindo leitura do documento após a ação.',
-      'Reforço de contraste (preto puro #000) nos textos jurídicos e descritivos.'
     ]
   }
 ];
