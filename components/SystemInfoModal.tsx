@@ -8,19 +8,8 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.2',
-    date: 'Hoje',
-    title: 'Correção: Autenticação Resiliente',
-    changes: [
-      'Normalização de e-mails para login (ignora maiúsculas/minúsculas).',
-      'Remoção automática de espaços em branco (trim) nas credenciais.',
-      'Bloqueio do botão de login até a conclusão do carregamento inicial do SQL Server.',
-      'Melhoria na mensagem de erro para maior clareza.'
-    ]
-  },
-    {
     version: '2.10.1',
-    date: '03/02/2025',
+    date: 'Hoje',
     title: 'Correção: Sincronização de Status de Chip',
     changes: [
       'Garantia de que o status do chip seja atualizado para "Em Uso" quando vinculado a um dispositivo alocado durante a importação CSV.',
@@ -37,6 +26,17 @@ const versions = [
       'O sistema agora localiza e vincula o chip automaticamente ao dispositivo se o número existir no cadastro.',
       'Melhoria na legibilidade dos logs de importação para avisos de chips não localizados.',
       'Sincronização global da versão.'
+    ]
+  },
+    {
+    version: '2.9.9',
+    date: '03/02/2025',
+    title: 'Correção Crítica: Unicidade na Importação',
+    changes: [
+      'Implementação de rastreio de duplicatas dentro do mesmo lote de importação CSV.',
+      'Validação rigorosa de campos secundários (RG, PIS, IMEI) contra o banco e contra o lote.',
+      'Normalização de strings (limpeza de pontos/traços) antes de qualquer comparação de unicidade.',
+      'Bloqueio de importação de linhas conflitantes com erro detalhado no log.'
     ]
   }
 ];
