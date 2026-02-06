@@ -8,35 +8,36 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.1',
+    version: '2.10.4',
     date: 'Hoje',
-    title: 'Correção: Sincronização de Status de Chip',
+    title: 'Infraestrutura: Auto-Detecção de Ambiente',
     changes: [
-      'Garantia de que o status do chip seja atualizado para "Em Uso" quando vinculado a um dispositivo alocado durante a importação CSV.',
-      'Sincronização automática do colaborador (currentUserId) entre o dispositivo e o chip vinculado no ato da importação.',
-      'Melhoria na integridade visual do cadastro de chips após cargas em lote.'
+      'Implementada sonda automática de conectividade para detectar o modo de operação (Produção vs Teste) sem depender de cache local.',
+      'Refatoração das chamadas de API para fornecer diagnósticos detalhados em caso de falha de sincronização.',
+      'Novo endpoint /api/health no backend para validação de integridade do servidor.',
+      'Correção de rotas para evitar erros 404 em novas instalações.',
+      'Otimização do carregamento inicial do sistema.'
     ]
   },
     {
-    version: '2.10.0',
-    date: '03/02/2025',
-    title: 'Vínculo Automático de Chips via CSV',
+    version: '2.10.3',
+    date: '04/02/2025',
+    title: 'Correção Crítica: Modo Produção por Padrão',
     changes: [
-      'Adicionado campo "Número da Linha" na importação de dispositivos.',
-      'O sistema agora localiza e vincula o chip automaticamente ao dispositivo se o número existir no cadastro.',
-      'Melhoria na legibilidade dos logs de importação para avisos de chips não localizados.',
-      'Sincronização global da versão.'
+      'O sistema agora inicializa em modo Produção (SQL Server) por padrão, prevenindo logins indesejados no modo de teste.',
+      'Garantia de integridade de dados em guias anônimas e novos acessos.',
+      'Remoção de dicas de credenciais de teste na tela de login para maior segurança.'
     ]
   },
     {
-    version: '2.9.9',
+    version: '2.10.2',
     date: '03/02/2025',
-    title: 'Correção Crítica: Unicidade na Importação',
+    title: 'Correção: Autenticação Resiliente',
     changes: [
-      'Implementação de rastreio de duplicatas dentro do mesmo lote de importação CSV.',
-      'Validação rigorosa de campos secundários (RG, PIS, IMEI) contra o banco e contra o lote.',
-      'Normalização de strings (limpeza de pontos/traços) antes de qualquer comparação de unicidade.',
-      'Bloqueio de importação de linhas conflitantes com erro detalhado no log.'
+      'Normalização de e-mails para login (ignora maiúsculas/minúsculas).',
+      'Remoção automática de espaços em branco (trim) nas credenciais.',
+      'Bloqueio do botão de login até a conclusão do carregamento inicial do SQL Server.',
+      'Melhoria na mensagem de erro para maior clareza.'
     ]
   }
 ];

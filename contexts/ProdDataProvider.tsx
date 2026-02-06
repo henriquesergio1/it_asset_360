@@ -25,10 +25,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const safeJson = async (res: Response) => {
+  const safeJson = async (res: Response, endpoint: string) => {
       if (!res.ok) {
           const text = await res.text();
-          throw new Error(`${res.status} ${res.statusText}: ${text.substring(0, 100)}`);
+          throw new Error(`Erro no endpoint ${endpoint}: ${res.status} ${res.statusText}. Detalhe: ${text.substring(0, 50)}`);
       }
       return res.json();
   };
@@ -36,33 +36,85 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log("[ITAsset360] Sincronizando dados com SQL Server...");
+
+      const endpoints = [
+          { name: 'devices', path: '/api/devices' },
+          { name: 'sims', path: '/api/sims' },
+          { name: 'users', path: '/api/users' },
+          { name: 'logs', path: '/api/logs' },
+          { name: 'system-users', path: '/api/system-users' },
+          { name: 'settings', path: '/api/settings' },
+          { name: 'models', path: '/api/models' },
+          { name: 'brands', path: '/api/brands' },
+          { name: 'asset-types', path: '/api/asset-types' },
+          { name: 'maintenances', path: '/api/maintenances' },
+          { name: 'sectors', path: '/api/sectors' },
+          { name: 'terms', path: '/api/terms' },
+          { name: 'accessory-types', path: '/api/accessory-types' },
+          { name: 'custom-fields', path: '/api/custom-fields' },
+          { name: 'accounts', path: '/api/accounts' }
+      ];
+
+      // Executa todas as requisições em paralelo com tratamento individual de erro
+      const responses = await Promise.all(endpoints.map(async (e) => {
+          try {
+              const res = await fetch(`${API_URL}${e.path}`);
+              return await safeJson(res, e.path);
+          } catch (err: any) {
+              throw new Error(`Falha ao carregar ${e.name}: ${err.message}`);
+          }
+      }));
+
+      // Desestruturação dos resultados na mesma ordem da lista de endpoints
       const [
-          devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes, 
-          modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes, accTypesRes, customFieldsRes, accountsRes
-      ] = await Promise.all([
-        fetch(`${API_URL}/api/devices`), fetch(`${API_URL}/api/sims`), fetch(`${API_URL}/api/users`), fetch(`${API_URL}/api/logs`), fetch(`${API_URL}/api/system-users`), fetch(`${API_URL}/api/settings`), fetch(`${API_URL}/api/models`), fetch(`${API_URL}/api/brands`), fetch(`${API_URL}/api/asset-types`), fetch(`${API_URL}/api/maintenances`), fetch(`${API_URL}/api/sectors`), fetch(`${API_URL}/api/terms`), fetch(`${API_URL}/api/accessory-types`), fetch(`${API_URL}/api/custom-fields`), fetch(`${API_URL}/api/accounts`)
-      ]);
-      setDevices(await safeJson(devicesRes)); setSims(await safeJson(simsRes));
-      const usersData = await safeJson(usersRes); const termsData = await safeJson(termsRes);
-      setUsers(usersData.map((u: User) => ({ ...u, terms: termsData.filter((t: Term) => t.userId === u.id) })));
-      setLogs(await safeJson(logsRes)); setSystemUsers(await safeJson(sysUsersRes)); setSettings(await safeJson(settingsRes));
-      setModels(await safeJson(modelsRes)); setBrands(await safeJson(brandsRes)); setAssetTypes(await safeJson(typesRes));
-      setMaintenances(await safeJson(maintRes)); setSectors(await safeJson(sectorsRes)); setAccessoryTypes(await safeJson(accTypesRes)); setCustomFields(await safeJson(customFieldsRes)); setTerms(termsData);
-      setAccounts(await safeJson(accountsRes));
+          devicesData, simsData, usersData, logsData, sysUsersData, settingsData, 
+          modelsData, brandsData, typesData, maintData, sectorsData, termsData, 
+          accTypesData, customFieldsData, accountsData
+      ] = responses;
+
+      setDevices(devicesData);
+      setSims(simsData);
+      
+      // Enriquecimento de usuários com seus termos
+      setUsers(usersData.map((u: User) => ({ 
+          ...u, 
+          terms: termsData.filter((t: Term) => t.userId === u.id) 
+      })));
+
+      setLogs(logsData);
+      setSystemUsers(sysUsersData);
+      setSettings(settingsData);
+      setModels(modelsData);
+      setBrands(brandsData);
+      setAssetTypes(typesData);
+      setMaintenances(maintData);
+      setSectors(sectorsData);
+      setAccessoryTypes(accTypesData);
+      setCustomFields(customFieldsData);
+      setTerms(termsData);
+      setAccounts(accountsData);
+      
       setError(null);
-    } catch (err: any) { console.error("Erro na sincronização:", err); setError(err.message); } finally { setLoading(false); }
+      console.log("[ITAsset360] Dados sincronizados com sucesso.");
+    } catch (err: any) { 
+        console.error("[ITAsset360] Falha crítica na sincronização:", err); 
+        setError(err.message); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
 
   const postData = async (endpoint: string, data: any) => {
     const res = await fetch(`${API_URL}/api/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    return safeJson(res);
+    return safeJson(res, endpoint);
   };
 
   const putData = async (endpoint: string, data: any) => {
     const res = await fetch(`${API_URL}/api/${endpoint}/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    return safeJson(res);
+    return safeJson(res, endpoint);
   };
 
   const addDevice = async (device: Device, adminName: string) => { await postData('devices', { ...device, _adminUser: adminName }); setDevices(p => [...p, device]); };
@@ -80,10 +132,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateUser = async (user: User, adminName: string, notes?: string) => { await putData('users', { ...user, _adminUser: adminName, _notes: notes }); setUsers(p => p.map(u => u.id === user.id ? user : u)); };
   const toggleUserActive = async (user: User, adminName: string, reason?: string) => {
     await putData('users', { ...user, active: !user.active, _adminUser: adminName, _reason: reason });
-    setUsers(p => p.map(u => u.id === user.id ? { ...u, active: !u.active } : u));
+    setUsers(p => p.map(u => u.id === user.id ? { ...u, active: !user.active } : u));
   };
 
-  // Fix: add account CRUD functions for ProdDataProvider
   const addAccount = async (account: SoftwareAccount, adminName: string) => { await postData('accounts', { ...account, _adminUser: adminName }); setAccounts(p => [...p, account]); };
   const updateAccount = async (account: SoftwareAccount, adminName: string) => { await putData('accounts', { ...account, _adminUser: adminName }); setAccounts(p => p.map(a => a.id === account.id ? account : a)); };
   const deleteAccount = async (id: string, adminName: string) => {
