@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.10',
+    version: '2.10.11',
     date: 'Hoje',
+    title: 'Print: High-density A4 Layout',
+    changes: [
+      'Otimização completa do layout dos termos para impressão em folha A4 única.',
+      'Padronização de todos os textos em preto puro (#000) para máxima legibilidade.',
+      'Redução estratégica de margens e line-height para acomodar termos de entrega extensos.',
+      'Preservação visual dos destaques coloridos (azul, laranja e cinza) em fundos e bordas.',
+      'Ajuste automático de fechamento da janela de impressão após a ação do usuário.'
+    ]
+  },
+    {
+    version: '2.10.10',
+    date: '04/02/2025',
     title: 'Logic: Smart CSV Merge for Devices',
     changes: [
       'Implementada lógica de mesclagem inteligente (Smart Merge) na importação de dispositivos.',
@@ -27,16 +39,6 @@ const versions = [
       'Estado do menu persistido localmente (mantém a preferência após o recarregamento).',
       'Transições suaves e ajustes dinâmicos de layout (Logo, Textos e Footer) no estado contraído.',
       'Adicionados ícones de controle de contração visual.'
-    ]
-  },
-    {
-    version: '2.10.8',
-    date: '04/02/2025',
-    title: 'Bugfix: Persistência de Custódia de Ativos',
-    changes: [
-      'Corrigida falha no backend que impedia a gravação do colaborador responsável (CurrentUserId) durante a importação e edição direta.',
-      'Sincronização imediata entre os ativos do estoque e a visualização do colaborador.',
-      'Garantia de que vínculos criados via importação CSV de dispositivos persistam após o recarregamento da página.'
     ]
   }
 ];
