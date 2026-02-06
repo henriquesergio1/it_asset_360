@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.11',
+    version: '2.10.12',
     date: 'Hoje',
+    title: 'Print: Balanced A4 Layout & Persistence',
+    changes: [
+      'Otimização do preenchimento vertical nos termos (line-height e margens ampliadas) para melhor uso da página A4.',
+      'Aumento no tamanho das fontes de cláusulas e declarações para melhor legibilidade em papel.',
+      'Remoção do fechamento automático da janela de impressão, permitindo leitura do documento após a ação.',
+      'Reforço de contraste (preto puro #000) nos textos jurídicos e descritivos.'
+    ]
+  },
+    {
+    version: '2.10.11',
+    date: '04/02/2025',
     title: 'Print: High-density A4 Layout',
     changes: [
       'Otimização completa do layout dos termos para impressão em folha A4 única.',
@@ -28,17 +39,6 @@ const versions = [
       'Preservação automática de dados existentes (Marca, Modelo, SN, NF) caso colunas estejam vazias no arquivo CSV.',
       'Sincronização imediata de status e vínculo de Chip SIM durante a importação em lote.',
       'Melhoria na detecção de vínculos via CPF durante processamento massivo.'
-    ]
-  },
-    {
-    version: '2.10.9',
-    date: '04/02/2025',
-    title: 'UI/UX: Menu Lateral Retrátil',
-    changes: [
-      'Implementada funcionalidade de contrair/expandir o menu lateral para otimização de espaço em tela.',
-      'Estado do menu persistido localmente (mantém a preferência após o recarregamento).',
-      'Transições suaves e ajustes dinâmicos de layout (Logo, Textos e Footer) no estado contraído.',
-      'Adicionados ícones de controle de contração visual.'
     ]
   }
 ];
