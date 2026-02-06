@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.12',
+    version: '2.10.13',
     date: 'Hoje',
+    title: 'Print: Auto-Balanced A4 Single Page',
+    changes: [
+      'Ajuste dinâmico de fontes e margens para garantir que termos caibam em 1 página A4.',
+      'Redução do padding de tabelas e espaçamento entre seções para evitar quebra de página.',
+      'Otimização do tamanho do logotipo e cabeçalho para maior aproveitamento vertical.',
+      'Texto padronizado em preto puro com foco em legibilidade de alto contraste.'
+    ]
+  },
+    {
+    version: '2.10.12',
+    date: '04/02/2025',
     title: 'Print: Balanced A4 Layout & Persistence',
     changes: [
       'Otimização do preenchimento vertical nos termos (line-height e margens ampliadas) para melhor uso da página A4.',
@@ -28,17 +39,6 @@ const versions = [
       'Redução estratégica de margens e line-height para acomodar termos de entrega extensos.',
       'Preservação visual dos destaques coloridos (azul, laranja e cinza) em fundos e bordas.',
       'Ajuste automático de fechamento da janela de impressão após a ação do usuário.'
-    ]
-  },
-    {
-    version: '2.10.10',
-    date: '04/02/2025',
-    title: 'Logic: Smart CSV Merge for Devices',
-    changes: [
-      'Implementada lógica de mesclagem inteligente (Smart Merge) na importação de dispositivos.',
-      'Preservação automática de dados existentes (Marca, Modelo, SN, NF) caso colunas estejam vazias no arquivo CSV.',
-      'Sincronização imediata de status e vínculo de Chip SIM durante a importação em lote.',
-      'Melhoria na detecção de vínculos via CPF durante processamento massivo.'
     ]
   }
 ];

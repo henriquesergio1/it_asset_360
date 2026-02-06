@@ -105,7 +105,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão 2.10.12</span>
+                 <span>Versão 2.10.13</span>
               </div>
           )}
           <button 

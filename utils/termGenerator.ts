@@ -15,7 +15,7 @@ interface GenerateTermProps {
   notes?: string;
 }
 
-// Layout Fixo Profissional Otimizado para A4 (Versão 2.10.12 - Balanced Vertical Fill)
+// Layout Fixo Profissional Otimizado para A4 (Versão 2.10.13 - Precise Single Page Balance)
 const getFixedLayout = (
     settings: SystemSettings, 
     content: {
@@ -29,54 +29,54 @@ const getFixedLayout = (
     }
 ) => {
     return `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; line-height: 1.4; max-width: 100%; margin: 0 auto; padding: 20px 40px; background-color: #fff;">
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; line-height: 1.35; max-width: 100%; margin: 0 auto; padding: 10px 30px; background-color: #fff;">
         
         <!-- HEADER -->
-        <table style="width: 100%; border-bottom: 2px solid #000; margin-bottom: 25px; padding-bottom: 10px;">
+        <table style="width: 100%; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 8px;">
             <tr>
                 <td style="width: 25%; vertical-align: middle;">
-                     <img src="${settings.logoUrl}" alt="Logo" style="max-height: 60px; max-width: 160px; object-fit: contain;" onerror="this.style.display='none'"/>
+                     <img src="${settings.logoUrl}" alt="Logo" style="max-height: 55px; max-width: 150px; object-fit: contain;" onerror="this.style.display='none'"/>
                 </td>
                 <td style="width: 75%; text-align: right; vertical-align: middle;">
-                    <h1 style="margin: 0; font-size: 18px; font-weight: bold; color: #000;">${settings.appName || 'Minha Empresa'}</h1>
-                    <p style="margin: 0; font-size: 11px; color: #000;">CNPJ: ${settings.cnpj || 'Não Informado'}</p>
-                    <h2 style="margin: 5px 0 0 0; text-transform: uppercase; font-size: 14px; color: #000; letter-spacing: 1px;">${content.headerTitle}</h2>
-                    <p style="margin: 0; font-size: 10px; color: #000; text-transform: uppercase; font-weight: bold;">CONTROLE DE ATIVO DE TI</p>
+                    <h1 style="margin: 0; font-size: 16px; font-weight: bold; color: #000;">${settings.appName || 'Minha Empresa'}</h1>
+                    <p style="margin: 0; font-size: 10px; color: #000;">CNPJ: ${settings.cnpj || 'Não Informado'}</p>
+                    <h2 style="margin: 3px 0 0 0; text-transform: uppercase; font-size: 13px; color: #000; letter-spacing: 0.5px;">${content.headerTitle}</h2>
+                    <p style="margin: 0; font-size: 9px; color: #000; text-transform: uppercase; font-weight: bold;">CONTROLE DE ATIVO DE TI</p>
                 </td>
             </tr>
         </table>
 
         <!-- DADOS DO COLABORADOR -->
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 25px; color: #000;">
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 12px; color: #000;">
             ${content.userTable}
         </div>
 
         <!-- DECLARAÇÃO -->
-        <div style="text-align: justify; font-size: 11.5px; margin-bottom: 25px; color: #000; line-height: 1.6;">
+        <div style="text-align: justify; font-size: 10.5px; margin-bottom: 12px; color: #000; line-height: 1.5;">
             ${content.declaration}
         </div>
 
         <!-- TABELA DE ITENS -->
-        <div style="margin-bottom: 25px;">
+        <div style="margin-bottom: 12px;">
             ${content.assetTable}
         </div>
 
         <!-- OBSERVAÇÕES -->
-        <div style="margin-bottom: 25px; font-size: 11px; color: #000; background-color: #fffbeb; padding: 12px; border: 1px solid #fcd34d; border-radius: 6px;">
+        <div style="margin-bottom: 12px; font-size: 10px; color: #000; background-color: #fffbeb; padding: 10px; border: 1px solid #fcd34d; border-radius: 6px;">
             <strong>Observações:</strong> ${content.observations}
         </div>
 
         <!-- CLÁUSULAS -->
-        <div style="font-size: 11px; color: #000; margin-bottom: 30px; line-height: 1.5; white-space: pre-line; text-align: justify;">
+        <div style="font-size: 10px; color: #000; margin-bottom: 15px; line-height: 1.4; white-space: pre-line; text-align: justify;">
             ${content.clauses}
         </div>
 
         <!-- ASSINATURAS -->
-        <div style="margin-top: 40px;">
+        <div style="margin-top: 25px;">
             ${content.signatures}
         </div>
 
-        <div style="margin-top: 30px; text-align: center; font-size: 9px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+        <div style="margin-top: 20px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px;">
             Documento gerado digitalmente pelo sistema IT Asset 360 • ${new Date().toLocaleString()}
         </div>
     </div>
@@ -125,18 +125,18 @@ export const generateAndPrintTerm = ({
 
   // 1. Tabela do Usuário
   const userTable = `
-    <table style="width: 100%; font-size: 11.5px; color: #000; border-collapse: collapse;">
+    <table style="width: 100%; font-size: 10.5px; color: #000; border-collapse: collapse;">
         <tr>
-            <td style="font-weight: bold; width: 18%; padding: 4px 0;">Colaborador:</td>
-            <td style="width: 42%; padding: 4px 0;">${user.fullName}</td>
-            <td style="font-weight: bold; width: 10%; padding: 4px 0;">CPF:</td>
-            <td style="width: 30%; font-family: monospace; padding: 4px 0;">${user.cpf}</td>
+            <td style="font-weight: bold; width: 18%; padding: 3px 0;">Colaborador:</td>
+            <td style="width: 42%; padding: 3px 0;">${user.fullName}</td>
+            <td style="font-weight: bold; width: 10%; padding: 3px 0;">CPF:</td>
+            <td style="width: 30%; font-family: monospace; padding: 3px 0;">${user.cpf}</td>
         </tr>
         <tr>
-            <td style="font-weight: bold; padding: 4px 0;">Cargo / Função:</td>
-            <td style="padding: 4px 0;">${sectorName || 'Não Informado'}</td>
-            <td style="font-weight: bold; padding: 4px 0;">Setor:</td>
-            <td style="padding: 4px 0;">${user.internalCode || '-'}</td>
+            <td style="font-weight: bold; padding: 3px 0;">Cargo / Função:</td>
+            <td style="padding: 3px 0;">${sectorName || 'Não Informado'}</td>
+            <td style="font-weight: bold; padding: 3px 0;">Setor:</td>
+            <td style="padding: 3px 0;">${user.internalCode || '-'}</td>
         </tr>
     </table>
   `;
@@ -163,11 +163,11 @@ export const generateAndPrintTerm = ({
 
   let assetTableRows = `
     <tr>
-        <td style="border: 1px solid #cbd5e1; padding: 10px; color: #000;">
-            <strong style="font-size: 12px;">${assetName}</strong><br>
-            <span style="font-size: 10px; color: #475569;">Acessórios: ${accessories}</span>
+        <td style="border: 1px solid #cbd5e1; padding: 6px; color: #000;">
+            <strong style="font-size: 11px;">${assetName}</strong><br>
+            <span style="font-size: 9px; color: #000;">Acessórios: ${accessories}</span>
         </td>
-        <td style="border: 1px solid #cbd5e1; padding: 10px; color: #000; font-size: 11px;">
+        <td style="border: 1px solid #cbd5e1; padding: 6px; color: #000; font-size: 10px;">
             ${idCode}<br>
             <strong>Serial:</strong> ${serial}
         </td>
@@ -177,13 +177,13 @@ export const generateAndPrintTerm = ({
   if (linkedSim) {
       assetTableRows += `
         <tr>
-          <td style="padding: 8px; border: 1px solid #d1d5db; background-color: #f1f5f9; color: #000;" colspan="2">
-            <strong style="font-size: 11px;">Item Vinculado: Chip / SIM Card</strong>
+          <td style="padding: 6px; border: 1px solid #d1d5db; background-color: #f1f5f9; color: #000;" colspan="2">
+            <strong style="font-size: 10px;">Item Vinculado: Chip / SIM Card</strong>
           </td>
         </tr>
         <tr>
-          <td style="padding: 8px; border: 1px solid #d1d5db; color: #000; font-size: 11px;"><strong>Número:</strong> ${linkedSim.phoneNumber} (${linkedSim.operator})</td>
-          <td style="padding: 8px; border: 1px solid #d1d5db; color: #000; font-size: 11px;"><strong>ICCID:</strong> ${linkedSim.iccid}</td>
+          <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>Número:</strong> ${linkedSim.phoneNumber} (${linkedSim.operator})</td>
+          <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>ICCID:</strong> ${linkedSim.iccid}</td>
         </tr>
       `;
   }
@@ -194,8 +194,8 @@ export const generateAndPrintTerm = ({
       Object.entries(checklist).forEach(([itemName, isReturned]) => {
           checkRows += `
             <tr>
-                <td style="border: 1px solid #cbd5e1; padding: 6px; width: 70%; font-size: 11px; color: #000;">${itemName}</td>
-                <td style="border: 1px solid #cbd5e1; padding: 6px; text-align: center; font-weight: bold; font-size: 10px; color: ${isReturned ? '#166534' : '#991b1b'};">
+                <td style="border: 1px solid #cbd5e1; padding: 5px; width: 70%; font-size: 10px; color: #000;">${itemName}</td>
+                <td style="border: 1px solid #cbd5e1; padding: 5px; text-align: center; font-weight: bold; font-size: 9px; color: ${isReturned ? '#166534' : '#991b1b'};">
                     ${isReturned ? 'OK' : 'PENDENTE'}
                 </td>
             </tr>
@@ -203,14 +203,14 @@ export const generateAndPrintTerm = ({
       });
 
       assetTableRows += `
-        <tr><td colspan="2" style="padding: 15px 0 8px 0;"><strong style="font-size: 11px; text-transform:uppercase; color: #000; border-bottom: 1px solid #e2e8f0; display: block;">Checklist de Conferência</strong></td></tr>
+        <tr><td colspan="2" style="padding: 10px 0 5px 0;"><strong style="font-size: 10px; text-transform:uppercase; color: #000; border-bottom: 1px solid #e2e8f0; display: block;">Checklist de Conferência</strong></td></tr>
         ${checkRows}
       `;
 
       if (missingItems.length > 0) {
           assetTableRows += `
             <tr>
-                <td colspan="2" style="background-color: #fee2e2; padding: 10px; border: 1px solid #fca5a5; color: #991b1b; font-size: 11px; margin-top: 5px;">
+                <td colspan="2" style="background-color: #fee2e2; padding: 8px; border: 1px solid #fca5a5; color: #991b1b; font-size: 10px; margin-top: 3px;">
                     <strong>PENDÊNCIAS:</strong> O colaborador declara estar ciente da não devolução imediata dos itens: ${missingItems.join(', ')}.
                 </td>
             </tr>
@@ -219,12 +219,12 @@ export const generateAndPrintTerm = ({
   }
 
   const assetTable = `
-    <h3 style="font-size: 12px; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 10px; color: #000; text-transform: uppercase; font-weight: bold;">1. Detalhes do Equipamento</h3>
-    <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 15px;">
+    <h3 style="font-size: 11px; border-left: 3px solid #2563eb; padding-left: 8px; margin-bottom: 8px; color: #000; text-transform: uppercase; font-weight: bold;">1. Detalhes do Equipamento</h3>
+    <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
         <thead>
             <tr style="background-color: #f1f5f9;">
-                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 65%; color: #000;">Descrição do Item</th>
-                <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; width: 35%; color: #000;">Identificação</th>
+                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; width: 65%; color: #000;">Descrição do Item</th>
+                <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; width: 35%; color: #000;">Identificação</th>
             </tr>
         </thead>
         <tbody>
@@ -233,16 +233,16 @@ export const generateAndPrintTerm = ({
     </table>
   `;
 
-  // 3. Assinaturas (Espaçadas)
+  // 3. Assinaturas (Equilibradas)
   const signatures = `
-    <div style="margin-top: 40px; page-break-inside: avoid; color: #000;">
-        <p style="text-align: center; margin-bottom: 45px; font-size: 12px;">São Paulo, ${today}</p>
+    <div style="margin-top: 25px; page-break-inside: avoid; color: #000;">
+        <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São Paulo, ${today}</p>
         
         <div style="width: 60%; margin: 0 auto; text-align: center;">
-            <div style="border-top: 2px solid #000; padding-top: 8px;">
-                <strong style="font-size: 12px; color: #000; text-transform: uppercase;">${user.fullName}</strong><br>
-                <span style="font-size: 10px; color: #000; font-weight: bold;">Assinatura do Colaborador</span><br>
-                <span style="font-size: 10px; color: #475569; font-family: monospace;">Documento de Identificação (CPF): ${user.cpf}</span>
+            <div style="border-top: 1.5px solid #000; padding-top: 6px;">
+                <strong style="font-size: 11px; color: #000; text-transform: uppercase;">${user.fullName}</strong><br>
+                <span style="font-size: 9px; color: #000; font-weight: bold;">Assinatura do Colaborador</span><br>
+                <span style="font-size: 9px; color: #000; font-family: monospace;">Documento de Identificação (CPF): ${user.cpf}</span>
             </div>
         </div>
     </div>
@@ -274,7 +274,7 @@ export const generateAndPrintTerm = ({
         body { font-family: 'Inter', sans-serif; padding: 0; margin: 0; background-color: #fff; color: #000; }
         @media print {
             body { padding: 0; margin: 0; -webkit-print-color-adjust: exact; }
-            @page { margin: 12mm; size: A4 portrait; }
+            @page { margin: 10mm; size: A4 portrait; }
         }
       </style>
     </head>
@@ -284,7 +284,6 @@ export const generateAndPrintTerm = ({
         window.onload = function() { 
             setTimeout(function(){ 
                 window.print(); 
-                // Remoção do window.close() para manter a aba aberta após a impressão
             }, 800); 
         }
       </script>
