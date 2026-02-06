@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.4',
+    version: '2.10.5',
     date: 'Hoje',
+    title: 'Layout: Otimização de Tabelas para Monitores Menores',
+    changes: [
+      'Implementada rolagem horizontal automática em tabelas de Dispositivos e Colaboradores.',
+      'Definição de largura mínima para garantir legibilidade mesmo com muitas colunas selecionadas.',
+      'Ajuste de espaçamentos (paddings/gaps) para melhor aproveitamento de tela em resoluções baixas.',
+      'Melhoria na experiência de uso em computadores com telas de 13 polegadas ou resoluções abaixo de 1080p.'
+    ]
+  },
+    {
+    version: '2.10.4',
+    date: '04/02/2025',
     title: 'Infraestrutura: Auto-Detecção de Ambiente',
     changes: [
       'Implementada sonda automática de conectividade para detectar o modo de operação (Produção vs Teste) sem depender de cache local.',
@@ -27,17 +38,6 @@ const versions = [
       'O sistema agora inicializa em modo Produção (SQL Server) por padrão, prevenindo logins indesejados no modo de teste.',
       'Garantia de integridade de dados em guias anônimas e novos acessos.',
       'Remoção de dicas de credenciais de teste na tela de login para maior segurança.'
-    ]
-  },
-    {
-    version: '2.10.2',
-    date: '03/02/2025',
-    title: 'Correção: Autenticação Resiliente',
-    changes: [
-      'Normalização de e-mails para login (ignora maiúsculas/minúsculas).',
-      'Remoção automática de espaços em branco (trim) nas credenciais.',
-      'Bloqueio do botão de login até a conclusão do carregamento inicial do SQL Server.',
-      'Melhoria na mensagem de erro para maior clareza.'
     ]
   }
 ];

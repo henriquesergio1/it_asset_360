@@ -348,8 +348,8 @@ const UserManager = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-sm text-left">
+      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
+        <table className="w-full text-sm text-left min-w-[1000px]">
           <thead className="bg-gray-50 text-[10px] uppercase font-black text-gray-500 border-b">
             <tr>
               <th className="px-6 py-4">Colaborador</th>

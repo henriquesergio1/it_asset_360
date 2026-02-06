@@ -550,8 +550,8 @@ const DeviceManager = () => {
         <input type="text" placeholder="Pesquisar por Tag, IMEI, S/N, Código de Setor ou Modelo..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-sm text-left">
+      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
+        <table className="w-full text-sm text-left min-w-[1200px]">
           <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
             <tr>
               <th className="px-6 py-4">Foto/Modelo</th>
