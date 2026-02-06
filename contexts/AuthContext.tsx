@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SystemUser, SystemRole } from '../types';
 import { useData } from './DataContext';
@@ -25,8 +26,15 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
   }, []);
 
   const login = async (email: string, pass: string) => {
-    // Simple mock authentication
-    const foundUser = systemUsers.find(u => u.email === email && u.password === pass);
+    // Normalização para evitar erros de digitação e sensibilidade a maiúsculas
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const cleanPass = (pass || '').trim();
+
+    const foundUser = systemUsers.find(u => 
+        (u.email || '').trim().toLowerCase() === normalizedEmail && 
+        u.password === cleanPass
+    );
+
     if (foundUser) {
       setUser(foundUser);
       localStorage.setItem('it_asset_user', JSON.stringify(foundUser));

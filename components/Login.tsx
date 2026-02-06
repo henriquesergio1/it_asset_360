@@ -2,21 +2,23 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { Cpu, Lock, Mail, AlertTriangle, Database } from 'lucide-react';
+import { Cpu, Lock, Mail, AlertTriangle, Database, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const { login } = useAuth();
-  const { settings, error } = useData();
+  const { settings, error, loading } = useData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setLocalError('');
     const success = await login(email, password);
     if (!success) {
-      setLocalError('Credenciais inválidas. Tente admin@empresa.com / admin');
+      setLocalError('Credenciais inválidas. Verifique o e-mail e a senha digitados.');
     }
   };
 
@@ -107,8 +109,18 @@ const Login = () => {
               </div>
             )}
 
-            <button type="submit" disabled={!!error && isProdMode} className={`w-full font-bold py-3 rounded-lg transition-colors text-white ${!!error && isProdMode ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-              Entrar no Sistema
+            <button 
+              type="submit" 
+              disabled={(!!error && isProdMode) || loading} 
+              className={`w-full font-bold py-3 rounded-lg transition-colors text-white flex items-center justify-center gap-2 
+                ${((!!error && isProdMode) || loading) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin"/> 
+                    Sincronizando Banco...
+                  </>
+              ) : 'Entrar no Sistema'}
             </button>
           </form>
           
@@ -118,7 +130,7 @@ const Login = () => {
                     <Database size={12}/> Alternar para Modo de Teste
                 </button>
             )}
-            <p className="text-xs text-gray-400">Versão 2.10.1</p>
+            <p className="text-xs text-gray-400">Versão 2.10.2</p>
             <p className="text-xs text-gray-300">Todos os acessos são monitorados.</p>
           </div>
         </div>
