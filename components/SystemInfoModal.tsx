@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.8',
+    version: '2.10.9',
     date: 'Hoje',
+    title: 'UI/UX: Menu Lateral Retrátil',
+    changes: [
+      'Implementada funcionalidade de contrair/expandir o menu lateral para otimização de espaço em tela.',
+      'Estado do menu persistido localmente (mantém a preferência após o recarregamento).',
+      'Transições suaves e ajustes dinâmicos de layout (Logo, Textos e Footer) no estado contraído.',
+      'Adicionados ícones de controle de contração visual.'
+    ]
+  },
+    {
+    version: '2.10.8',
+    date: '04/02/2025',
     title: 'Bugfix: Persistência de Custódia de Ativos',
     changes: [
       'Corrigida falha no backend que impedia a gravação do colaborador responsável (CurrentUserId) durante a importação e edição direta.',
@@ -25,17 +36,6 @@ const versions = [
       'Corrigida a declaração da função navigate no gerenciador de colaboradores para evitar erro de escopo.',
       'Sincronização global do número da versão em todos os pontos de exibição do sistema.',
       'Ajustes de tipagem interna para melhor conformidade com o strict mode.'
-    ]
-  },
-    {
-    version: '2.10.6',
-    date: '04/02/2025',
-    title: 'Usabilidade: Paginação e Controle de Densidade',
-    changes: [
-      'Implementada paginação nas tabelas de Dispositivos e Colaboradores para melhorar a performance.',
-      'Adicionado seletor de quantidade de itens por página (10, 20, 50, 100 ou Todos).',
-      'Resolvido problema da barra de rolagem horizontal inacessível em listas longas.',
-      'Otimização de renderização do DOM em ambientes com muitos ativos.'
     ]
   }
 ];

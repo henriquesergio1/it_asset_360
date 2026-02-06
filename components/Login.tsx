@@ -34,7 +34,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-md overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="bg-slate-900 p-8 text-center relative">
           <div className="flex justify-center mb-4">
             {settings.logoUrl ? (
@@ -128,7 +128,7 @@ const Login = () => {
           </form>
           
           <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">Versão 2.10.8</p>
+            <p className="text-xs text-gray-400">Versão 2.10.9</p>
             <p className="text-xs text-gray-300">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>
