@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 // Funções de Máscara
@@ -97,7 +97,7 @@ const COLUMN_OPTIONS = [
     { id: 'address', label: 'Endereço' },
     { id: 'sector', label: 'Setor/Função' },
     { id: 'internalCode', label: 'Cód. Setor' },
-    { id: 'assetsCount', label: 'Contagem de Ativos' },
+    { id: 'assetsCount', label: 'Ativos' },
     { id: 'activeSims', label: 'Números de Chip' },
     { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
 ];
@@ -105,6 +105,7 @@ const COLUMN_OPTIONS = [
 const UserManager = () => {
   const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile } = useData();
   const { user: currentUser } = useAuth();
+  // Fix: added const keyword to navigate variable declaration to fix 'Cannot find name' errors
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -128,6 +129,10 @@ const UserManager = () => {
   const columnRef = useRef<HTMLDivElement>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+
   useEffect(() => {
       const params = new URLSearchParams(location.search);
       const userId = params.get('userId');
@@ -148,6 +153,11 @@ const UserManager = () => {
   useEffect(() => {
       localStorage.setItem('user_manager_columns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
+
+  // Reset paginação ao filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, viewMode, showPendingOnly, itemsPerPage]);
 
   const adminName = currentUser?.name || 'Unknown';
 
@@ -292,6 +302,13 @@ const UserManager = () => {
     return `${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
+  // Cálculo de paginação
+  const totalItems = filteredUsers.length;
+  const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
+  const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
+  const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
+  const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
+
   const userAssets = devices.filter(d => d.currentUserId === editingId);
   const linkedSimIds = userAssets.map(d => d.linkedSimId).filter(Boolean) as string[];
   const userSims = sims.filter(s => s.currentUserId === editingId || linkedSimIds.includes(s.id));
@@ -348,67 +365,114 @@ const UserManager = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
-        <table className="w-full text-sm text-left min-w-[1000px]">
-          <thead className="bg-gray-50 text-[10px] uppercase font-black text-gray-500 border-b">
-            <tr>
-              <th className="px-6 py-4">Colaborador</th>
-              {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
-              {visibleColumns.includes('cpf') && <th className="px-6 py-4">CPF</th>}
-              {visibleColumns.includes('rg') && <th className="px-6 py-4">RG</th>}
-              {visibleColumns.includes('pis') && <th className="px-6 py-4">PIS</th>}
-              {visibleColumns.includes('address') && <th className="px-6 py-4">Endereço</th>}
-              {visibleColumns.includes('sector') && <th className="px-6 py-4">Cargo / Função</th>}
-              {visibleColumns.includes('internalCode') && <th className="px-6 py-4 text-center">Setor</th>}
-              {visibleColumns.includes('assetsCount') && <th className="px-6 py-4 text-center">Ativos</th>}
-              <th className="px-6 py-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((user) => {
-              const uDevices = devices.filter(d => d.currentUserId === user.id);
-              const uLinkedSimIds = uDevices.map(d => d.linkedSimId).filter(Boolean) as string[];
-              const uSims = sims.filter(s => s.currentUserId === user.id || uLinkedSimIds.includes(s.id));
-              const hasPending = (user.terms || []).some(t => !t.fileUrl);
-              return (
-                <tr key={user.id} onClick={() => handleOpenModal(user, true)} className={`border-b hover:bg-emerald-50/30 cursor-pointer transition-all ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
-                  <td className="px-6 py-4">
-                    <div className="font-bold text-gray-900 group-hover:text-emerald-600">{user.fullName}</div>
-                    {hasPending && <span className="inline-flex items-center gap-1 mt-1 bg-orange-100 text-orange-700 text-[8px] font-black px-1.5 py-0.5 rounded border border-orange-200">TERMO PENDENTE</span>}
-                  </td>
-                  {visibleColumns.includes('email') && <td className="px-6 py-4 text-xs text-slate-500">{user.email || '---'}</td>}
-                  {visibleColumns.includes('cpf') && <td className="px-6 py-4 text-[10px] font-mono font-bold text-slate-400">{user.cpf}</td>}
-                  {visibleColumns.includes('rg') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.rg || '---'}</td>}
-                  {visibleColumns.includes('pis') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.pis || '---'}</td>}
-                  {visibleColumns.includes('address') && <td className="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">{user.address || '---'}</td>}
-                  {visibleColumns.includes('sector') && (
-                    <td className="px-6 py-4">
-                        <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded truncate block max-w-[150px]">{sectors.find(s => s.id === user.sectorId)?.name || '---'}</span>
-                    </td>
-                  )}
-                  {visibleColumns.includes('internalCode') && (
-                    <td className="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase">{user.internalCode || '---'}</td>
-                  )}
-                  {visibleColumns.includes('assetsCount') && (
-                    <td className="px-6 py-4 text-center">
-                        <div className="flex gap-1 justify-center">
-                            {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-blue-100">{uDevices.length}</span>}
-                            {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-indigo-100">{uSims.length}</span>}
-                            {(uDevices.length === 0 && uSims.length === 0) && <span className="text-slate-200 text-xs">-</span>}
-                        </div>
-                    </td>
-                  )}
-                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-1">
-                        <button onClick={() => handleOpenModal(user, false)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={16}/></button>
-                        <button onClick={() => handleToggleClick(user)} className={`p-2 rounded-xl ${user.active ? 'text-gray-400 hover:text-red-600' : 'text-green-500'}`}><Power size={16}/></button>
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-[1000px]">
+              <thead className="bg-gray-50 text-[10px] uppercase font-black text-gray-500 border-b">
+                <tr>
+                  <th className="px-6 py-4">Colaborador</th>
+                  {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
+                  {visibleColumns.includes('cpf') && <th className="px-6 py-4">CPF</th>}
+                  {visibleColumns.includes('rg') && <th className="px-6 py-4">RG</th>}
+                  {visibleColumns.includes('pis') && <th className="px-6 py-4">PIS</th>}
+                  {visibleColumns.includes('address') && <th className="px-6 py-4">Endereço</th>}
+                  {visibleColumns.includes('sector') && <th className="px-6 py-4">Cargo / Função</th>}
+                  {visibleColumns.includes('internalCode') && <th className="px-6 py-4 text-center">Setor</th>}
+                  {visibleColumns.includes('assetsCount') && <th className="px-6 py-4 text-center">Ativos</th>}
+                  <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {paginatedUsers.map((user) => {
+                  const uDevices = devices.filter(d => d.currentUserId === user.id);
+                  const uLinkedSimIds = uDevices.map(d => d.linkedSimId).filter(Boolean) as string[];
+                  const uSims = sims.filter(s => s.currentUserId === user.id || uLinkedSimIds.includes(s.id));
+                  const hasPending = (user.terms || []).some(t => !t.fileUrl);
+                  return (
+                    <tr key={user.id} onClick={() => handleOpenModal(user, true)} className={`border-b hover:bg-emerald-50/30 cursor-pointer transition-all ${!user.active ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-gray-900 group-hover:text-emerald-600">{user.fullName}</div>
+                        {hasPending && <span className="inline-flex items-center gap-1 mt-1 bg-orange-100 text-orange-700 text-[8px] font-black px-1.5 py-0.5 rounded border border-orange-200">TERMO PENDENTE</span>}
+                      </td>
+                      {visibleColumns.includes('email') && <td className="px-6 py-4 text-xs text-slate-500">{user.email || '---'}</td>}
+                      {visibleColumns.includes('cpf') && <td className="px-6 py-4 text-[10px] font-mono font-bold text-slate-400">{user.cpf}</td>}
+                      {visibleColumns.includes('rg') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.rg || '---'}</td>}
+                      {visibleColumns.includes('pis') && <td className="px-6 py-4 text-[10px] font-mono text-slate-400">{user.pis || '---'}</td>}
+                      {visibleColumns.includes('address') && <td className="px-6 py-4 text-[10px] text-slate-400 truncate max-w-[150px]">{user.address || '---'}</td>}
+                      {visibleColumns.includes('sector') && (
+                        <td className="px-6 py-4">
+                            <span className="text-[10px] font-black uppercase text-gray-500 bg-gray-100 px-2 py-1 rounded truncate block max-w-[150px]">{sectors.find(s => s.id === user.sectorId)?.name || '---'}</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('internalCode') && (
+                        <td className="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase">{user.internalCode || '---'}</td>
+                      )}
+                      {visibleColumns.includes('assetsCount') && (
+                        <td className="px-6 py-4 text-center">
+                            <div className="flex gap-1 justify-center">
+                                {uDevices.length > 0 && <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-blue-100">{uDevices.length}</span>}
+                                {uSims.length > 0 && <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-black border border-indigo-100">{uSims.length}</span>}
+                                {(uDevices.length === 0 && uSims.length === 0) && <span className="text-slate-200 text-xs">-</span>}
+                            </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end gap-1">
+                            <button onClick={() => handleOpenModal(user, false)} className="text-blue-600 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={16}/></button>
+                            <button onClick={() => handleToggleClick(user)} className={`p-2 rounded-xl ${user.active ? 'text-gray-400 hover:text-red-600' : 'text-green-500'}`}><Power size={16}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+        </div>
+
+        {/* Paginação */}
+        <div className="bg-slate-50 border-t px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Exibir:</span>
+                    <select 
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500"
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                    >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                        <option value="ALL">Todos</option>
+                    </select>
+                </div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total: {totalItems} colaboradores</p>
+            </div>
+            
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                    <button 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                        className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`}
+                    >
+                        <ChevronLeft size={18}/>
+                    </button>
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase mx-1">de</span>
+                        <span className="text-xs font-black text-slate-700">{totalPages}</span>
+                    </div>
+                    <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                        className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`}
+                    >
+                        <ChevronRight size={18}/>
+                    </button>
+                </div>
+            )}
+        </div>
       </div>
 
       {isModalOpen && (

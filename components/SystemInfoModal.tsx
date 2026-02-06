@@ -8,36 +8,34 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.5',
+    version: '2.10.8',
     date: 'Hoje',
-    title: 'Layout: Otimização de Tabelas para Monitores Menores',
+    title: 'Bugfix: Persistência de Custódia de Ativos',
     changes: [
-      'Implementada rolagem horizontal automática em tabelas de Dispositivos e Colaboradores.',
-      'Definição de largura mínima para garantir legibilidade mesmo com muitas colunas selecionadas.',
-      'Ajuste de espaçamentos (paddings/gaps) para melhor aproveitamento de tela em resoluções baixas.',
-      'Melhoria na experiência de uso em computadores com telas de 13 polegadas ou resoluções abaixo de 1080p.'
+      'Corrigida falha no backend que impedia a gravação do colaborador responsável (CurrentUserId) durante a importação e edição direta.',
+      'Sincronização imediata entre os ativos do estoque e a visualização do colaborador.',
+      'Garantia de que vínculos criados via importação CSV de dispositivos persistam após o recarregamento da página.'
     ]
   },
     {
-    version: '2.10.4',
+    version: '2.10.7',
     date: '04/02/2025',
-    title: 'Infraestrutura: Auto-Detecção de Ambiente',
+    title: 'Correção: Escopo de Navegação',
     changes: [
-      'Implementada sonda automática de conectividade para detectar o modo de operação (Produção vs Teste) sem depender de cache local.',
-      'Refatoração das chamadas de API para fornecer diagnósticos detalhados em caso de falha de sincronização.',
-      'Novo endpoint /api/health no backend para validação de integridade do servidor.',
-      'Correção de rotas para evitar erros 404 em novas instalações.',
-      'Otimização do carregamento inicial do sistema.'
+      'Corrigida a declaração da função navigate no gerenciador de colaboradores para evitar erro de escopo.',
+      'Sincronização global do número da versão em todos os pontos de exibição do sistema.',
+      'Ajustes de tipagem interna para melhor conformidade com o strict mode.'
     ]
   },
     {
-    version: '2.10.3',
+    version: '2.10.6',
     date: '04/02/2025',
-    title: 'Correção Crítica: Modo Produção por Padrão',
+    title: 'Usabilidade: Paginação e Controle de Densidade',
     changes: [
-      'O sistema agora inicializa em modo Produção (SQL Server) por padrão, prevenindo logins indesejados no modo de teste.',
-      'Garantia de integridade de dados em guias anônimas e novos acessos.',
-      'Remoção de dicas de credenciais de teste na tela de login para maior segurança.'
+      'Implementada paginação nas tabelas de Dispositivos e Colaboradores para melhorar a performance.',
+      'Adicionado seletor de quantidade de itens por página (10, 20, 50, 100 ou Todos).',
+      'Resolvido problema da barra de rolagem horizontal inacessível em listas longas.',
+      'Otimização de renderização do DOM em ambientes com muitos ativos.'
     ]
   }
 ];

@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
 // Fixed: Added 'Users' to lucide-react imports
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -296,6 +296,10 @@ const DeviceManager = () => {
       type: MaintenanceType.CORRECTIVE 
   });
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
         if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
@@ -307,6 +311,11 @@ const DeviceManager = () => {
   useEffect(() => {
       localStorage.setItem('device_manager_columns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
+
+  // Reset paginação ao filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, viewStatus, itemsPerPage]);
 
   const toggleColumn = (id: string) => {
       setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -416,6 +425,13 @@ const DeviceManager = () => {
       const modelB = models.find(m => m.id === b.modelId)?.name || '';
       return modelA.localeCompare(modelB);
   });
+
+  // Cálculo de paginação
+  const totalItems = filteredDevices.length;
+  const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
+  const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
+  const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
+  const paginatedDevices = itemsPerPage === 'ALL' ? filteredDevices : filteredDevices.slice(startIndex, startIndex + (itemsPerPage as number));
 
   const handleOpenModal = (device?: Device, viewOnly: boolean = false) => {
     setActiveTab('GENERAL');
@@ -550,126 +566,173 @@ const DeviceManager = () => {
         <input type="text" placeholder="Pesquisar por Tag, IMEI, S/N, Código de Setor ou Modelo..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
-        <table className="w-full text-sm text-left min-w-[1200px]">
-          <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
-            <tr>
-              <th className="px-6 py-4">Foto/Modelo</th>
-              {visibleColumns.includes('assetTag') && <th className="px-6 py-4">Patrimônio</th>}
-              {visibleColumns.includes('imei') && <th className="px-6 py-4">IMEI</th>}
-              {visibleColumns.includes('serial') && <th className="px-6 py-4">S/N</th>}
-              {visibleColumns.includes('sectorCode') && <th className="px-6 py-4">Setor</th>}
-              {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus ID</th>}
-              {visibleColumns.includes('linkedSim') && <th className="px-6 py-4">Chip</th>}
-              {visibleColumns.includes('purchaseInfo') && <th className="px-6 py-4">Aquisição</th>}
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Responsável Atual</th>
-              <th className="px-6 py-4 text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredDevices.map(d => {
-              const { model, brand } = getModelDetails(d.modelId);
-              const user = users.find(u => u.id === d.currentUserId);
-              const isRet = d.status === DeviceStatus.RETIRED;
-              const linkedSim = sims.find(s => s.id === d.linkedSimId);
-
-              return (
-                <tr 
-                    key={d.id} 
-                    onClick={() => handleOpenModal(d, true)}
-                    className={`border-b transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50' : 'hover:bg-blue-50/30 bg-white'}`}
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 shadow-inner shrink-0">
-                            {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300" size={20}/>}
-                        </div>
-                        <div className="min-w-0">
-                            <div className="font-bold text-gray-900 truncate">{model?.name}</div>
-                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{brand?.name}</div>
-                        </div>
-                    </div>
-                  </td>
-                  {visibleColumns.includes('assetTag') && (
-                    <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div>
-                    </td>
-                  )}
-                  {visibleColumns.includes('imei') && (
-                    <td className="px-6 py-4 font-mono text-[10px] text-slate-500">{d.imei || '---'}</td>
-                  )}
-                  {visibleColumns.includes('serial') && (
-                    <td className="px-6 py-4 font-mono text-[10px] text-slate-400">{d.serialNumber || '---'}</td>
-                  )}
-                  {visibleColumns.includes('sectorCode') && (
-                    <td className="px-6 py-4">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">{d.internalCode || '---'}</span>
-                    </td>
-                  )}
-                  {visibleColumns.includes('pulsusId') && (
-                    <td className="px-6 py-4 text-center">
-                        {d.pulsusId ? (
-                            <span className="text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{d.pulsusId}</span>
-                        ) : <span className="text-[10px] text-slate-200">-</span>}
-                    </td>
-                  )}
-                  {visibleColumns.includes('linkedSim') && (
-                    <td className="px-6 py-4">
-                        {linkedSim ? (
-                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 w-fit flex items-center gap-1">
-                                <Cpu size={10}/> {linkedSim.phoneNumber}
-                            </span>
-                        ) : <span className="text-[10px] text-slate-200">-</span>}
-                    </td>
-                  )}
-                  {visibleColumns.includes('purchaseInfo') && (
-                    <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-emerald-600">R$ {d.purchaseCost?.toFixed(2) || '0.00'}</span>
-                            <span className="text-[9px] text-slate-400">{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString() : '---'}</span>
-                        </div>
-                    </td>
-                  )}
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 text-green-700 border-green-100' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 text-orange-700 border-orange-100' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 text-red-700 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{d.status}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {user ? (
-                        <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs font-bold text-blue-600 underline cursor-pointer" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
-                            <span className="text-[9px] text-slate-400 font-black uppercase">{user.internalCode || 'S/ Cód'}</span>
-                        </div>
-                    ) : <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter italic">Livre no Estoque</span>}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        {d.pulsusId && (
-                             <a 
-                                href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
-                                title="Abrir MDM Pulsus"
-                             >
-                                <ShieldCheck size={18}/>
-                             </a>
-                        )}
-                        {isRet ? (
-                            <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
-                        ) : (
-                            <>
-                                <button onClick={() => handleOpenModal(d, false)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
-                                <button onClick={() => handleDeleteAttempt(d)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
-                            </>
-                        )}
-                    </div>
-                  </td>
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-[1200px]">
+              <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-500 tracking-widest">
+                <tr>
+                  <th className="px-6 py-4">Foto/Modelo</th>
+                  {visibleColumns.includes('assetTag') && <th className="px-6 py-4">Patrimônio</th>}
+                  {visibleColumns.includes('imei') && <th className="px-6 py-4">IMEI</th>}
+                  {visibleColumns.includes('serial') && <th className="px-6 py-4">S/N</th>}
+                  {visibleColumns.includes('sectorCode') && <th className="px-6 py-4">Setor</th>}
+                  {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus ID</th>}
+                  {visibleColumns.includes('linkedSim') && <th className="px-6 py-4">Chip</th>}
+                  {visibleColumns.includes('purchaseInfo') && <th className="px-6 py-4">Aquisição</th>}
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Responsável Atual</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {paginatedDevices.map(d => {
+                  const { model, brand } = getModelDetails(d.modelId);
+                  const user = users.find(u => u.id === d.currentUserId);
+                  const isRet = d.status === DeviceStatus.RETIRED;
+                  const linkedSim = sims.find(s => s.id === d.linkedSimId);
+
+                  return (
+                    <tr 
+                        key={d.id} 
+                        onClick={() => handleOpenModal(d, true)}
+                        className={`border-b transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50' : 'hover:bg-blue-50/30 bg-white'}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 shadow-inner shrink-0">
+                                {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300" size={20}/>}
+                            </div>
+                            <div className="min-w-0">
+                                <div className="font-bold text-gray-900 truncate">{model?.name}</div>
+                                <div className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{brand?.name}</div>
+                            </div>
+                        </div>
+                      </td>
+                      {visibleColumns.includes('assetTag') && (
+                        <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('imei') && (
+                        <td className="px-6 py-4 font-mono text-[10px] text-slate-500">{d.imei || '---'}</td>
+                      )}
+                      {visibleColumns.includes('serial') && (
+                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400">{d.serialNumber || '---'}</td>
+                      )}
+                      {visibleColumns.includes('sectorCode') && (
+                        <td className="px-6 py-4">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded border border-gray-100 w-fit">{d.internalCode || '---'}</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('pulsusId') && (
+                        <td className="px-6 py-4 text-center">
+                            {d.pulsusId ? (
+                                <span className="text-[10px] font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{d.pulsusId}</span>
+                            ) : <span className="text-[10px] text-slate-200">-</span>}
+                        </td>
+                      )}
+                      {visibleColumns.includes('linkedSim') && (
+                        <td className="px-6 py-4">
+                            {linkedSim ? (
+                                <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 w-fit flex items-center gap-1">
+                                    <Cpu size={10}/> {linkedSim.phoneNumber}
+                                </span>
+                            ) : <span className="text-[10px] text-slate-200">-</span>}
+                        </td>
+                      )}
+                      {visibleColumns.includes('purchaseInfo') && (
+                        <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-emerald-600">R$ {d.purchaseCost?.toFixed(2) || '0.00'}</span>
+                                <span className="text-[9px] text-slate-400">{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString() : '---'}</span>
+                            </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 text-green-700 border-green-100' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 text-orange-700 border-orange-100' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 text-red-700 border-red-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{d.status}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {user ? (
+                            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-xs font-bold text-blue-600 underline cursor-pointer" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
+                                <span className="text-[9px] text-slate-400 font-black uppercase">{user.internalCode || 'S/ Cód'}</span>
+                            </div>
+                        ) : <span className="text-[10px] font-bold text-slate-300 uppercase tracking-tighter italic">Livre no Estoque</span>}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            {d.pulsusId && (
+                                 <a 
+                                    href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                                    title="Abrir MDM Pulsus"
+                                 >
+                                    <ShieldCheck size={18}/>
+                                 </a>
+                            )}
+                            {isRet ? (
+                                <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
+                            ) : (
+                                <>
+                                    <button onClick={() => handleOpenModal(d, false)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
+                                    <button onClick={() => handleDeleteAttempt(d)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
+                                </>
+                            )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+        </div>
+        
+        {/* Paginação */}
+        <div className="bg-slate-50 border-t px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Exibir:</span>
+                    <select 
+                        className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                    >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={40}>40</option>
+                        <option value={100}>100</option>
+                        <option value="ALL">Todos</option>
+                    </select>
+                </div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total: {totalItems} ativos</p>
+            </div>
+            
+            {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                    <button 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                        className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-100'}`}
+                    >
+                        <ChevronLeft size={18}/>
+                    </button>
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs font-black text-blue-700 bg-blue-100 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
+                        <span className="text-xs font-bold text-slate-400 uppercase mx-1">de</span>
+                        <span className="text-xs font-black text-slate-700">{totalPages}</span>
+                    </div>
+                    <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                        className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-100'}`}
+                    >
+                        <ChevronRight size={18}/>
+                    </button>
+                </div>
+            )}
+        </div>
       </div>
 
       {isModalOpen && (

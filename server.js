@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.10.5', 
+        version: '2.10.8', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -47,7 +47,7 @@ async function runMigrations(pool) {
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SimCards') CREATE TABLE SimCards (Id NVARCHAR(50) PRIMARY KEY, PhoneNumber NVARCHAR(50) NOT NULL, Operator NVARCHAR(50), Iccid NVARCHAR(50), PlanDetails NVARCHAR(100), Status NVARCHAR(50) NOT NULL, CurrentUserId NVARCHAR(50) NULL);
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices') CREATE TABLE Devices (Id NVARCHAR(50) PRIMARY KEY, AssetTag NVARCHAR(50), Status NVARCHAR(50) NOT NULL, ModelId NVARCHAR(50), SerialNumber NVARCHAR(50), InternalCode NVARCHAR(50), Imei NVARCHAR(50), PulsusId NVARCHAR(50), CurrentUserId NVARCHAR(50) NULL, SectorId NVARCHAR(50), CostCenter NVARCHAR(50), LinkedSimId NVARCHAR(50) NULL, PurchaseDate DATE, PurchaseCost DECIMAL(18,2), InvoiceNumber NVARCHAR(50), Supplier NVARCHAR(100), PurchaseInvoiceUrl NVARCHAR(MAX), CustomData NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SoftwareAccounts') CREATE TABLE SoftwareAccounts (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Type NVARCHAR(50), Login NVARCHAR(200), Password NVARCHAR(MAX), LicenseKey NVARCHAR(MAX), Status NVARCHAR(20), UserId NVARCHAR(50), DeviceId NVARCHAR(50), SectorId NVARCHAR(50), Notes NVARCHAR(MAX));
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs') CREATE TABLE AuditLogs (Id NVARCHAR(50) PRIMARY KEY, AssetId NVARCHAR(50), Action NVARCHAR(50), Timestamp DATETIME2 DEFAULT GETDATE(), AdminUser NVARCHAR(100), Notes NVARCHAR(MAX), BackupData NVARCHAR(MAX), AssetType NVARCHAR(50), TargetName NVARCHAR(100), PreviousData NVARCHAR(MAX), NewData NVARCHAR(MAX));
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs') CREATE TABLE AuditLogs (Id NVARCHAR(50) PRIMARY KEY, AssetId NVARCHAR(50), AssetType NVARCHAR(50), Action NVARCHAR(50), Timestamp DATETIME2 DEFAULT GETDATE(), AdminUser NVARCHAR(100), Notes NVARCHAR(MAX), BackupData NVARCHAR(MAX), AssetType NVARCHAR(50), TargetName NVARCHAR(100), PreviousData NVARCHAR(MAX), NewData NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings') CREATE TABLE SystemSettings (Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(100), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(20), TermTemplate NVARCHAR(MAX));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemUsers') CREATE TABLE SystemUsers (Id NVARCHAR(50) PRIMARY KEY, Name NVARCHAR(100), Email NVARCHAR(100), Password NVARCHAR(100), Role NVARCHAR(20));
         IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords') CREATE TABLE MaintenanceRecords (Id NVARCHAR(50) PRIMARY KEY, DeviceId NVARCHAR(50) NOT NULL, Description NVARCHAR(MAX), Cost DECIMAL(18,2), Date DATETIME2, Type NVARCHAR(50), Provider NVARCHAR(100), InvoiceUrl NVARCHAR(MAX));
@@ -315,8 +315,27 @@ app.delete('/api/sims/:id', async (req, res) => {
 app.post('/api/devices', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const { id, modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, _adminUser } = req.body;
-        await pool.request().input('I',id).input('M',modelId).input('Sn',serialNumber).input('At',assetTag).input('St',status).input('Ic',internalCode).input('Im',imei).input('Pu',pulsusId).input('Se',sectorId).input('Co',costCenter).input('Ls',linkedSimId).input('Pd',purchaseDate).input('Pc',purchaseCost).input('In',invoiceNumber).input('Su',supplier).input('PuU',purchaseInvoiceUrl).input('Cd',JSON.stringify(customData)).query("INSERT INTO Devices (Id, ModelId, SerialNumber, AssetTag, Status, InternalCode, Imei, PulsusId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, PurchaseInvoiceUrl, CustomData) VALUES (@I, @M, @Sn, @At, @St, @Ic, @Im, @Pu, @Se, @Co, @Ls, @Pd, @Pc, @In, @Su, @PuU, @Cd)");
+        const { id, modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, currentUserId, _adminUser } = req.body;
+        await pool.request()
+            .input('I',id)
+            .input('M',modelId)
+            .input('Sn',serialNumber)
+            .input('At',assetTag)
+            .input('St',status)
+            .input('Ic',internalCode)
+            .input('Im',imei)
+            .input('Pu',pulsusId)
+            .input('Se',sectorId)
+            .input('Co',costCenter)
+            .input('Ls',linkedSimId)
+            .input('Pd',purchaseDate)
+            .input('Pc',purchaseCost)
+            .input('In',invoiceNumber)
+            .input('Su',supplier)
+            .input('PuU',purchaseInvoiceUrl)
+            .input('Cd',JSON.stringify(customData))
+            .input('Cuid', currentUserId)
+            .query("INSERT INTO Devices (Id, ModelId, SerialNumber, AssetTag, Status, InternalCode, Imei, PulsusId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, PurchaseInvoiceUrl, CustomData, CurrentUserId) VALUES (@I, @M, @Sn, @At, @St, @Ic, @Im, @Pu, @Se, @Co, @Ls, @Pd, @Pc, @In, @Su, @PuU, @Cd, @Cuid)");
         await logAction(id, 'Device', 'Criação', _adminUser, assetTag);
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
@@ -325,10 +344,29 @@ app.post('/api/devices', async (req, res) => {
 app.put('/api/devices/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const { modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, _adminUser, _reason } = req.body;
+        const { modelId, serialNumber, assetTag, status, internalCode, imei, pulsusId, sectorId, costCenter, linkedSimId, purchaseDate, purchaseCost, invoiceNumber, supplier, purchaseInvoiceUrl, customData, currentUserId, _adminUser, _reason } = req.body;
         const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM Devices WHERE Id=@Id");
         const prev = oldRes.recordset[0];
-        await pool.request().input('I',req.params.id).input('M',modelId).input('Sn',serialNumber).input('At',assetTag).input('St',status).input('Ic',internalCode).input('Im',imei).input('Pu',pulsusId).input('Se',sectorId).input('Co',costCenter).input('Ls',linkedSimId).input('Pd',purchaseDate).input('Pc',purchaseCost).input('In',invoiceNumber).input('Su',supplier).input('PuU',purchaseInvoiceUrl).input('Cd',JSON.stringify(customData)).query("UPDATE Devices SET ModelId=@M, SerialNumber=@Sn, AssetTag=@At, Status=@St, InternalCode=@Ic, Imei=@Im, PulsusId=@Pu, SectorId=@Se, CostCenter=@Co, LinkedSimId=@Ls, PurchaseDate=@Pd, PurchaseCost=@Pc, InvoiceNumber=@In, Supplier=@Su, PurchaseInvoiceUrl=@PuU, CustomData=@Cd WHERE Id=@I");
+        await pool.request()
+            .input('I',req.params.id)
+            .input('M',modelId)
+            .input('Sn',serialNumber)
+            .input('At',assetTag)
+            .input('St',status)
+            .input('Ic',internalCode)
+            .input('Im',imei)
+            .input('Pu',pulsusId)
+            .input('Se',sectorId)
+            .input('Co',costCenter)
+            .input('Ls',linkedSimId)
+            .input('Pd',purchaseDate)
+            .input('Pc',purchaseCost)
+            .input('In',invoiceNumber)
+            .input('Su',supplier)
+            .input('PuU',purchaseInvoiceUrl)
+            .input('Cd',JSON.stringify(customData))
+            .input('Cuid', currentUserId)
+            .query("UPDATE Devices SET ModelId=@M, SerialNumber=@Sn, AssetTag=@At, Status=@St, InternalCode=@Ic, Imei=@Im, PulsusId=@Pu, SectorId=@Se, CostCenter=@Co, LinkedSimId=@Ls, PurchaseDate=@Pd, PurchaseCost=@Pc, InvoiceNumber=@In, Supplier=@Su, PurchaseInvoiceUrl=@PuU, CustomData=@Cd, CurrentUserId=@Cuid WHERE Id=@I");
         await logAction(req.params.id, 'Device', 'Atualização', _adminUser, assetTag, _reason, null, prev, req.body);
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
