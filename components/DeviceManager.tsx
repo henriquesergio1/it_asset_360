@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -303,7 +302,8 @@ const DeviceManager = () => {
       description: '', 
       cost: 0, 
       invoiceUrl: '',
-      type: MaintenanceType.CORRECTIVE 
+      type: MaintenanceType.CORRECTIVE,
+      date: new Date().toISOString().split('T')[0]
   });
 
   // Paginação
@@ -379,14 +379,20 @@ const DeviceManager = () => {
       id: Math.random().toString(36).substr(2, 9),
       deviceId: editingId,
       type: newMaint.type || MaintenanceType.CORRECTIVE,
-      date: new Date().toISOString(),
+      date: newMaint.date ? new Date(newMaint.date).toISOString() : new Date().toISOString(),
       description: newMaint.description,
       cost: newMaint.cost || 0,
       provider: 'Interno',
       invoiceUrl: newMaint.invoiceUrl
     };
     addMaintenance(record, adminName);
-    setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE });
+    setNewMaint({ 
+        description: '', 
+        cost: 0, 
+        invoiceUrl: '', 
+        type: MaintenanceType.CORRECTIVE,
+        date: new Date().toISOString().split('T')[0]
+    });
   };
 
   useEffect(() => {
@@ -946,20 +952,32 @@ const DeviceManager = () => {
                                         <div className="h-8 w-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-700"><Wrench size={16}/></div>
                                         <h5 className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Registrar Nova Manutenção</h5>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="md:col-span-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="md:col-span-3">
                                             <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Descrição</label>
                                             <input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/>
                                         </div>
                                         <div>
                                             <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo (R$)</label>
                                             <div className="relative">
-                                                <DollarSign className="absolute left-3 top-3 text-orange-300" size={16}/>
+                                                <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
                                                 <input 
                                                     type="text" 
                                                     className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" 
                                                     value={formatCurrencyBR(newMaint.cost || 0)} 
                                                     onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Data</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
+                                                <input 
+                                                    type="date" 
+                                                    className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" 
+                                                    value={newMaint.date || ''} 
+                                                    onChange={e => setNewMaint({...newMaint, date: e.target.value})}
                                                 />
                                             </div>
                                         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -128,7 +127,7 @@ const Login = () => {
           </form>
           
           <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">Versão 2.10.16</p>
+            <p className="text-xs text-gray-400">Versão 2.10.17</p>
             <p className="text-xs text-gray-300">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>

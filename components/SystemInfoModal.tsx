@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -7,6 +6,16 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.10.17',
+    date: 'Hoje',
+    title: 'Feat: Manual Date for Maintenance & R$ Labeling',
+    changes: [
+      'Adicionado campo de data no formulário de registro de manutenção.',
+      'Alterado prefixo visual do campo de custo de manutenção para "R$".',
+      'Lógica de salvamento atualizada para utilizar a data informada pelo usuário.'
+    ]
+  },
     {
     version: '2.10.16',
     date: 'Hoje',
@@ -25,15 +34,6 @@ const versions = [
       'Correção de erro 404 ao anexar termos PDF no ambiente de produção.',
       'Alinhamento do endpoint no backend para suportar IDs de termos via parâmetros de URL.',
       'Ajuste na consistência entre ProdDataProvider e o servidor SQL.'
-    ]
-  },
-    {
-    version: '2.10.14',
-    date: '05/02/2025',
-    title: 'Localization: Updated terms city',
-    changes: [
-      'Alteração da cidade padrão no rodapé dos termos para "São José dos Campos".',
-      'Manutenção da integridade de layout para impressão em página única A4.'
     ]
   }
 ];
