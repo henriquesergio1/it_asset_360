@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -38,6 +38,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
   });
   
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('app_theme') || 'light';
+  });
+
   const { logout, user, isAdmin } = useAuth();
   const { settings } = useData();
 
@@ -45,8 +49,22 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('app_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-950 transition-colors duration-300 overflow-hidden">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-slate-900 shadow-xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
         
@@ -104,7 +122,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão 2.10.18</span>
+                 <span>Versão 2.11.3</span>
               </div>
           )}
           <button 
@@ -119,22 +137,32 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm z-10 h-16 flex items-center justify-between px-6 shrink-0">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-gray-600 hover:text-gray-900">
+        <header className="bg-white dark:bg-slate-900 shadow-sm z-10 h-16 flex items-center justify-between px-6 shrink-0 transition-colors duration-300 border-b dark:border-slate-800">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
             <Menu size={24} />
           </button>
+          
           <div className="flex items-center space-x-4 ml-auto">
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme} 
+              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all active:scale-90 shadow-inner"
+              title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-slate-100">{user?.name}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-slate-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200">
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold border border-blue-200 dark:border-blue-800">
               {user?.name.charAt(0)}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-950 transition-colors duration-300">
           {children}
         </main>
       </div>

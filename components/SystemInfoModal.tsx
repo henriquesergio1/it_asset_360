@@ -7,33 +7,45 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.18',
+    version: '2.11.3',
     date: 'Hoje',
-    title: 'Fix: Maintenance Date Persistence & R$ Labeling',
+    title: 'Refactor: Final Dark Mode Polishing',
     changes: [
-      'Correção de bug na exibição da data de manutenção (exibia a data do dia em vez da informada).',
-      'Ajuste na lógica de parsing de datas ISO para evitar distorções de fuso horário UTC.',
-      'Garantia do prefixo "R$" em todos os campos monetários da aba de manutenção.'
+      'Refinamento completo do Modo Escuro nas telas de Entrega/Devolução.',
+      'Ajuste visual do Painel de Administração e Auditoria Detalhada.',
+      'Correção de legibilidade em modais de auditoria e editor de termos.',
+      'Padronização de cores de botões e tabelas no tema Dark.'
     ]
   },
     {
-    version: '2.10.17',
+    version: '2.11.2',
     date: 'Hoje',
-    title: 'Feat: Manual Date for Maintenance & R$ Labeling',
+    title: 'Hotfix: AccountManager Recovery & Version Align',
     changes: [
-      'Adicionado campo de data no formulário de registro de manutenção.',
-      'Alterado prefixo visual do campo de custo de manutenção para "R$".',
-      'Lógica de salvamento atualizada para utilizar a data informada pelo usuário.'
+      'Correção do arquivo AccountManager.tsx que estava truncado impedindo o build.',
+      'Harmonização global da versão do sistema para 2.11.2.',
+      'Restauração de componentes de modal em Software & Contas.'
     ]
   },
     {
-    version: '2.10.16',
+    version: '2.11.1',
     date: 'Hoje',
-    title: 'Fix: Brazilian Currency Mask & Date Format',
+    title: 'Fix: Navigation & Dependency Imports',
     changes: [
-      'Implementação de máscara de moeda R$ no campo Valor Pago (aba Financeiro).',
-      'Correção de compatibilidade do campo Data da Compra com o componente nativo do navegador.',
-      'Ajuste de parsing para persistência correta de valores monetários no SQL Server.'
+      'Correção de erros de importação (lucide-react) em DeviceManager.',
+      'Ajuste na declaração de roteamento em UserManager.',
+      'Atualização do health check do servidor para 2.11.1.'
+    ]
+  },
+    {
+    version: '2.11.0',
+    date: 'Ontem',
+    title: 'Feat: Light & Dark Mode Support',
+    changes: [
+      'Implementação de alternância dinâmica entre tema claro e escuro.',
+      'Persistência da preferência de tema no navegador (localStorage).',
+      'Botão de toggle adicionado ao cabeçalho principal.',
+      'Adaptação visual da tela de login e layout base para modo dark.'
     ]
   }
 ];
@@ -41,9 +53,9 @@ const versions = [
 const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] transition-colors duration-300">
         
-        <div className="bg-slate-900 px-8 py-6 flex justify-between items-start shrink-0 relative overflow-hidden">
+        <div className="bg-slate-900 px-8 py-6 flex justify-between items-start shrink-0 relative overflow-hidden border-b dark:border-slate-800">
           <div className="relative z-10">
             <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
             <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
@@ -56,41 +68,41 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="mb-8 bg-blue-50 border border-blue-100 rounded-xl p-5 flex items-center gap-4">
-             <div className="bg-white p-3 rounded-full shadow-sm border border-blue-100">
-                <User size={24} className="text-blue-600"/>
+        <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900">
+          <div className="mb-8 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-5 flex items-center gap-4">
+             <div className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-sm border border-blue-100 dark:border-blue-900/50">
+                <User size={24} className="text-blue-600 dark:text-blue-400"/>
              </div>
              <div>
-                <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">Desenvolvido por</p>
-                <h3 className="text-xl font-bold text-slate-800">Sergio Oliveira</h3>
-                <p className="text-sm text-slate-500">Engenheiro de Software Sênior</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Desenvolvido por</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Sergio Oliveira</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Engenheiro de Software Sênior</p>
              </div>
           </div>
 
-          <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <GitCommit className="text-blue-600"/> Histórico de Versões
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+            <GitCommit className="text-blue-600 dark:text-blue-400"/> Histórico de Versões
           </h3>
 
-          <div className="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+          <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-8 pb-4">
             {versions.map((ver, index) => (
               <div key={index} className="relative pl-8">
-                <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white shadow-sm 
-                    ${index === 0 ? 'bg-blue-600 ring-4 ring-blue-100' : 'bg-slate-300'}`}>
+                <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm 
+                    ${index === 0 ? 'bg-blue-600 ring-4 ring-blue-100 dark:ring-blue-900/20' : 'bg-slate-300 dark:bg-slate-600'}`}>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${index === 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${index === 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                         v{ver.version}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
                         <Calendar size={12}/> {ver.date}
                     </span>
                 </div>
-                <h4 className="text-base font-bold text-slate-800 mb-2">{ver.title}</h4>
+                <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2">{ver.title}</h4>
                 <ul className="space-y-1">
                     {ver.changes.map((change, i) => (
-                        <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                        <li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2">
+                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-600 shrink-0"></span>
                             {change}
                         </li>
                     ))}
@@ -99,8 +111,8 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
             ))}
           </div>
         </div>
-        <div className="bg-slate-50 border-t px-8 py-4 text-center">
-             <p className="text-xs text-slate-400">© 2025 IT Asset 360. Todos os direitos reservados.</p>
+        <div className="bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 px-8 py-4 text-center">
+             <p className="text-xs text-slate-400 dark:text-slate-500">© 2025 IT Asset 360. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>

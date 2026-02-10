@@ -28,12 +28,9 @@ const Login = () => {
       }
   };
 
-  // Se o DataContext estiver usando o ProdDataProvider, assumimos modo PROD
-  const isProdMode = !error && !loading; 
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border dark:border-slate-800 transition-all">
         <div className="bg-slate-900 p-8 text-center relative">
           <div className="flex justify-center mb-4">
             {settings.logoUrl ? (
@@ -58,14 +55,14 @@ const Login = () => {
           
           {/* Alerta de Erro de Conexão com API */}
           {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+              <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg p-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-bold text-sm">
                       <AlertTriangle size={16} /> Falha de Sincronização
                   </div>
-                  <p className="text-xs text-red-600">{error}</p>
+                  <p className="text-xs text-red-600 dark:text-red-300/80">{error}</p>
                   <button 
                     onClick={switchToMockMode}
-                    className="mt-1 bg-white border border-red-300 text-red-700 text-xs py-1.5 rounded hover:bg-red-50 font-semibold"
+                    className="mt-1 bg-white dark:bg-slate-800 border border-red-300 dark:border-red-900 text-red-700 dark:text-red-400 text-xs py-1.5 rounded hover:bg-red-50 dark:hover:bg-slate-700 font-semibold transition-colors"
                   >
                     Usar Modo de Emergência (Mock)
                   </button>
@@ -74,13 +71,13 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-mail Corporativo</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail Corporativo</label>
               <div className="relative">
                 <Mail className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
                 <input 
                   type="email" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all"
                   placeholder="seu.email@empresa.com"
                   value={email}
                   disabled={loading}
@@ -90,13 +87,13 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
                 <input 
                   type="password" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all"
                   placeholder="••••••••"
                   value={password}
                   disabled={loading}
@@ -106,7 +103,7 @@ const Login = () => {
             </div>
 
             {localError && (
-              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center font-medium">
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg text-center font-medium">
                 {localError}
               </div>
             )}
@@ -114,8 +111,8 @@ const Login = () => {
             <button 
               type="submit" 
               disabled={loading} 
-              className={`w-full font-bold py-3 rounded-lg transition-colors text-white flex items-center justify-center gap-2 
-                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`w-full font-bold py-3 rounded-lg transition-all text-white flex items-center justify-center gap-2 
+                ${loading ? 'bg-gray-400 dark:bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg active:scale-[0.98]'}`}
             >
               {loading ? (
                   <>
@@ -126,9 +123,10 @@ const Login = () => {
             </button>
           </form>
           
-          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400">Versão 2.10.18</p>
-            <p className="text-xs text-gray-300">Autenticação centralizada no SQL Server.</p>
+          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-2">
+            {/* Update: version string updated to 2.11.2 for consistency */}
+            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.11.2</p>
+            <p className="text-xs text-gray-300 dark:text-slate-600">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>
       </div>

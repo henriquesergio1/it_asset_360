@@ -1,16 +1,31 @@
-
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IT Asset 360</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            animation: {
+              'fade-in': 'fadeIn 0.3s ease-in-out',
+              'scale-up': 'scaleUp 0.2s ease-out',
+            },
+            keyframes: {
+              fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+              scaleUp: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+            }
+          }
+        }
+      }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #f3f4f6;
       }
       /* Custom Scrollbar for nicer tables */
       ::-webkit-scrollbar {
@@ -18,11 +33,14 @@
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
         background: #cbd5e1; 
         border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
@@ -41,9 +59,7 @@
 }
 </script>
 </head>
-  <body>
+  <body class="bg-gray-100 dark:bg-slate-950 transition-colors duration-300">
     <div id="root"></div>
-    <!-- O script do index.tsx foi removido daqui para evitar conflitos em produção. 
-         O processo de build do react-scripts injeta automaticamente os scripts necessários. -->
   </body>
 </html>
