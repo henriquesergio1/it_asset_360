@@ -4,8 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-// Fixed: Added 'Users' to lucide-react imports
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+// Fixed: Added 'Users' to lucide-react imports to fix 'Cannot find name' error
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -242,6 +242,16 @@ const COLUMN_OPTIONS = [
     { id: 'linkedSim', label: 'Chip Vinculado' },
     { id: 'purchaseInfo', label: 'Valor/Data Compra' }
 ];
+
+// --- Helpers de Formatação Financeira (BR) ---
+const formatCurrencyBR = (value: number): string => {
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+};
+
+const parseCurrencyBR = (value: string): number => {
+    const cleanedValue = value.replace(/\D/g, '');
+    return cleanedValue ? parseFloat(cleanedValue) / 100 : 0;
+};
 
 const DeviceManager = () => {
   const { 
@@ -643,7 +653,7 @@ const DeviceManager = () => {
                       {visibleColumns.includes('purchaseInfo') && (
                         <td className="px-6 py-4">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold text-emerald-600">R$ {d.purchaseCost?.toFixed(2) || '0.00'}</span>
+                                <span className="text-[10px] font-bold text-emerald-600">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span>
                                 <span className="text-[9px] text-slate-400">{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString() : '---'}</span>
                             </div>
                         </td>
@@ -862,12 +872,28 @@ const DeviceManager = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago</label>
-                                        <input type="number" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" value={formData.purchaseCost || 0} onChange={e => setFormData({...formData, purchaseCost: Number(e.target.value)})} step="0.01"/>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago (R$)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-3 text-slate-400 text-xs font-bold">R$</span>
+                                            <input 
+                                                type="text" 
+                                                disabled={isViewOnly} 
+                                                className="w-full border-2 border-slate-100 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-50 font-bold" 
+                                                value={formatCurrencyBR(formData.purchaseCost || 0)} 
+                                                onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})}
+                                                placeholder="0,00"
+                                            />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label>
-                                        <input type="date" disabled={isViewOnly} className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" value={formData.purchaseDate || ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/>
+                                        <input 
+                                            type="date" 
+                                            disabled={isViewOnly} 
+                                            className="w-full border-2 border-slate-100 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-50" 
+                                            value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} 
+                                            onChange={e => setFormData({...formData, purchaseDate: e.target.value})}
+                                        />
                                     </div>
                                 </div>
                                 <div>
@@ -929,7 +955,12 @@ const DeviceManager = () => {
                                             <label className="block text-[10px] font-bold text-orange-400 uppercase mb-1">Custo (R$)</label>
                                             <div className="relative">
                                                 <DollarSign className="absolute left-3 top-3 text-orange-300" size={16}/>
-                                                <input type="number" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" value={newMaint.cost || 0} onChange={e => setNewMaint({...newMaint, cost: Number(e.target.value)})} step="0.01"/>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white" 
+                                                    value={formatCurrencyBR(newMaint.cost || 0)} 
+                                                    onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
+                                                />
                                             </div>
                                         </div>
                                         <div>
@@ -961,7 +992,7 @@ const DeviceManager = () => {
                                                     <p className="font-bold text-slate-800 text-sm">{m.description}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(m.date).toLocaleDateString()}</span>
-                                                        <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {m.cost.toFixed(2)}</span>
+                                                        <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {formatCurrencyBR(m.cost)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1055,7 +1086,7 @@ const DeviceManager = () => {
       {/* NOVO MODAL: Motivo da Alteração */}
       {isReasonModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-blue-100">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-blue-100">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Save size={32} /></div>

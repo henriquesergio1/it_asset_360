@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.10.15',
+    version: '2.10.16',
     date: 'Hoje',
+    title: 'Fix: Brazilian Currency Mask & Date Format',
+    changes: [
+      'Implementação de máscara de moeda R$ no campo Valor Pago (aba Financeiro).',
+      'Correção de compatibilidade do campo Data da Compra com o componente nativo do navegador.',
+      'Ajuste de parsing para persistência correta de valores monetários no SQL Server.'
+    ]
+  },
+    {
+    version: '2.10.15',
+    date: '05/02/2025',
     title: 'Bugfix: Term Attachment API Route',
     changes: [
       'Correção de erro 404 ao anexar termos PDF no ambiente de produção.',
@@ -24,17 +34,6 @@ const versions = [
     changes: [
       'Alteração da cidade padrão no rodapé dos termos para "São José dos Campos".',
       'Manutenção da integridade de layout para impressão em página única A4.'
-    ]
-  },
-    {
-    version: '2.10.13',
-    date: '04/02/2025',
-    title: 'Print: Auto-Balanced A4 Single Page',
-    changes: [
-      'Ajuste dinâmico de fontes e margens para garantir que termos caibam em 1 página A4.',
-      'Redução do padding de tabelas e espaçamento entre seções para evitar quebra de página.',
-      'Otimização do tamanho do logotipo e cabeçalho para maior aproveitamento vertical.',
-      'Texto padronizado em preto puro com foco em legibilidade de alto contraste.'
     ]
   }
 ];
