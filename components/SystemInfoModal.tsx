@@ -7,6 +7,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.10.18',
+    date: 'Hoje',
+    title: 'Fix: Maintenance Date Persistence & R$ Labeling',
+    changes: [
+      'Correção de bug na exibição da data de manutenção (exibia a data do dia em vez da informada).',
+      'Ajuste na lógica de parsing de datas ISO para evitar distorções de fuso horário UTC.',
+      'Garantia do prefixo "R$" em todos os campos monetários da aba de manutenção.'
+    ]
+  },
+    {
     version: '2.10.17',
     date: 'Hoje',
     title: 'Feat: Manual Date for Maintenance & R$ Labeling',
@@ -24,16 +34,6 @@ const versions = [
       'Implementação de máscara de moeda R$ no campo Valor Pago (aba Financeiro).',
       'Correção de compatibilidade do campo Data da Compra com o componente nativo do navegador.',
       'Ajuste de parsing para persistência correta de valores monetários no SQL Server.'
-    ]
-  },
-    {
-    version: '2.10.15',
-    date: '05/02/2025',
-    title: 'Bugfix: Term Attachment API Route',
-    changes: [
-      'Correção de erro 404 ao anexar termos PDF no ambiente de produção.',
-      'Alinhamento do endpoint no backend para suportar IDs de termos via parâmetros de URL.',
-      'Ajuste na consistência entre ProdDataProvider e o servidor SQL.'
     ]
   }
 ];

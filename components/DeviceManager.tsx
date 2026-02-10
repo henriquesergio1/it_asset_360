@@ -252,6 +252,15 @@ const parseCurrencyBR = (value: string): number => {
     return cleanedValue ? parseFloat(cleanedValue) / 100 : 0;
 };
 
+// Helper para formatar data ISO vinda do banco para exibição local brasileira segura
+const formatDateBR = (isoString: string): string => {
+    if (!isoString) return '---';
+    // Adicionamos T12:00:00 para evitar que o fuso horário mude o dia ao criar o objeto Date
+    const datePart = isoString.substring(0, 10);
+    const [year, month, day] = datePart.split('-');
+    return `${day}/${month}/${year}`;
+};
+
 const DeviceManager = () => {
   const { 
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
@@ -375,11 +384,16 @@ const DeviceManager = () => {
 
   const saveMaintenance = () => {
     if (!editingId || !newMaint.description) return;
+    
+    // Preparação da data: pegamos a string YYYY-MM-DD do input e garantimos que o objeto Date criado não retroceda o dia
+    // devido ao fuso horário brasileiro (UTC-3) ao converter para ISO string no servidor.
+    const isoDate = newMaint.date ? `${newMaint.date}T12:00:00.000Z` : new Date().toISOString();
+
     const record: MaintenanceRecord = {
       id: Math.random().toString(36).substr(2, 9),
       deviceId: editingId,
       type: newMaint.type || MaintenanceType.CORRECTIVE,
-      date: newMaint.date ? new Date(newMaint.date).toISOString() : new Date().toISOString(),
+      date: isoDate,
       description: newMaint.description,
       cost: newMaint.cost || 0,
       provider: 'Interno',
@@ -660,7 +674,7 @@ const DeviceManager = () => {
                         <td className="px-6 py-4">
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-emerald-600">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span>
-                                <span className="text-[9px] text-slate-400">{d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString() : '---'}</span>
+                                <span className="text-[9px] text-slate-400">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span>
                             </div>
                         </td>
                       )}
@@ -1009,7 +1023,7 @@ const DeviceManager = () => {
                                                 <div>
                                                     <p className="font-bold text-slate-800 text-sm">{m.description}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(m.date).toLocaleDateString()}</span>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase">{formatDateBR(m.date)}</span>
                                                         <span className="text-[10px] font-black text-emerald-600 uppercase">R$ {formatCurrencyBR(m.cost)}</span>
                                                     </div>
                                                 </div>
