@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -580,6 +580,21 @@ const DeviceManager = () => {
       setIsDeleteModalOpen(true);
   };
 
+  const toggleMaintenanceStatus = (device: Device) => {
+      if (device.status === DeviceStatus.IN_USE) {
+          alert("Ativo em uso. Realize a devolução antes de enviar para manutenção.");
+          return;
+      }
+      const newStatus = device.status === DeviceStatus.MAINTENANCE ? DeviceStatus.AVAILABLE : DeviceStatus.MAINTENANCE;
+      const confirmMsg = newStatus === DeviceStatus.MAINTENANCE 
+        ? `Enviar o dispositivo ${device.assetTag || device.serialNumber} para Manutenção?`
+        : `Concluir manutenção e retornar ${device.assetTag || device.serialNumber} para o Estoque Disponível?`;
+      
+      if (window.confirm(confirmMsg)) {
+          updateDevice({ ...device, status: newStatus }, adminName);
+      }
+  };
+
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
   const deviceAccounts = accounts.filter(a => a.deviceId === editingId);
 
@@ -696,7 +711,7 @@ const DeviceManager = () => {
                     Responsável Atual
                     <Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} />
                   </th>
-                  <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
+                  <th className="px-6 py-4 text-right" style={{ width: '150px' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -782,6 +797,14 @@ const DeviceManager = () => {
                       </td>
                       <td className="px-6 py-4 text-right truncate">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                            {/* NOVO: Ações de Manutenção Rápidas */}
+                            {d.status === DeviceStatus.AVAILABLE && (
+                                <button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>
+                            )}
+                            {d.status === DeviceStatus.MAINTENANCE && (
+                                <button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-all" title="Concluir Manutenção"><CheckCircle size={16}/></button>
+                            )}
+
                             {d.pulsusId && (
                                  <a 
                                     href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
@@ -952,6 +975,29 @@ const DeviceManager = () => {
                         </div>
 
                         <div className="space-y-4">
+                            {/* NOVO: Campo de Status (Passar para Manutenção) */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Estado Global do Ativo</label>
+                                <select 
+                                    disabled={isViewOnly || formData.status === DeviceStatus.IN_USE} 
+                                    className={`w-full border-2 rounded-xl p-3 text-sm font-black focus:border-blue-500 outline-none transition-colors 
+                                        ${formData.status === DeviceStatus.IN_USE ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 text-blue-700 dark:text-blue-400' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 dark:text-slate-100'}`}
+                                    value={formData.status || ''} 
+                                    onChange={e => setFormData({...formData, status: e.target.value as DeviceStatus})}
+                                >
+                                    {Object.values(DeviceStatus).map(s => (
+                                        <option key={s} value={s} disabled={s === DeviceStatus.IN_USE && formData.status !== DeviceStatus.IN_USE}>
+                                            {s} {s === DeviceStatus.IN_USE ? '(Requer Devolução)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {formData.status === DeviceStatus.IN_USE && (
+                                    <p className="text-[9px] text-blue-500 mt-1.5 font-bold uppercase tracking-tighter">
+                                        * Status gerido via Entrega/Devolução para segurança jurídica.
+                                    </p>
+                                )}
+                            </div>
+
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Serial Number (Fabricante)</label>
                                 <input required disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 transition-colors" value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase()})} placeholder="S/N"/>

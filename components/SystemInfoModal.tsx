@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.7',
+    date: 'Hoje',
+    title: 'Feature: Manual Maintenance Control',
+    changes: [
+      'Adição de controle direto de status de manutenção no inventário de dispositivos.',
+      'Novas ações rápidas na tabela: Enviar para Manutenção e Concluir Manutenção.',
+      'Habilitação do campo de Status no formulário de edição para ajustes manuais administrativos.',
+      'Sincronização global da versão para 2.12.7.'
+    ]
+  },
+    {
     version: '2.12.6',
     date: 'Hoje',
     title: 'Fix: AccountManager Component Completion',
@@ -44,16 +55,6 @@ const versions = [
     changes: [
       'Correção de erro de compilação no UserManager: importação ausente do ícone RefreshCw.',
       'Sincronização da versão do sistema.'
-    ]
-  },
-    {
-    version: '2.12.2',
-    date: 'Hoje',
-    title: 'Fix: Build Error & Restoration',
-    changes: [
-      'Correção crítica de erros de compilação em UserManager e outros componentes principais.',
-      'Restauração total dos blocos de código omitidos que causavam falha no deploy.',
-      'Estabilização da lógica de redimensionamento de colunas em todas as tabelas.'
     ]
   }
 ];
