@@ -8,6 +8,25 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.3',
+    date: 'Hoje',
+    title: 'Fix: Missing Icon Import',
+    changes: [
+      'Correção de erro de compilação no UserManager: importação ausente do ícone RefreshCw.',
+      'Sincronização da versão do sistema.'
+    ]
+  },
+    {
+    version: '2.12.2',
+    date: 'Hoje',
+    title: 'Fix: Build Error & Restoration',
+    changes: [
+      'Correção crítica de erros de compilação em UserManager e outros componentes principais.',
+      'Restauração total dos blocos de código omitidos que causavam falha no deploy.',
+      'Estabilização da lógica de redimensionamento de colunas em todas as tabelas.'
+    ]
+  },
+    {
     version: '2.12.1',
     date: 'Hoje',
     title: 'Fix: Component Stabilization',
@@ -38,27 +57,6 @@ const versions = [
     changes: [
       'Ajuste de cor de texto nos botões de seleção de tipo de ativo (Operations) para o tema escuro.',
       'Melhoria no contraste de elementos inativos na tela de Entrega/Devolução.'
-    ]
-  },
-    {
-    version: '2.11.6',
-    date: 'Hoje',
-    title: 'UI: Dark Mode for Asset Catalog',
-    changes: [
-      'Aplicação completa do tema escuro no modal de Catálogo (Modelos, Marcas, Tipos).',
-      'Correção de cores de inputs e selects em modo escuro.',
-      'Ajuste de visibilidade em backgrounds de formulários auxiliares.'
-    ]
-  },
-    {
-    version: '2.11.5',
-    date: 'Hoje',
-    title: 'Fix: Multi-Asset Term Tracking',
-    changes: [
-      'Correção do bug de rastreabilidade onde todos os termos de um colaborador apontavam para o mesmo ativo.',
-      'Implementação de identificadores robustos [TAG: XXX] no campo AssetDetails dos termos.',
-      'Aprimoramento da lógica de re-impressão para localizar o ativo exato via Regex.',
-      'Sincronização da lógica de identificação entre servidor SQL e provedor Mock.'
     ]
   }
 ];
