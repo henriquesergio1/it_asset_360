@@ -27,8 +27,8 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        // Version updated to 2.12.7
-        version: '2.12.7', 
+        // Version updated to 2.12.9
+        version: '2.12.9', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -430,6 +430,13 @@ app.post('/api/operations/checkin', async (req, res) => {
             const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
             userName = userRes.recordset[0]?.FullName || 'Colaborador';
         }
+        
+        // --- BUGFIX: LIBERAÇÃO DE CHIP VINCULADO ---
+        // Se for dispositivo, buscar se tem chip vinculado para liberar
+        if (assetType === 'Device' && prev && prev.LinkedSimId) {
+            await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
+        }
+
         await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
         if (userId) {
             const termId = Math.random().toString(36).substr(2, 9);

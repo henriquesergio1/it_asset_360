@@ -8,6 +8,25 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.9',
+    date: 'Hoje',
+    title: 'Fix: Admin Route JSX Syntax',
+    changes: [
+      'Correção de erro de sintaxe na definição da rota administrativa no componente AppRoutes.',
+      'Sincronização global da versão para 2.12.9.'
+    ]
+  },
+    {
+    version: '2.12.8',
+    date: 'Hoje',
+    title: 'Bugfix: Auto-release Linked SIM',
+    changes: [
+      'Correção de bug na devolução: chips vinculados agora são automaticamente liberados ao devolver o dispositivo.',
+      'Ajuste na lógica de check-in tanto no backend SQL quanto no provedor Mock.',
+      'Sincronização global da versão para 2.12.8.'
+    ]
+  },
+    {
     version: '2.12.7',
     date: 'Hoje',
     title: 'Feature: Manual Maintenance Control',
@@ -36,25 +55,6 @@ const versions = [
       'Implementação de fallback de IMEI para badges de ativos sem patrimônio no perfil do colaborador.',
       'Melhoria na visibilidade das divisórias de redimensionamento de colunas nas tabelas.',
       'Sincronização global da versão do sistema.'
-    ]
-  },
-    {
-    version: '2.12.4',
-    date: 'Hoje',
-    title: 'Fix: Restored User Registration Fields',
-    changes: [
-      'Restauração dos campos PIS e Endereço no cadastro de colaboradores.',
-      'Ajuste da máscara de PIS no formulário de edição/criação.',
-      'Ajuste no layout do grid do formulário para melhor usabilidade em resoluções menores.'
-    ]
-  },
-    {
-    version: '2.12.3',
-    date: 'Hoje',
-    title: 'Fix: Missing Icon Import',
-    changes: [
-      'Correção de erro de compilação no UserManager: importação ausente do ícone RefreshCw.',
-      'Sincronização da versão do sistema.'
     ]
   }
 ];

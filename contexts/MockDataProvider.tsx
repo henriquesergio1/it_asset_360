@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType } from '../types';
@@ -213,6 +214,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const oldUserId = old?.currentUserId;
             const oldUser = users.find(u => u.id === oldUserId);
             
+            // --- BUGFIX: LIBERAÇÃO DE CHIP VINCULADO NO MOCK ---
+            if (old && old.linkedSimId) {
+                setSims(prev => prev.map(s => s.id === old.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+            }
+
             setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
             
             if (oldUserId) {

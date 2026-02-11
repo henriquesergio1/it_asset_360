@@ -125,8 +125,8 @@ const Login = () => {
           </form>
           
           <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-2">
-            {/* Version updated to 2.12.7 */}
-            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.7</p>
+            {/* Version updated to 2.12.9 */}
+            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.9</p>
             <p className="text-xs text-gray-300 dark:text-slate-600">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>

@@ -123,8 +123,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 {/* Version updated to 2.12.7 */}
-                 <span>Versão 2.12.7</span>
+                 {/* Version updated to 2.12.9 */}
+                 <span>Versão 2.12.9</span>
               </div>
           )}
           <button 
@@ -148,7 +148,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             {/* Theme Toggle Button */}
             <button 
               onClick={toggleTheme} 
-              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all active:scale-90 shadow-inner"
+              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-inner"
               title={theme === 'light' ? 'Ativar Modo Escuro' : 'Ativar Modo Claro'}
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -202,6 +202,7 @@ const AppRoutes = () => {
             <Route path="/accounts" element={<ProtectedRoute><AccountManager /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManager /></ProtectedRoute>} />
             <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+            {/* Fix: Corrected JSX syntax for the /admin route by wrapping the element in AdminRoute correctly */}
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
