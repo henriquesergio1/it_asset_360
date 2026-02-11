@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-// Fixed: Added 'Users' to lucide-react imports to fix 'Cannot find name' error
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
@@ -214,7 +213,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
                                 <p className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
                                     <Users size={14} className="text-slate-400 dark:text-slate-500"/> {userName}
                                 </p>
-                                {log.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic bg-slate-50 dark:bg-slate-800/50 p-2 rounded-lg border-l-2 border-slate-200 dark:border-slate-700">{log.notes}</p>}
+                                {log.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border-l-2 border-slate-200 dark:border-slate-700">{log.notes}</p>}
                                 <div className="mt-3 text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-tighter">Registrado por: {log.adminUser}</div>
                             </div>
                         </div>
@@ -237,6 +236,7 @@ const COLUMN_OPTIONS = [
     { id: 'imei', label: 'IMEI' },
     { id: 'serial', label: 'S/N Fabricante' },
     { id: 'sectorCode', label: 'Cód. Setor' },
+    { id: 'sectorName', label: 'Cargo / Função' },
     { id: 'pulsusId', label: 'Pulsus ID' },
     { id: 'linkedSim', label: 'Chip Vinculado' },
     { id: 'purchaseInfo', label: 'Valor/Data Compra' }
@@ -260,6 +260,14 @@ const formatDateBR = (isoString: string): string => {
     const [year, month, day] = datePart.split('-');
     return `${day}/${month}/${year}`;
 };
+
+// Componente divisor para redimensionamento
+const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
+    <div 
+        onMouseDown={onMouseDown}
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-400/50 transition-colors z-10"
+    />
+);
 
 const DeviceManager = () => {
   const { 
@@ -297,6 +305,11 @@ const DeviceManager = () => {
       const saved = localStorage.getItem('device_manager_columns');
       return saved ? JSON.parse(saved) : ['assetTag', 'linkedSim'];
   });
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+      const saved = localStorage.getItem('device_manager_widths');
+      return saved ? JSON.parse(saved) : {};
+  });
   
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
@@ -331,6 +344,10 @@ const DeviceManager = () => {
       localStorage.setItem('device_manager_columns', JSON.stringify(visibleColumns));
   }, [visibleColumns]);
 
+  useEffect(() => {
+      localStorage.setItem('device_manager_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
   // Reset paginação ao filtrar
   useEffect(() => {
     setCurrentPage(1);
@@ -338,6 +355,22 @@ const DeviceManager = () => {
 
   const toggleColumn = (id: string) => {
       setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const handleResize = (colId: string, startX: number, startWidth: number) => {
+    const onMouseMove = (e: MouseEvent) => {
+        const delta = e.clientX - startX;
+        setColumnWidths(prev => ({
+            ...prev,
+            [colId]: Math.max(startWidth + delta, 50)
+        }));
+    };
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   const handleNFFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -448,7 +481,8 @@ const DeviceManager = () => {
   const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
     const { model, brand } = getModelDetails(d.modelId);
-    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''}`.toLowerCase();
+    const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
+    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   }).sort((a, b) => {
       const modelA = models.find(m => m.id === a.modelId)?.name || '';
@@ -593,25 +627,75 @@ const DeviceManager = () => {
 
       <div className="relative">
         <Search className="absolute left-4 top-3 text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar por Tag, IMEI, S/N, Código de Setor ou Modelo..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+        <input type="text" placeholder="Pesquisar por Tag, IMEI, S/N, Código, Cargo ou Modelo..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[1200px]">
+            <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
-                  <th className="px-6 py-4">Foto/Modelo</th>
-                  {visibleColumns.includes('assetTag') && <th className="px-6 py-4">Patrimônio</th>}
-                  {visibleColumns.includes('imei') && <th className="px-6 py-4">IMEI</th>}
-                  {visibleColumns.includes('serial') && <th className="px-6 py-4">S/N</th>}
-                  {visibleColumns.includes('sectorCode') && <th className="px-6 py-4">Setor</th>}
-                  {visibleColumns.includes('pulsusId') && <th className="px-6 py-4 text-center">Pulsus ID</th>}
-                  {visibleColumns.includes('linkedSim') && <th className="px-6 py-4">Chip</th>}
-                  {visibleColumns.includes('purchaseInfo') && <th className="px-6 py-4">Aquisição</th>}
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Responsável Atual</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['model'] || '200px' }}>
+                    Foto/Modelo
+                    <Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} />
+                  </th>
+                  {visibleColumns.includes('assetTag') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['assetTag'] || '120px' }}>
+                        Patrimônio
+                        <Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('imei') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['imei'] || '150px' }}>
+                        IMEI
+                        <Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('serial') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['serial'] || '120px' }}>
+                        S/N
+                        <Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('sectorCode') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['sectorCode'] || '100px' }}>
+                        Cód. Setor
+                        <Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('sectorName') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['sectorName'] || '150px' }}>
+                        Cargo / Função
+                        <Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('pulsusId') && (
+                    <th className="px-6 py-4 relative text-center" style={{ width: columnWidths['pulsusId'] || '100px' }}>
+                        Pulsus ID
+                        <Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('linkedSim') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['linkedSim'] || '150px' }}>
+                        Chip
+                        <Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} />
+                    </th>
+                  )}
+                  {visibleColumns.includes('purchaseInfo') && (
+                    <th className="px-6 py-4 relative" style={{ width: columnWidths['purchaseInfo'] || '120px' }}>
+                        Aquisição
+                        <Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} />
+                    </th>
+                  )}
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['status'] || '120px' }}>
+                    Status
+                    <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} />
+                  </th>
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['user'] || '180px' }}>
+                    Responsável Atual
+                    <Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} />
+                  </th>
+                  <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -620,6 +704,7 @@ const DeviceManager = () => {
                   const user = users.find(u => u.id === d.currentUserId);
                   const isRet = d.status === DeviceStatus.RETIRED;
                   const linkedSim = sims.find(s => s.id === d.linkedSimId);
+                  const sector = sectors.find(s => s.id === d.sectorId);
 
                   return (
                     <tr 
@@ -627,87 +712,92 @@ const DeviceManager = () => {
                         onClick={() => handleOpenModal(d, true)}
                         className={`border-b dark:border-slate-800 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'}`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 truncate">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700 shadow-inner shrink-0">
-                                {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300 dark:text-slate-600" size={20}/>}
+                            <div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700 shadow-inner shrink-0">
+                                {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300 dark:text-slate-600" size={16}/>}
                             </div>
                             <div className="min-w-0">
-                                <div className="font-bold text-gray-900 dark:text-slate-100 truncate">{model?.name}</div>
-                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tighter">{brand?.name}</div>
+                                <div className="font-bold text-gray-900 dark:text-slate-100 truncate text-xs">{model?.name}</div>
+                                <div className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tighter">{brand?.name}</div>
                             </div>
                         </div>
                       </td>
                       {visibleColumns.includes('assetTag') && (
-                        <td className="px-6 py-4">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div>
+                        <td className="px-6 py-4 truncate">
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div>
                         </td>
                       )}
                       {visibleColumns.includes('imei') && (
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-500 dark:text-slate-400">{d.imei || '---'}</td>
+                        <td className="px-6 py-4 font-mono text-[9px] text-slate-500 dark:text-slate-400 truncate">{d.imei || '---'}</td>
                       )}
                       {visibleColumns.includes('serial') && (
-                        <td className="px-6 py-4 font-mono text-[10px] text-slate-400 dark:text-slate-500">{d.serialNumber || '---'}</td>
+                        <td className="px-6 py-4 font-mono text-[9px] text-slate-500 dark:text-slate-400 truncate">{d.serialNumber || '---'}</td>
                       )}
                       {visibleColumns.includes('sectorCode') && (
-                        <td className="px-6 py-4">
-                            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-gray-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700 w-fit">{d.internalCode || '---'}</span>
+                        <td className="px-6 py-4 truncate">
+                            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-gray-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700">{d.internalCode || '---'}</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('sectorName') && (
+                        <td className="px-6 py-4 truncate">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-700">{sector?.name || '---'}</span>
                         </td>
                       )}
                       {visibleColumns.includes('pulsusId') && (
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-6 py-4 text-center truncate">
                             {d.pulsusId ? (
-                                <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/40">{d.pulsusId}</span>
+                                <span className="text-[9px] font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded border border-blue-100 dark:border-blue-900/40">{d.pulsusId}</span>
                             ) : <span className="text-[10px] text-slate-200 dark:text-slate-700">-</span>}
                         </td>
                       )}
                       {visibleColumns.includes('linkedSim') && (
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 truncate">
                             {linkedSim ? (
-                                <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/40 w-fit flex items-center gap-1">
+                                <span className="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/40 flex items-center gap-1 w-fit">
                                     <Cpu size={10}/> {linkedSim.phoneNumber}
                                 </span>
                             ) : <span className="text-[10px] text-slate-200 dark:text-slate-700">-</span>}
                         </td>
                       )}
                       {visibleColumns.includes('purchaseInfo') && (
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 truncate">
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span>
                                 <span className="text-[9px] text-slate-400 dark:text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span>
                             </div>
                         </td>
                       )}
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/40'}`}>{d.status}</span>
+                      <td className="px-6 py-4 truncate">
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/40'}`}>{d.status}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 truncate">
                         {user ? (
                             <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                                 <span className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-700" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
                                 <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase">{user.internalCode || 'S/ Cód'}</span>
                             </div>
-                        ) : <span className="text-[10px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-tighter italic">Livre no Estoque</span>}
+                        ) : <span className="text-[9px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-tighter italic">Livre no Estoque</span>}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right truncate">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                             {d.pulsusId && (
                                  <a 
                                     href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
+                                    className="p-1.5 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
                                     title="Abrir MDM Pulsus"
                                  >
-                                    <ShieldCheck size={18}/>
+                                    <ShieldCheck size={16}/>
                                  </a>
                             )}
                             {isRet ? (
-                                <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={18}/></button>
+                                <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Restaurar Ativo"><RotateCcw size={16}/></button>
                             ) : (
                                 <>
-                                    <button onClick={() => handleOpenModal(d, false)} className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all" title="Editar"><Edit2 size={18}/></button>
-                                    <button onClick={() => handleDeleteAttempt(d)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all" title="Descartar"><Trash2 size={18}/></button>
+                                    <button onClick={() => handleOpenModal(d, false)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Editar"><Edit2 size={16}/></button>
+                                    <button onClick={() => handleDeleteAttempt(d)} className="p-1.5 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Descartar"><Trash2 size={16}/></button>
                                 </>
                             )}
                         </div>
@@ -799,6 +889,29 @@ const DeviceManager = () => {
                                 <p className="text-xs font-bold text-blue-800 dark:text-blue-200">Modo de visualização. Clique no botão azul "Habilitar Edição" abaixo para editar os dados.</p>
                             </div>
                         )}
+                        
+                        {/* NOVO: Exibição do Responsável Atual */}
+                        {editingId && (
+                            <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-blue-500 border dark:border-slate-800 shadow-sm">
+                                        <Users size={24}/>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Responsável Atual</span>
+                                        <p className="text-sm font-black text-slate-800 dark:text-slate-100">
+                                            {formData.currentUserId ? users.find(u => u.id === formData.currentUserId)?.fullName : 'LIVRE NO ESTOQUE'}
+                                        </p>
+                                    </div>
+                                </div>
+                                {formData.currentUserId && (
+                                    <button type="button" onClick={() => navigate(`/users?userId=${formData.currentUserId}`)} className="px-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center gap-2">
+                                        Ver Perfil <ChevronRight size={14}/>
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
                         <div className="md:col-span-2 space-y-4">
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner transition-colors">
                                 <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>

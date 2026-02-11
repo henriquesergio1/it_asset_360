@@ -1,3 +1,4 @@
+
 const express = require('express');
 const sql = require('mssql');
 const cors = require('cors');
@@ -26,7 +27,8 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.11.7', 
+        /* FIX: Updated version to 2.12.1 */
+        version: '2.12.1', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });

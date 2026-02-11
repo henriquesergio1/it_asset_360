@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SimCard, DeviceStatus } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save } from 'lucide-react';
+
+// Componente divisor para redimensionamento
+const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
+    <div 
+        onMouseDown={onMouseDown}
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400/50 transition-colors z-10"
+    />
+);
 
 const SimManager = () => {
   const { sims, addSim, updateSim, deleteSim, users } = useData();
@@ -17,6 +25,31 @@ const SimManager = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [formData, setFormData] = useState<Partial<SimCard>>({ status: DeviceStatus.AVAILABLE });
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+      const saved = localStorage.getItem('sim_manager_widths');
+      return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+      localStorage.setItem('sim_manager_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
+  const handleResize = (colId: string, startX: number, startWidth: number) => {
+    const onMouseMove = (e: MouseEvent) => {
+        const delta = e.clientX - startX;
+        setColumnWidths(prev => ({
+            ...prev,
+            [colId]: Math.max(startWidth + delta, 50)
+        }));
+    };
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
 
   const adminName = currentUser?.name || 'Unknown';
 
@@ -141,15 +174,30 @@ const SimManager = () => {
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-500 dark:text-slate-400">
+          <table className="w-full text-sm text-left text-gray-500 dark:text-slate-400 table-fixed">
             <thead className="text-[10px] text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50 font-black tracking-widest border-b dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Número</th>
-                <th className="px-6 py-4">Operadora</th>
-                <th className="px-6 py-4">ICCID</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4">Usuário</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-6 py-4 relative" style={{ width: columnWidths['phone'] || '180px' }}>
+                    Número
+                    <Resizer onMouseDown={(e) => handleResize('phone', e.clientX, columnWidths['phone'] || 180)} />
+                </th>
+                <th className="px-6 py-4 relative" style={{ width: columnWidths['operator'] || '140px' }}>
+                    Operadora
+                    <Resizer onMouseDown={(e) => handleResize('operator', e.clientX, columnWidths['operator'] || 140)} />
+                </th>
+                <th className="px-6 py-4 relative" style={{ width: columnWidths['iccid'] || '200px' }}>
+                    ICCID
+                    <Resizer onMouseDown={(e) => handleResize('iccid', e.clientX, columnWidths['iccid'] || 200)} />
+                </th>
+                <th className="px-6 py-4 relative text-center" style={{ width: columnWidths['status'] || '120px' }}>
+                    Status
+                    <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} />
+                </th>
+                <th className="px-6 py-4 relative" style={{ width: columnWidths['user'] || '200px' }}>
+                    Usuário
+                    <Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 200)} />
+                </th>
+                <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -157,25 +205,25 @@ const SimManager = () => {
                 const assignedUser = users.find(u => u.id === sim.currentUserId);
                 return (
                   <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer group">
-                    <td className="px-6 py-4 font-bold text-gray-900 dark:text-slate-100">{sim.phoneNumber}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 font-bold text-gray-900 dark:text-slate-100 truncate">{sim.phoneNumber}</td>
+                    <td className="px-6 py-4 truncate">
                       <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider border dark:border-slate-700">{sim.operator}</span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-400 dark:text-slate-500 font-bold">{sim.iccid}</td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 font-mono text-xs text-slate-400 dark:text-slate-500 font-bold truncate">{sim.iccid}</td>
+                    <td className="px-6 py-4 text-center truncate">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border
                         ${sim.status === DeviceStatus.AVAILABLE ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40'}`}>
                         {sim.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 truncate">
                       {assignedUser ? (
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300">{assignedUser.fullName}</span>
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300 truncate block">{assignedUser.fullName}</span>
                       ) : <span className="text-gray-300 dark:text-slate-700 font-bold text-[10px] uppercase tracking-wider italic">Disponível</span>}
                     </td>
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenModal(sim, false)} className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 p-2 rounded-xl transition-all shadow-sm" title="Editar"><Edit2 size={16} /></button>
+                        <button onClick={() => handleOpenModal(sim, false)} className="text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-indigo-900/30 p-2 rounded-xl transition-all shadow-sm" title="Editar"><Edit2 size={16} /></button>
                         <button onClick={() => handleDeleteClick(sim.id)} className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-xl transition-all shadow-sm" title="Excluir"><Trash2 size={16} /></button>
                       </div>
                     </td>

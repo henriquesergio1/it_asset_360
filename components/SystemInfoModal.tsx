@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -6,6 +7,30 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.12.1',
+    date: 'Hoje',
+    title: 'Fix: Component Stabilization',
+    changes: [
+      'Correção de erro de compilação em UserManager (Default Export).',
+      'Correção de erro de sintaxe em botão de gerenciamento de colunas.',
+      'Unificação e sincronização da versão em todo o ecossistema (Login, Dashboard, Menu).',
+      'Finalização da renderização estruturada da tabela de colaboradores.'
+    ]
+  },
+    {
+    version: '2.12.0',
+    date: 'Hoje',
+    title: 'UX: Standardized Tables & Advanced Search',
+    changes: [
+      'Implementação de colunas redimensionáveis em todas as listagens principais.',
+      'Padronização da tela de Software/Contas com paginação e seletor de colunas.',
+      'Melhoria nos filtros de alocação de licenças (pesquisa avançada por CPF, IMEI, Serial).',
+      'Inclusão da coluna Cargo/Função na listagem de dispositivos.',
+      'Exibição destacada do Responsável Atual nos detalhes do dispositivo.',
+      'Adição de campo de observações em softwares/contas.'
+    ]
+  },
     {
     version: '2.11.7',
     date: 'Hoje',
@@ -34,17 +59,6 @@ const versions = [
       'Implementação de identificadores robustos [TAG: XXX] no campo AssetDetails dos termos.',
       'Aprimoramento da lógica de re-impressão para localizar o ativo exato via Regex.',
       'Sincronização da lógica de identificação entre servidor SQL e provedor Mock.'
-    ]
-  },
-    {
-    version: '2.11.4',
-    date: 'Hoje',
-    title: 'Fix: Accessory Printing in Delivery Term',
-    changes: [
-      'Correção do bug onde acessórios não apareciam na impressão imediata do termo de entrega.',
-      'Implementação de acessóriosSnapshot no estado de última operação.',
-      'Injeção dinâmica de acessórios no objeto de impressão para garantir fidelidade visual.',
-      'Harmonização de versões remanescentes entre telas.'
     ]
   }
 ];
