@@ -7,6 +7,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.11.7',
+    date: 'Hoje',
+    title: 'UI: Dark Mode Legibility Fix',
+    changes: [
+      'Ajuste de cor de texto nos botões de seleção de tipo de ativo (Operations) para o tema escuro.',
+      'Melhoria no contraste de elementos inativos na tela de Entrega/Devolução.'
+    ]
+  },
+    {
     version: '2.11.6',
     date: 'Hoje',
     title: 'UI: Dark Mode for Asset Catalog',
@@ -36,17 +45,6 @@ const versions = [
       'Implementação de acessóriosSnapshot no estado de última operação.',
       'Injeção dinâmica de acessórios no objeto de impressão para garantir fidelidade visual.',
       'Harmonização de versões remanescentes entre telas.'
-    ]
-  },
-    {
-    version: '2.11.3',
-    date: 'Hoje',
-    title: 'Refactor: Final Dark Mode Polishing',
-    changes: [
-      'Refinamento completo do Modo Escuro nas telas de Entrega/Devolução.',
-      'Ajuste visual do Painel de Administração e Auditoria Detalhada.',
-      'Correção de legibilidade em modais de auditoria e editor de termos.',
-      'Padronização de cores de botões e tabelas no tema Dark.'
     ]
   }
 ];
