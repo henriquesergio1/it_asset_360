@@ -1,7 +1,8 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { Smartphone, Users, Wifi, AlertTriangle, FileWarning, ArrowRight, Globe, Lock } from 'lucide-react';
+import { Smartphone, Users, Wifi, AlertTriangle, FileWarning, ArrowRight, Globe, Lock, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
 import { DeviceStatus, ActionType, AccountType } from '../types';
 import { Link } from 'react-router-dom';
 
@@ -19,7 +20,8 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const { devices, sims, users, logs, accounts } = useData();
+  const { devices, sims, users, logs, accounts, sectors } = useData();
+  const [isTermsExpanded, setIsTermsExpanded] = useState(false);
 
   const availableDevices = devices.filter(d => d.status === DeviceStatus.AVAILABLE).length;
   const inUseDevices = devices.filter(d => d.status === DeviceStatus.IN_USE).length;
@@ -31,12 +33,15 @@ const Dashboard = () => {
     { name: 'Manutenção', value: maintenanceDevices, color: '#F59E0B' }, 
   ];
 
+  // Filtra termos pendentes (inclusive de colaboradores inativados recentemente)
   const pendingTerms = users.flatMap(u => 
       (u.terms || []).filter(t => !t.fileUrl).map(t => ({
           term: t,
           user: u
       }))
-  );
+  ).sort((a, b) => new Date(b.term.date).getTime() - new Date(a.term.date).getTime());
+
+  const visiblePendingTerms = isTermsExpanded ? pendingTerms : pendingTerms.slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -78,34 +83,76 @@ const Dashboard = () => {
       {pendingTerms.length > 0 && (
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
               <div className="flex items-start gap-4">
-                  <div className="p-3 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-lg">
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-lg shrink-0">
                       <FileWarning size={24} />
                   </div>
-                  <div className="flex-1">
-                      <h3 className="text-lg font-bold text-orange-900 dark:text-orange-200 mb-1">
-                          {pendingTerms.length} Termos Pendentes
-                      </h3>
+                  <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-1">
+                          <h3 className="text-lg font-bold text-orange-900 dark:text-orange-200">
+                              {pendingTerms.length} Termos Pendentes de Assinatura
+                          </h3>
+                          <span className="text-[10px] font-black uppercase text-orange-500/60 tracking-widest bg-orange-100 dark:bg-orange-900/40 px-2 py-1 rounded">
+                             Requer Digitalização
+                          </span>
+                      </div>
+                      
                       <div className="bg-white dark:bg-slate-900 rounded-lg border border-orange-100 dark:border-orange-900/30 overflow-hidden mt-4 shadow-sm">
-                          <table className="w-full text-sm text-left">
-                              <thead className="bg-orange-50 dark:bg-slate-800 text-orange-800 dark:text-orange-400 text-xs uppercase font-black tracking-widest">
-                                  <tr>
-                                      <th className="px-4 py-2">Colaborador</th>
-                                      <th className="px-4 py-2">Ativo</th>
-                                      <th className="px-4 py-2 text-right">Ação</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-                                  {pendingTerms.slice(0, 3).map(({term, user}) => (
-                                      <tr key={term.id} className="border-b dark:border-slate-800 last:border-0 hover:bg-orange-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                          <td className="px-4 py-2 font-bold text-gray-800 dark:text-slate-100">{user.fullName}</td>
-                                          <td className="px-4 py-2 text-gray-600 dark:text-slate-400 text-xs">{term.assetDetails}</td>
-                                          <td className="px-4 py-2 text-right">
-                                              <Link to={`/users?userId=${user.id}`} className="text-blue-600 dark:text-blue-400 font-bold hover:underline text-xs">Resolver</Link>
-                                          </td>
+                          <div className="overflow-x-auto">
+                              <table className="w-full text-sm text-left">
+                                  <thead className="bg-orange-50 dark:bg-slate-800 text-orange-800 dark:text-orange-400 text-[10px] uppercase font-black tracking-widest border-b dark:border-slate-700">
+                                      <tr>
+                                          <th className="px-4 py-3">Colaborador / Função</th>
+                                          <th className="px-4 py-3">Equipamento Vinculado</th>
+                                          <th className="px-4 py-3">Data Ref.</th>
+                                          <th className="px-4 py-3 text-right">Ação</th>
                                       </tr>
-                                  ))}
-                              </tbody>
-                          </table>
+                                  </thead>
+                                  <tbody className="divide-y dark:divide-slate-800">
+                                      {visiblePendingTerms.map(({term, user}) => {
+                                          const sector = sectors.find(s => s.id === user.sectorId);
+                                          return (
+                                              <tr key={term.id} className="border-b dark:border-slate-800 last:border-0 hover:bg-orange-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                                                  <td className="px-4 py-3">
+                                                      <div className="flex flex-col">
+                                                          <span className="font-bold text-gray-800 dark:text-slate-100">{user.fullName}</span>
+                                                          <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                                              <Briefcase size={10}/> {sector?.name || 'Não Informado'}
+                                                              {!user.active && <span className="ml-1 text-red-400 dark:text-red-500/80">[INATIVO]</span>}
+                                                          </span>
+                                                      </div>
+                                                  </td>
+                                                  <td className="px-4 py-3">
+                                                      <span className="text-gray-600 dark:text-slate-400 text-xs font-medium">{term.assetDetails}</span>
+                                                  </td>
+                                                  <td className="px-4 py-3 whitespace-nowrap">
+                                                      <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500">
+                                                          {new Date(term.date).toLocaleDateString()}
+                                                      </span>
+                                                  </td>
+                                                  <td className="px-4 py-3 text-right">
+                                                      <Link to={`/users?userId=${user.id}`} className="inline-flex items-center gap-1.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-orange-200 dark:hover:bg-orange-900 transition-colors">
+                                                          <ArrowRight size={14}/> Resolver
+                                                      </Link>
+                                                  </td>
+                                              </tr>
+                                          );
+                                      })}
+                                  </tbody>
+                              </table>
+                          </div>
+                          
+                          {pendingTerms.length > 3 && (
+                              <button 
+                                onClick={() => setIsTermsExpanded(!isTermsExpanded)}
+                                className="w-full py-3 bg-slate-50 dark:bg-slate-800/80 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all border-t dark:border-slate-700"
+                              >
+                                  {isTermsExpanded ? (
+                                      <><ChevronUp size={16}/> Mostrar Menos</>
+                                  ) : (
+                                      <><ChevronDown size={16}/> Mostrar Todas as Pendências ({pendingTerms.length - 3} mais)</>
+                                  )}
+                              </button>
+                          )}
                       </div>
                   </div>
               </div>

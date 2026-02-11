@@ -27,8 +27,8 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        // Version updated to 2.12.9
-        version: '2.12.9', 
+        // Version updated to 2.12.10
+        version: '2.12.10', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -409,7 +409,7 @@ app.post('/api/operations/checkout', async (req, res) => {
 
 app.post('/api/operations/checkin', async (req, res) => {
     try {
-        const { assetId, assetType, notes, _adminUser } = req.body;
+        const { assetId, assetType, notes, _adminUser, inactivateUser } = req.body;
         const pool = await sql.connect(dbConfig);
         const table = assetType === 'Device' ? 'Devices' : 'SimCards';
         const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
@@ -431,17 +431,24 @@ app.post('/api/operations/checkin', async (req, res) => {
             userName = userRes.recordset[0]?.FullName || 'Colaborador';
         }
         
-        // --- BUGFIX: LIBERAÇÃO DE CHIP VINCULADO ---
         // Se for dispositivo, buscar se tem chip vinculado para liberar
         if (assetType === 'Device' && prev && prev.LinkedSimId) {
             await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
         }
 
         await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
+        
         if (userId) {
             const termId = Math.random().toString(36).substr(2, 9);
             await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            
+            // --- NOVO: INATIVAÇÃO AUTOMÁTICA DO COLABORADOR ---
+            if (inactivateUser) {
+                await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
+                await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
+            }
         }
+        
         await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }

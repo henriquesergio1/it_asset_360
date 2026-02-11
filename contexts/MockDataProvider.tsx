@@ -168,7 +168,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 accessories: accessories
             } : d));
             
-            // Term logic (Fix multi-asset bug)
             const termId = Math.random().toString(36).substr(2, 9);
             const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
             const newTerm: Term = {
@@ -189,7 +188,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const old = sims.find(s => s.id === assetId);
             setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
             
-            // Term logic for SIM (Fix multi-asset bug)
             const termId = Math.random().toString(36).substr(2, 9);
             const newTerm: Term = {
                 id: termId,
@@ -208,13 +206,13 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
         }
     },
-    returnAsset: (assetType, assetId, notes, adminName, checklist) => {
+    // Updated returnAsset implementation to handle user inactivation in mock mode
+    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser) => {
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
             const oldUserId = old?.currentUserId;
             const oldUser = users.find(u => u.id === oldUserId);
             
-            // --- BUGFIX: LIBERAÇÃO DE CHIP VINCULADO NO MOCK ---
             if (old && old.linkedSimId) {
                 setSims(prev => prev.map(s => s.id === old.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
             }
@@ -232,7 +230,17 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     date: new Date().toISOString(),
                     fileUrl: ''
                 };
-                setUsers(prev => prev.map(u => u.id === oldUserId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+                
+                // Aplicar inativação se solicitado
+                setUsers(prev => prev.map(u => u.id === oldUserId ? { 
+                    ...u, 
+                    active: inactivateUser ? false : u.active,
+                    terms: [...(u.terms || []), newTerm] 
+                } : u));
+
+                if (inactivateUser) {
+                    logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
+                }
             }
             logAction(ActionType.CHECKIN, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, {
                 status: DeviceStatus.IN_USE,
@@ -256,7 +264,17 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     date: new Date().toISOString(),
                     fileUrl: ''
                 };
-                setUsers(prev => prev.map(u => u.id === oldUserId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+
+                // Aplicar inativação se solicitado
+                setUsers(prev => prev.map(u => u.id === oldUserId ? { 
+                    ...u, 
+                    active: inactivateUser ? false : u.active,
+                    terms: [...(u.terms || []), newTerm] 
+                } : u));
+
+                if (inactivateUser) {
+                    logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
+                }
             }
 
             logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {

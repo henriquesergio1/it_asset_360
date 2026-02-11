@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 type OperationType = 'CHECKOUT' | 'CHECKIN';
@@ -113,6 +114,8 @@ const Operations = () => {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [notes, setNotes] = useState('');
   const [syncAssetData, setSyncAssetData] = useState(true);
+  // NOVO: Flag para inativar usuário no desligamento
+  const [inactivateAfterReturn, setInactivateAfterReturn] = useState(false);
   const [isProcessed, setIsProcessed] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   
@@ -125,7 +128,7 @@ const Operations = () => {
       assetType: AssetType;
       action: OperationType;
       checklistSnapshot?: ReturnChecklist;
-      accessoriesSnapshot?: DeviceAccessory[]; // NOVO: Snapshot para impressão imediata
+      accessoriesSnapshot?: DeviceAccessory[]; 
       notes: string;
   } | null>(null);
 
@@ -147,6 +150,7 @@ const Operations = () => {
           }
       } else if (activeTab === 'CHECKOUT') {
           setSelectedAccessoryTypeIds([]);
+          setInactivateAfterReturn(false);
       }
   }, [selectedAssetId, activeTab, assetType, devices, sims]);
 
@@ -223,7 +227,8 @@ const Operations = () => {
 
             await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
         } else {
-            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist);
+            // Pass the inactivation flag to the return process
+            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn);
         }
 
         setLastOperation({ 
@@ -232,7 +237,7 @@ const Operations = () => {
             assetType: assetType, 
             action: activeTab, 
             checklistSnapshot: activeTab === 'CHECKIN' && assetType === 'Device' ? { ...checklist } : undefined,
-            accessoriesSnapshot: activeTab === 'CHECKOUT' && assetType === 'Device' ? deliveryAccessories : undefined, // Salva o snapshot
+            accessoriesSnapshot: activeTab === 'CHECKOUT' && assetType === 'Device' ? deliveryAccessories : undefined,
             notes: notes 
         });
         
@@ -254,9 +259,6 @@ const Operations = () => {
           return;
       }
 
-      // Injeta os acessórios do snapshot caso seja um dispositivo em entrega, 
-      // pois o objeto 'asset' vindo da lista pode ainda não estar sincronizado 
-      // com os acessórios recém-adicionados no banco/estado global.
       if (lastOperation.assetType === 'Device' && lastOperation.accessoriesSnapshot) {
           asset = { ...asset, accessories: lastOperation.accessoriesSnapshot } as Device;
       }
@@ -296,6 +298,7 @@ const Operations = () => {
       setNotes(''); 
       setLastOperation(null); 
       setSelectedAccessoryTypeIds([]);
+      setInactivateAfterReturn(false);
   };
 
   if (isProcessed) {
@@ -412,31 +415,66 @@ const Operations = () => {
                   </div>
               )}
 
-              {activeTab === 'CHECKIN' && assetType === 'Device' && selectedAssetId && (
-                   <div className="space-y-6 animate-fade-in">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">2</div>
-                            <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Conferência de Devolução</h3>
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-4 italic">
-                            Marque os itens que foram devolvidos fisicamente pelo colaborador:
-                        </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 dark:bg-orange-900/10 p-6 rounded-3xl border border-orange-100 dark:border-orange-900/30 shadow-inner transition-colors">
-                            {Object.keys(checklist).map(item => (
-                                <button 
-                                    key={item} 
-                                    onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
-                                    className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all shadow-sm ${checklist[item] ? 'bg-white dark:bg-slate-800 border-orange-500 text-orange-900 dark:text-orange-100' : 'bg-slate-100/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 opacity-70'}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
-                                            {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase text-left">{item}</span>
+              {activeTab === 'CHECKIN' && selectedAssetId && (
+                   <div className="space-y-8 animate-fade-in">
+                        {assetType === 'Device' && (
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">2</div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Conferência de Devolução</h3>
+                                </div>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-4 italic">
+                                    Marque os itens que foram devolvidos fisicamente pelo colaborador:
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 dark:bg-orange-900/10 p-6 rounded-3xl border border-orange-100 dark:border-orange-900/30 shadow-inner transition-colors">
+                                    {Object.keys(checklist).map(item => (
+                                        <button 
+                                            key={item} 
+                                            onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
+                                            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all shadow-sm ${checklist[item] ? 'bg-white dark:bg-slate-800 border-orange-500 text-orange-900 dark:text-orange-100' : 'bg-slate-100/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 opacity-70'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
+                                                    {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase text-left">{item}</span>
+                                            </div>
+                                            {checklist[item] ? <CheckSquare size={20} className="text-orange-600 dark:text-orange-400" /> : <X size={20} />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* NOVO: OPÇÃO DE DESLIGAMENTO (INATIVAÇÃO AUTOMÁTICA) */}
+                        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                             <div className="flex items-center gap-4">
+                                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-orange-600`}>
+                                    {assetType === 'Device' ? '3' : '2'}
+                                </div>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Fluxo de Desligamento</h3>
+                             </div>
+                             <button 
+                                onClick={() => setInactivateAfterReturn(!inactivateAfterReturn)}
+                                className={`w-full flex items-center gap-4 p-6 rounded-3xl border-2 transition-all text-left group
+                                    ${inactivateAfterReturn ? 'border-red-500 bg-red-50 dark:bg-red-900/20 shadow-md' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-red-200'}`}
+                             >
+                                <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors
+                                    ${inactivateAfterReturn ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 group-hover:text-red-400'}`}>
+                                    <UserX size={24} />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className={`font-black uppercase text-xs tracking-widest ${inactivateAfterReturn ? 'text-red-700 dark:text-red-400' : 'text-slate-500'}`}>
+                                            Marcar como Desligamento
+                                        </span>
+                                        {inactivateAfterReturn && <CheckSquare size={20} className="text-red-600" />}
                                     </div>
-                                    {checklist[item] ? <CheckSquare size={20} className="text-orange-600 dark:text-orange-400" /> : <X size={20} />}
-                                </button>
-                            ))}
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-relaxed">
+                                        Ao finalizar, o sistema inativará o cadastro do colaborador automaticamente após a devolução.
+                                    </p>
+                                </div>
+                             </button>
                         </div>
                    </div>
               )}
@@ -444,7 +482,7 @@ const Operations = () => {
               <div className="space-y-6">
                   <div className="flex items-center gap-4">
                       <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? 'bg-blue-600' : 'bg-orange-600'}`}>
-                          {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? '3' : '2')}
+                          {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? '4' : '3')}
                       </div>
                       <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Observações Adicionais</h3>
                   </div>

@@ -8,6 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.10',
+    date: 'Hoje',
+    title: 'Offboarding Automation & Dashboard UX',
+    changes: [
+      'Adição de opção "Desligamento" na devolução para inativação automática do colaborador.',
+      'Dashboard: Lista de pendências agora exibe cargo/função do colaborador.',
+      'Dashboard: Implementado botão para expandir a lista de pendências de termos.',
+      'Garantia de que colaboradores inativos continuem aparecendo em pendências de termo.',
+      'Sincronização global da versão para 2.12.10.'
+    ]
+  },
+    {
     version: '2.12.9',
     date: 'Hoje',
     title: 'Fix: Admin Route JSX Syntax',
@@ -35,26 +47,6 @@ const versions = [
       'Novas ações rápidas na tabela: Enviar para Manutenção e Concluir Manutenção.',
       'Habilitação do campo de Status no formulário de edição para ajustes manuais administrativos.',
       'Sincronização global da versão para 2.12.7.'
-    ]
-  },
-    {
-    version: '2.12.6',
-    date: 'Hoje',
-    title: 'Fix: AccountManager Component Completion',
-    changes: [
-      'Implementação completa do componente AccountManager para gestão de licenças e softwares.',
-      'Correção do erro de exportação ausente que impedia a compilação do sistema.',
-      'Sincronização global da versão para 2.12.6.'
-    ]
-  },
-    {
-    version: '2.12.5',
-    date: 'Hoje',
-    title: 'UX: Visibility & ID Improvements',
-    changes: [
-      'Implementação de fallback de IMEI para badges de ativos sem patrimônio no perfil do colaborador.',
-      'Melhoria na visibilidade das divisórias de redimensionamento de colunas nas tabelas.',
-      'Sincronização global da versão do sistema.'
     ]
   }
 ];

@@ -56,7 +56,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           { name: 'accounts', path: '/api/accounts' }
       ];
 
-      // Executa todas as requisições em paralelo com tratamento individual de erro
       const responses = await Promise.all(endpoints.map(async (e) => {
           try {
               const res = await fetch(`${API_URL}${e.path}`);
@@ -66,7 +65,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
       }));
 
-      // Desestruturação dos resultados na mesma ordem da lista de endpoints
       const [
           devicesData, simsData, usersData, logsData, sysUsersData, settingsData, 
           modelsData, brandsData, typesData, maintData, sectorsData, termsData, 
@@ -76,7 +74,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setDevices(devicesData);
       setSims(simsData);
       
-      // Enriquecimento de usuários com seus termos
       setUsers(usersData.map((u: User) => ({ 
           ...u, 
           terms: termsData.filter((t: Term) => t.userId === u.id) 
@@ -96,9 +93,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setAccounts(accountsData);
       
       setError(null);
-      console.log("[ITAsset360] Dados sincronizados com sucesso.");
     } catch (err: any) { 
-        console.error("[ITAsset360] Falha crítica na sincronização:", err); 
         setError(err.message); 
     } finally { 
         setLoading(false); 
@@ -149,7 +144,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               if (u.id === userId) { const updatedTerms = (u.terms || []).map(t => t.id === termId ? { ...t, fileUrl } : t); return { ...u, terms: updatedTerms }; }
               return u;
           }));
-      } catch (err) { console.error("Failed to update term file", err); alert("Falha ao salvar arquivo do termo."); }
+      } catch (err) { alert("Falha ao salvar arquivo do termo."); }
   };
 
   const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
@@ -159,7 +154,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (u.id === userId) { const updatedTerms = (u.terms || []).map(t => t.id === termId ? { ...t, fileUrl: '' } : t); return { ...u, terms: updatedTerms }; }
             return u;
           }));
-      } catch (err) { console.error("Failed to delete term file", err); alert("Falha ao excluir arquivo do termo."); }
+      } catch (err) { alert("Falha ao excluir arquivo do termo."); }
   };
 
   const addSim = async (s: SimCard, a: string) => { await postData('sims', {...s, _adminUser: a}); setSims(p => [...p, s]); };
@@ -185,7 +180,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     accounts, addAccount, updateAccount, deleteAccount,
     addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, updateSettings,
     assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(); },
-    returnAsset: async (at, aid, n, adm) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm }); fetchData(); },
+    // Updated returnAsset logic to include inactivateUser
+    returnAsset: async (at, aid, n, adm, list, inactivate) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); fetchData(); },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },
     restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(); },

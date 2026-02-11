@@ -123,8 +123,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 {/* Version updated to 2.12.9 */}
-                 <span>Versão 2.12.9</span>
+                 {/* Version updated to 2.12.10 */}
+                 <span>Versão 2.12.10</span>
               </div>
           )}
           <button 
@@ -202,7 +202,6 @@ const AppRoutes = () => {
             <Route path="/accounts" element={<ProtectedRoute><AccountManager /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManager /></ProtectedRoute>} />
             <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
-            {/* Fix: Corrected JSX syntax for the /admin route by wrapping the element in AdminRoute correctly */}
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -18,7 +18,7 @@ export interface DataContextType {
   sectors: UserSector[];
   accessoryTypes: AccessoryType[];
   customFields: CustomField[]; 
-  accounts: SoftwareAccount[]; // NOVO
+  accounts: SoftwareAccount[]; 
 
   loading?: boolean;
   error?: string | null;
@@ -44,7 +44,7 @@ export interface DataContextType {
   updateSector: (sector: UserSector, adminName: string) => void; 
   deleteSector: (id: string, adminName: string) => void;
 
-  // CRUD Accounts (NOVO)
+  // CRUD Accounts
   addAccount: (account: SoftwareAccount, adminName: string) => void;
   updateAccount: (account: SoftwareAccount, adminName: string) => void;
   deleteAccount: (id: string, adminName: string) => void;
@@ -59,7 +59,8 @@ export interface DataContextType {
 
   // Operations
   assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
-  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>) => void;
+  // Updated signature to support user inactivation
+  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean) => void;
   
   // Term Management
   updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;
