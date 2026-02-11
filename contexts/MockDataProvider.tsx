@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType } from '../types';
@@ -168,13 +167,14 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 accessories: accessories
             } : d));
             
-            // Term logic
+            // Term logic (Fix multi-asset bug)
             const termId = Math.random().toString(36).substr(2, 9);
+            const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
             const newTerm: Term = {
                 id: termId,
                 userId: userId,
                 type: 'ENTREGA',
-                assetDetails: `${old?.assetTag} - ${models.find(m => m.id === old?.modelId)?.name}`,
+                assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
                 date: new Date().toISOString(),
                 fileUrl: ''
             };
@@ -187,6 +187,19 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } else {
             const old = sims.find(s => s.id === assetId);
             setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
+            
+            // Term logic for SIM (Fix multi-asset bug)
+            const termId = Math.random().toString(36).substr(2, 9);
+            const newTerm: Term = {
+                id: termId,
+                userId: userId,
+                type: 'ENTREGA',
+                assetDetails: `[CHIP: ${old?.phoneNumber}]`,
+                date: new Date().toISOString(),
+                fileUrl: ''
+            };
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+            
             logAction(ActionType.CHECKOUT, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { 
                 status: DeviceStatus.IN_USE, 
                 currentUserId: userId,
@@ -204,11 +217,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             
             if (oldUserId) {
                 const termId = Math.random().toString(36).substr(2, 9);
+                const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
                 const newTerm: Term = {
                     id: termId,
                     userId: oldUserId,
                     type: 'DEVOLUCAO',
-                    assetDetails: `${old?.assetTag} - ${models.find(m => m.id === old?.modelId)?.name}`,
+                    assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
                     date: new Date().toISOString(),
                     fileUrl: ''
                 };
@@ -225,6 +239,20 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const oldUser = users.find(u => u.id === oldUserId);
 
             setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+            
+            if (oldUserId) {
+                const termId = Math.random().toString(36).substr(2, 9);
+                const newTerm: Term = {
+                    id: termId,
+                    userId: oldUserId,
+                    type: 'DEVOLUCAO',
+                    assetDetails: `[CHIP: ${old?.phoneNumber}]`,
+                    date: new Date().toISOString(),
+                    fileUrl: ''
+                };
+                setUsers(prev => prev.map(u => u.id === oldUserId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+            }
+
             logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {
                 status: DeviceStatus.IN_USE,
                 currentUserId: oldUserId,

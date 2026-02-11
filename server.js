@@ -26,7 +26,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.11.4', 
+        version: '2.11.5', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -381,6 +381,16 @@ app.post('/api/operations/checkout', async (req, res) => {
         const prev = oldRes.recordset[0];
         const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+        
+        // Geração de detalhes do ativo para o termo (Fix multi-asset bug)
+        let assetDetails = notes || '';
+        if (assetType === 'Device' && prev) {
+            const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
+            assetDetails = `[TAG: ${prev.AssetTag}] ${modelRes.recordset[0]?.Name || 'Dispositivo'}`;
+        } else if (prev) {
+            assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+        }
+
         await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
         if (assetType === 'Device' && accessories) {
             await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
@@ -389,7 +399,7 @@ app.post('/api/operations/checkout', async (req, res) => {
             }
         }
         const termId = Math.random().toString(36).substr(2, 9);
-        await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+        await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
@@ -403,6 +413,16 @@ app.post('/api/operations/checkin', async (req, res) => {
         const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
         const prev = oldRes.recordset[0];
         const userId = prev?.CurrentUserId;
+        
+        // Geração de detalhes do ativo para o termo (Fix multi-asset bug)
+        let assetDetails = notes || '';
+        if (assetType === 'Device' && prev) {
+            const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
+            assetDetails = `[TAG: ${prev.AssetTag}] ${modelRes.recordset[0]?.Name || 'Dispositivo'}`;
+        } else if (prev) {
+            assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+        }
+
         let userName = 'Colaborador';
         if (userId) {
             const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
@@ -411,7 +431,7 @@ app.post('/api/operations/checkin', async (req, res) => {
         await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
         if (userId) {
             const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', notes).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         }
         await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});

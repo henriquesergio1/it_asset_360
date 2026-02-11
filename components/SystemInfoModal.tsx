@@ -7,6 +7,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.11.5',
+    date: 'Hoje',
+    title: 'Fix: Multi-Asset Term Tracking',
+    changes: [
+      'Correção do bug de rastreabilidade onde todos os termos de um colaborador apontavam para o mesmo ativo.',
+      'Implementação de identificadores robustos [TAG: XXX] no campo AssetDetails dos termos.',
+      'Aprimoramento da lógica de re-impressão para localizar o ativo exato via Regex.',
+      'Sincronização da lógica de identificação entre servidor SQL e provedor Mock.'
+    ]
+  },
+    {
     version: '2.11.4',
     date: 'Hoje',
     title: 'Fix: Accessory Printing in Delivery Term',
@@ -36,16 +47,6 @@ const versions = [
       'Correção do arquivo AccountManager.tsx que estava truncado impedindo o build.',
       'Harmonização global da versão do sistema para 2.11.2.',
       'Restauração de componentes de modal em Software & Contas.'
-    ]
-  },
-    {
-    version: '2.11.1',
-    date: 'Hoje',
-    title: 'Fix: Navigation & Dependency Imports',
-    changes: [
-      'Correção de erros de importação (lucide-react) em DeviceManager.',
-      'Ajuste na declaração de roteamento em UserManager.',
-      'Atualização do health check do servidor para 2.11.1.'
     ]
   }
 ];

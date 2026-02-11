@@ -104,7 +104,6 @@ const COLUMN_OPTIONS = [
 const UserManager = () => {
   const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile } = useData();
   const { user: currentUser } = useAuth();
-  // Fix: added const keyword to navigate variable declaration to fix 'Cannot find name' errors
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -139,7 +138,7 @@ const UserManager = () => {
           const user = users.find(u => u.id === userId);
           if (user) { handleOpenModal(user, true); navigate('/users', { replace: true }); }
       }
-  }, [location, users]);
+  }, [location, users, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -186,9 +185,31 @@ const UserManager = () => {
   const handleReprintTerm = (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
-      let asset: any = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
-      if (!asset) asset = sims.find(s => term.assetDetails.includes(s.phoneNumber));
-      if (!asset) { alert("Ativo não localizado no estoque para re-impressão."); return; }
+      
+      let asset: any = null;
+
+      // Suporte para o novo padrão de mapeamento robusto (v2.11.5+)
+      const tagMatch = term.assetDetails.match(/\[TAG:\s*([^\]]+)\]/i);
+      const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
+
+      if (tagMatch) {
+          const tag = tagMatch[1].trim();
+          asset = devices.find(d => d.assetTag === tag);
+      } else if (chipMatch) {
+          const phone = chipMatch[1].trim();
+          asset = sims.find(s => s.phoneNumber === phone);
+      }
+
+      // Fallback para termos antigos baseados em inclusão de string
+      if (!asset) {
+          asset = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
+          if (!asset) asset = sims.find(s => term.assetDetails.includes(s.phoneNumber));
+      }
+
+      if (!asset) { 
+          alert("Não foi possível localizar o ativo exato no estoque atual para re-impressão.\n\nDetalhes gravados: " + term.assetDetails); 
+          return; 
+      }
 
       let model, brand, type, linkedSim;
       if ('serialNumber' in asset) {
@@ -330,7 +351,7 @@ const UserManager = () => {
                     <SlidersHorizontal size={18} /> Colunas
                 </button>
                 {isColumnSelectorOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                             <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
                             <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
@@ -660,7 +681,7 @@ const UserManager = () => {
                         {currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (
                             <div key={term.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm flex items-center justify-between group hover:border-emerald-200 dark:hover:border-emerald-900/60 transition-all">
                                 <div className="flex items-center gap-4">
-                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner transition-colors ${term.fileUrl ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>
+                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner transition-colors ${term.fileUrl ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'}`}>
                                         <FileText size={24}/>
                                     </div>
                                     <div>
