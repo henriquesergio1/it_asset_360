@@ -106,7 +106,7 @@ const COLUMN_OPTIONS = [
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
     />
 );
 
@@ -553,7 +553,7 @@ const UserManager = () => {
                     <div className="flex items-center gap-1">
                         <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span>
-                        <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">{totalPages}</span>
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span>
                     </div>
                     <button 
                         disabled={currentPage === totalPages}
@@ -599,7 +599,6 @@ const UserManager = () => {
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label>
                                 <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/>
                             </div>
-                            {/* RESTORED: PIS field */}
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label>
                                 <input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value)})} placeholder="000.00000.00-0"/>
@@ -615,7 +614,6 @@ const UserManager = () => {
                                     {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
-                            {/* RESTORED: Address field */}
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label>
                                 <textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/>
@@ -632,7 +630,10 @@ const UserManager = () => {
                                     <div className="flex items-center gap-3">
                                         <Smartphone className="text-blue-500" size={20}/>
                                         <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span>
-                                        <span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag}</span>
+                                        {/* Fallback to IMEI if assetTag is missing */}
+                                        <span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">
+                                            {d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}
+                                        </span>
                                     </div>
                                     <button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button>
                                 </div>
@@ -717,7 +718,7 @@ const UserManager = () => {
                 )}
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
                 {!isViewOnly && <button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Salvar Colaborador</button>}
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +9,7 @@ import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400/50 transition-colors z-10"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
     />
 );
 
@@ -281,7 +282,7 @@ const SimManager = () => {
                           </div>
                       </div>
                       
-                      <div className="flex justify-end gap-3 pt-6 border-t dark:border-slate-800">
+                      <div className="flex justify-end gap-3 pt-6 border-t dark:border-slate-800 transition-colors">
                           <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all tracking-widest border border-slate-200 dark:border-slate-700 shadow-sm">Fechar</button>
                           {isViewOnly ? (
                               <button type="button" onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-600 shadow-xl font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
@@ -296,10 +297,9 @@ const SimManager = () => {
           </div>
       )}
 
-      {/* NOVO MODAL: Motivo da Alteração */}
       {isReasonModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100 dark:border-indigo-900/40">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100 dark:border-indigo-900/40 transition-colors">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-500 dark:text-indigo-400 mb-4 shadow-inner border border-indigo-100 dark:border-indigo-900/40"><Save size={32} /></div>
@@ -319,7 +319,7 @@ const SimManager = () => {
       {/* Modal de Exclusão */}
       {isDeleteModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-red-100 dark:border-red-900/40">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-red-100 dark:border-red-900/40 transition-colors">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 dark:text-red-400 mb-4 shadow-inner border border-red-100 dark:border-red-900/40"><AlertTriangle size={32} /></div>

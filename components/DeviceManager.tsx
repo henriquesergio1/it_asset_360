@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -200,7 +201,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
                     return (
                         <div key={log.id} className="relative pl-10">
                             <div className={`absolute -left-[11px] top-0 h-5 w-5 rounded-full border-4 border-white dark:border-slate-950 shadow-md flex items-center justify-center 
-                                ${log.action === ActionType.CHECKOUT ? 'bg-blue-600' : 'bg-orange-500'}`}>
+                                ${log.action === ActionType.CHECKOUT ? 'bg-blue-600' : 'bg-orange-50'}`}>
                                 {log.action === ActionType.CHECKOUT ? <UserCheck size={10} className="text-white"/> : <UserX size={10} className="text-white"/>}
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:border-blue-200 dark:hover:border-blue-800 transition-all">
@@ -265,7 +266,7 @@ const formatDateBR = (isoString: string): string => {
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-400/50 transition-colors z-10"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
     />
 );
 
@@ -915,7 +916,7 @@ const DeviceManager = () => {
                         <div className="md:col-span-2 space-y-4">
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner transition-colors">
                                 <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
-                                <select required disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold bg-white dark:bg-slate-800 dark:text-slate-100 focus:border-blue-500 outline-none transition-all" value={formData.modelId} onChange={e => setFormData({...formData, modelId: e.target.value})}>
+                                <select required disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold bg-white dark:bg-slate-800 dark:text-slate-100 focus:border-blue-500 outline-none transition-all" value={formData.modelId || ''} onChange={e => setFormData({...formData, modelId: e.target.value})}>
                                     <option value="">Vincular a um modelo do catálogo...</option>
                                     {[...models].sort((a,b) => a.name.localeCompare(b.name)).map(m => <option key={m.id} value={m.id}>{brands.find(b => b.id === m.brandId)?.name} {m.name}</option>)}
                                 </select>

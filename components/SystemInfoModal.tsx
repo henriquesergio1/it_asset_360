@@ -8,6 +8,26 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.6',
+    date: 'Hoje',
+    title: 'Fix: AccountManager Component Completion',
+    changes: [
+      'Implementação completa do componente AccountManager para gestão de licenças e softwares.',
+      'Correção do erro de exportação ausente que impedia a compilação do sistema.',
+      'Sincronização global da versão para 2.12.6.'
+    ]
+  },
+    {
+    version: '2.12.5',
+    date: 'Hoje',
+    title: 'UX: Visibility & ID Improvements',
+    changes: [
+      'Implementação de fallback de IMEI para badges de ativos sem patrimônio no perfil do colaborador.',
+      'Melhoria na visibilidade das divisórias de redimensionamento de colunas nas tabelas.',
+      'Sincronização global da versão do sistema.'
+    ]
+  },
+    {
     version: '2.12.4',
     date: 'Hoje',
     title: 'Fix: Restored User Registration Fields',
@@ -34,17 +54,6 @@ const versions = [
       'Correção crítica de erros de compilação em UserManager e outros componentes principais.',
       'Restauração total dos blocos de código omitidos que causavam falha no deploy.',
       'Estabilização da lógica de redimensionamento de colunas em todas as tabelas.'
-    ]
-  },
-    {
-    version: '2.12.1',
-    date: 'Hoje',
-    title: 'Fix: Component Stabilization',
-    changes: [
-      'Correção de erro de compilação em UserManager (Default Export).',
-      'Correção de erro de sintaxe em botão de gerenciamento de colunas.',
-      'Unificação e sincronização da versão em todo o ecossistema (Login, Dashboard, Menu).',
-      'Finalização da renderização estruturada da tabela de colaboradores.'
     ]
   }
 ];
