@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-// Fix: Added missing RefreshCw import from lucide-react
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
@@ -554,7 +553,7 @@ const UserManager = () => {
                     <div className="flex items-center gap-1">
                         <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span>
-                        <span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span>
+                        <span className="text-xs font-black text-emerald-700 dark:text-emerald-300">{totalPages}</span>
                     </div>
                     <button 
                         disabled={currentPage === totalPages}
@@ -570,7 +569,7 @@ const UserManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border dark:border-slate-800 transition-colors">
             <div className="bg-slate-900 dark:bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
               <h3 className="text-lg font-black text-white uppercase tracking-tighter">
                 {editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}
@@ -584,32 +583,42 @@ const UserManager = () => {
                 <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Termos Gerados</button>
                 <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Histórico</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900">
+            <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900 transition-colors">
                 {activeTab === 'DATA' && (
                     <form id="userForm" onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label>
-                                <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
+                                <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label>
-                                <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/>
+                                <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG (Opcional)</label>
-                                <input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label>
+                                <input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/>
+                            </div>
+                            {/* RESTORED: PIS field */}
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label>
+                                <input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value)})} placeholder="000.00000.00-0"/>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">E-mail Corporativo</label>
-                                <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}/>
+                                <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Cargo / Setor Atual</label>
-                                <select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                                <select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                                     <option value="">Selecione um cargo...</option>
                                     {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
+                            </div>
+                            {/* RESTORED: Address field */}
+                            <div className="md:col-span-2">
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label>
+                                <textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/>
                             </div>
                         </div>
                     </form>
@@ -707,7 +716,7 @@ const UserManager = () => {
                     </div>
                 )}
             </div>
-            <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0">
+            <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
                 {!isViewOnly && <button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Salvar Colaborador</button>}
             </div>
@@ -717,7 +726,7 @@ const UserManager = () => {
 
       {isReasonModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transition-colors">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Save size={32} /></div>
@@ -725,8 +734,8 @@ const UserManager = () => {
                       </div>
                       <textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo da alteração..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest">Voltar</button>
-                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-50">Confirmar</button>
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors">Voltar</button>
+                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-50 transition-all active:scale-95">Confirmar</button>
                       </div>
                   </div>
               </div>

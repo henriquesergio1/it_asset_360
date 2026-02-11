@@ -8,6 +8,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.4',
+    date: 'Hoje',
+    title: 'Fix: Restored User Registration Fields',
+    changes: [
+      'Restauração dos campos PIS e Endereço no cadastro de colaboradores.',
+      'Ajuste da máscara de PIS no formulário de edição/criação.',
+      'Ajuste no layout do grid do formulário para melhor usabilidade em resoluções menores.'
+    ]
+  },
+    {
     version: '2.12.3',
     date: 'Hoje',
     title: 'Fix: Missing Icon Import',
@@ -35,28 +45,6 @@ const versions = [
       'Correção de erro de sintaxe em botão de gerenciamento de colunas.',
       'Unificação e sincronização da versão em todo o ecossistema (Login, Dashboard, Menu).',
       'Finalização da renderização estruturada da tabela de colaboradores.'
-    ]
-  },
-    {
-    version: '2.12.0',
-    date: 'Hoje',
-    title: 'UX: Standardized Tables & Advanced Search',
-    changes: [
-      'Implementação de colunas redimensionáveis em todas as listagens principais.',
-      'Padronização da tela de Software/Contas com paginação e seletor de colunas.',
-      'Melhoria nos filtros de alocação de licenças (pesquisa avançada por CPF, IMEI, Serial).',
-      'Inclusão da coluna Cargo/Função na listagem de dispositivos.',
-      'Exibição destacada do Responsável Atual nos detalhes do dispositivo.',
-      'Adição de campo de observações em softwares/contas.'
-    ]
-  },
-    {
-    version: '2.11.7',
-    date: 'Hoje',
-    title: 'UI: Dark Mode Legibility Fix',
-    changes: [
-      'Ajuste de cor de texto nos botões de seleção de tipo de ativo (Operations) para o tema escuro.',
-      'Melhoria no contraste de elementos inativos na tela de Entrega/Devolução.'
     ]
   }
 ];

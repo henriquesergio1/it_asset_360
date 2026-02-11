@@ -27,8 +27,8 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        // Version updated to 2.12.3
-        version: '2.12.3', 
+        // Version updated to 2.12.4
+        version: '2.12.4', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
