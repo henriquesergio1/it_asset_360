@@ -7,6 +7,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.11.6',
+    date: 'Hoje',
+    title: 'UI: Dark Mode for Asset Catalog',
+    changes: [
+      'Aplicação completa do tema escuro no modal de Catálogo (Modelos, Marcas, Tipos).',
+      'Correção de cores de inputs e selects em modo escuro.',
+      'Ajuste de visibilidade em backgrounds de formulários auxiliares.'
+    ]
+  },
+    {
     version: '2.11.5',
     date: 'Hoje',
     title: 'Fix: Multi-Asset Term Tracking',
@@ -37,16 +47,6 @@ const versions = [
       'Ajuste visual do Painel de Administração e Auditoria Detalhada.',
       'Correção de legibilidade em modais de auditoria e editor de termos.',
       'Padronização de cores de botões e tabelas no tema Dark.'
-    ]
-  },
-    {
-    version: '2.11.2',
-    date: 'Hoje',
-    title: 'Hotfix: AccountManager Recovery & Version Align',
-    changes: [
-      'Correção do arquivo AccountManager.tsx que estava truncado impedindo o build.',
-      'Harmonização global da versão do sistema para 2.11.2.',
-      'Restauração de componentes de modal em Software & Contas.'
     ]
   }
 ];
