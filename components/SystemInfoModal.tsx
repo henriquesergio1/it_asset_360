@@ -7,6 +7,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.11.4',
+    date: 'Hoje',
+    title: 'Fix: Accessory Printing in Delivery Term',
+    changes: [
+      'Correção do bug onde acessórios não apareciam na impressão imediata do termo de entrega.',
+      'Implementação de acessóriosSnapshot no estado de última operação.',
+      'Injeção dinâmica de acessórios no objeto de impressão para garantir fidelidade visual.',
+      'Harmonização de versões remanescentes entre telas.'
+    ]
+  },
+    {
     version: '2.11.3',
     date: 'Hoje',
     title: 'Refactor: Final Dark Mode Polishing',
@@ -35,17 +46,6 @@ const versions = [
       'Correção de erros de importação (lucide-react) em DeviceManager.',
       'Ajuste na declaração de roteamento em UserManager.',
       'Atualização do health check do servidor para 2.11.1.'
-    ]
-  },
-    {
-    version: '2.11.0',
-    date: 'Ontem',
-    title: 'Feat: Light & Dark Mode Support',
-    changes: [
-      'Implementação de alternância dinâmica entre tema claro e escuro.',
-      'Persistência da preferência de tema no navegador (localStorage).',
-      'Botão de toggle adicionado ao cabeçalho principal.',
-      'Adaptação visual da tela de login e layout base para modo dark.'
     ]
   }
 ];

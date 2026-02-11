@@ -125,6 +125,7 @@ const Operations = () => {
       assetType: AssetType;
       action: OperationType;
       checklistSnapshot?: ReturnChecklist;
+      accessoriesSnapshot?: DeviceAccessory[]; // NOVO: Snapshot para impressão imediata
       notes: string;
   } | null>(null);
 
@@ -201,8 +202,10 @@ const Operations = () => {
     }
 
     try {
+        let deliveryAccessories: DeviceAccessory[] = [];
+
         if (activeTab === 'CHECKOUT') {
-            const deliveryAccessories: DeviceAccessory[] = selectedAccessoryTypeIds.map(typeId => {
+            deliveryAccessories = selectedAccessoryTypeIds.map(typeId => {
                 const type = accessoryTypes.find(t => t.id === typeId);
                 return {
                     id: Math.random().toString(36).substr(2, 9),
@@ -229,6 +232,7 @@ const Operations = () => {
             assetType: assetType, 
             action: activeTab, 
             checklistSnapshot: activeTab === 'CHECKIN' && assetType === 'Device' ? { ...checklist } : undefined,
+            accessoriesSnapshot: activeTab === 'CHECKOUT' && assetType === 'Device' ? deliveryAccessories : undefined, // Salva o snapshot
             notes: notes 
         });
         
@@ -243,8 +247,19 @@ const Operations = () => {
   const handlePrint = () => {
       if (!lastOperation) return;
       const user = users.find(u => u.id === lastOperation.userId);
-      const asset = lastOperation.assetType === 'Device' ? devices.find(d => d.id === lastOperation.assetId) : sims.find(s => s.id === lastOperation.assetId);
-      if (!user || !asset) return;
+      let asset = lastOperation.assetType === 'Device' ? devices.find(d => d.id === lastOperation.assetId) : sims.find(s => s.id === lastOperation.assetId);
+      
+      if (!user || !asset) {
+          alert("Não foi possível localizar os dados para impressão.");
+          return;
+      }
+
+      // Injeta os acessórios do snapshot caso seja um dispositivo em entrega, 
+      // pois o objeto 'asset' vindo da lista pode ainda não estar sincronizado 
+      // com os acessórios recém-adicionados no banco/estado global.
+      if (lastOperation.assetType === 'Device' && lastOperation.accessoriesSnapshot) {
+          asset = { ...asset, accessories: lastOperation.accessoriesSnapshot } as Device;
+      }
 
       let model, brand, type, linkedSim;
       if (lastOperation.assetType === 'Device') {
