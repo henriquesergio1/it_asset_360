@@ -8,6 +8,25 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.12',
+    date: 'Hoje',
+    title: 'Bugfix: UserManager Export & Deployment',
+    changes: [
+      'Correção: Restaurado arquivo UserManager.tsx truncado e adicionado export default.',
+      'Sincronização global da versão para 2.12.12.'
+    ]
+  },
+    {
+    version: '2.12.11',
+    date: 'Hoje',
+    title: 'Bugfix: License isolation & UX Renaming',
+    changes: [
+      'Correção: Aba de Licenças agora inicia vazia ao cadastrar novo dispositivo.',
+      'Renomeação global: "Software / Contas" alterado para "Licenças / Contas" em todo o sistema.',
+      'Sincronização global da versão para 2.12.11.'
+    ]
+  },
+    {
     version: '2.12.10',
     date: 'Hoje',
     title: 'Offboarding Automation & Dashboard UX',
@@ -37,17 +56,6 @@ const versions = [
       'Ajuste na lógica de check-in tanto no backend SQL quanto no provedor Mock.',
       'Sincronização global da versão para 2.12.8.'
     ]
-  },
-    {
-    version: '2.12.7',
-    date: 'Hoje',
-    title: 'Feature: Manual Maintenance Control',
-    changes: [
-      'Adição de controle direto de status de manutenção no inventário de dispositivos.',
-      'Novas ações rápidas na tabela: Enviar para Manutenção e Concluir Manutenção.',
-      'Habilitação do campo de Status no formulário de edição para ajustes manuais administrativos.',
-      'Sincronização global da versão para 2.12.7.'
-    ]
   }
 ];
 
@@ -61,7 +69,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
             <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
             <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
+          <button onClose={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
             <X size={24} />
           </button>
           <div className="absolute -right-10 -top-10 text-slate-800 opacity-50">

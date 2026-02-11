@@ -300,7 +300,7 @@ const DeviceManager = () => {
   const [isViewOnly, setIsViewOnly] = useState(false); 
   const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'SOFTWARE' | 'CUSTODY' | 'HISTORY'>('GENERAL');
+  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'LICENSES' | 'CUSTODY' | 'HISTORY'>('GENERAL');
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('device_manager_columns');
@@ -596,7 +596,8 @@ const DeviceManager = () => {
   };
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
-  const deviceAccounts = accounts.filter(a => a.deviceId === editingId);
+  // FIX: Se editingId for null (novo), garantir que deviceAccounts seja um array vazio
+  const deviceAccounts = editingId ? accounts.filter(a => a.deviceId === editingId) : [];
 
   return (
     <div className="space-y-6 relative pb-20">
@@ -898,7 +899,7 @@ const DeviceManager = () => {
                 <button type="button" onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Geral</button>
                 <button type="button" onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Financeiro</button>
                 <button type="button" onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Manutenções ({deviceMaintenances.length})</button>
-                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'SOFTWARE' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Software ({deviceAccounts.length})</button>
+                <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSES' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Licenças ({deviceAccounts.length})</button>
                 <button type="button" onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Cadeia de Custódia</button>
                 <button type="button" onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Auditoria</button>
             </div>
@@ -1202,7 +1203,7 @@ const DeviceManager = () => {
                             </div>
                         </div>
                     )}
-                    {activeTab === 'SOFTWARE' && (
+                    {activeTab === 'LICENSES' && (
                         <div className="space-y-4 animate-fade-in">
                             <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças e Contas Vinculadas</h4>
                             <div className="grid grid-cols-1 gap-3">
@@ -1234,7 +1235,7 @@ const DeviceManager = () => {
                                 )) : (
                                     <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 transition-colors">
                                         <Globe size={32} className="mx-auto text-slate-200 dark:text-slate-800 mb-2"/>
-                                        <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest italic">Nenhum software vinculado a este dispositivo.</p>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest italic">Nenhuma licença vinculada a este dispositivo.</p>
                                     </div>
                                 )}
                             </div>
@@ -1297,7 +1298,7 @@ const DeviceManager = () => {
 
       {isDeleteModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-red-100 dark:border-red-900/40">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-red-100 dark:border-red-900/40">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
                           <div className="h-16 w-16 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 dark:text-red-400 mb-4 shadow-inner border border-red-100 dark:border-red-900/40"><AlertTriangle size={32} /></div>

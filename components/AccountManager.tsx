@@ -160,7 +160,7 @@ const AccountManager = () => {
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Software / Contas</h1>
+                    <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Licenças / Contas</h1>
                     <p className="text-gray-500 dark:text-slate-400 text-sm">Gestão de licenças, e-mails e acessos.</p>
                 </div>
                 <button onClick={() => handleOpenModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95 font-bold">
@@ -256,7 +256,7 @@ const AccountManager = () => {
                     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up border dark:border-slate-800">
                         <div className="bg-slate-900 dark:bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
                             <h3 className="text-lg font-black text-white uppercase tracking-tighter">
-                                {editingAccount.id ? 'Editar Conta / Software' : 'Nova Conta / Software'}
+                                {editingAccount.id ? 'Editar Licença / Conta' : 'Nova Licença / Conta'}
                             </h3>
                             <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white transition-colors"><X size={24}/></button>
                         </div>

@@ -182,7 +182,7 @@ const Dashboard = () => {
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[400px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                    <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Acessos por Tipo
+                    <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
                 </h2>
                 <Link to="/accounts" className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline">Ver Tudo</Link>
             </div>

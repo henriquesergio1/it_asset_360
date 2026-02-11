@@ -123,7 +123,7 @@ const UserManager = () => {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [editReason, setEditReason] = useState('');
   const [isViewOnly, setIsViewOnly] = useState(false); 
-  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'SOFTWARE' | 'TERMS' | 'LOGS'>('DATA');
+  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   
@@ -385,7 +385,7 @@ const UserManager = () => {
                     <SlidersHorizontal size={18} /> Colunas
                 </button>
                 {isColumnSelectorOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                             <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
                             <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
@@ -579,7 +579,7 @@ const UserManager = () => {
             <div className="flex bg-slate-50 dark:bg-slate-950 border-b dark:border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
                 <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Dados Cadastrais</button>
                 <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Ativos em Posse</button>
-                <button type="button" onClick={() => setActiveTab('SOFTWARE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SOFTWARE' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Acessos e Contas</button>
+                <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Licenças e Contas</button>
                 <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Termos Gerados</button>
                 <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Histórico</button>
             </div>
@@ -630,7 +630,6 @@ const UserManager = () => {
                                     <div className="flex items-center gap-3">
                                         <Smartphone className="text-blue-500" size={20}/>
                                         <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span>
-                                        {/* Fallback to IMEI if assetTag is missing */}
                                         <span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">
                                             {d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}
                                         </span>
@@ -651,9 +650,9 @@ const UserManager = () => {
                         </div>
                     </div>
                 )}
-                {activeTab === 'SOFTWARE' && (
+                {activeTab === 'LICENSES' && (
                     <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Contas e Acessos</h4>
+                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4>
                         <div className="grid grid-cols-1 gap-3">
                             {userAccounts.map(acc => (
                                 <div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800">
@@ -662,39 +661,46 @@ const UserManager = () => {
                                         <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span>
                                         <span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span>
                                     </div>
-                                    <button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Tudo</button>
+                                    <button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button>
                                 </div>
                             ))}
-                            {userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma conta vinculada no momento.</p>}
+                            {userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}
                         </div>
                     </div>
                 )}
                 {activeTab === 'TERMS' && (
                     <div className="space-y-6">
-                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4>
-                        <div className="grid grid-cols-1 gap-4">
-                            {currentUserTerms.map(t => (
-                                <div key={t.id} className="p-5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-all">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${t.type === 'ENTREGA' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>{t.type}</span>
-                                            <h5 className="font-bold text-slate-800 dark:text-slate-100 mt-2 text-sm">{t.assetDetails}</h5>
-                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">{new Date(t.date).toLocaleDateString()}</p>
+                        <div className="flex justify-between items-center">
+                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                            {currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (
+                                <div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}>
+                                            <FileText size={24}/>
                                         </div>
-                                        <button onClick={() => handleReprintTerm(t)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Re-imprimir Termo"><Printer size={18}/></button>
+                                        <div>
+                                            <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p>
+                                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p>
+                                            <p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3 pt-4 border-t dark:border-slate-800">
-                                        {t.fileUrl ? (
+                                    <div className="flex items-center gap-2">
+                                        {term.fileUrl ? (
                                             <>
-                                                <button onClick={() => handleOpenFile(t.fileUrl)} className="flex-1 bg-emerald-50 text-emerald-700 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100 hover:bg-emerald-100 transition-all flex items-center justify-center gap-2"><CheckCircle size={14}/> Termo Assinado</button>
-                                                <button onClick={() => deleteTermFile(t.id, editingId!, 'Exclusão solicitada', adminName)} className="p-2.5 text-red-400 hover:text-red-600 transition-colors"><Trash2 size={18}/></button>
+                                                <button onClick={() => handleOpenFile(term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all" title="Abrir Arquivo"><ExternalLink size={18}/></button>
+                                                {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}
                                             </>
                                         ) : (
-                                            <label className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-600 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-pointer hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-all shadow-sm">
-                                                <Upload size={14}/> Anexar Assinado (PDF/Imagem)
-                                                <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(t.id, e)}/>
-                                            </label>
+                                            !isViewOnly && (
+                                                <label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2">
+                                                    <Upload size={14}/> Digitalizar
+                                                    <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
+                                                </label>
+                                            )
                                         )}
+                                        <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo"><Printer size={18}/></button>
                                     </div>
                                 </div>
                             ))}
@@ -703,23 +709,30 @@ const UserManager = () => {
                     </div>
                 )}
                 {activeTab === 'LOGS' && (
-                    <div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4">
+                    <div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">
                         {userHistory.map(log => (
                             <div key={log.id} className="relative pl-8">
-                                <div className="absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md bg-emerald-500"></div>
-                                <div className="text-[10px] text-slate-400 font-black uppercase mb-1">{new Date(log.timestamp).toLocaleString()}</div>
+                                <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
                                 <div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 dark:border-slate-700">
+                                <div className="text-xs text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
                                     <LogNoteRenderer log={log} />
                                 </div>
+                                <div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-100 transition-all tracking-widest shadow-sm">Fechar</button>
-                {!isViewOnly && <button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all active:scale-95">Salvar Colaborador</button>}
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all tracking-widest shadow-sm">Fechar</button>
+                {isViewOnly ? (
+                    <button type="button" onClick={() => setIsViewOnly(false)} className="px-10 py-3 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all hover:scale-105 flex items-center gap-2">
+                        <Edit2 size={16}/> Habilitar Edição
+                    </button>
+                ) : (
+                    <button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95">Salvar Colaborador</button>
+                )}
             </div>
           </div>
         </div>
@@ -727,16 +740,17 @@ const UserManager = () => {
 
       {isReasonModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transition-colors">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40">
                   <div className="p-8">
                       <div className="flex flex-col items-center text-center mb-6">
-                          <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Save size={32} /></div>
-                          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Salvar Alterações?</h3>
+                          <div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40"><Save size={32} /></div>
+                          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p>
                       </div>
-                      <textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo da alteração..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
+                      <textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
                       <div className="flex gap-4">
-                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors">Voltar</button>
-                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-50 transition-all active:scale-95">Confirmar</button>
+                          <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button>
+                          <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
                       </div>
                   </div>
               </div>

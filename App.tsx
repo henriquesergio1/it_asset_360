@@ -106,7 +106,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/accounts" icon={Globe} label="Software / Contas" collapsed={isSidebarCollapsed} />
+          <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/operations" icon={Repeat} label="Entrega/Devolução" collapsed={isSidebarCollapsed} />
           
@@ -123,8 +123,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 {/* Version updated to 2.12.10 */}
-                 <span>Versão 2.12.10</span>
+                 {/* Version updated to 2.12.12 */}
+                 <span>Versão 2.12.12</span>
               </div>
           )}
           <button 
