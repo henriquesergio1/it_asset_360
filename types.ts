@@ -20,7 +20,7 @@ export interface SoftwareAccount {
   type: AccountType;
   login: string;
   password?: string;
-  licenseKey?: string;
+  accessUrl?: string; // Renomeado de licenseKey para accessUrl
   status: 'Ativo' | 'Inativo';
   
   // Vínculos

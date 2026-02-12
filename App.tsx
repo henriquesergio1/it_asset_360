@@ -101,14 +101,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation - Reordered as per request (v2.12.16) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />
+          <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/operations" icon={Repeat} label="Entrega/Devolução" collapsed={isSidebarCollapsed} />
+          <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />
           
           {isAdmin && (
             <div className={`pt-4 mt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'px-0' : ''}`}>
@@ -123,8 +123,8 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 {/* Version updated to 2.12.12 */}
-                 <span>Versão 2.12.12</span>
+                 {/* Version updated to 2.12.16 */}
+                 <span>Versão 2.12.16</span>
               </div>
           )}
           <button 

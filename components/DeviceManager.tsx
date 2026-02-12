@@ -206,7 +206,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
                             </div>
                             <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:border-blue-200 dark:hover:border-blue-800 transition-all">
                                 <div className="flex justify-between items-start mb-2">
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${log.action === ActionType.CHECKOUT ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800'}`}>
+                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${log.action === ActionType.CHECKOUT ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/40' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800'}`}>
                                         {log.action === ActionType.CHECKOUT ? 'RECEBEU' : 'DEVOLVEU'}
                                     </span>
                                     <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-bold">{new Date(log.timestamp).toLocaleString()}</span>
@@ -595,6 +595,15 @@ const DeviceManager = () => {
       }
   };
 
+  const handleOpenUrl = (url?: string) => {
+    if (!url) return;
+    let finalUrl = url.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('ftp://')) {
+        finalUrl = 'https://' + finalUrl;
+    }
+    window.open(finalUrl, '_blank');
+  };
+
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
   // FIX: Se editingId for null (novo), garantir que deviceAccounts seja um array vazio
   const deviceAccounts = editingId ? accounts.filter(a => a.deviceId === editingId) : [];
@@ -612,7 +621,7 @@ const DeviceManager = () => {
                     <SlidersHorizontal size={18} /> Colunas
                 </button>
                 {isColumnSelectorOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                             <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
                             <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
@@ -1224,8 +1233,20 @@ const DeviceManager = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {/* Link Externo se houver accessUrl (v2.12.16) */}
+                                            {acc.accessUrl && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }}
+                                                    className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                                    title="Abrir URL de Acesso"
+                                                >
+                                                    <ExternalLink size={16}/>
+                                                </button>
+                                            )}
                                             <div className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono text-[10px] text-slate-700 dark:text-slate-300 min-w-[80px] text-center border dark:border-slate-700 shadow-inner">
-                                                {showPasswords[acc.id] ? (acc.password || acc.licenseKey || '---') : '••••••••'}
+                                                {/* Corrected property reference from licenseKey to accessUrl */}
+                                                {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                                             </div>
                                             <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                                 {showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}

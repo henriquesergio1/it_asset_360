@@ -586,6 +586,12 @@ const UserManager = () => {
             <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900 transition-colors">
                 {activeTab === 'DATA' && (
                     <form id="userForm" onSubmit={handleSubmit} className="space-y-6">
+                        {isViewOnly && (
+                            <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4">
+                                <Info className="text-emerald-600 dark:text-emerald-400" size={20}/>
+                                <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p>
+                            </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
                                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label>

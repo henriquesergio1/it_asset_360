@@ -8,53 +8,50 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.12',
+    version: '2.12.16',
     date: 'Hoje',
-    title: 'Bugfix: UserManager Export & Deployment',
+    title: 'Bugfix & Navigation Reorder',
     changes: [
-      'Correção: Restaurado arquivo UserManager.tsx truncado e adicionado export default.',
-      'Sincronização global da versão para 2.12.12.'
+      'Correção de bug: Propriedade licenseKey alterada para accessUrl na aba de licenças do dispositivo.',
+      'Melhoria de UX: Adicionado botão de acesso direto a URL de licença nos detalhes do dispositivo.',
+      'Reorganização do menu lateral: Dashboard, Dispositivos, Colaboradores, Chips, Licenças, Entrega.',
+      'Sincronização global da versão para 2.12.16.'
     ]
   },
     {
-    version: '2.12.11',
+    version: '2.12.15',
     date: 'Hoje',
-    title: 'Bugfix: License isolation & UX Renaming',
+    title: 'Access URL & Menu Reorganization',
     changes: [
-      'Correção: Aba de Licenças agora inicia vazia ao cadastrar novo dispositivo.',
-      'Renomeação global: "Software / Contas" alterado para "Licenças / Contas" em todo o sistema.',
-      'Sincronização global da versão para 2.12.11.'
+      'Reativação e renomeação do campo de licença para "Endereço de Acesso / URL".',
+      'Renomeação semântica da coluna no banco de dados de LicenseKey para AccessUrl.',
+      'Implementação de abertura rápida de link na tabela de licenças.',
+      'Sincronização global da versão para 2.12.15.'
     ]
   },
     {
-    version: '2.12.10',
+    version: '2.12.14',
     date: 'Hoje',
-    title: 'Offboarding Automation & Dashboard UX',
+    title: 'UI Consistency: View Mode for Users',
     changes: [
-      'Adição de opção "Desligamento" na devolução para inativação automática do colaborador.',
-      'Dashboard: Lista de pendências agora exibe cargo/função do colaborador.',
-      'Dashboard: Implementado botão para expandir a lista de pendências de termos.',
-      'Garantia de que colaboradores inativos continuem aparecendo em pendências de termo.',
-      'Sincronização global da versão para 2.12.10.'
+      'Padronização da tela de Colaboradores com a tela de Dispositivos.',
+      'Implementação do banner informativo de modo de visualização no cadastro do colaborador.',
+      'Garantia de que o clique na lista abra o modo de leitura por padrão.',
+      'Sincronização global da versão para 2.12.14.'
     ]
   },
     {
-    version: '2.12.9',
+    version: '2.12.13',
     date: 'Hoje',
-    title: 'Fix: Admin Route JSX Syntax',
+    title: 'Restoration & UI Standardization: Licenses',
     changes: [
-      'Correção de erro de sintaxe na definição da rota administrativa no componente AppRoutes.',
-      'Sincronização global da versão para 2.12.9.'
-    ]
-  },
-    {
-    version: '2.12.8',
-    date: 'Hoje',
-    title: 'Bugfix: Auto-release Linked SIM',
-    changes: [
-      'Correção de bug na devolução: chips vinculados agora são automaticamente liberados ao devolver o dispositivo.',
-      'Ajuste na lógica de check-in tanto no backend SQL quanto no provedor Mock.',
-      'Sincronização global da versão para 2.12.8.'
+      'Restauração das melhorias da v2.12.0 na tela de Licenças / Contas.',
+      'Padronização com seletor de colunas, paginação e redimensionamento.',
+      'Renomeação de campos: "Adicional/Outros" e "Login/E-mail/Acesso".',
+      'Busca avançada em vínculos: exibição de CPF (Colaboradores) e IMEI/Modelo (Dispositivos).',
+      'Remoção de alocação por Setor para simplificação.',
+      'Inclusão de campo de Observações no cadastro de licença.',
+      'Sincronização global da versão para 2.12.13.'
     ]
   }
 ];
@@ -69,7 +66,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
             <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
             <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
           </div>
-          <button onClose={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
             <X size={24} />
           </button>
           <div className="absolute -right-10 -top-10 text-slate-800 opacity-50">
