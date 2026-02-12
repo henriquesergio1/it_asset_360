@@ -8,6 +8,27 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.18',
+    date: 'Hoje',
+    title: 'Licenses Filter & A-Z Sorting Refinement',
+    changes: [
+      'Reativação das abas de filtro por tipo de licença na tela de Licenças / Contas.',
+      'Garantia de ordenação alfabética obrigatória pelo Nome Amigável na listagem.',
+      'Ajuste final da ordem do menu lateral conforme solicitado.',
+      'Sincronização global da versão para 2.12.18.'
+    ]
+  },
+    {
+    version: '2.12.17',
+    date: 'Hoje',
+    title: 'Licenses Filter & Sorting',
+    changes: [
+      'Reintrodução do filtro de botões por tipo de conta no topo da tela de Licenças / Contas.',
+      'Ajuste de ordenação alfabética obrigatória pelo "Nome Amigável" na listagem de licenças.',
+      'Sincronização global da versão para 2.12.17.'
+    ]
+  },
+    {
     version: '2.12.16',
     date: 'Hoje',
     title: 'Bugfix & Navigation Reorder',
@@ -26,32 +47,8 @@ const versions = [
       'Reativação e renomeação do campo de licença para "Endereço de Acesso / URL".',
       'Renomeação semântica da coluna no banco de dados de LicenseKey para AccessUrl.',
       'Implementação de abertura rápida de link na tabela de licenças.',
+      'Reorganização da barra lateral: Dashboard, Dispositivos, Colaboradores, Licenças, Entrega.',
       'Sincronização global da versão para 2.12.15.'
-    ]
-  },
-    {
-    version: '2.12.14',
-    date: 'Hoje',
-    title: 'UI Consistency: View Mode for Users',
-    changes: [
-      'Padronização da tela de Colaboradores com a tela de Dispositivos.',
-      'Implementação do banner informativo de modo de visualização no cadastro do colaborador.',
-      'Garantia de que o clique na lista abra o modo de leitura por padrão.',
-      'Sincronização global da versão para 2.12.14.'
-    ]
-  },
-    {
-    version: '2.12.13',
-    date: 'Hoje',
-    title: 'Restoration & UI Standardization: Licenses',
-    changes: [
-      'Restauração das melhorias da v2.12.0 na tela de Licenças / Contas.',
-      'Padronização com seletor de colunas, paginação e redimensionamento.',
-      'Renomeação de campos: "Adicional/Outros" e "Login/E-mail/Acesso".',
-      'Busca avançada em vínculos: exibição de CPF (Colaboradores) e IMEI/Modelo (Dispositivos).',
-      'Remoção de alocação por Setor para simplificação.',
-      'Inclusão de campo de Observações no cadastro de licença.',
-      'Sincronização global da versão para 2.12.13.'
     ]
   }
 ];

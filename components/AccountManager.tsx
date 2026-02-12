@@ -123,6 +123,7 @@ const AccountManager = () => {
     const { user: currentUser } = useAuth();
     
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeFilter, setActiveFilter] = useState<AccountType | 'ALL'>('ALL');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAccount, setEditingAccount] = useState<Partial<SoftwareAccount> | null>(null);
     const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -221,12 +222,16 @@ const AccountManager = () => {
         window.open(finalUrl, '_blank');
     };
 
-    const filteredAccounts = accounts.filter(acc => 
-        acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        acc.login.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (acc.accessUrl || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (acc.notes || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredAccounts = accounts.filter(acc => {
+        const matchesSearch = acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            acc.login.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (acc.accessUrl || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (acc.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesType = activeFilter === 'ALL' || acc.type === activeFilter;
+        
+        return matchesSearch && matchesType;
+    }).sort((a, b) => a.name.localeCompare(b.name));
 
     // Paginação
     const totalItems = filteredAccounts.length;
@@ -278,6 +283,27 @@ const AccountManager = () => {
                         <Plus size={18} /> Nova Conta
                     </button>
                 </div>
+            </div>
+
+            {/* BARRA DE FILTROS POR TIPO (v2.12.18) */}
+            <div className="flex gap-4 border-b border-gray-200 dark:border-slate-800 overflow-x-auto bg-white dark:bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
+                <button 
+                    onClick={() => setActiveFilter('ALL')} 
+                    className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeFilter === 'ALL' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'}`}
+                >
+                    Todas
+                    <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full text-[10px]">{accounts.length}</span>
+                </button>
+                {Object.values(AccountType).map(type => (
+                    <button 
+                        key={type} 
+                        onClick={() => setActiveFilter(type)} 
+                        className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeFilter === type ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'}`}
+                    >
+                        {type}
+                        <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full text-[10px]">{accounts.filter(a => a.type === type).length}</span>
+                    </button>
+                ))}
             </div>
 
             <div className="relative">
@@ -451,7 +477,7 @@ const AccountManager = () => {
                             <button 
                                 disabled={currentPage === totalPages}
                                 onClick={() => setCurrentPage(p => p + 1)}
-                                className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'}`}
+                                className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}
                             >
                                 <ChevronRight size={18}/>
                             </button>
