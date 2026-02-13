@@ -60,7 +60,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
                          {selectedOption ? (
                              <>
                                 <span className="text-gray-900 dark:text-slate-100 font-bold text-sm truncate">{selectedOption.label}</span>
-                                {selectedOption.subLabel && <span className="text-[10px] text-gray-500 dark:text-slate-400 truncate font-mono uppercase">{selectedOption.subLabel}</span>}
+                                {selectedOption.subLabel && <span className="text-[10px] text-gray-500 dark:text-slate-400 truncate font-mono uppercase tracking-tighter">{selectedOption.subLabel}</span>}
                              </>
                          ) : (
                              <span className="text-gray-400 dark:text-slate-500 text-sm">{placeholder}</span>
@@ -114,7 +114,6 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const navigate = useNavigate();
     const note = log.notes || '';
 
-    // Detalhes técnicos se houver diff
     if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
         try {
             const prev = log.previousData ? JSON.parse(log.previousData) : {};
@@ -163,12 +162,10 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     );
 };
 
-// --- COMPONENTE: PossessionHistory (Rastreabilidade) ---
 const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
     const { getHistory } = useData();
     const history = getHistory(deviceId);
     
-    // Filtrar apenas ações de Checkout e Checkin para montar a cadeia de custódia
     const chain = history
         .filter(l => l.action === ActionType.CHECKOUT || l.action === ActionType.CHECKIN)
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -243,7 +240,6 @@ const COLUMN_OPTIONS = [
     { id: 'purchaseInfo', label: 'Valor/Data Compra' }
 ];
 
-// --- Helpers de Formatação Financeira (BR) ---
 const formatCurrencyBR = (value: number): string => {
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 };
@@ -253,16 +249,13 @@ const parseCurrencyBR = (value: string): number => {
     return cleanedValue ? parseFloat(cleanedValue) / 100 : 0;
 };
 
-// Helper para formatar data ISO vinda do banco para exibição local brasileira segura
 const formatDateBR = (isoString: string): string => {
     if (!isoString) return '---';
-    // Adicionamos T12:00:00 para evitar que o fuso horário mude o dia ao criar o objeto Date
     const datePart = isoString.substring(0, 10);
     const [year, month, day] = datePart.split('-');
     return `${day}/${month}/${year}`;
 };
 
-// Componente divisor para redimensionamento
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
@@ -275,7 +268,7 @@ const DeviceManager = () => {
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
     users, models, brands, assetTypes, sims, customFields, sectors,
     maintenances, addMaintenance, deleteMaintenance, accounts,
-    getHistory
+    getHistory, loadDeviceNF, loadModelImg
   } = useData();
   const { user: currentUser } = useAuth();
   const location = useLocation();
@@ -293,7 +286,6 @@ const DeviceManager = () => {
   const [restoreTargetId, setRestoreTargetId] = useState<string | null>(null);
   const [restoreReason, setRestoreReason] = useState('');
 
-  // Novo modal de motivo para alteração
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [editReason, setEditReason] = useState('');
 
@@ -329,7 +321,6 @@ const DeviceManager = () => {
       date: new Date().toISOString().split('T')[0]
   });
 
-  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
 
@@ -349,7 +340,6 @@ const DeviceManager = () => {
       localStorage.setItem('device_manager_widths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
-  // Reset paginação ao filtrar
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, viewStatus, itemsPerPage]);
@@ -418,9 +408,6 @@ const DeviceManager = () => {
 
   const saveMaintenance = () => {
     if (!editingId || !newMaint.description) return;
-    
-    // Preparação da data: pegamos a string YYYY-MM-DD do input e garantimos que o objeto Date criado não retroceda o dia
-    // devido ao fuso horário brasileiro (UTC-3) ao converter para ISO string no servidor.
     const isoDate = newMaint.date ? `${newMaint.date}T12:00:00.000Z` : new Date().toISOString();
 
     const record: MaintenanceRecord = {
@@ -491,7 +478,6 @@ const DeviceManager = () => {
       return modelA.localeCompare(modelB);
   });
 
-  // Cálculo de paginação
   const totalItems = filteredDevices.length;
   const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
   const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
@@ -507,6 +493,10 @@ const DeviceManager = () => {
       setEditingId(device.id);
       setFormData({ ...device, customData: device.customData || {} });
       setIdType(device.imei && !device.assetTag ? 'IMEI' : 'TAG');
+      
+      // LAZY LOAD TRIGGER (v2.12.24)
+      if (loadDeviceNF) loadDeviceNF(device.id);
+      if (loadModelImg && device.modelId) loadModelImg(device.modelId);
     } else {
       setEditingId(null);
       setFormData({ 
@@ -528,7 +518,6 @@ const DeviceManager = () => {
         return;
     }
 
-    // Validação de unicidade
     if (formData.assetTag) {
         const dupTag = devices.find(d => d.assetTag === formData.assetTag && d.id !== editingId);
         if (dupTag) {
@@ -605,7 +594,6 @@ const DeviceManager = () => {
   };
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
-  // FIX: Se editingId for null (novo), garantir que deviceAccounts seja um array vazio
   const deviceAccounts = editingId ? accounts.filter(a => a.deviceId === editingId) : [];
 
   return (
@@ -807,7 +795,6 @@ const DeviceManager = () => {
                       </td>
                       <td className="px-6 py-4 text-right truncate">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                            {/* NOVO: Ações de Manutenção Rápidas */}
                             {d.status === DeviceStatus.AVAILABLE && (
                                 <button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>
                             )}
@@ -843,7 +830,6 @@ const DeviceManager = () => {
             </table>
         </div>
         
-        {/* Paginação */}
         <div className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -924,7 +910,6 @@ const DeviceManager = () => {
                             </div>
                         )}
                         
-                        {/* NOVO: Exibição do Responsável Atual */}
                         {editingId && (
                             <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/40 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
@@ -985,7 +970,6 @@ const DeviceManager = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {/* NOVO: Campo de Status (Passar para Manutenção) */}
                             <div>
                                 <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Estado Global do Ativo</label>
                                 <select 
@@ -1233,7 +1217,6 @@ const DeviceManager = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {/* Link Externo se houver accessUrl (v2.12.16) */}
                                             {acc.accessUrl && (
                                                 <button 
                                                     type="button" 
@@ -1245,7 +1228,6 @@ const DeviceManager = () => {
                                                 </button>
                                             )}
                                             <div className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono text-[10px] text-slate-700 dark:text-slate-300 min-w-[80px] text-center border dark:border-slate-700 shadow-inner">
-                                                {/* Corrected property reference from licenseKey to accessUrl */}
                                                 {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                                             </div>
                                             <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
@@ -1297,7 +1279,6 @@ const DeviceManager = () => {
         </div>
       )}
 
-      {/* NOVO MODAL: Motivo da Alteração */}
       {isReasonModalOpen && (
           <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-blue-100 dark:border-blue-900/40">

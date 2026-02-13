@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount } from '../types';
 
 export interface DataContextType {
   devices: Device[];
@@ -23,6 +23,11 @@ export interface DataContextType {
   loading?: boolean;
   error?: string | null;
   
+  // Lazy Loading Methods (v2.12.24)
+  loadDeviceNF: (deviceId: string) => Promise<void>;
+  loadModelImg: (modelId: string) => Promise<void>;
+  loadTermBlob: (termId: string, userId: string) => Promise<void>;
+
   // CRUD Dispositivos
   addDevice: (device: Device, adminName: string) => void;
   updateDevice: (device: Device, adminName: string) => void;
@@ -59,7 +64,6 @@ export interface DataContextType {
 
   // Operations
   assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
-  // Updated signature to support user inactivation
   returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean) => void;
   
   // Term Management

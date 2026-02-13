@@ -27,14 +27,38 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.23', 
+        version: '2.12.24', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.23) ---
-// Otimizado: Exclui colunas pesadas (Base64/JSON longo) para reduzir payload de MBs para KBs
+// --- LAZY LOADING ENDPOINTS (v2.12.24) ---
+app.get('/api/devices/:id/invoice', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl FROM Devices WHERE Id=@Id");
+        res.json({ purchaseInvoiceUrl: result.recordset[0]?.PurchaseInvoiceUrl || "" });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/models/:id/image', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT ImageUrl FROM Models WHERE Id=@Id");
+        res.json({ imageUrl: result.recordset[0]?.ImageUrl || "" });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/terms/:id/file', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM Terms WHERE Id=@Id");
+        res.json({ fileUrl: result.recordset[0]?.FileUrl || "" });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// --- BOOTSTRAP ENDPOINT (v2.12.23+) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -43,22 +67,17 @@ app.get('/api/bootstrap', async (req, res) => {
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
-            // Excluindo PurchaseInvoiceUrl da carga inicial
             pool.request().query("SELECT Id, ModelId, SerialNumber, AssetTag, InternalCode, Imei, PulsusId, Status, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            // Excluindo BackupData, PreviousData e NewData do log inicial
             pool.request().query("SELECT TOP 100 Id, AssetId, Action, Timestamp, AdminUser, Notes, AssetType, TargetName FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
-            // Excluindo ImageUrl do catálogo inicial
             pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"),
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
-            // Excluindo InvoiceUrl de manutenções
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            // Excluindo FileUrl de termos
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
@@ -74,7 +93,6 @@ app.get('/api/bootstrap', async (req, res) => {
             return entry;
         });
 
-        // Specific devices logic to include accessories
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return {
@@ -94,7 +112,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 purchaseCost: d.PurchaseCost,
                 invoiceNumber: d.InvoiceNumber,
                 supplier: d.Supplier,
-                purchaseInvoiceUrl: "", // Excluído da carga inicial
+                purchaseInvoiceUrl: "", 
                 customData: d.CustomData ? JSON.parse(d.CustomData) : {},
                 accessories: acc.recordset
             };
@@ -145,16 +163,14 @@ async function runMigrations(pool) {
     `;
     await pool.request().query(baseTables);
 
-    // --- PATCH: RENOMEAR COLUNA LICENSEKEY PARA ACCESSURL ---
     try {
         await pool.request().query(`
             IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('SoftwareAccounts') AND name = 'LicenseKey')
             AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('SoftwareAccounts') AND name = 'AccessUrl')
             EXEC sp_rename 'SoftwareAccounts.LicenseKey', 'AccessUrl', 'COLUMN';
         `);
-    } catch (e) { console.log('SoftwareAccounts column already renamed or patch not needed'); }
+    } catch (e) { }
 
-    // Patch for existing AuditLogs table
     try {
         await pool.request().query(`
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AuditLogs') AND name = 'PreviousData')
@@ -162,7 +178,7 @@ async function runMigrations(pool) {
             IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AuditLogs') AND name = 'NewData')
             ALTER TABLE AuditLogs ADD NewData NVARCHAR(MAX);
         `);
-    } catch (e) { console.log('AuditLogs already patched'); }
+    } catch (e) { }
 
     const checkAdmin = await pool.request().query("SELECT * FROM SystemUsers WHERE Email = 'admin@empresa.com'");
     if (checkAdmin.recordset.length === 0) {
@@ -200,7 +216,6 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
-// --- SYSTEM ---
 app.get('/api/system-users', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -251,7 +266,6 @@ app.put('/api/settings', async (req, res) => {
     res.json({success: true});
 });
 
-// --- CATALOG HELPER ---
 const crud = (table, route, assetType) => {
     app.get(`/api/${route}`, async (req, res) => {
         try {
@@ -319,7 +333,6 @@ const crud = (table, route, assetType) => {
     });
 };
 
-// Registrando rotas dinâmicas do catálogo
 crud('Sectors', 'sectors', 'Sector');
 crud('Brands', 'brands', 'Brand');
 crud('AssetTypes', 'asset-types', 'Type');
@@ -329,7 +342,6 @@ crud('CustomFields', 'custom-fields', 'CustomField');
 crud('MaintenanceRecords', 'maintenances', 'Maintenance');
 crud('SoftwareAccounts', 'accounts', 'Account');
 
-// --- MAIN ENTITIES ---
 app.get('/api/users', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -470,7 +482,6 @@ app.put('/api/devices/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- OPERATIONS ---
 app.post('/api/operations/checkout', async (req, res) => {
     try {
         const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
@@ -481,7 +492,6 @@ app.post('/api/operations/checkout', async (req, res) => {
         const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
         
-        // Geração de detalhes do ativo para o termo (Fix multi-asset bug)
         let assetDetails = notes || '';
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
@@ -513,7 +523,6 @@ app.post('/api/operations/checkin', async (req, res) => {
         const prev = oldRes.recordset[0];
         const userId = prev?.CurrentUserId;
         
-        // Geração de detalhes do ativo para o termo (Fix multi-asset bug)
         let assetDetails = notes || '';
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
@@ -528,7 +537,6 @@ app.post('/api/operations/checkin', async (req, res) => {
             userName = userRes.recordset[0]?.FullName || 'Colaborador';
         }
         
-        // Se for dispositivo, buscar se tem chip vinculado para liberar
         if (assetType === 'Device' && prev && prev.LinkedSimId) {
             await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
         }
@@ -539,7 +547,6 @@ app.post('/api/operations/checkin', async (req, res) => {
             const termId = Math.random().toString(36).substr(2, 9);
             await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
             
-            // --- NOVO: INATIVAÇÃO AUTOMÁTICA DO COLABORADOR ---
             if (inactivateUser) {
                 await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
                 await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
@@ -606,7 +613,6 @@ app.post('/api/restore', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Finalização da inicialização do servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📡 Health Check em: http://localhost:${PORT}/api/health`);

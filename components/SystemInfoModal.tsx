@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.23',
+    version: '2.12.24',
     date: 'Agora',
+    title: 'Lazy Loading & Attachment Restoration',
+    changes: [
+      'Implementação de Lazy Loading: Anexos pesados (notas fiscais, fotos, termos) agora são carregados sob demanda quando visualizados, mantendo o bootstrap ultraleve.',
+      'Restauração de Arquivos: Corrigido o problema onde as imagens e PDFs pareciam ter sumido após a otimização de payload.',
+      'Novos Endpoints de API: Adicionados endpoints individuais para busca de NF, fotos do catálogo e documentos de termos.',
+      'Sincronização global da versão para 2.12.24.'
+    ]
+  },
+    {
+    version: '2.12.23',
+    date: 'Hoje',
     title: 'Payload Optimization & UI Hotfix',
     changes: [
       'Otimização radical de Bootstrap: Exclusão de campos binários/base64 (notas fiscais, fotos, PDFs) da carga inicial para reduzir payload (de 220MB para <1MB).',
@@ -20,22 +31,12 @@ const versions = [
   },
     {
     version: '2.12.22',
-    date: 'Hoje',
+    date: 'Ontem',
     title: 'Bootstrap Performance & Entity Registration Optimization',
     changes: [
       'Novo Endpoint Agregado: Criação de /api/bootstrap para carregar todos os dados de cadastro em uma única requisição (redução de latência).',
       'Otimização de Cadastro: O sistema agora está pronto para uso imediato após o login, com todos os ativos, chips e licenças pré-carregados.',
       'Sincronização global da versão para 2.12.22.'
-    ]
-  },
-    {
-    version: '2.12.21',
-    date: 'Ontem',
-    title: 'UX Refresh Persistence & Init Optimization',
-    changes: [
-      'Correção crítica: Persistência de rota garantida ao atualizar a página (o app não volta mais para a Home se você estiver em outra tela).',
-      'Otimização de inicialização: O sistema agora prioriza o modo detectado anteriormente, eliminando o atraso de ping de rede no refresh.',
-      'Sincronização global da versão para 2.12.21.'
     ]
   }
 ];

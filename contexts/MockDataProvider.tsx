@@ -25,6 +25,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
 
+  // --- Lazy Loading Methods (v2.12.24) - Mock implementation ---
+  const loadDeviceNF = async (deviceId: string) => { console.log(`[Mock] NF for device ${deviceId} loaded.`); };
+  const loadModelImg = async (modelId: string) => { console.log(`[Mock] Image for model ${modelId} loaded.`); };
+  const loadTermBlob = async (termId: string, userId: string) => { console.log(`[Mock] File for term ${termId} loaded.`); };
+
   const logAction = (
     action: ActionType, 
     assetType: 'Device' | 'Sim' | 'User' | 'System' | 'Model' | 'Brand' | 'Type' | 'Sector' | 'Accessory' | 'CustomField' | 'Account', 
@@ -144,6 +149,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
+    loadDeviceNF, loadModelImg, loadTermBlob,
     addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
