@@ -27,13 +27,14 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.22', 
+        version: '2.12.23', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.22) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.23) ---
+// Otimizado: Exclui colunas pesadas (Base64/JSON longo) para reduzir payload de MBs para KBs
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -42,18 +43,23 @@ app.get('/api/bootstrap', async (req, res) => {
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
-            pool.request().query("SELECT * FROM Devices"),
+            // Excluindo PurchaseInvoiceUrl da carga inicial
+            pool.request().query("SELECT Id, ModelId, SerialNumber, AssetTag, InternalCode, Imei, PulsusId, Status, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 100 * FROM AuditLogs ORDER BY Timestamp DESC"),
+            // Excluindo BackupData, PreviousData e NewData do log inicial
+            pool.request().query("SELECT TOP 100 Id, AssetId, Action, Timestamp, AdminUser, Notes, AssetType, TargetName FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
-            pool.request().query("SELECT * FROM Models"),
+            // Excluindo ImageUrl do catálogo inicial
+            pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"),
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
-            pool.request().query("SELECT * FROM MaintenanceRecords"),
+            // Excluindo InvoiceUrl de manutenções
+            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT * FROM Terms"),
+            // Excluindo FileUrl de termos
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -88,7 +94,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 purchaseCost: d.PurchaseCost,
                 invoiceNumber: d.InvoiceNumber,
                 supplier: d.Supplier,
-                purchaseInvoiceUrl: d.PurchaseInvoiceUrl,
+                purchaseInvoiceUrl: "", // Excluído da carga inicial
                 customData: d.CustomData ? JSON.parse(d.CustomData) : {},
                 accessories: acc.recordset
             };
