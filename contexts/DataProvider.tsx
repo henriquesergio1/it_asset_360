@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MockDataProvider } from './MockDataProvider';
 import { ProdDataProvider } from './ProdDataProvider';
@@ -13,9 +12,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         console.log("[ITAsset360] Verificando conectividade com a API...");
         
-        // Timeout de 4 segundos para a sonda inicial
+        // Timeout reduzido para 1500ms para evitar longos períodos em branco
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
         
         const response = await fetch('/api/health', { 
             signal: controller.signal,

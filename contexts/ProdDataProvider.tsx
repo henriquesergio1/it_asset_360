@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount } from '../types';
@@ -112,22 +111,41 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return safeJson(res, endpoint);
   };
 
-  const addDevice = async (device: Device, adminName: string) => { await postData('devices', { ...device, _adminUser: adminName }); setDevices(p => [...p, device]); };
-  const updateDevice = async (device: Device, adminName: string) => { await putData('devices', { ...device, _adminUser: adminName }); setDevices(p => p.map(d => d.id === device.id ? device : d)); };
+  const addDevice = async (device: Device, adminName: string) => { 
+      await postData('devices', { ...device, _adminUser: adminName }); 
+      setDevices(p => [...p, device]); 
+  };
+
+  const updateDevice = async (device: Device, adminName: string) => { 
+      await putData('devices', { ...device, _adminUser: adminName }); 
+      setDevices(p => p.map(d => d.id === device.id ? device : d)); 
+  };
+
   const deleteDevice = async (id: string, adminName: string, reason: string) => {
     const device = devices.find(d => d.id === id);
-    if (device) { await putData('devices', { ...device, status: DeviceStatus.RETIRED, _adminUser: adminName, _reason: reason }); setDevices(p => p.map(d => d.id === id ? { ...d, status: DeviceStatus.RETIRED } : d)); }
+    if (device) { 
+        const updatedDevice = { ...device, status: DeviceStatus.RETIRED, currentUserId: null };
+        await putData('devices', { ...updatedDevice, _adminUser: adminName, _reason: reason }); 
+        setDevices(p => p.map(d => d.id === id ? updatedDevice : d)); 
+    }
   };
+
   const restoreDevice = async (id: string, adminName: string, reason: string) => {
     const device = devices.find(d => d.id === id);
-    if (device) { await putData('devices', { ...device, status: DeviceStatus.AVAILABLE, currentUserId: null, _adminUser: adminName, _reason: reason }); setDevices(p => p.map(d => d.id === id ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d)); }
+    if (device) { 
+        const restored = { ...device, status: DeviceStatus.AVAILABLE, currentUserId: null };
+        await putData('devices', { ...restored, _adminUser: adminName, _reason: reason }); 
+        setDevices(p => p.map(d => d.id === id ? restored : d)); 
+    }
   };
 
   const addUser = async (user: User, adminName: string) => { await postData('users', { ...user, _adminUser: adminName }); setUsers(p => [...p, user]); };
   const updateUser = async (user: User, adminName: string, notes?: string) => { await putData('users', { ...user, _adminUser: adminName, _notes: notes }); setUsers(p => p.map(u => u.id === user.id ? user : u)); };
+  
   const toggleUserActive = async (user: User, adminName: string, reason?: string) => {
-    await putData('users', { ...user, active: !user.active, _adminUser: adminName, _reason: reason });
-    setUsers(p => p.map(u => u.id === user.id ? { ...u, active: !user.active } : u));
+    const updated = { ...user, active: !user.active };
+    await putData('users', { ...updated, _adminUser: adminName, _reason: reason });
+    setUsers(p => p.map(u => u.id === user.id ? updated : u));
   };
 
   const addAccount = async (account: SoftwareAccount, adminName: string) => { await postData('accounts', { ...account, _adminUser: adminName }); setAccounts(p => [...p, account]); };
@@ -179,9 +197,37 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     accounts, addAccount, updateAccount, deleteAccount,
     addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, updateSettings,
-    assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(); },
-    // Updated returnAsset logic to include inactivateUser
-    returnAsset: async (at, aid, n, adm, list, inactivate) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); fetchData(); },
+    assignAsset: async (at, aid, uid, n, adm, acc) => { 
+        await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); 
+        // Atualização reativa imediata do estado local
+        if (at === 'Device') {
+            setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.IN_USE, currentUserId: uid, accessories: acc } : d));
+        } else {
+            setSims(prev => prev.map(s => s.id === aid ? { ...s, status: DeviceStatus.IN_USE, currentUserId: uid } : s));
+        }
+        fetchData(); // Sincronização de fundo
+    },
+    returnAsset: async (at, aid, n, adm, list, inactivate) => { 
+        await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); 
+        // Atualização reativa imediata do estado local
+        if (at === 'Device') {
+            setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
+            // Se houver chip vinculado no dispositivo sendo devolvido, a API libera ele também. Refletimos aqui:
+            const dev = devices.find(d => d.id === aid);
+            if (dev?.linkedSimId) {
+                setSims(prev => prev.map(s => s.id === dev.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+            }
+        } else {
+            setSims(prev => prev.map(s => s.id === aid ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+        }
+        if (inactivate) {
+            const devOrSim = at === 'Device' ? devices.find(d => d.id === aid) : sims.find(s => s.id === aid);
+            if (devOrSim?.currentUserId) {
+                setUsers(prev => prev.map(u => u.id === devOrSim.currentUserId ? { ...u, active: false } : u));
+            }
+        }
+        fetchData(); // Sincronização de fundo
+    },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },
     restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(); },

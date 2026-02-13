@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -7,6 +6,26 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.12.20',
+    date: 'Hoje',
+    title: 'Critical Hotfix: Library Import',
+    changes: [
+      'Correção do erro de importação da biblioteca Lucide (lucide-center -> lucide-react) que impedia o carregamento do sistema.',
+      'Sincronização global da versão para 2.12.20.'
+    ]
+  },
+    {
+    version: '2.12.19',
+    date: 'Hoje',
+    title: 'Reactive UX & Route Persistence',
+    changes: [
+      'Redução do timeout de detecção de ambiente para acelerar o carregamento inicial.',
+      'Melhoria na reatividade: atualizações de dispositivos e colaboradores agora são refletidas instantaneamente sem refresh.',
+      'Ajuste fino no AuthProvider para garantir persistência de rota após atualização de página.',
+      'Sincronização global da versão para 2.12.19.'
+    ]
+  },
     {
     version: '2.12.18',
     date: 'Hoje',
@@ -26,29 +45,6 @@ const versions = [
       'Reintrodução do filtro de botões por tipo de conta no topo da tela de Licenças / Contas.',
       'Ajuste de ordenação alfabética obrigatória pelo "Nome Amigável" na listagem de licenças.',
       'Sincronização global da versão para 2.12.17.'
-    ]
-  },
-    {
-    version: '2.12.16',
-    date: 'Hoje',
-    title: 'Bugfix & Navigation Reorder',
-    changes: [
-      'Correção de bug: Propriedade licenseKey alterada para accessUrl na aba de licenças do dispositivo.',
-      'Melhoria de UX: Adicionado botão de acesso direto a URL de licença nos detalhes do dispositivo.',
-      'Reorganização do menu lateral: Dashboard, Dispositivos, Colaboradores, Chips, Licenças, Entrega.',
-      'Sincronização global da versão para 2.12.16.'
-    ]
-  },
-    {
-    version: '2.12.15',
-    date: 'Hoje',
-    title: 'Access URL & Menu Reorganization',
-    changes: [
-      'Reativação e renomeação do campo de licença para "Endereço de Acesso / URL".',
-      'Renomeação semântica da coluna no banco de dados de LicenseKey para AccessUrl.',
-      'Implementação de abertura rápida de link na tabela de licenças.',
-      'Reorganização da barra lateral: Dashboard, Dispositivos, Colaboradores, Licenças, Entrega.',
-      'Sincronização global da versão para 2.12.15.'
     ]
   }
 ];
