@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount } from '../types';
@@ -35,40 +36,18 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log("[ITAsset360] Sincronizando dados com SQL Server...");
+      console.log("[ITAsset360] Sincronizando dados com SQL Server via Bootstrap...");
 
-      const endpoints = [
-          { name: 'devices', path: '/api/devices' },
-          { name: 'sims', path: '/api/sims' },
-          { name: 'users', path: '/api/users' },
-          { name: 'logs', path: '/api/logs' },
-          { name: 'system-users', path: '/api/system-users' },
-          { name: 'settings', path: '/api/settings' },
-          { name: 'models', path: '/api/models' },
-          { name: 'brands', path: '/api/brands' },
-          { name: 'asset-types', path: '/api/asset-types' },
-          { name: 'maintenances', path: '/api/maintenances' },
-          { name: 'sectors', path: '/api/sectors' },
-          { name: 'terms', path: '/api/terms' },
-          { name: 'accessory-types', path: '/api/accessory-types' },
-          { name: 'custom-fields', path: '/api/custom-fields' },
-          { name: 'accounts', path: '/api/accounts' }
-      ];
+      const res = await fetch(`${API_URL}/api/bootstrap`);
+      const data = await safeJson(res, '/api/bootstrap');
 
-      const responses = await Promise.all(endpoints.map(async (e) => {
-          try {
-              const res = await fetch(`${API_URL}${e.path}`);
-              return await safeJson(res, e.path);
-          } catch (err: any) {
-              throw new Error(`Falha ao carregar ${e.name}: ${err.message}`);
-          }
-      }));
-
-      const [
-          devicesData, simsData, usersData, logsData, sysUsersData, settingsData, 
-          modelsData, brandsData, typesData, maintData, sectorsData, termsData, 
-          accTypesData, customFieldsData, accountsData
-      ] = responses;
+      const {
+          devices: devicesData, sims: simsData, users: usersData, logs: logsData, 
+          systemUsers: sysUsersData, settings: settingsData, models: modelsData, 
+          brands: brandsData, assetTypes: typesData, maintenances: maintData, 
+          sectors: sectorsData, terms: termsData, accessoryTypes: accTypesData, 
+          customFields: customFieldsData, accounts: accountsData
+      } = data;
 
       setDevices(devicesData);
       setSims(simsData);

@@ -1,3 +1,4 @@
+
 const express = require('express');
 const sql = require('mssql');
 const cors = require('cors');
@@ -26,10 +27,93 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.21', 
+        version: '2.12.22', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// --- BOOTSTRAP ENDPOINT (v2.12.22) ---
+app.get('/api/bootstrap', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const [
+            devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes,
+            modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
+            accTypesRes, customFieldsRes, accountsRes
+        ] = await Promise.all([
+            pool.request().query("SELECT * FROM Devices"),
+            pool.request().query("SELECT * FROM SimCards"),
+            pool.request().query("SELECT * FROM Users"),
+            pool.request().query("SELECT TOP 100 * FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
+            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
+            pool.request().query("SELECT * FROM Models"),
+            pool.request().query("SELECT * FROM Brands"),
+            pool.request().query("SELECT * FROM AssetTypes"),
+            pool.request().query("SELECT * FROM MaintenanceRecords"),
+            pool.request().query("SELECT * FROM Sectors"),
+            pool.request().query("SELECT * FROM Terms"),
+            pool.request().query("SELECT * FROM AccessoryTypes"),
+            pool.request().query("SELECT * FROM CustomFields"),
+            pool.request().query("SELECT * FROM SoftwareAccounts")
+        ]);
+
+        const format = (set, jsonKeys = []) => set.recordset.map(row => {
+            const entry = {};
+            for (let key in row) {
+                const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+                entry[camelKey] = jsonKeys.includes(key) && row[key] ? JSON.parse(row[key]) : row[key];
+            }
+            return entry;
+        });
+
+        // Specific devices logic to include accessories
+        const devices = await Promise.all(devicesRes.recordset.map(async d => {
+            const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
+            return {
+                id: d.Id,
+                modelId: d.ModelId,
+                serialNumber: d.SerialNumber,
+                assetTag: d.AssetTag,
+                internalCode: d.InternalCode,
+                imei: d.Imei,
+                pulsusId: d.PulsusId,
+                status: d.Status,
+                currentUserId: d.CurrentUserId,
+                sectorId: d.SectorId,
+                costCenter: d.CostCenter,
+                linkedSimId: d.LinkedSimId,
+                purchaseDate: d.PurchaseDate,
+                purchaseCost: d.PurchaseCost,
+                invoiceNumber: d.InvoiceNumber,
+                supplier: d.Supplier,
+                purchaseInvoiceUrl: d.PurchaseInvoiceUrl,
+                customData: d.CustomData ? JSON.parse(d.CustomData) : {},
+                accessories: acc.recordset
+            };
+        }));
+
+        res.json({
+            devices,
+            sims: format(simsRes),
+            users: format(usersRes),
+            logs: format(logsRes),
+            systemUsers: sysUsersRes.recordset,
+            settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' },
+            models: format(modelsRes),
+            brands: format(brandsRes),
+            assetTypes: format(typesRes, ['CustomFieldIds']),
+            maintenances: format(maintRes),
+            sectors: format(sectorsRes),
+            terms: format(termsRes),
+            accessoryTypes: format(accTypesRes),
+            customFields: format(customFieldsRes),
+            accounts: format(accountsRes)
+        });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
 });
 
 // --- MIGRAÇÕES E CRIAÇÃO DE TABELAS ---

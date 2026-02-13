@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -6,6 +7,16 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.12.22',
+    date: 'Agora',
+    title: 'Bootstrap Performance & Entity Registration Optimization',
+    changes: [
+      'Novo Endpoint Agregado: Criação de /api/bootstrap para carregar todos os dados de cadastro em uma única requisição (redução de latência).',
+      'Otimização de Cadastro: O sistema agora está pronto para uso imediato após o login, com todos os ativos, chips e licenças pré-carregados.',
+      'Sincronização global da versão para 2.12.22.'
+    ]
+  },
     {
     version: '2.12.21',
     date: 'Hoje',
@@ -35,17 +46,6 @@ const versions = [
       'Melhoria na reatividade: atualizações de dispositivos e colaboradores agora são refletidas instantaneamente sem refresh.',
       'Ajuste fino no AuthProvider para garantir persistência de rota após atualização de página.',
       'Sincronização global da versão para 2.12.19.'
-    ]
-  },
-    {
-    version: '2.12.18',
-    date: 'Hoje',
-    title: 'Licenses Filter & A-Z Sorting Refinement',
-    changes: [
-      'Reativação das abas de filtro por tipo de licença na tela de Licenças / Contas.',
-      'Garantia de ordenação alfabética obrigatória pelo Nome Amigável na listagem.',
-      'Ajuste final da ordem do menu lateral conforme solicitado.',
-      'Sincronização global da versão para 2.12.18.'
     ]
   }
 ];

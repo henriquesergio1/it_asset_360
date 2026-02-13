@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -30,7 +31,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border dark:border-slate-800 transition-all">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-md overflow-hidden border dark:border-slate-800 transition-all">
         <div className="bg-slate-900 p-8 text-center relative">
           <div className="flex justify-center mb-4">
             {settings.logoUrl ? (
@@ -124,7 +125,7 @@ const Login = () => {
           </form>
           
           <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-2">
-            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.21</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.22</p>
             <p className="text-xs text-gray-300 dark:text-slate-600">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>
