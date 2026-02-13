@@ -7,6 +7,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.21',
+    date: 'Hoje',
+    title: 'UX Refresh Persistence & Init Optimization',
+    changes: [
+      'Correção crítica: Persistência de rota garantida ao atualizar a página (o app não volta mais para a Home se você estiver em outra tela).',
+      'Otimização de inicialização: O sistema agora prioriza o modo detectado anteriormente, eliminando o atraso de ping de rede no refresh.',
+      'Sincronização síncrona de autenticação: Estado do usuário carregado imediatamente do cache para evitar redirecionamentos indesejados.',
+      'Sincronização global da versão para 2.12.21.'
+    ]
+  },
+    {
     version: '2.12.20',
     date: 'Hoje',
     title: 'Critical Hotfix: Library Import',
@@ -35,16 +46,6 @@ const versions = [
       'Garantia de ordenação alfabética obrigatória pelo Nome Amigável na listagem.',
       'Ajuste final da ordem do menu lateral conforme solicitado.',
       'Sincronização global da versão para 2.12.18.'
-    ]
-  },
-    {
-    version: '2.12.17',
-    date: 'Hoje',
-    title: 'Licenses Filter & Sorting',
-    changes: [
-      'Reintrodução do filtro de botões por tipo de conta no topo da tela de Licenças / Contas.',
-      'Ajuste de ordenação alfabética obrigatória pelo "Nome Amigável" na listagem de licenças.',
-      'Sincronização global da versão para 2.12.17.'
     ]
   }
 ];

@@ -100,7 +100,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
 
-        {/* Navigation - Mandatory Order (v2.12.20) */}
+        {/* Navigation - Mandatory Order (v2.12.21) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />
@@ -122,7 +122,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão 2.12.20</span>
+                 <span>Versão 2.12.21</span>
               </div>
           )}
           <button 

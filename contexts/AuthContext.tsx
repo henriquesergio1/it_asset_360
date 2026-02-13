@@ -14,18 +14,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { systemUsers } = useData();
-  const [user, setUser] = useState<SystemUser | null>(null);
-
-  // Check LocalStorage on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem('it_asset_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  
+  // Sincronização IMEDIATA na inicialização para evitar que o isAuthenticated seja false por alguns ms
+  const [user, setUser] = useState<SystemUser | null>(() => {
+      const storedUser = localStorage.getItem('it_asset_user');
+      try {
+          return storedUser ? JSON.parse(storedUser) : null;
+      } catch (e) {
+          return null;
+      }
+  });
 
   const login = async (email: string, pass: string) => {
-    // Simple mock authentication
+    // Simple mock authentication against loaded system users
     const foundUser = systemUsers.find(u => u.email === email && u.password === pass);
     if (foundUser) {
       setUser(foundUser);
