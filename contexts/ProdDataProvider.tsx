@@ -80,38 +80,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => { fetchData(); }, []);
 
-  // --- Lazy Loading Implementation (v2.12.24) ---
-  const loadDeviceNF = async (deviceId: string) => {
-      try {
-          const res = await fetch(`${API_URL}/api/devices/${deviceId}/invoice`);
-          const data = await safeJson(res, 'device/invoice');
-          if (data.purchaseInvoiceUrl) {
-              setDevices(prev => prev.map(d => d.id === deviceId ? { ...d, purchaseInvoiceUrl: data.purchaseInvoiceUrl } : d));
-          }
-      } catch (e) { console.error("Lazy load NF error", e); }
-  };
-
-  const loadModelImg = async (modelId: string) => {
-      try {
-          const res = await fetch(`${API_URL}/api/models/${modelId}/image`);
-          const data = await safeJson(res, 'model/image');
-          if (data.imageUrl) {
-              setModels(prev => prev.map(m => m.id === modelId ? { ...m, imageUrl: data.imageUrl } : m));
-          }
-      } catch (e) { console.error("Lazy load ModelImg error", e); }
-  };
-
-  const loadTermBlob = async (termId: string, userId: string) => {
-      try {
-          const res = await fetch(`${API_URL}/api/terms/${termId}/file`);
-          const data = await safeJson(res, 'term/file');
-          if (data.fileUrl) {
-              setTerms(prev => prev.map(t => t.id === termId ? { ...t, fileUrl: data.fileUrl } : t));
-              setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: (u.terms || []).map(t => t.id === termId ? { ...t, fileUrl: data.fileUrl } : t) } : u));
-          }
-      } catch (e) { console.error("Lazy load Term error", e); }
-  };
-
   const postData = async (endpoint: string, data: any) => {
     const res = await fetch(`${API_URL}/api/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     return safeJson(res, endpoint);
@@ -207,21 +175,23 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     accounts, addAccount, updateAccount, deleteAccount,
-    loadDeviceNF, loadModelImg, loadTermBlob,
     addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, updateSettings,
     assignAsset: async (at, aid, uid, n, adm, acc) => { 
         await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); 
+        // Atualização reativa imediata do estado local
         if (at === 'Device') {
             setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.IN_USE, currentUserId: uid, accessories: acc } : d));
         } else {
             setSims(prev => prev.map(s => s.id === aid ? { ...s, status: DeviceStatus.IN_USE, currentUserId: uid } : s));
         }
-        fetchData(); 
+        fetchData(); // Sincronização de fundo
     },
     returnAsset: async (at, aid, n, adm, list, inactivate) => { 
         await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); 
+        // Atualização reativa imediata do estado local
         if (at === 'Device') {
             setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
+            // Se houver chip vinculado no dispositivo sendo devolvido, a API libera ele também. Refletimos aqui:
             const dev = devices.find(d => d.id === aid);
             if (dev?.linkedSimId) {
                 setSims(prev => prev.map(s => s.id === dev.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
@@ -235,7 +205,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setUsers(prev => prev.map(u => u.id === devOrSim.currentUserId ? { ...u, active: false } : u));
             }
         }
-        fetchData(); 
+        fetchData(); // Sincronização de fundo
     },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },

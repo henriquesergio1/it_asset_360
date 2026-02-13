@@ -7,6 +7,7 @@ import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, Audit
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
+// Funções de Máscara
 const formatCPF = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
@@ -34,6 +35,7 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const navigate = useNavigate();
     const note = log.notes || '';
     
+    // Se for um log de atualização com diff
     if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
         try {
             const prev = log.previousData ? JSON.parse(log.previousData) : {};
@@ -100,6 +102,7 @@ const COLUMN_OPTIONS = [
     { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
 ];
 
+// Componente divisor para redimensionamento
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
@@ -108,7 +111,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, loadTermBlob } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -138,6 +141,7 @@ const UserManager = () => {
   const columnRef = useRef<HTMLDivElement>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
+  // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
 
@@ -166,21 +170,10 @@ const UserManager = () => {
       localStorage.setItem('user_manager_widths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
+  // Reset paginação ao filtrar
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, viewMode, showPendingOnly, itemsPerPage]);
-
-  // LAZY LOAD TRIGGER FOR TERMS (v2.12.24)
-  useEffect(() => {
-      if (activeTab === 'TERMS' && editingId && loadTermBlob) {
-          const user = users.find(u => u.id === editingId);
-          if (user?.terms) {
-              user.terms.forEach(t => {
-                  if (!t.fileUrl) loadTermBlob(t.id, editingId);
-              });
-          }
-      }
-  }, [activeTab, editingId, users]);
 
   const adminName = currentUser?.name || 'Unknown';
 
@@ -228,6 +221,8 @@ const UserManager = () => {
       if (!user) return;
       
       let asset: any = null;
+
+      // Suporte para o novo padrão de mapeamento robusto (v2.11.5+)
       const tagMatch = term.assetDetails.match(/\[TAG:\s*([^\]]+)\]/i);
       const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
 
@@ -239,6 +234,7 @@ const UserManager = () => {
           asset = sims.find(s => s.phoneNumber === phone);
       }
 
+      // Fallback para termos antigos baseados em inclusão de string
       if (!asset) {
           asset = devices.find(d => term.assetDetails.includes(d.assetTag) || (d.imei && term.assetDetails.includes(d.imei)));
           if (!asset) asset = sims.find(s => term.assetDetails.includes(s.phoneNumber));
@@ -279,6 +275,7 @@ const UserManager = () => {
       } else { window.open(fileUrl, '_blank'); }
   };
 
+  // Verificação de unicidade
   const checkUniqueness = (data: Partial<User>) => {
       const cleanedCpf = formatCPF(data.cpf || '');
       const cleanedRg = formatRG(data.rg || '');
@@ -359,6 +356,7 @@ const UserManager = () => {
     return `${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
+  // Cálculo de paginação
   const totalItems = filteredUsers.length;
   const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
   const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
@@ -524,6 +522,7 @@ const UserManager = () => {
             </table>
         </div>
         
+        {/* Paginação */}
         <div className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors">
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">

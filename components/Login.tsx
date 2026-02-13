@@ -30,23 +30,23 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300 overflow-hidden">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border dark:border-slate-800 transition-all">
-        <div className="bg-slate-900 p-6 text-center relative">
-          <div className="flex justify-center mb-3">
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-md overflow-hidden border dark:border-slate-800 transition-all">
+        <div className="bg-slate-900 p-8 text-center relative">
+          <div className="flex justify-center mb-4">
             {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt="Logo" className="h-10 object-contain" />
+                <img src={settings.logoUrl} alt="Logo" className="h-12 object-contain" />
             ) : (
-                <div className="bg-blue-600 p-2.5 rounded-xl">
-                  <Cpu className="text-white h-7 w-7" />
+                <div className="bg-blue-600 p-3 rounded-xl">
+                  <Cpu className="text-white h-8 w-8" />
                 </div>
             )}
           </div>
-          <h1 className="text-xl font-bold text-white">{settings.appName || 'IT Asset 360'}</h1>
-          <p className="text-gray-400 mt-1 text-xs uppercase tracking-widest font-medium">Gestão de Ativos</p>
+          <h1 className="text-2xl font-bold text-white">{settings.appName || 'IT Asset 360'}</h1>
+          <p className="text-gray-400 mt-2 text-sm">Entre para gerenciar seus ativos de TI</p>
           
           <div className="absolute top-4 right-4">
-             <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${loading ? 'bg-slate-700 text-slate-400' : 'bg-green-600 text-white'}`}>
+             <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${loading ? 'bg-slate-700 text-slate-400' : 'bg-green-600 text-white'}`}>
                 {loading ? 'AUTO' : 'PROD'}
              </span>
           </div>
@@ -70,15 +70,15 @@ const Login = () => {
               </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-1 ml-1 tracking-widest">E-mail Corporativo</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail Corporativo</label>
               <div className="relative">
                 <Mail className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
                 <input 
                   type="email" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all"
                   placeholder="seu.email@empresa.com"
                   value={email}
                   disabled={loading}
@@ -88,13 +88,13 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-1 ml-1 tracking-widest">Senha</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
                 <input 
                   type="password" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-50 dark:disabled:bg-slate-800/50 disabled:text-gray-400 transition-all"
                   placeholder="••••••••"
                   value={password}
                   disabled={loading}
@@ -104,7 +104,7 @@ const Login = () => {
             </div>
 
             {localError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-lg text-center font-bold uppercase tracking-widest">
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg text-center font-medium">
                 {localError}
               </div>
             )}
@@ -112,7 +112,7 @@ const Login = () => {
             <button 
               type="submit" 
               disabled={loading} 
-              className={`w-full font-black py-4 rounded-xl transition-all text-white flex items-center justify-center gap-2 uppercase text-xs tracking-[0.2em]
+              className={`w-full font-bold py-3 rounded-lg transition-all text-white flex items-center justify-center gap-2 
                 ${loading ? 'bg-gray-400 dark:bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg active:scale-[0.98]'}`}
             >
               {loading ? (
@@ -125,8 +125,8 @@ const Login = () => {
           </form>
           
           <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-2">
-            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Versão 2.12.23</p>
-            <p className="text-[9px] font-medium text-gray-300 dark:text-slate-600 uppercase">Ambiente Seguro via SQL Server</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.22</p>
+            <p className="text-xs text-gray-300 dark:text-slate-600">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>
       </div>

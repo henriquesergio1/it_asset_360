@@ -8,35 +8,44 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.24',
-    date: 'Agora',
-    title: 'Lazy Loading & Attachment Restoration',
-    changes: [
-      'Implementação de Lazy Loading: Anexos pesados (notas fiscais, fotos, termos) agora são carregados sob demanda quando visualizados, mantendo o bootstrap ultraleve.',
-      'Restauração de Arquivos: Corrigido o problema onde as imagens e PDFs pareciam ter sumido após a otimização de payload.',
-      'Novos Endpoints de API: Adicionados endpoints individuais para busca de NF, fotos do catálogo e documentos de termos.',
-      'Sincronização global da versão para 2.12.24.'
-    ]
-  },
-    {
-    version: '2.12.23',
-    date: 'Hoje',
-    title: 'Payload Optimization & UI Hotfix',
-    changes: [
-      'Otimização radical de Bootstrap: Exclusão de campos binários/base64 (notas fiscais, fotos, PDFs) da carga inicial para reduzir payload (de 220MB para <1MB).',
-      'Correção de UI Login: Restauração do layout compacto e centralizado, evitando a expansão vertical excessiva.',
-      'Melhoria de Performance: Carregamento inicial agora é virtualmente instantâneo.',
-      'Sincronização global da versão para 2.12.23.'
-    ]
-  },
-    {
     version: '2.12.22',
-    date: 'Ontem',
+    date: 'Agora',
     title: 'Bootstrap Performance & Entity Registration Optimization',
     changes: [
       'Novo Endpoint Agregado: Criação de /api/bootstrap para carregar todos os dados de cadastro em uma única requisição (redução de latência).',
       'Otimização de Cadastro: O sistema agora está pronto para uso imediato após o login, com todos os ativos, chips e licenças pré-carregados.',
       'Sincronização global da versão para 2.12.22.'
+    ]
+  },
+    {
+    version: '2.12.21',
+    date: 'Hoje',
+    title: 'UX Refresh Persistence & Init Optimization',
+    changes: [
+      'Correção crítica: Persistência de rota garantida ao atualizar a página (o app não volta mais para a Home se você estiver em outra tela).',
+      'Otimização de inicialização: O sistema agora prioriza o modo detectado anteriormente, eliminando o atraso de ping de rede no refresh.',
+      'Sincronização síncrona de autenticação: Estado do usuário carregado imediatamente do cache para evitar redirecionamentos indesejados.',
+      'Sincronização global da versão para 2.12.21.'
+    ]
+  },
+    {
+    version: '2.12.20',
+    date: 'Hoje',
+    title: 'Critical Hotfix: Library Import',
+    changes: [
+      'Correção do erro de importação da biblioteca Lucide (lucide-center -> lucide-react) que impedia o carregamento do sistema.',
+      'Sincronização global da versão para 2.12.20.'
+    ]
+  },
+    {
+    version: '2.12.19',
+    date: 'Hoje',
+    title: 'Reactive UX & Route Persistence',
+    changes: [
+      'Redução do timeout de detecção de ambiente para acelerar o carregamento inicial.',
+      'Melhoria na reatividade: atualizações de dispositivos e colaboradores agora são refletidas instantaneamente sem refresh.',
+      'Ajuste fino no AuthProvider para garantir persistência de rota após atualização de página.',
+      'Sincronização global da versão para 2.12.19.'
     ]
   }
 ];
