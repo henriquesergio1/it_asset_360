@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2, ArrowRight } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 const formatCPF = (v: string): string => {
@@ -30,61 +30,59 @@ const formatRG = (v: string): string => {
 };
 
 const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
-    const { devices, sims } = useData();
+    const { devices, sims, users } = useData();
     const navigate = useNavigate();
     const note = log.notes || '';
-    
-    if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
-        try {
-            const prev = log.previousData ? JSON.parse(log.previousData) : {};
-            const next = log.newData ? JSON.parse(log.newData) : {};
-            const diffs = Object.keys(next).filter(k => !k.startsWith('_') && JSON.stringify(prev[k]) !== JSON.stringify(next[k]));
-            
-            if (diffs.length > 0) {
-                return (
-                    <div className="space-y-1">
-                        <div className="font-bold text-[10px] text-blue-600 dark:text-blue-400 uppercase mb-1">Campos Alterados:</div>
-                        <div className="flex flex-wrap gap-1">
-                            {diffs.map(d => (
-                                <span key={d} className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[9px] font-black uppercase text-slate-500 dark:text-slate-400 shadow-sm">{d}</span>
-                            ))}
-                        </div>
-                        {note && <div className="mt-2 text-slate-500 dark:text-slate-400 font-medium">Motivo: {note}</div>}
-                    </div>
-                );
-            }
-        } catch (e) { console.error("Error parsing diff in user history", e); }
-    }
 
-    const assetPattern = new RegExp('(Recebeu|Devolveu|Entregue para|Devolvido por):\\s+([^.]+)', 'i');
-    const match = note.match(assetPattern);
-    
-    if (!match) return <span>{note}</span>;
-    
-    const action = match[1];
-    const assetString = match[2].trim();
-    
-    let targetLink = null;
-    const foundDevice = devices.find(d => assetString.includes(d.assetTag) || (d.imei && assetString.includes(d.imei)));
-    
-    if (foundDevice) {
-        targetLink = (
-            <span onClick={() => navigate(`/devices?deviceId=${foundDevice.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 px-1 rounded transition-colors">
-                {assetString}
-            </span>
-        );
-    } else {
-        const foundSim = sims.find(s => assetString.includes(s.phoneNumber));
-        if (foundSim) {
-            targetLink = (
-                <span onClick={() => navigate(`/sims`)} className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-1 rounded transition-colors">
-                    {assetString}
-                </span>
-            );
-        }
-    }
-    
-    return (<span>{action}: {targetLink || <span className="font-bold">{assetString}</span>}</span>);
+    // v2.12.31: Renderizador Rico estilo Snipe-IT
+    const lines = note.split('\n');
+
+    return (
+        <div className="space-y-1.5 py-1">
+            {lines.map((line, i) => {
+                if (!line.trim()) return null;
+
+                // Caso 1: Mudança de valor (estilo Sniper-IT: 'Campo: 'antigo' ➔ 'novo'')
+                if (line.includes('➔')) {
+                    const [fieldLabel, values] = line.split(':');
+                    const [oldVal, newVal] = (values || '').split('➔');
+                    
+                    return (
+                        <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
+                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
+                                {oldVal?.trim().replace(/'/g, '') || '---'}
+                            </span>
+                            <ArrowRight size={10} className="text-slate-300"/>
+                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
+                                {newVal?.trim().replace(/'/g, '') || '---'}
+                            </span>
+                        </div>
+                    );
+                }
+
+                // Caso 2: Menção a colaborador ou ativo (Linkable)
+                if (line.includes('Alvo:') || line.includes('Origem:')) {
+                    const [label, name] = line.split(':');
+                    const trimmedName = name?.trim();
+                    const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
+                    
+                    return (
+                        <div key={i} className="font-bold text-[11px] flex items-center gap-2">
+                             <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
+                             {foundUser ? (
+                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
+                                    <UserIcon size={10}/> {trimmedName}
+                                 </span>
+                             ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
+                        </div>
+                    );
+                }
+
+                return <div key={i} className="text-slate-600 dark:text-slate-300 font-medium">{line}</div>;
+            })}
+        </div>
+    );
 };
 
 const COLUMN_OPTIONS = [
@@ -209,7 +207,7 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  // v2.12.30: Correção crítica de mapeamento na reimpressão
+  // v2.12.31: Correção definitiva de mapeamento na reimpressão com Regex estrito
   const handleReprintTerm = (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
@@ -426,7 +424,7 @@ const UserManager = () => {
                 {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
                 {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
                 {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p></div></div><div className="flex items-center gap-2">{(term.fileUrl || term.hasFile) ? (<><button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">{loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}</button>{!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}</>) : (!isViewOnly && (<label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2"><Upload size={14}/> Digitalizar<input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} /></label>))}<button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo"><Printer size={18}/></button></div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
-                {activeTab === 'LOGS' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{userHistory.map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
+                {activeTab === 'LOGS' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{userHistory.map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors"><button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all tracking-widest shadow-sm">Fechar</button>{isViewOnly ? (<button type="button" onClick={() => setIsViewOnly(false)} className="px-10 py-3 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>) : (<button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95">Salvar Colaborador</button>)}</div>
           </div>

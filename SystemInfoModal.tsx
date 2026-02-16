@@ -8,34 +8,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.29',
+    version: '2.12.31',
     date: 'Hoje',
-    title: 'Compilation & Logic Fixes',
+    title: 'Snipe-IT Style Rich Audit',
     changes: [
-      'Correção de Erros: Implementação do método getLogDetail ausente no MockDataProvider.',
-      'Correção de Erros: Remoção de chamada inexistente setTerms no ProdDataProvider.',
-      'Correção de Erros: Ajuste de variáveis incorretas (a para adm) nos métodos CRUD de catálogo no ProdDataProvider.',
-      'Sincronização global da versão para 2.12.29.'
+      'Auditoria Rica: Geração automática de diffs (De ➔ Para) nas atualizações.',
+      'Interface Sniper-IT: Novo renderizador de logs com cores e formatação.',
+      'Regex Estrito: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP.',
+      'Sincronização global da versão para 2.12.31.'
     ]
   },
     {
-    version: '2.12.28',
+    version: '2.12.30',
     date: 'Hoje',
-    title: 'Differential Sync & Bandwidth Optimization',
+    title: 'Precision Asset Mapping & Audit Fix',
     changes: [
-      'Otimização de Performance: Redução do payload de sincronização de 42.6MB para ~150KB por navegação via endpoint /api/sync.',
-      'Lazy Loading Estrutural: Fotos de modelos e logs pesados (Backups JSON) agora são carregados apenas sob demanda.',
-      'Dashboard Bugfix: Correção na lógica de termos pendentes que considerava termos digitalizados como pendentes.',
-      'Sincronização global da versão para 2.12.28.'
-    ]
-  },
-    {
-    version: '2.12.27',
-    date: 'Ontem',
-    title: 'Lazy Load de Arquivos Pesados',
-    changes: [
-      'Bootstrap Otimizado: Remoção de anexos Base64 do carregamento inicial, acelerando o login em até 10x.',
-      'Sincronização por Navegação: Agora o sistema atualiza os dados automaticamente ao trocar de aba.'
+      'Correção de Reimpressão: Implementada detecção exata via Regex ([TAG: ...]).',
+      'Cadeia de Custódia: Metadados de entrega e devolução agora são persistidos no campo Notes leve.',
+      'Melhoria de Auditoria: Aumento do limite de visualização rápida de logs.'
     ]
   }
 ];

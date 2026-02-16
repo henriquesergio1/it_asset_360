@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 interface Option {
@@ -113,51 +113,56 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const navigate = useNavigate();
     const note = log.notes || '';
 
-    if (log.action === ActionType.UPDATE && (log.previousData || log.newData)) {
-        try {
-            const prev = log.previousData ? JSON.parse(log.previousData) : {};
-            const next = log.newData ? JSON.parse(log.newData) : {};
-            const diffs = Object.keys(next).filter(k => !k.startsWith('_') && JSON.stringify(prev[k]) !== JSON.stringify(next[k]));
-            
-            if (diffs.length > 0) {
-                return (
-                    <div className="space-y-1">
-                        <div className="font-bold text-[10px] text-blue-600 dark:text-blue-400 uppercase mb-1">Alterações detectadas:</div>
-                        <div className="flex flex-wrap gap-1">
-                            {diffs.map(d => (
-                                <span key={d} className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[9px] font-black uppercase text-slate-500 dark:text-slate-400 shadow-sm">{d}</span>
-                            ))}
-                        </div>
-                        {note && <div className="mt-2 text-slate-500 dark:text-slate-400 font-medium">Observação: {note}</div>}
-                    </div>
-                );
-            }
-        } catch (e) { console.error("Error parsing log diff", e); }
-    }
-
-    const userPattern = new RegExp('(Entregue para|Devolvido por):\\s+([^. •]+)', 'i');
-    const match = note.match(userPattern);
-
-    if (!match) return <span>{note}</span>;
-
-    const actionText = match[1];
-    const nameString = match[2].trim();
-
-    const foundUser = users.find(u => u.fullName.toLowerCase() === nameString.toLowerCase());
+    // v2.12.31: Renderizador Rico estilo Snipe-IT
+    const lines = note.split('\n');
 
     return (
-        <span>
-            {actionText}: {foundUser ? (
-                <span 
-                    onClick={() => navigate(`/users?userId=${foundUser.id}`)} 
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 px-1 rounded"
-                >
-                    {nameString}
-                </span>
-            ) : (
-                <span className="font-bold">{nameString}</span>
-            )}
-        </span>
+        <div className="space-y-1.5 py-1">
+            {lines.map((line, i) => {
+                if (!line.trim()) return null;
+
+                // Caso 1: Mudança de valor (estilo Snipe-IT: 'Campo: 'antigo' ➔ 'novo'')
+                if (line.includes('➔')) {
+                    const parts = line.split(':');
+                    const fieldLabel = parts[0];
+                    const valuesPart = parts.slice(1).join(':');
+                    const [oldVal, newVal] = (valuesPart || '').split('➔');
+                    
+                    return (
+                        <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
+                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
+                                {oldVal?.trim().replace(/'/g, '') || '---'}
+                            </span>
+                            <ArrowRight size={10} className="text-slate-300"/>
+                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
+                                {newVal?.trim().replace(/'/g, '') || '---'}
+                            </span>
+                        </div>
+                    );
+                }
+
+                // Caso 2: Menção a colaborador ou ativo (Linkable)
+                if (line.includes('Alvo:') || line.includes('Origem:')) {
+                    const [label, name] = line.split(':');
+                    const trimmedName = name?.trim();
+                    const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
+                    
+                    return (
+                        <div key={i} className="font-bold text-[11px] flex items-center gap-2">
+                             <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
+                             {foundUser ? (
+                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
+                                    <Users size={10}/> {trimmedName}
+                                 </span>
+                             ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
+                        </div>
+                    );
+                }
+
+                return <div key={i} className="text-slate-600 dark:text-slate-300 font-medium">{line}</div>;
+            })}
+        </div>
     );
 };
 
@@ -189,14 +194,12 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
                 {chain.map((log, idx) => {
                     let userName = 'Colaborador';
                     
-                    // v2.12.30: Busca resiliente do nome
-                    // 1. Tenta extrair das Notes (v2.12.30+ salva assim)
-                    const userPattern = new RegExp('(Entregue para|Devolvido por):\\s+([^. •]+)', 'i');
+                    // v2.12.31: Busca resiliente do nome (v2.12.31+ usa 'Alvo:' ou 'Origem:')
+                    const userPattern = new RegExp('(Alvo|Origem|Entregue para|Devolvido por):\\s+([^.\n •]+)', 'i');
                     const match = (log.notes || '').match(userPattern);
                     if (match) {
                         userName = match[2].trim();
                     } else {
-                        // 2. Fallback para JSON (se disponível)
                         try {
                             const data = log.action === ActionType.CHECKOUT 
                                 ? JSON.parse(log.newData || '{}') 
@@ -228,7 +231,9 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
                                         </span>
                                     ) : <span>{userName}</span>}
                                 </p>
-                                {log.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border-l-2 border-slate-200 dark:border-slate-700">{log.notes}</p>}
+                                <div className="mt-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border-l-2 border-slate-200 dark:border-slate-700">
+                                    <LogNoteRenderer log={log} />
+                                </div>
                                 <div className="mt-3 text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-tighter">Registrado por: {log.adminUser}</div>
                             </div>
                         </div>
@@ -640,7 +645,7 @@ const DeviceManager = () => {
                     {activeTab === 'MAINTENANCE' && (<div className="space-y-6 animate-fade-in">{!isViewOnly && (<div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-2xl border border-orange-200 dark:border-orange-900/40 space-y-4 shadow-sm transition-colors"><div className="flex items-center gap-2"><div className="h-8 w-8 bg-orange-200 dark:bg-orange-900/40 rounded-full flex items-center justify-center text-orange-700 dark:text-orange-400"><Wrench size={16}/></div><h5 className="text-[10px] font-black text-orange-800 dark:text-orange-200 uppercase tracking-widest">Nova Manutenção</h5></div><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-3"><label className="block text-[10px] font-bold text-orange-400 mb-1">Descrição</label><input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 dark:border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100 shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Custo (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span><input type="text" className="w-full border-2 border-orange-100 dark:border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100" value={formatCurrencyBR(newMaint.cost || 0)} onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Data</label><div className="relative"><Calendar className="absolute left-3 top-3 text-orange-300" size={16}/><input type="date" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100" value={newMaint.date || ''} onChange={e => setNewMaint({...newMaint, date: e.target.value})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Anexo</label><label className={`w-full flex items-center gap-3 bg-white dark:bg-slate-800 border-2 border-dashed border-orange-200 p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}><div className="h-8 w-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400">{isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}</div><span className="text-[10px] font-bold text-orange-700 uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span><input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*" /></label></div></div><div className="flex justify-end pt-2"><button type="button" onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar</button></div></div>)}<div className="space-y-3"><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4><div className="grid grid-cols-1 gap-3">{deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (<div key={m.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-orange-200 transition-all group"><div className="flex items-center gap-4"><div className="h-10 w-10 bg-orange-50 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600"><Wrench size={20}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{m.description}</p><div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-black text-slate-400 uppercase">{formatDateBR(m.date)}</span><span className="text-[10px] font-black text-emerald-600 uppercase">R$ {formatCurrencyBR(m.cost)}</span></div></div></div><div className="flex gap-2">{(m.invoiceUrl || m.hasInvoice) && (<button disabled={loadingFiles[m.id]} type="button" onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center">{loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}</button>)}{!isViewOnly && <button type="button" onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>}</div></div>)) : (<div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800"><p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p></div>)}</div></div></div>)}
                     {activeTab === 'LICENSES' && (<div className="space-y-4 animate-fade-in"><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4><div className="grid grid-cols-1 gap-3">{deviceAccounts.length > 0 ? deviceAccounts.map(acc => (<div key={acc.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 text-blue-600' : acc.type === AccountType.OFFICE ? 'bg-orange-50 text-orange-600' : acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>{acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}</div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{acc.name}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{acc.login}</p></div></div><div className="flex items-center gap-2">{acc.accessUrl && (<button type="button" onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><ExternalLink size={16}/></button>)}<div className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono text-[10px] text-slate-700 min-w-[80px] text-center">{showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}</div><button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-indigo-600">{showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></div>)) : (<div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800"><Globe size={32} className="mx-auto text-slate-200 mb-2"/><p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhuma licença vinculada.</p></div>)}</div></div>)}
                     {activeTab === 'CUSTODY' && (<PossessionHistory deviceId={editingId || ''} />)}
-                    {activeTab === 'HISTORY' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{getHistory(editingId || '').map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mt-1 border-l-4 border-slate-200 shadow-sm"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
+                    {activeTab === 'HISTORY' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{getHistory(editingId || '').map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors"><button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 hover:bg-slate-100 transition-all tracking-widest">Fechar</button>{isViewOnly ? (<button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>) : (<button type="submit" form="devForm" className="px-10 py-3 rounded-2xl bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-blue-700 transition-all hover:scale-105 active:scale-95">Salvar</button>)}</div>

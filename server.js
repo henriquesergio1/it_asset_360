@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.30', 
+        version: '2.12.31', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.30 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.31 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -54,7 +54,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 150 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
             pool.request().query("SELECT * FROM Models"), 
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.30 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.31 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -93,7 +93,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 150 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -115,7 +115,6 @@ app.get('/api/sync', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- CARREGAMENTO SOB DEMANDA ---
 app.get('/api/logs/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -205,7 +204,7 @@ const crud = (table, route, assetType) => {
                 values.push('@' + dbKey);
             }
             await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
-            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName);
+            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, 'Item criado manualmente no sistema');
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -216,17 +215,35 @@ const crud = (table, route, assetType) => {
             const request = pool.request();
             const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query(`SELECT * FROM ${table} WHERE Id=@Id`);
             const prev = oldRes.recordset[0];
+            
+            // v2.12.31: Comparação rica para auditoria automática
+            let diffNotes = [];
             let sets = [];
             for (let key in req.body) {
                 if (key.startsWith('_')) continue;
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                
                 request.input(dbKey, val);
                 sets.push(`${dbKey}=@${dbKey}`);
+
+                // Gerar linha de diff
+                if (prev) {
+                    let oldVal = prev[dbKey];
+                    let newVal = req.body[key];
+                    if (key === 'customData' || key === 'customFieldIds') newVal = JSON.stringify(newVal);
+                    
+                    if (String(oldVal || '') !== String(newVal || '')) {
+                        diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);
+                    }
+                }
             }
             request.input('TargetId', req.params.id);
             await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
-            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, req.body._reason, null, prev, req.body);
+            
+            const richNotes = (req.body._notes || req.body._reason ? `Motivo: ${req.body._notes || req.body._reason}\n\n` : '') + diffNotes.join('\n');
+            
+            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, richNotes, null, prev, req.body);
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -263,7 +280,7 @@ app.put('/api/settings', async (req, res) => {
     const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
     const prev = oldRes.recordset[0];
     await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', '', null, prev, { appName, logoUrl, cnpj });
+    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj });
     res.json({success: true});
 });
 
@@ -311,7 +328,7 @@ app.get('/api/logs', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operations Checkout/Checkin - v2.12.30 com metadados fixos leves (Notes/TargetName)
+// Operations Checkout/Checkin - v2.12.31 com metadados ricos (estilo Snipe-IT)
 app.post('/api/operations/checkout', async (req, res) => {
     try {
         const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
@@ -345,9 +362,9 @@ app.post('/api/operations/checkout', async (req, res) => {
         const termId = Math.random().toString(36).substr(2, 9);
         await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         
-        // v2.12.30: Persistimos o nome do colaborador nas Notes leves para garantir a visualização da Cadeia de Custódia
-        const lightweightNotes = `Entregue para: ${userName}${notes ? ` • Obs: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, lightweightNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
+        // v2.12.31: Enriquecimento de Notas
+        const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
+        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -396,13 +413,13 @@ app.post('/api/operations/checkin', async (req, res) => {
             }
         }
         
-        // v2.12.30: Persistimos o nome do colaborador nas Notes leves
-        const lightweightNotes = `Devolvido por: ${userName}${notes ? ` • Obs: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, lightweightNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
+        // v2.12.31: Enriquecimento de Notas
+        const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
+        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.30 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.31 rodando na porta ${PORT}`);
 });
