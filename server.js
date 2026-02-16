@@ -27,13 +27,13 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.22', 
+        version: '2.12.23', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.22) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.23) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);

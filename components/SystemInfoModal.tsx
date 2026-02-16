@@ -8,8 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.23',
+    date: 'Hoje',
+    title: 'UserManager Logic Fix & New Registration Polish',
+    changes: [
+      'Correção de Bug Visual: As abas de "Ativos em Posse", "Licenças" e "Histórico" no cadastro de novo colaborador agora aparecem vazias, em vez de listar itens sem dono do estoque.',
+      'Refinamento de UX: Melhoria na consistência de dados ao alternar entre visualização e edição de colaboradores.',
+      'Sincronização global da versão para 2.12.23.'
+    ]
+  },
+    {
     version: '2.12.22',
-    date: 'Agora',
+    date: 'Ontem',
     title: 'Bootstrap Performance & Entity Registration Optimization',
     changes: [
       'Novo Endpoint Agregado: Criação de /api/bootstrap para carregar todos os dados de cadastro em uma única requisição (redução de latência).',
@@ -19,33 +29,13 @@ const versions = [
   },
     {
     version: '2.12.21',
-    date: 'Hoje',
+    date: 'Ontem',
     title: 'UX Refresh Persistence & Init Optimization',
     changes: [
       'Correção crítica: Persistência de rota garantida ao atualizar a página (o app não volta mais para a Home se você estiver em outra tela).',
       'Otimização de inicialização: O sistema agora prioriza o modo detectado anteriormente, eliminando o atraso de ping de rede no refresh.',
       'Sincronização síncrona de autenticação: Estado do usuário carregado imediatamente do cache para evitar redirecionamentos indesejados.',
       'Sincronização global da versão para 2.12.21.'
-    ]
-  },
-    {
-    version: '2.12.20',
-    date: 'Hoje',
-    title: 'Critical Hotfix: Library Import',
-    changes: [
-      'Correção do erro de importação da biblioteca Lucide (lucide-center -> lucide-react) que impedia o carregamento do sistema.',
-      'Sincronização global da versão para 2.12.20.'
-    ]
-  },
-    {
-    version: '2.12.19',
-    date: 'Hoje',
-    title: 'Reactive UX & Route Persistence',
-    changes: [
-      'Redução do timeout de detecção de ambiente para acelerar o carregamento inicial.',
-      'Melhoria na reatividade: atualizações de dispositivos e colaboradores agora são refletidas instantaneamente sem refresh.',
-      'Ajuste fino no AuthProvider para garantir persistência de rota após atualização de página.',
-      'Sincronização global da versão para 2.12.19.'
     ]
   }
 ];

@@ -363,14 +363,15 @@ const UserManager = () => {
   const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
   const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
 
-  const userAssets = devices.filter(d => d.currentUserId === editingId);
+  // FIX v2.12.23: Garantir que se editingId for nulo (novo cadastro), as listas apareçam vazias em vez de puxar itens com currentUserId === null
+  const userAssets = editingId ? devices.filter(d => d.currentUserId === editingId) : [];
   const linkedSimIds = userAssets.map(d => d.linkedSimId).filter(Boolean) as string[];
-  const userSims = sims.filter(s => s.currentUserId === editingId || linkedSimIds.includes(s.id));
+  const userSims = editingId ? sims.filter(s => s.currentUserId === editingId || linkedSimIds.includes(s.id)) : [];
   
-  const userHistory = getHistory(editingId || '');
-  const currentUserTerms = users.find(u => u.id === editingId)?.terms || [];
+  const userHistory = editingId ? getHistory(editingId || '') : [];
+  const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
   
-  const userAccounts = accounts.filter(a => a.userId === editingId);
+  const userAccounts = editingId ? accounts.filter(a => a.userId === editingId) : [];
 
   return (
     <div className="space-y-6">
