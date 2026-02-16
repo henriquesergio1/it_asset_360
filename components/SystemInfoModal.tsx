@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -8,8 +7,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.25',
+    version: '2.12.26',
     date: 'Hoje',
+    title: 'High-Resolution Display Optimization',
+    changes: [
+      'Expansão de Layout: Aumento do limite de largura máxima do container principal para 1850px, melhorando o aproveitamento de espaço em monitores Ultra-wide e 4K.',
+      'Melhoria Visual: Redução das bordas laterais em resoluções altas para visualização otimizada de tabelas complexas.',
+      'Sincronização global da versão para 2.12.26.'
+    ]
+  },
+    {
+    version: '2.12.25',
+    date: 'Ontem',
     title: 'Login UI Fix & Consistency Update',
     changes: [
       'Correção de Layout: Ajuste da largura máxima do card de login (max-w-md) para evitar que a tela fique esticada em monitores grandes.',
@@ -28,7 +37,7 @@ const versions = [
   },
     {
     version: '2.12.23',
-    date: 'Ontem',
+    date: 'Anteontem',
     title: 'UserManager Logic Fix & New Registration Polish',
     changes: [
       'Correção de Bug Visual: As abas de "Ativos em Posse", "Licenças" e "Histórico" no cadastro de novo colaborador agora aparecem vazias, em vez de listar itens sem dono do estoque.',
