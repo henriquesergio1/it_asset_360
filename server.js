@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.37', 
+        version: '2.12.38', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.37 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.38 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.37 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.38 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -135,6 +135,51 @@ app.get('/api/terms/:id/file', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM Terms WHERE Id=@Id");
         res.json({ fileUrl: result.recordset[0]?.FileUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// v2.12.38 - Endpoint crítico para upload de termos digitalizados
+app.put('/api/terms/file/:id', async (req, res) => {
+    try {
+        const { fileUrl, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails FROM Terms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+        
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Url', sql.NVarChar, fileUrl)
+            .query("UPDATE Terms SET FileUrl=@Url WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        await logAction(term.UserId, 'User', 'Atualização', _adminUser, userName, `Digitalização anexada ao termo: ${term.AssetDetails}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// v2.12.38 - Endpoint crítico para remoção de anexos de termos
+app.delete('/api/terms/:id/file', async (req, res) => {
+    try {
+        const { _adminUser, reason } = req.body;
+        const pool = await sql.connect(dbConfig);
+
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails FROM Terms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE Terms SET FileUrl=NULL WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        await logAction(term.UserId, 'User', 'Atualização', _adminUser, userName, `Anexo removido do termo (${term.AssetDetails}). Motivo: ${reason || 'Não informado'}`);
+        res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -334,7 +379,7 @@ app.post('/api/operations/checkout', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.37: Snapshotting completo no log para identificação infalível
+            // v2.12.38: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -373,7 +418,7 @@ app.post('/api/operations/checkin', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.37: Snapshotting completo no log para identificação infalível
+            // v2.12.38: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -410,5 +455,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.37 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.38 rodando na porta ${PORT}`);
 });

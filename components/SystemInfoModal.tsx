@@ -8,19 +8,28 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.37',
+    version: '2.12.38',
     date: 'Hoje',
+    title: 'Critical Fix: Term File Management',
+    changes: [
+      'Correção de Bug: Implementados endpoints ausentes para upload e exclusão de termos digitalizados (Fix 404 error).',
+      'Auditoria de Anexos: Inclusão automática de logs de auditoria ao digitalizar ou remover arquivos de termos.',
+      'Sincronização de Estado: Atualização global para v2.12.38.'
+    ]
+  },
+    {
+    version: '2.12.37',
+    date: 'Ontem',
     title: 'Advanced Asset Snapshotting & Heuristics',
     changes: [
       'Persistência Histórica: Operações de entrega e devolução agora salvam snapshots JSON completos no log de auditoria.',
       'Rastreabilidade de Termos: Heurística de re-impressão aprimorada para localizar ativos mesmo após mudanças de identificador no cadastro principal.',
-      'Sincronização de Estado: Garantia de integridade de metadados durante o ciclo de vida do ativo.',
-      'Incremento global para v2.12.37.'
+      'Sincronização de Estado: Garantia de integridade de metadados durante o ciclo de vida do ativo.'
     ]
   },
     {
     version: '2.12.36',
-    date: 'Ontem',
+    date: '02/2025',
     title: 'Robust Multi-Identifier Asset Matching',
     changes: [
       'Identificação Infalível: Novos termos agora incluem obrigatoriamente o IMEI do ativo na string de detalhes.',
