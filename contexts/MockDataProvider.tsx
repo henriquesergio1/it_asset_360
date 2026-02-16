@@ -144,16 +144,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
-    fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
-    getTermFile: async (id: string) => "",
-    getDeviceInvoice: async (id: string) => "",
-    getMaintenanceInvoice: async (id: string) => "",
-    // Fix: implemented getLogDetail to satisfy DataContextType
-    getLogDetail: async (id: string) => {
-      const log = logs.find(l => l.id === id);
-      if (!log) throw new Error("Log não encontrado");
-      return log;
-    },
     addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,
@@ -216,6 +206,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
         }
     },
+    // Updated returnAsset implementation to handle user inactivation in mock mode
     returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser) => {
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
@@ -240,6 +231,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     fileUrl: ''
                 };
                 
+                // Aplicar inativação se solicitado
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
                     ...u, 
                     active: inactivateUser ? false : u.active,
@@ -273,6 +265,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     fileUrl: ''
                 };
 
+                // Aplicar inativação se solicitado
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
                     ...u, 
                     active: inactivateUser ? false : u.active,

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -8,35 +7,42 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.30',
+    version: '2.12.26',
     date: 'Hoje',
-    title: 'Precision Asset Mapping & Audit Fix',
+    title: 'High-Resolution Display Optimization',
     changes: [
-      'Correção de Reimpressão: Implementada detecção exata via Regex ([TAG: ...]) para garantir que o sistema localize o aparelho correto mesmo em casos de trocas consecutivas da mesma marca.',
-      'Cadeia de Custódia: Metadados de entrega e devolução agora são persistidos no campo Notes leve, garantindo que o histórico de posse apareça imediatamente sem depender de snapshots JSON pesados.',
-      'Melhoria de Auditoria: Aumento do limite de visualização rápida de logs e correção de visibilidade de nomes de colaboradores em conexões lentas.',
-      'Sincronização global da versão para 2.12.30.'
+      'Expansão de Layout: Aumento do limite de largura máxima do container principal para 1850px, melhorando o aproveitamento de espaço em monitores Ultra-wide e 4K.',
+      'Melhoria Visual: Redução das bordas laterais em resoluções altas para visualização otimizada de tabelas complexas.',
+      'Sincronização global da versão para 2.12.26.'
     ]
   },
     {
-    version: '2.12.29',
-    date: 'Hoje',
-    title: 'Compilation & Logic Fixes',
-    changes: [
-      'Correção de Erros: Implementação do método getLogDetail ausente no MockDataProvider.',
-      'Correção de Erros: Remoção de chamada inexistente setTerms no ProdDataProvider.',
-      'Correção de Erros: Ajuste de variáveis incorretas (a para adm) nos métodos CRUD de catálogo no ProdDataProvider.',
-      'Sincronização global da versão para 2.12.29.'
-    ]
-  },
-    {
-    version: '2.12.28',
+    version: '2.12.25',
     date: 'Ontem',
-    title: 'Differential Sync & Bandwidth Optimization',
+    title: 'Login UI Fix & Consistency Update',
     changes: [
-      'Otimização de Performance: Redução do payload de sincronização de 42.6MB para ~150KB por navegação via endpoint /api/sync.',
-      'Lazy Loading Estrutural: Fotos de modelos e logs pesados agora são carregados apenas sob demanda.',
-      'Dashboard Bugfix: Correção na lógica de termos pendentes.'
+      'Correção de Layout: Ajuste da largura máxima do card de login (max-w-md) para evitar que a tela fique esticada em monitores grandes.',
+      'Sincronização global da versão para 2.12.25.'
+    ]
+  },
+    {
+    version: '2.12.24',
+    date: 'Ontem',
+    title: 'UI Layout Confinement & Dashboard Optimization',
+    changes: [
+      'Ajuste de Layout: Adição de limite de largura máxima (max-w-7xl) no container principal para evitar que o conteúdo fique esticado em monitores grandes.',
+      'Refinamento Visual: Redução da altura dos cards de gráficos no Dashboard (380px) para melhor aproveitamento do espaço vertical.',
+      'Sincronização global da versão para 2.12.24.'
+    ]
+  },
+    {
+    version: '2.12.23',
+    date: 'Anteontem',
+    title: 'UserManager Logic Fix & New Registration Polish',
+    changes: [
+      'Correção de Bug Visual: As abas de "Ativos em Posse", "Licenças" e "Histórico" no cadastro de novo colaborador agora aparecem vazias, em vez de listar itens sem dono do estoque.',
+      'Refinamento de UX: Melhoria na consistência de dados ao alternar entre visualização e edição de colaboradores.',
+      'Sincronização global da versão para 2.12.23.'
     ]
   }
 ];
@@ -60,8 +66,19 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900">
+          <div className="mb-8 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-5 flex items-center gap-4">
+             <div className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-sm border border-blue-100 dark:border-blue-900/50">
+                <User size={24} className="text-blue-600 dark:text-blue-400"/>
+             </div>
+             <div>
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">Desenvolvido por</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Sergio Oliveira</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Engenheiro de Software Sênior</p>
+             </div>
+          </div>
+
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-            <GitCommit className="text-blue-600 dark:text-blue-400" size={20}/> Histórico de Versões
+            <GitCommit className="text-blue-600 dark:text-blue-400"/> Histórico de Versões
           </h3>
 
           <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-8 pb-4">

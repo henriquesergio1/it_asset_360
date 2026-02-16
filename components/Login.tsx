@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -91,7 +90,6 @@ const Login = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
-                {/* Fix: Added missing password input and closed the truncated block */}
                 <input 
                   type="password" 
                   required
@@ -105,24 +103,29 @@ const Login = () => {
             </div>
 
             {localError && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 p-3 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-medium animate-shake">
-                <AlertTriangle size={18} /> {localError}
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-lg text-center font-medium">
+                {localError}
               </div>
             )}
 
             <button 
               type="submit" 
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+              disabled={loading} 
+              className={`w-full font-bold py-3 rounded-lg transition-all text-white flex items-center justify-center gap-2 
+                ${loading ? 'bg-gray-400 dark:bg-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-lg active:scale-[0.98]'}`}
             >
-              {loading ? <Loader2 size={20} className="animate-spin" /> : <Database size={20} />}
-              {loading ? 'Sincronizando...' : 'Entrar no Sistema'}
+              {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin"/> 
+                    Conectando ao SQL...
+                  </>
+              ) : 'Entrar no Sistema'}
             </button>
           </form>
           
-          <div className="mt-8 pt-6 border-t dark:border-slate-800 text-center">
-             <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Problemas no acesso?</p>
-             <p className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer">Contatar Suporte de T.I.</p>
+          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 flex flex-col items-center gap-2">
+            <p className="text-xs text-gray-400 dark:text-slate-500">Versão 2.12.26</p>
+            <p className="text-xs text-gray-300 dark:text-slate-600">Autenticação centralizada no SQL Server.</p>
           </div>
         </div>
       </div>
