@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.38', 
+        version: '2.12.39', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.38 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.39 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.38 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.39 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -217,7 +217,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
-const IGNORED_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
+const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
 
 const crud = (table, route, assetType) => {
     app.post(`/api/${route}`, async (req, res) => {
@@ -227,7 +227,7 @@ const crud = (table, route, assetType) => {
             let columns = [];
             let values = [];
             for (let key in req.body) {
-                if (key.startsWith('_') || IGNORED_CRUD_KEYS.includes(key)) continue;
+                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 request.input(dbKey, val);
@@ -251,7 +251,7 @@ const crud = (table, route, assetType) => {
             let diffNotes = [];
             let sets = [];
             for (let key in req.body) {
-                if (key.startsWith('_') || IGNORED_CRUD_KEYS.includes(key)) continue;
+                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 
@@ -379,7 +379,7 @@ app.post('/api/operations/checkout', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.38: Snapshotting completo no log para identificação infalível
+            // v2.12.39: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -418,7 +418,7 @@ app.post('/api/operations/checkin', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.38: Snapshotting completo no log para identificação infalível
+            // v2.12.39: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -455,5 +455,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.38 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.39 rodando na porta ${PORT}`);
 });

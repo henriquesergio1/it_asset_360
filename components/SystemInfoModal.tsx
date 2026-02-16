@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.38',
+    version: '2.12.39',
     date: 'Hoje',
+    title: 'Visual Standardization & Column Fixes',
+    changes: [
+      'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
+      'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
+      'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
+      'Sincronização global para v2.12.39.'
+    ]
+  },
+    {
+    version: '2.12.38',
+    date: 'Ontem',
     title: 'Critical Fix: Term File Management',
     changes: [
       'Correção de Bug: Implementados endpoints ausentes para upload e exclusão de termos digitalizados (Fix 404 error).',
@@ -19,22 +30,12 @@ const versions = [
   },
     {
     version: '2.12.37',
-    date: 'Ontem',
+    date: '02/2025',
     title: 'Advanced Asset Snapshotting & Heuristics',
     changes: [
       'Persistência Histórica: Operações de entrega e devolução agora salvam snapshots JSON completos no log de auditoria.',
       'Rastreabilidade de Termos: Heurística de re-impressão aprimorada para localizar ativos mesmo após mudanças de identificador no cadastro principal.',
       'Sincronização de Estado: Garantia de integridade de metadados durante o ciclo de vida do ativo.'
-    ]
-  },
-    {
-    version: '2.12.36',
-    date: '02/2025',
-    title: 'Robust Multi-Identifier Asset Matching',
-    changes: [
-      'Identificação Infalível: Novos termos agora incluem obrigatoriamente o IMEI do ativo na string de detalhes.',
-      'Lógica de Re-impressão: O sistema prioriza IMEI > Tag > S/N para localizar o ativo exato no inventário.',
-      'Isolamento de Usuário: Fallback heurístico agora restringe a busca ao dono do termo, impedindo que ativos de outros colaboradores apareçam por engano.'
     ]
   }
 ];
