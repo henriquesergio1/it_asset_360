@@ -8,34 +8,32 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.23',
+    version: '2.12.25',
     date: 'Hoje',
+    title: 'Login UI Fix & Consistency Update',
+    changes: [
+      'Correção de Layout: Ajuste da largura máxima do card de login (max-w-md) para evitar que a tela fique esticada em monitores grandes.',
+      'Sincronização global da versão para 2.12.25.'
+    ]
+  },
+    {
+    version: '2.12.24',
+    date: 'Ontem',
+    title: 'UI Layout Confinement & Dashboard Optimization',
+    changes: [
+      'Ajuste de Layout: Adição de limite de largura máxima (max-w-7xl) no container principal para evitar que o conteúdo fique esticado em monitores grandes.',
+      'Refinamento Visual: Redução da altura dos cards de gráficos no Dashboard (380px) para melhor aproveitamento do espaço vertical.',
+      'Sincronização global da versão para 2.12.24.'
+    ]
+  },
+    {
+    version: '2.12.23',
+    date: 'Ontem',
     title: 'UserManager Logic Fix & New Registration Polish',
     changes: [
       'Correção de Bug Visual: As abas de "Ativos em Posse", "Licenças" e "Histórico" no cadastro de novo colaborador agora aparecem vazias, em vez de listar itens sem dono do estoque.',
       'Refinamento de UX: Melhoria na consistência de dados ao alternar entre visualização e edição de colaboradores.',
       'Sincronização global da versão para 2.12.23.'
-    ]
-  },
-    {
-    version: '2.12.22',
-    date: 'Ontem',
-    title: 'Bootstrap Performance & Entity Registration Optimization',
-    changes: [
-      'Novo Endpoint Agregado: Criação de /api/bootstrap para carregar todos os dados de cadastro em uma única requisição (redução de latência).',
-      'Otimização de Cadastro: O sistema agora está pronto para uso imediato após o login, com todos os ativos, chips e licenças pré-carregados.',
-      'Sincronização global da versão para 2.12.22.'
-    ]
-  },
-    {
-    version: '2.12.21',
-    date: 'Ontem',
-    title: 'UX Refresh Persistence & Init Optimization',
-    changes: [
-      'Correção crítica: Persistência de rota garantida ao atualizar a página (o app não volta mais para a Home se você estiver em outra tela).',
-      'Otimização de inicialização: O sistema agora prioriza o modo detectado anteriormente, eliminando o atraso de ping de rede no refresh.',
-      'Sincronização síncrona de autenticação: Estado do usuário carregado imediatamente do cache para evitar redirecionamentos indesejados.',
-      'Sincronização global da versão para 2.12.21.'
     ]
   }
 ];

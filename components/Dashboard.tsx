@@ -160,7 +160,7 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[400px]">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[380px]">
           <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">Status dos Dispositivos</h2>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
@@ -179,7 +179,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[400px] flex flex-col">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[380px] flex flex-col">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                     <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
