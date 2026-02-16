@@ -29,6 +29,7 @@ export interface DataContextType {
   getTermFile: (id: string) => Promise<string>;
   getDeviceInvoice: (id: string) => Promise<string>;
   getMaintenanceInvoice: (id: string) => Promise<string>;
+  getLogDetail: (id: string) => Promise<AuditLog>;
 
   // CRUD Dispositivos
   addDevice: (device: Device, adminName: string) => void;

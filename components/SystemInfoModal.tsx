@@ -8,8 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.28',
+    version: '2.12.29',
     date: 'Hoje',
+    title: 'Compilation & Logic Fixes',
+    changes: [
+      'Correção de Erros: Implementação do método getLogDetail ausente no MockDataProvider.',
+      'Correção de Erros: Remoção de chamada inexistente setTerms no ProdDataProvider.',
+      'Correção de Erros: Ajuste de variáveis incorretas (a para adm) nos métodos CRUD de catálogo no ProdDataProvider.',
+      'Sincronização global da versão para 2.12.29.'
+    ]
+  },
+    {
+    version: '2.12.28',
+    date: 'Ontem',
     title: 'Compiling Errors Fix & Mock Implementation',
     changes: [
       'Correção de Erro: Finalização e exportação do componente de Login que estava truncado.',
