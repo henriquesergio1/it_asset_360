@@ -8,23 +8,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.13.0',
+    version: '2.12.36',
     date: 'Hoje',
-    title: 'Baseline: Integrated IT Asset Management',
+    title: 'Robust Multi-Identifier Asset Matching',
     changes: [
-      'Gestão Unificada: Sistema otimizado para celulares, computadores e chips de TI.',
-      'Identificadores robustos: Foco em Patrimônio (Tag), IMEI e Serial Number.',
-      'Consolidação de versão v2.13.0 para baseline de projeto.'
+      'Identificação Infalível: Novos termos agora incluem obrigatoriamente o IMEI do ativo na string de detalhes.',
+      'Lógica de Re-impressão: O sistema prioriza IMEI > Tag > S/N para localizar o ativo exato no inventário.',
+      'Isolamento de Usuário: Fallback heurístico agora restringe a busca ao dono do termo.',
+      'Sincronização global para 2.12.36.'
     ]
   },
     {
-    version: '2.12.37',
+    version: '2.12.35',
     date: 'Ontem',
-    title: 'High-Fidelity Term Re-printing',
+    title: 'Strict Term Asset Matching',
     changes: [
-      'Recuperação de Snapshot: Re-impressões agora trazem os acessórios exatos que foram entregues no passado.',
-      'Notas Originais: A observação digitada no ato da Entrega/Devolução agora é recuperada automaticamente.',
-      'Arquitetura de Vínculo: Cada termo agora possui um LogId vinculado.'
+      'BUGFIX: Resolvido erro de "Ativo não encontrado" na re-impressão de termos quando a TAG era nula.',
+      'Enriquecimento de Termos: Novos termos agora incluem o S/N (Serial Number) para garantir precisão.',
+      'Heurística de Fallback: Localização via Modelo + Vínculo Atual se a Tag falhar.'
     ]
   }
 ];

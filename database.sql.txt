@@ -1,15 +1,6 @@
 
--- Script de Atualização para v2.12.37
--- Adiciona vínculo de termos com logs para re-impressão fiel (acessórios e notas históricas)
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Terms') AND name = 'LogId')
-BEGIN
-    ALTER TABLE Terms ADD LogId NVARCHAR(50) NULL;
-END
-GO
-
 -- Script Completo de Criação de Tabelas - IT Asset 360
--- Versão 2.3.7 (Auditoria com Vínculo de Termos)
+-- Versão 2.3 (Auditoria Detalhada)
 
 -- Configurações e Sistema
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings')
@@ -169,7 +160,6 @@ CREATE TABLE Terms (
     AssetDetails NVARCHAR(255),
     Date DATETIME2,
     FileUrl NVARCHAR(MAX),
-    LogId NVARCHAR(50) NULL, -- Vínculo para auditoria de acessórios históricos
     CONSTRAINT FK_Terms_Users FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
 );
 
@@ -184,8 +174,8 @@ CREATE TABLE AuditLogs (
     Notes NVARCHAR(MAX),
     AdminUser NVARCHAR(100),
     BackupData NVARCHAR(MAX),
-    PreviousData NVARCHAR(MAX), 
-    NewData NVARCHAR(MAX)      
+    PreviousData NVARCHAR(MAX), -- NOVO
+    NewData NVARCHAR(MAX)      -- NOVO
 );
 
 -- Seed Minimal
