@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.32', 
+        version: '2.12.33', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.32 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.33 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.32 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.33 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -172,6 +172,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
+// v2.12.33: Filtro de chaves não-coluna para evitar erros de validação SQL
+const IGNORED_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
+
 const crud = (table, route, assetType) => {
     app.post(`/api/${route}`, async (req, res) => {
         try {
@@ -180,7 +183,7 @@ const crud = (table, route, assetType) => {
             let columns = [];
             let values = [];
             for (let key in req.body) {
-                if (key.startsWith('_')) continue;
+                if (key.startsWith('_') || IGNORED_CRUD_KEYS.includes(key)) continue;
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 request.input(dbKey, val);
@@ -204,7 +207,7 @@ const crud = (table, route, assetType) => {
             let diffNotes = [];
             let sets = [];
             for (let key in req.body) {
-                if (key.startsWith('_')) continue;
+                if (key.startsWith('_') || IGNORED_CRUD_KEYS.includes(key)) continue;
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 
@@ -241,7 +244,6 @@ const crud = (table, route, assetType) => {
     });
 };
 
-// v2.12.32: Ativação dos endpoints CRUD para todas as tabelas (incluindo principais)
 crud('Sectors', 'sectors', 'Sector');
 crud('Brands', 'brands', 'Brand');
 crud('AssetTypes', 'asset-types', 'Type');
@@ -407,5 +409,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.32 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.33 rodando na porta ${PORT}`);
 });

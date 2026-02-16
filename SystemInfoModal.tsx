@@ -8,23 +8,22 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.32',
+    version: '2.12.33',
     date: 'Hoje',
-    title: 'Write Endpoint Restoration & Audit Fix',
+    title: 'SQL Parameter Validation & UI Fix',
     changes: [
-      'BUGFIX: Restaurados os endpoints de atualização (PUT) que estavam retornando 404.',
-      'Auditoria Rica: Mapeamento corrigido para exibir Patrimônio (AssetTag) no alvo da auditoria.',
-      'Sincronização global da versão para 2.12.32.'
+      'BUGFIX: Resolvido erro 500 ao salvar Dispositivos e Usuários. O servidor agora filtra propriedades de navegação (accessories, terms) que não são colunas do banco de dados.',
+      'UI Fix: Botão "Habilitar Edição" agora previne o bubbling de eventos, evitando pedidos de motivo de alteração indevidos ao entrar no modo de edição.',
+      'Sincronização global da versão para 2.12.33.'
     ]
   },
     {
-    version: '2.12.31',
+    version: '2.12.32',
     date: 'Ontem',
-    title: 'Snipe-IT Style Rich Audit',
+    title: 'Write Endpoint Restoration & Audit Fix',
     changes: [
-      'Auditoria Rica: Geração automática de diffs (De ➔ Para) nas atualizações.',
-      'Interface Sniper-IT: Novo renderizador de logs com cores e formatação.',
-      'Regex Estrito: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP.'
+      'BUGFIX: Restaurados os endpoints de atualização (PUT) que estavam retornando 404.',
+      'Auditoria Rica: Mapeamento corrigido para exibir Patrimônio (AssetTag) no alvo da auditoria.'
     ]
   }
 ];
