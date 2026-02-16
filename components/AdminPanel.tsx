@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,9 +7,35 @@ import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Ser
 import DataImporter from './DataImporter';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
-// --- SUB-COMPONENTE: AuditDetailModal (v2.12.28 - Lazy Load Detalhes) ---
+const FIELD_LABELS: Record<string, string> = {
+    sectorId: 'Setor/Cargo',
+    linkedSimId: 'Chip Vinculado',
+    currentUserId: 'Responsável Atual',
+    userId: 'Colaborador',
+    modelId: 'Modelo do Ativo',
+    purchaseDate: 'Data de Compra',
+    purchaseCost: 'Custo de Aquisição',
+    invoiceNumber: 'Número da Nota',
+    internalCode: 'Código Interno',
+    pulsusId: 'ID MDM Pulsus',
+    serialNumber: 'Nº Série',
+    assetTag: 'Patrimônio',
+    customData: 'Dados Extras',
+    fullName: 'Nome Completo',
+    email: 'E-mail',
+    active: 'Status Ativo',
+    address: 'Endereço Residencial',
+    phoneNumber: 'Linha Telefônica',
+    operator: 'Operadora',
+    iccid: 'ICCID',
+    planDetails: 'Plano',
+    status: 'Estado Global',
+    id: 'ID Sistema'
+};
+
+// --- SUB-COMPONENTE: AuditDetailModal (v2.12.34 - Friendly Mapping) ---
 const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => void }) => {
-    const { getLogDetail } = useData();
+    const { getLogDetail, sectors, sims, users, models, customFields } = useData();
     const [log, setLog] = useState<AuditLog | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -23,11 +50,45 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
         load();
     }, [logId]);
 
-    const formatValue = (v: any) => {
-        if (v === null || v === undefined) return <span className="text-slate-300 dark:text-slate-600 italic text-[10px]">vazio</span>;
-        if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
-        if (typeof v === 'object') return <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 break-all">{JSON.stringify(v)}</span>;
-        return String(v);
+    const resolveFriendlyValue = (key: string, val: any): any => {
+        if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-300 dark:text-slate-600 italic text-[10px]">vazio</span>;
+        
+        // Formatação de data
+        if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
+            try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
+        }
+
+        // Formatação de dinheiro
+        if (key === 'purchaseCost') {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+        }
+
+        // Resolução de IDs
+        if (key === 'sectorId') return sectors.find(s => s.id === val)?.name || val;
+        if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
+        if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
+        if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
+        if (key === 'active') return val ? 'Ativo' : 'Inativo';
+
+        // Resolução de Dados Customizados
+        if (key === 'customData') {
+            try {
+                const data = typeof val === 'string' ? JSON.parse(val) : val;
+                return (
+                    <div className="flex flex-col gap-1">
+                        {Object.entries(data).map(([fieldId, fieldVal]: [string, any]) => {
+                            const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
+                            return <div key={fieldId} className="text-[10px]"><span className="font-bold opacity-60">{fieldName}:</span> {String(fieldVal || 'vazio')}</div>;
+                        })}
+                    </div>
+                );
+            } catch (e) { return <span className="text-[10px] font-mono text-slate-400 break-all">{JSON.stringify(val)}</span>; }
+        }
+
+        if (typeof val === 'boolean') return val ? 'Sim' : 'Não';
+        if (typeof val === 'object') return <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 break-all">{JSON.stringify(val)}</span>;
+        
+        return String(val);
     };
 
     if (loading) return (
@@ -41,7 +102,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
 
     if (!log) return null;
 
-    let diffs: { field: string, old: any, new: any }[] = [];
+    let diffs: { field: string, rawKey: string, old: any, new: any }[] = [];
     try {
         const prev = log.previousData ? JSON.parse(log.previousData) : null;
         const next = log.newData ? JSON.parse(log.newData) : null;
@@ -50,7 +111,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
             allKeys.forEach(key => {
                 if (key.startsWith('_')) return;
                 if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) {
-                    diffs.push({ field: key, old: prev[key], new: next[key] });
+                    diffs.push({ field: FIELD_LABELS[key] || key, rawKey: key, old: prev[key], new: next[key] });
                 }
             });
         }
@@ -86,9 +147,9 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
                                 <tbody className="divide-y dark:divide-slate-800">
                                     {diffs.map((d, i) => (
                                         <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
-                                            <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300 capitalize">{d.field}</td>
-                                            <td className="px-4 py-3 text-red-600 dark:text-red-400 bg-red-50/30 dark:bg-red-900/10 line-through decoration-red-300 dark:decoration-red-700">{formatValue(d.old)}</td>
-                                            <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10 font-bold">{formatValue(d.new)}</td>
+                                            <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{d.field}</td>
+                                            <td className="px-4 py-3 text-red-600 dark:text-red-400 bg-red-50/30 dark:bg-red-900/10 line-through decoration-red-300 dark:decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
+                                            <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
                                         </tr>
                                     ))}
                                 </tbody>

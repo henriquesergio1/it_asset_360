@@ -133,6 +133,7 @@ export interface Term {
   assetDetails: string; 
   date: string;
   fileUrl: string; 
+  logId?: string; // NOVO v2.12.37: Vínculo com log de auditoria
 }
 
 export type ReturnChecklist = Record<string, boolean>;
@@ -199,8 +200,8 @@ export interface AuditLog {
   notes?: string;
   adminUser: string;
   backupData?: string; 
-  previousData?: string; // NOVO: Snapshot antes da alteração
-  newData?: string;      // NOVO: Snapshot depois da alteração
+  previousData?: string; // Snapshot antes da alteração
+  newData?: string;      // Snapshot depois da alteração
 }
 
 export interface DashboardStats {

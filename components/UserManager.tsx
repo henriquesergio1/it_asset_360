@@ -29,12 +29,71 @@ const formatRG = (v: string): string => {
     return v.toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
 };
 
+const FIELD_LABELS: Record<string, string> = {
+    sectorId: 'Setor/Cargo',
+    linkedSimId: 'Chip Vinculado',
+    currentUserId: 'Responsável Atual',
+    userId: 'Colaborador',
+    modelId: 'Modelo do Ativo',
+    purchaseDate: 'Data de Compra',
+    purchaseCost: 'Custo de Aquisição',
+    invoiceNumber: 'Número da Nota',
+    internalCode: 'Código Interno',
+    pulsusId: 'ID MDM Pulsus',
+    serialNumber: 'Nº Série',
+    assetTag: 'Patrimônio',
+    customData: 'Dados Extras',
+    fullName: 'Nome Completo',
+    email: 'E-mail',
+    active: 'Status Ativo',
+    address: 'Endereço Residencial',
+    phoneNumber: 'Linha Telefônica',
+    operator: 'Operadora',
+    iccid: 'ICCID',
+    planDetails: 'Plano',
+    status: 'Estado Global',
+    id: 'ID Sistema'
+};
+
 const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
-    const { devices, sims, users } = useData();
+    const { devices, sims, users, sectors, models, customFields } = useData();
     const navigate = useNavigate();
     const note = log.notes || '';
 
-    // v2.12.31: Renderizador Rico estilo Snipe-IT
+    const resolveValue = (key: string, val: any): string => {
+        if (val === null || val === undefined || val === '---' || val === '') return 'Nenhum';
+        
+        // Formatação de data
+        if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
+            try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
+        }
+
+        // Formatação de dinheiro
+        if (key === 'purchaseCost') {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+        }
+
+        // Resolução de IDs
+        if (key === 'sectorId') return sectors.find(s => s.id === val)?.name || val;
+        if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
+        if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
+        if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
+        if (key === 'active') return val ? 'Ativo/Sim' : 'Inativo/Não';
+
+        // Resolução de Dados Customizados
+        if (key === 'customData') {
+            try {
+                const data = typeof val === 'string' ? JSON.parse(val) : val;
+                return Object.entries(data).map(([fieldId, fieldVal]) => {
+                    const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
+                    return `${fieldName}: ${fieldVal || 'vazio'}`;
+                }).join('; ');
+            } catch (e) { return String(val); }
+        }
+
+        return String(val);
+    };
+
     const lines = note.split('\n');
 
     return (
@@ -44,18 +103,24 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
 
                 // Caso 1: Mudança de valor (estilo Sniper-IT: 'Campo: 'antigo' ➔ 'novo'')
                 if (line.includes('➔')) {
-                    const [fieldLabel, values] = line.split(':');
-                    const [oldVal, newVal] = (values || '').split('➔');
+                    const parts = line.split(':');
+                    const rawKey = parts[0]?.trim();
+                    const fieldLabel = FIELD_LABELS[rawKey] || rawKey;
+                    const valuesPart = parts.slice(1).join(':');
+                    const [oldVal, newVal] = (valuesPart || '').split('➔');
                     
+                    const cleanOld = oldVal?.trim().replace(/'/g, '');
+                    const cleanNew = newVal?.trim().replace(/'/g, '');
+
                     return (
                         <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
                             <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
                             <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
-                                {oldVal?.trim().replace(/'/g, '') || '---'}
+                                {resolveValue(rawKey, cleanOld)}
                             </span>
                             <ArrowRight size={10} className="text-slate-300"/>
                             <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
-                                {newVal?.trim().replace(/'/g, '') || '---'}
+                                {resolveValue(rawKey, cleanNew)}
                             </span>
                         </div>
                     );
@@ -106,7 +171,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile, getLogDetail } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -137,6 +202,7 @@ const UserManager = () => {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
+  const [isReprinting, setIsReprinting] = useState<Record<string, boolean>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
 
@@ -207,46 +273,95 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  const handleReprintTerm = (term: Term) => {
+  const handleReprintTerm = async (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
       
-      let asset: any = null;
-      const tagMatch = term.assetDetails.match(/\[TAG:\s*([^\]]+)\]/i);
-      const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
+      setIsReprinting(prev => ({ ...prev, [term.id]: true }));
+      
+      try {
+          let asset: any = null;
+          let originalNotes = 'Re-impressão via painel do colaborador.';
+          let historicalAccessories = [];
 
-      if (tagMatch) {
-          const tagValue = tagMatch[1].trim();
-          asset = devices.find(d => d.assetTag === tagValue);
-      } else if (chipMatch) {
-          const phoneValue = chipMatch[1].trim();
-          asset = sims.find(s => s.phoneNumber === phoneValue);
+          // v2.12.37: Prioridade para dados históricos via LOG vinculado
+          if (term.logId) {
+              try {
+                  const log = await getLogDetail(term.logId);
+                  const snapshotStr = term.type === 'ENTREGA' ? log.newData : log.previousData;
+                  if (snapshotStr) {
+                      const snapshot = JSON.parse(snapshotStr);
+                      // Reconstruir ativo a partir do snapshot
+                      asset = { ...snapshot };
+                      historicalAccessories = snapshot.accessories || [];
+                      
+                      // Tentar extrair observação original do campo notes do log
+                      const obsMatch = log.notes?.match(/Observação:\s*([^.\n]+)/i);
+                      if (obsMatch) originalNotes = obsMatch[1].trim();
+                      else if (log.notes) originalNotes = log.notes.split('\n')[0]; // Pega a primeira linha como backup
+                  }
+              } catch (e) {
+                  console.warn("Falha ao recuperar log histórico, usando fallback heurístico.");
+              }
+          }
+
+          // Fallback Heurístico (Legado v2.12.36) se o LogId falhou ou não existe
+          if (!asset) {
+              const imeiMatch = term.assetDetails.match(/IMEI:\s*([^|\]\s]+)/i);
+              const tagMatch = term.assetDetails.match(/\[TAG:\s*([^|\]\s]+)/i);
+              const snMatch = term.assetDetails.match(/S\/N:\s*([^|\]\s]+)/i);
+              const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
+
+              if (imeiMatch) {
+                  const imeiValue = imeiMatch[1].trim();
+                  if (imeiValue && imeiValue.toLowerCase() !== 's/i') asset = devices.find(d => d.imei === imeiValue);
+              }
+              if (!asset && tagMatch) {
+                  const tagValue = tagMatch[1].trim();
+                  if (tagValue && tagValue.toLowerCase() !== 'null' && tagValue.toLowerCase() !== 's/t') asset = devices.find(d => d.assetTag === tagValue);
+              }
+              if (!asset && snMatch) {
+                  const snValue = snMatch[1].trim();
+                  if (snValue && snValue.toLowerCase() !== 's/s') asset = devices.find(d => d.serialNumber === snValue);
+              }
+              if (!asset && chipMatch) {
+                  const phoneValue = chipMatch[1].trim();
+                  asset = sims.find(s => s.phoneNumber === phoneValue);
+              }
+              if (!asset && editingId) {
+                  const modelInDetail = term.assetDetails.toLowerCase();
+                  asset = devices.find(d => (d.currentUserId === editingId || !d.currentUserId) && modelInDetail.includes((models.find(m => m.id === d.modelId)?.name || '').toLowerCase()));
+              }
+          }
+
+          if (!asset) { 
+              alert("Não foi possível localizar o ativo no inventário atual para re-impressão.\n\nIdentificação no termo: " + term.assetDetails); 
+              return; 
+          }
+
+          // Preparar dados para o gerador
+          let model, brand, type, linkedSim;
+          if ('modelId' in asset) {
+              model = models.find(m => m.id === asset.modelId);
+              brand = brands.find(b => b.id === model?.brandId);
+              type = assetTypes.find(t => t.id === model?.typeId);
+              // v2.12.37: Se temos acessórios históricos, usamos eles, senão usamos os atuais
+              if (historicalAccessories.length > 0) asset.accessories = historicalAccessories;
+              
+              if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
+          }
+
+          generateAndPrintTerm({
+              user, asset, settings, model, brand, type, linkedSim,
+              actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
+              sectorName: sectors.find(s => s.id === user.sectorId)?.name,
+              notes: originalNotes
+          });
+      } catch (err) {
+          alert("Erro técnico ao processar re-impressão.");
+      } finally {
+          setIsReprinting(prev => ({ ...prev, [term.id]: false }));
       }
-
-      if (!asset) {
-          asset = devices.find(d => d.assetTag && term.assetDetails.includes(d.assetTag));
-          if (!asset) asset = sims.find(s => term.assetDetails.includes(s.phoneNumber));
-      }
-
-      if (!asset) { 
-          alert("Não foi possível localizar este ativo específico no inventário atual para re-impressão.\n\nIdentificação no termo: " + term.assetDetails); 
-          return; 
-      }
-
-      let model, brand, type, linkedSim;
-      if ('serialNumber' in asset) {
-          model = models.find(m => m.id === asset.modelId);
-          brand = brands.find(b => b.id === model?.brandId);
-          type = assetTypes.find(t => t.id === model?.typeId);
-          if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
-      }
-
-      generateAndPrintTerm({
-          user, asset, settings, model, brand, type, linkedSim,
-          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
-          sectorName: sectors.find(s => s.id === user.sectorId)?.name,
-          notes: 'Re-impressão via painel do colaborador.'
-      });
   };
 
   const handleOpenFile = async (termId: string, fileUrl?: string) => {
@@ -416,10 +531,10 @@ const UserManager = () => {
             <div className="bg-slate-900 dark:bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div>
             <div className="flex bg-slate-50 dark:bg-slate-950 border-b dark:border-slate-800 overflow-x-auto shrink-0 px-4 pt-2"><button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Dados Cadastrais</button><button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Ativos em Posse</button><button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Licenças e Contas</button><button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Termos Gerados</button><button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Histórico</button></div>
             <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900 transition-colors">
-                {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value)})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
+                {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value)})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
                 {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
                 {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
-                {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p></div></div><div className="flex items-center gap-2">{(term.fileUrl || term.hasFile) ? (<><button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">{loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}</button>{!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}</>) : (!isViewOnly && (<label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2"><Upload size={14}/> Digitalizar<input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} /></label>))}<button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo"><Printer size={18}/></button></div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
+                {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p></div></div><div className="flex items-center gap-2">{(term.fileUrl || term.hasFile) ? (<><button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">{loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}</button>{!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}</>) : (!isViewOnly && (<label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2"><Upload size={14}/> Digitalizar<input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} /></label>))}<button disabled={isReprinting[term.id]} onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center justify-center" title="Re-imprimir Termo">{isReprinting[term.id] ? <Loader2 size={18} className="animate-spin text-blue-600"/> : <Printer size={18}/>}</button></div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
                 {activeTab === 'LOGS' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{userHistory.map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">

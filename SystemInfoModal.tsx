@@ -8,22 +8,23 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.33',
+    version: '2.13.0',
     date: 'Hoje',
-    title: 'SQL Parameter Validation & UI Fix',
+    title: 'Baseline: Integrated IT Asset Management',
     changes: [
-      'BUGFIX: Resolvido erro 500 ao salvar Dispositivos e Usuários. O servidor agora filtra propriedades de navegação (accessories, terms) que não são colunas do banco de dados.',
-      'UI Fix: Botão "Habilitar Edição" agora previne o bubbling de eventos, evitando pedidos de motivo de alteração indevidos ao entrar no modo de edição.',
-      'Sincronização global da versão para 2.12.33.'
+      'Gestão Unificada: Sistema otimizado para celulares, computadores e chips de TI.',
+      'Identificadores robustos: Foco em Patrimônio (Tag), IMEI e Serial Number.',
+      'Consolidação de versão v2.13.0 para baseline de projeto.'
     ]
   },
     {
-    version: '2.12.32',
+    version: '2.12.37',
     date: 'Ontem',
-    title: 'Write Endpoint Restoration & Audit Fix',
+    title: 'High-Fidelity Term Re-printing',
     changes: [
-      'BUGFIX: Restaurados os endpoints de atualização (PUT) que estavam retornando 404.',
-      'Auditoria Rica: Mapeamento corrigido para exibir Patrimônio (AssetTag) no alvo da auditoria.'
+      'Recuperação de Snapshot: Re-impressões agora trazem os acessórios exatos que foram entregues no passado.',
+      'Notas Originais: A observação digitada no ato da Entrega/Devolução agora é recuperada automaticamente.',
+      'Arquitetura de Vínculo: Cada termo agora possui um LogId vinculado.'
     ]
   }
 ];

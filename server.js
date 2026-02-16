@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.33', 
+        version: '2.13.0', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.33 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.13.0 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -62,7 +62,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile, LogId FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.33 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.13.0 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -94,8 +94,8 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id as id, DeviceId as deviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile, LogId FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
         ]);
 
@@ -154,11 +154,12 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null, previousData = null, newData = null) {
+async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null, previousData = null, newData = null, pool = null) {
     try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
+        const usedPool = pool || await sql.connect(dbConfig);
+        const logId = Math.random().toString(36).substr(2, 9);
+        await usedPool.request()
+            .input('Id', sql.NVarChar, logId)
             .input('AssetId', sql.NVarChar, assetId)
             .input('AssetType', sql.NVarChar, assetType)
             .input('Action', sql.NVarChar, action)
@@ -169,10 +170,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             .input('Prev', sql.NVarChar, previousData ? (typeof previousData === 'string' ? previousData : JSON.stringify(previousData)) : null)
             .input('Next', sql.NVarChar, newData ? (typeof newData === 'string' ? newData : JSON.stringify(newData)) : null)
             .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, TargetName, Notes, BackupData, PreviousData, NewData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @TargetName, @Notes, @BackupData, @Prev, @Next)`);
-    } catch (e) { console.error('Erro de Log:', e); }
+        return logId;
+    } catch (e) { console.error('Erro de Log:', e); return null; }
 }
 
-// v2.12.33: Filtro de chaves não-coluna para evitar erros de validação SQL
 const IGNORED_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
 
 const crud = (table, route, assetType) => {
@@ -192,7 +193,7 @@ const crud = (table, route, assetType) => {
             }
             await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
-            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, tName, 'Item criado manualmente no sistema');
+            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, tName, 'Item criado manualmente no sistema', null, null, null, pool);
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -230,7 +231,7 @@ const crud = (table, route, assetType) => {
             const richNotes = (req.body._notes || req.body._reason ? `Motivo: ${req.body._notes || req.body._reason}\n\n` : '') + diffNotes.join('\n');
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
             
-            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body);
+            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body, pool);
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -270,7 +271,7 @@ app.put('/api/settings', async (req, res) => {
     const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
     const prev = oldRes.recordset[0];
     await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj });
+    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj }, pool);
     res.json({success: true});
 });
 
@@ -331,15 +332,19 @@ app.post('/api/operations/checkout', async (req, res) => {
         
         let assetDetails = notes || '';
         let targetIdStr = assetId;
+        let snapshotAsset = null;
 
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            assetDetails = `[TAG: ${prev.AssetTag}] ${modelName}`;
-            targetIdStr = `${prev.AssetTag} (${modelName})`;
+            assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
+            targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
+            // Snapshot completo para o log v2.13.0
+            snapshotAsset = { ...prev, accessories: accessories || [] };
         } else if (prev) {
             assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
             targetIdStr = prev.PhoneNumber;
+            snapshotAsset = { ...prev };
         }
 
         await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
@@ -349,11 +354,20 @@ app.post('/api/operations/checkout', async (req, res) => {
                 await pool.request().input('I', acc.id).input('Did', assetId).input('At', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@I, @Did, @At, @N)");
             }
         }
-        const termId = Math.random().toString(36).substr(2, 9);
-        await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         
         const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
+        // v2.13.0: Salvando LogId no Termo para re-impressão fiel
+        const logId = await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { ...snapshotAsset, status: 'Em Uso', currentUserId: userId, userName: userName }, pool);
+        
+        const termId = Math.random().toString(36).substr(2, 9);
+        await pool.request()
+            .input('I', termId)
+            .input('U', userId)
+            .input('T', 'ENTREGA')
+            .input('Ad', assetDetails)
+            .input('Lid', logId)
+            .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, LogId) VALUES (@I, @U, @T, @Ad, GETDATE(), @Lid)");
+        
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -363,21 +377,32 @@ app.post('/api/operations/checkin', async (req, res) => {
         const { assetId, assetType, notes, _adminUser, inactivateUser } = req.body;
         const pool = await sql.connect(dbConfig);
         const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+        
+        // v2.13.0: Pegar acessórios ANTES da devolução para o snapshot
+        let oldAccs = [];
+        if (assetType === 'Device') {
+            const accRes = await pool.request().input('Did', assetId).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@Did");
+            oldAccs = accRes.recordset;
+        }
+
         const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
         const prev = oldRes.recordset[0];
         const userId = prev?.CurrentUserId;
         
         let assetDetails = notes || '';
         let targetIdStr = assetId;
+        let snapshotAsset = null;
 
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            assetDetails = `[TAG: ${prev.AssetTag}] ${modelName}`;
-            targetIdStr = `${prev.AssetTag} (${modelName})`;
+            assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
+            targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
+            snapshotAsset = { ...prev, accessories: oldAccs };
         } else if (prev) {
             assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
             targetIdStr = prev.PhoneNumber;
+            snapshotAsset = { ...prev };
         }
 
         let userName = 'Colaborador';
@@ -392,22 +417,29 @@ app.post('/api/operations/checkin', async (req, res) => {
 
         await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
         
+        const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
+        const logId = await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { ...snapshotAsset, userName: userName }, { status: 'Disponível', currentUserId: null }, pool);
+
         if (userId) {
             const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            await pool.request()
+                .input('I', termId)
+                .input('U', userId)
+                .input('T', 'DEVOLUCAO')
+                .input('Ad', assetDetails)
+                .input('Lid', logId)
+                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, LogId) VALUES (@I, @U, @T, @Ad, GETDATE(), @Lid)");
             
             if (inactivateUser) {
                 await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
-                await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
+                await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)', null, null, null, pool);
             }
         }
         
-        const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.33 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.13.0 rodando na porta ${PORT}`);
 });
