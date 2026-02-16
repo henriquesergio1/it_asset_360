@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
@@ -43,7 +44,13 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   });
 
   const { logout, user, isAdmin } = useAuth();
-  const { settings } = useData();
+  const { settings, fetchData } = useData();
+  const location = useLocation();
+
+  // Sincronização por Navegação (On-Demand Sync)
+  useEffect(() => {
+      fetchData(true); // Sincroniza silenciosamente ao mudar de tela
+  }, [location.pathname]);
 
   useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
@@ -100,7 +107,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
 
-        {/* Navigation - Mandatory Order (v2.12.26) */}
+        {/* Navigation - Mandatory Order (v2.12.30) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />
@@ -122,7 +129,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full animate-fade-in overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão 2.12.26</span>
+                 <span>Versão 2.12.30</span>
               </div>
           )}
           <button 
@@ -143,7 +150,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
           
           <div className="flex items-center space-x-4 ml-auto">
-            {/* Theme Toggle Button */}
             <button 
               onClick={toggleTheme} 
               className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-amber-400 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-inner"

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -33,9 +32,9 @@ const Dashboard = () => {
     { name: 'Manutenção', value: maintenanceDevices, color: '#F59E0B' }, 
   ];
 
-  // Filtra termos pendentes (inclusive de colaboradores inativados recentemente)
+  // Filtra termos pendentes (v2.12.28 - Fix lógica: pendente se não tem URL E não tem flag de arquivo no servidor)
   const pendingTerms = users.flatMap(u => 
-      (u.terms || []).filter(t => !t.fileUrl).map(t => ({
+      (u.terms || []).filter(t => !t.fileUrl && !t.hasFile).map(t => ({
           term: t,
           user: u
       }))

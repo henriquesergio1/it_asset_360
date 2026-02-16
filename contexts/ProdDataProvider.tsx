@@ -17,7 +17,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>([]);
   const [sectors, setSectors] = useState<UserSector[]>([]);
-  const [terms, setTerms] = useState<Term[]>([]);
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
@@ -33,52 +32,78 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return res.json();
   };
 
-  const fetchData = async () => {
+  const fetchData = async (silent: boolean = false) => {
     try {
-      setLoading(true);
-      console.log("[ITAsset360] Sincronizando dados com SQL Server via Bootstrap...");
+      if (!silent) setLoading(true);
+      
+      // Se for atualização silenciosa (navegação), usa o endpoint /api/sync que economiza 99% de banda (sem fotos)
+      const endpoint = silent ? '/api/sync' : '/api/bootstrap';
+      console.log(`[ITAsset360] Sincronizando dados via ${endpoint}...`);
 
-      const res = await fetch(`${API_URL}/api/bootstrap`);
-      const data = await safeJson(res, '/api/bootstrap');
+      const res = await fetch(`${API_URL}${endpoint}`);
+      const data = await safeJson(res, endpoint);
 
       const {
           devices: devicesData, sims: simsData, users: usersData, logs: logsData, 
-          systemUsers: sysUsersData, settings: settingsData, models: modelsData, 
-          brands: brandsData, assetTypes: typesData, maintenances: maintData, 
-          sectors: sectorsData, terms: termsData, accessoryTypes: accTypesData, 
-          customFields: customFieldsData, accounts: accountsData
+          maintenances: maintData, terms: termsData, accounts: accountsData
       } = data;
 
       setDevices(devicesData);
       setSims(simsData);
-      
       setUsers(usersData.map((u: User) => ({ 
           ...u, 
           terms: termsData.filter((t: Term) => t.userId === u.id) 
       })));
-
       setLogs(logsData);
-      setSystemUsers(sysUsersData);
-      setSettings(settingsData);
-      setModels(modelsData);
-      setBrands(brandsData);
-      setAssetTypes(typesData);
       setMaintenances(maintData);
-      setSectors(sectorsData);
-      setAccessoryTypes(accTypesData);
-      setCustomFields(customFieldsData);
-      setTerms(termsData);
+      // setTerms call removed as state is not defined and data is mapped to users
       setAccounts(accountsData);
+
+      // Apenas atualiza catálogo no bootstrap inicial ou carregamento forçado
+      if (!silent) {
+          setSystemUsers(data.systemUsers || []);
+          setSettings(data.settings || { appName: 'IT Asset', logoUrl: '' });
+          setModels(data.models || []);
+          setBrands(data.brands || []);
+          setAssetTypes(data.assetTypes || []);
+          setSectors(data.sectors || []);
+          setAccessoryTypes(data.accessoryTypes || []);
+          setCustomFields(data.customFields || []);
+      }
       
       setError(null);
     } catch (err: any) { 
-        setError(err.message); 
+        if (!silent) setError(err.message); 
+        console.error("Sync Error:", err.message);
     } finally { 
-        setLoading(false); 
+        if (!silent) setLoading(false); 
     }
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const getLogDetail = async (id: string): Promise<AuditLog> => {
+      const res = await fetch(`${API_URL}/api/logs/${id}`);
+      return safeJson(res, `/api/logs/${id}`);
+  };
+
+  const getTermFile = async (id: string): Promise<string> => {
+      const res = await fetch(`${API_URL}/api/terms/${id}/file`);
+      const data = await safeJson(res, `/api/terms/${id}/file`);
+      return data.fileUrl || '';
+  };
+
+  const getDeviceInvoice = async (id: string): Promise<string> => {
+      const res = await fetch(`${API_URL}/api/devices/${id}/invoice`);
+      const data = await safeJson(res, `/api/devices/${id}/invoice`);
+      return data.invoiceUrl || '';
+  };
+
+  const getMaintenanceInvoice = async (id: string): Promise<string> => {
+      const res = await fetch(`${API_URL}/api/maintenances/${id}/invoice`);
+      const data = await safeJson(res, `/api/maintenances/${id}/invoice`);
+      return data.invoiceUrl || '';
+  };
 
   const postData = async (endpoint: string, data: any) => {
     const res = await fetch(`${API_URL}/api/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -90,22 +115,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return safeJson(res, endpoint);
   };
 
-  const addDevice = async (device: Device, adminName: string) => { 
-      await postData('devices', { ...device, _adminUser: adminName }); 
-      setDevices(p => [...p, device]); 
-  };
-
-  const updateDevice = async (device: Device, adminName: string) => { 
-      await putData('devices', { ...device, _adminUser: adminName }); 
-      setDevices(p => p.map(d => d.id === device.id ? device : d)); 
-  };
-
+  // CRUD Dispositivos
+  const addDevice = async (device: Device, adminName: string) => { await postData('devices', { ...device, _adminUser: adminName }); fetchData(true); };
+  const updateDevice = async (device: Device, adminName: string) => { await putData('devices', { ...device, _adminUser: adminName }); fetchData(true); };
   const deleteDevice = async (id: string, adminName: string, reason: string) => {
     const device = devices.find(d => d.id === id);
     if (device) { 
         const updatedDevice = { ...device, status: DeviceStatus.RETIRED, currentUserId: null };
         await putData('devices', { ...updatedDevice, _adminUser: adminName, _reason: reason }); 
-        setDevices(p => p.map(d => d.id === id ? updatedDevice : d)); 
+        fetchData(true);
     }
   };
 
@@ -114,117 +132,75 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (device) { 
         const restored = { ...device, status: DeviceStatus.AVAILABLE, currentUserId: null };
         await putData('devices', { ...restored, _adminUser: adminName, _reason: reason }); 
-        setDevices(p => p.map(d => d.id === id ? restored : d)); 
+        fetchData(true);
     }
   };
 
-  const addUser = async (user: User, adminName: string) => { await postData('users', { ...user, _adminUser: adminName }); setUsers(p => [...p, user]); };
-  const updateUser = async (user: User, adminName: string, notes?: string) => { await putData('users', { ...user, _adminUser: adminName, _notes: notes }); setUsers(p => p.map(u => u.id === user.id ? user : u)); };
-  
+  const addUser = async (user: User, adminName: string) => { await postData('users', { ...user, _adminUser: adminName }); fetchData(true); };
+  const updateUser = async (user: User, adminName: string, notes?: string) => { await putData('users', { ...user, _adminUser: adminName, _notes: notes }); fetchData(true); };
   const toggleUserActive = async (user: User, adminName: string, reason?: string) => {
     const updated = { ...user, active: !user.active };
     await putData('users', { ...updated, _adminUser: adminName, _reason: reason });
-    setUsers(p => p.map(u => u.id === user.id ? updated : u));
+    fetchData(true);
   };
 
-  const addAccount = async (account: SoftwareAccount, adminName: string) => { await postData('accounts', { ...account, _adminUser: adminName }); setAccounts(p => [...p, account]); };
-  const updateAccount = async (account: SoftwareAccount, adminName: string) => { await putData('accounts', { ...account, _adminUser: adminName }); setAccounts(p => p.map(a => a.id === account.id ? account : a)); };
+  const addAccount = async (account: SoftwareAccount, adminName: string) => { await postData('accounts', { ...account, _adminUser: adminName }); fetchData(true); };
+  const updateAccount = async (account: SoftwareAccount, adminName: string) => { await putData('accounts', { ...account, _adminUser: adminName }); fetchData(true); };
   const deleteAccount = async (id: string, adminName: string) => {
     await fetch(`${API_URL}/api/accounts/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _adminUser: adminName }) });
-    setAccounts(p => p.filter(a => a.id !== id));
+    fetchData(true);
   };
 
   const updateTermFile = async (termId: string, userId: string, fileUrl: string, adminName: string) => {
-      try {
-          await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName });
-          setUsers(prev => prev.map(u => {
-              if (u.id === userId) { const updatedTerms = (u.terms || []).map(t => t.id === termId ? { ...t, fileUrl } : t); return { ...u, terms: updatedTerms }; }
-              return u;
-          }));
-      } catch (err) { alert("Falha ao salvar arquivo do termo."); }
+      try { await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName }); fetchData(true); } catch (err) { alert("Falha ao salvar arquivo do termo."); }
   };
 
   const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
-      try {
-          await fetch(`${API_URL}/api/terms/${termId}/file`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ _adminUser: adminName, reason }) });
-          setUsers(prev => prev.map(u => {
-            if (u.id === userId) { const updatedTerms = (u.terms || []).map(t => t.id === termId ? { ...t, fileUrl: '' } : t); return { ...u, terms: updatedTerms }; }
-            return u;
-          }));
-      } catch (err) { alert("Falha ao excluir arquivo do termo."); }
+      try { await fetch(`${API_URL}/api/terms/${termId}/file`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ _adminUser: adminName, reason }) }); fetchData(true); } catch (err) { alert("Falha ao excluir arquivo do termo."); }
   };
 
-  const addSim = async (s: SimCard, a: string) => { await postData('sims', {...s, _adminUser: a}); setSims(p => [...p, s]); };
-  const updateSim = async (s: SimCard, a: string) => { await putData('sims', {...s, _adminUser: a}); setSims(p => p.map(x => x.id === s.id ? s : x)); };
+  const addSim = async (s: SimCard, a: string) => { await postData('sims', {...s, _adminUser: a}); fetchData(true); };
+  const updateSim = async (s: SimCard, a: string) => { await putData('sims', {...s, _adminUser: a}); fetchData(true); };
   const deleteSim = async (id: string, a: string, r: string) => { 
       await fetch(`${API_URL}/api/sims/${id}`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({_adminUser: a, reason: r}) });
-      setSims(p => p.filter(x => x.id !== id));
+      fetchData(true);
   };
-
-  const addSector = async (s: UserSector, adm: string) => { await postData('sectors', { ...s, _adminUser: adm }); setSectors(prev => [...prev, s]); };
-  const updateSector = async (s: UserSector, adm: string) => { await putData('sectors', { ...s, _adminUser: adm }); setSectors(prev => prev.map(x => x.id === s.id ? s : x)); };
-  const addAssetType = async (t: AssetType, a: string) => { await postData('asset-types', {...t, _adminUser: a}); setAssetTypes(p => [...p, t]); };
-  const updateAssetType = async (t: AssetType, a: string) => { await putData('asset-types', {...t, _adminUser: a}); setAssetTypes(p => p.map(x => x.id === t.id ? t : x)); };
-  const addBrand = async (b: DeviceBrand, a: string) => { await postData('brands', {...b, _adminUser: a}); setBrands(p => [...p, b]); };
-  const updateBrand = async (b: DeviceBrand, a: string) => { await putData('brands', {...b, _adminUser: a}); setBrands(p => p.map(x => x.id === b.id ? b : x)); };
-  const addModel = async (m: DeviceModel, a: string) => { await postData('models', {...m, _adminUser: a}); setModels(p => [...p, m]); };
-  const updateModel = async (m: DeviceModel, a: string) => { await putData('models', {...m, _adminUser: a}); setModels(p => p.map(x => x.id === m.id ? m : x)); };
-  const updateSettings = async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); };
 
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    accounts, addAccount, updateAccount, deleteAccount,
-    addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, updateSettings,
-    assignAsset: async (at, aid, uid, n, adm, acc) => { 
-        await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); 
-        // Atualização reativa imediata do estado local
-        if (at === 'Device') {
-            setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.IN_USE, currentUserId: uid, accessories: acc } : d));
-        } else {
-            setSims(prev => prev.map(s => s.id === aid ? { ...s, status: DeviceStatus.IN_USE, currentUserId: uid } : s));
-        }
-        fetchData(); // Sincronização de fundo
-    },
-    returnAsset: async (at, aid, n, adm, list, inactivate) => { 
-        await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); 
-        // Atualização reativa imediata do estado local
-        if (at === 'Device') {
-            setDevices(prev => prev.map(d => d.id === aid ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
-            // Se houver chip vinculado no dispositivo sendo devolvido, a API libera ele também. Refletimos aqui:
-            const dev = devices.find(d => d.id === aid);
-            if (dev?.linkedSimId) {
-                setSims(prev => prev.map(s => s.id === dev.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
-            }
-        } else {
-            setSims(prev => prev.map(s => s.id === aid ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
-        }
-        if (inactivate) {
-            const devOrSim = at === 'Device' ? devices.find(d => d.id === aid) : sims.find(s => s.id === aid);
-            if (devOrSim?.currentUserId) {
-                setUsers(prev => prev.map(u => u.id === devOrSim.currentUserId ? { ...u, active: false } : u));
-            }
-        }
-        fetchData(); // Sincronização de fundo
-    },
+    accounts, fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
+    updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); },
+    assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
+    returnAsset: async (at, aid, n, adm, list, inactivate) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); fetchData(true); },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
-    clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(); },
-    restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(); },
-    addAssetType, updateAssetType, deleteAssetType: async (id) => { await fetch(`${API_URL}/api/asset-types/${id}`, {method: 'DELETE'}); setAssetTypes(p => p.filter(x => x.id !== id)); },
-    addBrand, updateBrand, deleteBrand: async (id) => { await fetch(`${API_URL}/api/brands/${id}`, {method: 'DELETE'}); setBrands(p => p.filter(x => x.id !== id)); },
-    addModel, updateModel, deleteModel: async (id) => { await fetch(`${API_URL}/api/models/${id}`, {method: 'DELETE'}); setModels(p => p.filter(x => x.id !== id)); },
-    addMaintenance: async (m, adm) => { await postData('maintenances', {...m, _adminUser: adm}); setMaintenances(p => [...p, m]); },
-    deleteMaintenance: async (id) => { await fetch(`${API_URL}/api/maintenances/${id}`, {method: 'DELETE'}); setMaintenances(p => p.filter(x => x.id !== id)); },
-    addSector, updateSector, deleteSector: async (id) => { await fetch(`${API_URL}/api/sectors/${id}`, {method: 'DELETE'}); fetchData(); },
-    addAccessoryType: async (t, adm) => { await postData('accessory-types', {...t, _adminUser: adm}); setAccessoryTypes(p => [...p, t]); },
-    updateAccessoryType: async (t, adm) => { await putData('accessory-types', {...t, _adminUser: adm}); setAccessoryTypes(p => p.map(x => x.id === t.id ? t : x)); },
-    deleteAccessoryType: async (id) => { await fetch(`${API_URL}/api/accessory-types/${id}`, {method: 'DELETE'}); setAccessoryTypes(p => p.filter(x => x.id !== id)); },
-    addCustomField: async (f, adm) => { await postData('custom-fields', {...f, _adminUser: adm}); setCustomFields(p => [...p, f]); },
-    updateCustomField: async (f, adm) => { await putData('custom-fields', {...f, _adminUser: adm}); setCustomFields(p => p.map(x => x.id === f.id ? f : x)); },
-    deleteCustomField: async (id) => { await fetch(`${API_URL}/api/custom-fields/${id}`, {method: 'DELETE'}); setCustomFields(p => p.filter(x => x.id !== id)); },
-    addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); setSystemUsers(p => [...p, u]); },
-    updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); setSystemUsers(p => p.map(x => x.id === u.id ? u : x)); },
-    deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); setSystemUsers(p => p.filter(x => x.id !== id)); }
+    clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(true); },
+    restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(true); },
+    // Fix: replaced 'a' with 'adm' to match function parameters
+    addAssetType: async (t, adm) => { await postData('asset-types', {...t, _adminUser: adm}); fetchData(true); },
+    updateAssetType: async (t, adm) => { await putData('asset-types', {...t, _adminUser: adm}); fetchData(true); },
+    deleteAssetType: async (id) => { await fetch(`${API_URL}/api/asset-types/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addBrand: async (b, adm) => { await postData('brands', {...b, _adminUser: adm}); fetchData(true); },
+    updateBrand: async (b, adm) => { await putData('brands', {...b, _adminUser: adm}); fetchData(true); },
+    deleteBrand: async (id) => { await fetch(`${API_URL}/api/brands/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addModel: async (m, adm) => { await postData('models', {...m, _adminUser: adm}); fetchData(true); },
+    updateModel: async (m, adm) => { await putData('models', {...m, _adminUser: adm}); fetchData(true); },
+    deleteModel: async (id) => { await fetch(`${API_URL}/api/models/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addMaintenance: async (m, adm) => { await postData('maintenances', {...m, _adminUser: adm}); fetchData(true); },
+    deleteMaintenance: async (id) => { await fetch(`${API_URL}/api/maintenances/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addSector: async (s, adm) => { await postData('sectors', { ...s, _adminUser: adm }); fetchData(true); },
+    updateSector: async (s, adm) => { await putData('sectors', { ...s, _adminUser: adm }); fetchData(true); },
+    deleteSector: async (id) => { await fetch(`${API_URL}/api/sectors/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addAccessoryType: async (t, adm) => { await postData('accessory-types', {...t, _adminUser: adm}); fetchData(true); },
+    updateAccessoryType: async (t, adm) => { await putData('accessory-types', {...t, _adminUser: adm}); fetchData(true); },
+    deleteAccessoryType: async (id) => { await fetch(`${API_URL}/api/accessory-types/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addCustomField: async (f, adm) => { await postData('custom-fields', {...f, _adminUser: adm}); fetchData(true); },
+    updateCustomField: async (f, adm) => { await putData('custom-fields', {...f, _adminUser: adm}); fetchData(true); },
+    deleteCustomField: async (id) => { await fetch(`${API_URL}/api/custom-fields/${id}`, {method: 'DELETE'}); fetchData(true); },
+    addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); fetchData(true); },
+    updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); fetchData(true); },
+    deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); }
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
