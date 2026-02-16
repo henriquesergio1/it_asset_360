@@ -8,24 +8,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.36',
+    version: '2.12.37',
     date: 'Hoje',
+    title: 'Advanced Asset Snapshotting & Heuristics',
+    changes: [
+      'Persistência Histórica: Operações de entrega e devolução agora salvam snapshots JSON completos no log de auditoria.',
+      'Rastreabilidade de Termos: Heurística de re-impressão aprimorada para localizar ativos mesmo após mudanças de identificador no cadastro principal.',
+      'Sincronização de Estado: Garantia de integridade de metadados durante o ciclo de vida do ativo.',
+      'Incremento global para v2.12.37.'
+    ]
+  },
+    {
+    version: '2.12.36',
+    date: 'Ontem',
     title: 'Robust Multi-Identifier Asset Matching',
     changes: [
       'Identificação Infalível: Novos termos agora incluem obrigatoriamente o IMEI do ativo na string de detalhes.',
       'Lógica de Re-impressão: O sistema prioriza IMEI > Tag > S/N para localizar o ativo exato no inventário.',
-      'Isolamento de Usuário: Fallback heurístico agora restringe a busca ao dono do termo, impedindo que ativos de outros colaboradores apareçam por engano.',
-      'Sincronização global para 2.12.36.'
-    ]
-  },
-    {
-    version: '2.12.35',
-    date: 'Ontem',
-    title: 'Strict Term Asset Matching',
-    changes: [
-      'BUGFIX: Resolvido erro de "Ativo não encontrado" na re-impressão de termos quando a TAG era nula.',
-      'Enriquecimento de Termos: Novos termos agora incluem o S/N (Serial Number) para garantir precisão.',
-      'Heurística de Fallback: Localização via Modelo + Vínculo Atual se a Tag falhar.'
+      'Isolamento de Usuário: Fallback heurístico agora restringe a busca ao dono do termo, impedindo que ativos de outros colaboradores apareçam por engano.'
     ]
   }
 ];

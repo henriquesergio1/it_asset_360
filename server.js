@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.36', 
+        version: '2.12.37', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.36 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.37 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.36 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.37 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -334,7 +334,7 @@ app.post('/api/operations/checkout', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.36: Incluindo IMEI obrigatoriamente para identificação infalível
+            // v2.12.37: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -353,7 +353,7 @@ app.post('/api/operations/checkout', async (req, res) => {
         await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         
         const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
+        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -373,7 +373,7 @@ app.post('/api/operations/checkin', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.36: Incluindo IMEI obrigatoriamente para identificação infalível
+            // v2.12.37: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -404,11 +404,11 @@ app.post('/api/operations/checkin', async (req, res) => {
         }
         
         const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
+        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.36 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.37 rodando na porta ${PORT}`);
 });
