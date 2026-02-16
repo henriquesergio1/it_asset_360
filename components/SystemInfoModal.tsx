@@ -8,35 +8,23 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.31',
+    version: '2.12.32',
     date: 'Hoje',
+    title: 'Write Endpoint Restoration & Audit Fix',
+    changes: [
+      'BUGFIX: Restaurados os endpoints de atualização (PUT) para Dispositivos, Usuários e Chips que estavam retornando 404 após a migração de auditoria.',
+      'Auditoria Rica: Mapeamento corrigido para exibir o número de Patrimônio (AssetTag) no alvo da auditoria durante edições.',
+      'Sincronização global da versão para 2.12.32.'
+    ]
+  },
+    {
+    version: '2.12.31',
+    date: 'Ontem',
     title: 'Snipe-IT Style Rich Audit',
     changes: [
-      'Auditoria Rica: Implementada geração automática de diffs (De ➔ Para) nas atualizações, exibindo exatamente o que foi alterado em cada campo.',
-      'Interface Sniper-IT: Novo renderizador de logs com cores e formatação profissional para mudanças de valores e metadados de transação.',
-      'Enriquecimento de Checkout: Operações de entrega e devolução agora registram o alvo/origem e a transição de status nas notas leves.',
-      'Regex Estrito de Mapeamento: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP, eliminando conflitos entre modelos da mesma marca.',
-      'Sincronização global da versão para 2.12.31.'
-    ]
-  },
-    {
-    version: '2.12.30',
-    date: 'Hoje',
-    title: 'Precision Asset Mapping & Audit Fix',
-    changes: [
-      'Correção de Reimpressão: Implementada detecção exata via Regex ([TAG: ...]) para garantir que o sistema localize o aparelho correto.',
-      'Cadeia de Custódia: Metadados de entrega e devolução agora são persistidos no campo Notes leve.',
-      'Melhoria de Auditoria: Aumento do limite de visualização rápida de logs.'
-    ]
-  },
-    {
-    version: '2.12.29',
-    date: 'Hoje',
-    title: 'Compilation & Logic Fixes',
-    changes: [
-      'Correção de Erros: Implementação do método getLogDetail ausente no MockDataProvider.',
-      'Correção de Erros: Remoção de chamada inexistente setTerms no ProdDataProvider.',
-      'Correção de Erros: Ajuste de variáveis incorretas nos métodos CRUD.'
+      'Auditoria Rica: Implementada geração automática de diffs (De ➔ Para) nas atualizações.',
+      'Interface Sniper-IT: Novo renderizador de logs com cores e formatação profissional.',
+      'Regex Estrito de Mapeamento: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP.'
     ]
   }
 ];

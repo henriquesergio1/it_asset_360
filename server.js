@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.31', 
+        version: '2.12.32', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.31 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.32 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.31 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.32 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -173,22 +173,6 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 }
 
 const crud = (table, route, assetType) => {
-    app.get(`/api/${route}`, async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query(`SELECT * FROM ${table}`);
-            const camelCased = result.recordset.map(row => {
-                const entry = {};
-                for (let key in row) {
-                    const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-                    entry[camelKey] = (key === 'CustomFieldIds' || key === 'CustomData') && row[key] ? JSON.parse(row[key]) : row[key];
-                }
-                return entry;
-            });
-            res.json(camelCased);
-        } catch (err) { res.status(500).send(`Error fetching ${route}: ${err.message}`); }
-    });
-
     app.post(`/api/${route}`, async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
@@ -204,7 +188,8 @@ const crud = (table, route, assetType) => {
                 values.push('@' + dbKey);
             }
             await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
-            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, 'Item criado manualmente no sistema');
+            const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
+            await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, tName, 'Item criado manualmente no sistema');
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -216,7 +201,6 @@ const crud = (table, route, assetType) => {
             const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query(`SELECT * FROM ${table} WHERE Id=@Id`);
             const prev = oldRes.recordset[0];
             
-            // v2.12.31: Comparação rica para auditoria automática
             let diffNotes = [];
             let sets = [];
             for (let key in req.body) {
@@ -227,7 +211,6 @@ const crud = (table, route, assetType) => {
                 request.input(dbKey, val);
                 sets.push(`${dbKey}=@${dbKey}`);
 
-                // Gerar linha de diff
                 if (prev) {
                     let oldVal = prev[dbKey];
                     let newVal = req.body[key];
@@ -242,8 +225,9 @@ const crud = (table, route, assetType) => {
             await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
             
             const richNotes = (req.body._notes || req.body._reason ? `Motivo: ${req.body._notes || req.body._reason}\n\n` : '') + diffNotes.join('\n');
+            const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
             
-            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.phoneNumber || req.body.fullName, richNotes, null, prev, req.body);
+            await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body);
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -257,6 +241,7 @@ const crud = (table, route, assetType) => {
     });
 };
 
+// v2.12.32: Ativação dos endpoints CRUD para todas as tabelas (incluindo principais)
 crud('Sectors', 'sectors', 'Sector');
 crud('Brands', 'brands', 'Brand');
 crud('AssetTypes', 'asset-types', 'Type');
@@ -265,6 +250,9 @@ crud('AccessoryTypes', 'accessory-types', 'Accessory');
 crud('CustomFields', 'custom-fields', 'CustomField');
 crud('MaintenanceRecords', 'maintenances', 'Maintenance');
 crud('SoftwareAccounts', 'accounts', 'Account');
+crud('Users', 'users', 'User');
+crud('SimCards', 'sims', 'Sim');
+crud('Devices', 'devices', 'Device');
 
 app.get('/api/settings', async (req, res) => {
     try {
@@ -328,7 +316,7 @@ app.get('/api/logs', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operations Checkout/Checkin - v2.12.31 com metadados ricos (estilo Snipe-IT)
+// Operations Checkout/Checkin
 app.post('/api/operations/checkout', async (req, res) => {
     try {
         const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
@@ -362,7 +350,6 @@ app.post('/api/operations/checkout', async (req, res) => {
         const termId = Math.random().toString(36).substr(2, 9);
         await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
         
-        // v2.12.31: Enriquecimento de Notas
         const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
         await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
         res.json({success: true});
@@ -413,7 +400,6 @@ app.post('/api/operations/checkin', async (req, res) => {
             }
         }
         
-        // v2.12.31: Enriquecimento de Notas
         const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
         await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});
@@ -421,5 +407,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.31 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.32 rodando na porta ${PORT}`);
 });

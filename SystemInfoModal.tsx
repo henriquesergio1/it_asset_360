@@ -8,24 +8,23 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.31',
+    version: '2.12.32',
     date: 'Hoje',
+    title: 'Write Endpoint Restoration & Audit Fix',
+    changes: [
+      'BUGFIX: Restaurados os endpoints de atualização (PUT) que estavam retornando 404.',
+      'Auditoria Rica: Mapeamento corrigido para exibir Patrimônio (AssetTag) no alvo da auditoria.',
+      'Sincronização global da versão para 2.12.32.'
+    ]
+  },
+    {
+    version: '2.12.31',
+    date: 'Ontem',
     title: 'Snipe-IT Style Rich Audit',
     changes: [
       'Auditoria Rica: Geração automática de diffs (De ➔ Para) nas atualizações.',
       'Interface Sniper-IT: Novo renderizador de logs com cores e formatação.',
-      'Regex Estrito: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP.',
-      'Sincronização global da versão para 2.12.31.'
-    ]
-  },
-    {
-    version: '2.12.30',
-    date: 'Hoje',
-    title: 'Precision Asset Mapping & Audit Fix',
-    changes: [
-      'Correção de Reimpressão: Implementada detecção exata via Regex ([TAG: ...]).',
-      'Cadeia de Custódia: Metadados de entrega e devolução agora são persistidos no campo Notes leve.',
-      'Melhoria de Auditoria: Aumento do limite de visualização rápida de logs.'
+      'Regex Estrito: Correção definitiva da reimpressão de termos via captura exata de TAG e CHIP.'
     ]
   }
 ];
