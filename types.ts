@@ -1,4 +1,5 @@
 
+
 export enum DeviceStatus {
   AVAILABLE = 'Disponível',
   IN_USE = 'Em Uso',
@@ -79,6 +80,8 @@ export interface MaintenanceRecord {
   cost: number;
   provider: string; 
   invoiceUrl?: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
+  hasInvoice?: boolean;
 }
 
 export enum MaintenanceType {
@@ -109,6 +112,8 @@ export interface Device {
   invoiceNumber?: string;
   supplier?: string;
   purchaseInvoiceUrl?: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
+  hasInvoice?: boolean;
 }
 
 export interface SimCard {
@@ -133,6 +138,8 @@ export interface Term {
   assetDetails: string; 
   date: string;
   fileUrl: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
+  hasFile?: boolean;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -429,9 +428,20 @@ const UserManager = () => {
   const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
   const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
 
-  const userAssets = editingId ? devices.filter(d => d.currentUserId === editingId) : [];
-  const linkedSimIds = userAssets.map(d => d.linkedSimId).filter(Boolean) as string[];
-  const userSims = editingId ? sims.filter(s => s.currentUserId === editingId || linkedSimIds.includes(s.id)) : [];
+  // Lógica de Ativos por Usuário (v2.12.39 - Agregada para colunas e abas)
+  const getUserAssets = (userId: string) => {
+      const userDevices = devices.filter(d => d.currentUserId === userId);
+      const directSims = sims.filter(s => s.currentUserId === userId);
+      const linkedSimIdsFromDevices = userDevices.map(d => d.linkedSimId).filter(Boolean);
+      const linkedSimsFromDevices = sims.filter(s => linkedSimIdsFromDevices.includes(s.id));
+      
+      // Unir chips sem duplicidade (v2.12.39)
+      const allUserSims = [...new Map([...directSims, ...linkedSimsFromDevices].map(s => [s.id, s])).values()];
+      
+      return { userDevices, allUserSims };
+  };
+
+  const { userDevices: userAssets, allUserSims: userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], allUserSims: [] };
   const userHistory = editingId ? getHistory(editingId || '') : [];
   const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
   const userAccounts = editingId ? accounts.filter(a => a.userId === editingId) : [];
@@ -485,13 +495,12 @@ const UserManager = () => {
               <tbody>
                 {paginatedUsers.map(u => {
                   const sector = sectors.find(s => s.id === u.sectorId);
-                  const userDevices = devices.filter(d => d.currentUserId === u.id);
-                  const userSpecificSims = sims.filter(s => s.currentUserId === u.id);
-                  const assets = userDevices.length + userSpecificSims.length;
+                  const { userDevices, allUserSims } = getUserAssets(u.id);
+                  const assets = userDevices.length + allUserSims.length;
                   const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile);
                   
                   // Detalhes estendidos (v2.12.39 - Correção colunas dinâmicas)
-                  const chipsString = userSpecificSims.map(s => s.phoneNumber).join(', ') || '---';
+                  const chipsString = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
                   const devicesString = userDevices.map(d => {
                       const m = models.find(mod => mod.id === d.modelId);
                       return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;

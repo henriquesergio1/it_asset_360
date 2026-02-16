@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -8,34 +7,35 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.39',
+    version: '2.12.40',
     date: 'Hoje',
+    title: 'TypeScript Stability & Missing Properties',
+    changes: [
+      'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
+      'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
+      'Sincronização global para v2.12.40.'
+    ]
+  },
+    {
+    version: '2.12.39',
+    date: 'Ontem',
     title: 'Visual Standardization & Column Fixes',
     changes: [
       'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
       'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
+      'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
       'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
       'Sincronização global para v2.12.39.'
     ]
   },
     {
     version: '2.12.38',
-    date: 'Ontem',
+    date: '02/2025',
     title: 'Critical Fix: Term File Management',
     changes: [
       'Correção de Bug: Implementados endpoints ausentes para upload e exclusão de termos digitalizados (Fix 404 error).',
       'Auditoria de Anexos: Inclusão automática de logs de auditoria ao digitalizar ou remover arquivos de termos.',
       'Sincronização de Estado: Atualização global para v2.12.38.'
-    ]
-  },
-    {
-    version: '2.12.37',
-    date: '02/2025',
-    title: 'Advanced Asset Snapshotting & Heuristics',
-    changes: [
-      'Persistência Histórica: Operações de entrega e devolução agora salvam snapshots JSON completos no log de auditoria.',
-      'Rastreabilidade de Termos: Heurística de re-impressão aprimorada para localizar ativos mesmo após mudanças de identificador no cadastro principal.',
-      'Sincronização de Estado: Garantia de integridade de metadados durante o ciclo de vida do ativo.'
     ]
   }
 ];

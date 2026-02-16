@@ -8,24 +8,35 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.36',
+    version: '2.12.40',
     date: 'Hoje',
-    title: 'Robust Multi-Identifier Asset Matching',
+    title: 'TypeScript Stability & Missing Properties',
     changes: [
-      'Identificação Infalível: Novos termos agora incluem obrigatoriamente o IMEI do ativo na string de detalhes.',
-      'Lógica de Re-impressão: O sistema prioriza IMEI > Tag > S/N para localizar o ativo exato no inventário.',
-      'Isolamento de Usuário: Fallback heurístico agora restringe a busca ao dono do termo.',
-      'Sincronização global para 2.12.36.'
+      'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
+      'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
+      'Sincronização global para v2.12.40.'
     ]
   },
     {
-    version: '2.12.35',
+    version: '2.12.39',
     date: 'Ontem',
-    title: 'Strict Term Asset Matching',
+    title: 'Visual Standardization & Column Fixes',
     changes: [
-      'BUGFIX: Resolvido erro de "Ativo não encontrado" na re-impressão de termos quando a TAG era nula.',
-      'Enriquecimento de Termos: Novos termos agora incluem o S/N (Serial Number) para garantir precisão.',
-      'Heurística de Fallback: Localização via Modelo + Vínculo Atual se a Tag falhar.'
+      'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
+      'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
+      'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
+      'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
+      'Sincronização global para v2.12.39.'
+    ]
+  },
+    {
+    version: '2.12.38',
+    date: '02/2025',
+    title: 'Critical Fix: Term File Management',
+    changes: [
+      'Correção de Bug: Implementados endpoints ausentes para upload e exclusão de termos digitalizados (Fix 404 error).',
+      'Auditoria de Anexos: Inclusão automática de logs de auditoria ao digitalizar ou remover arquivos de termos.',
+      'Sincronização de Estado: Atualização global para v2.12.38.'
     ]
   }
 ];
