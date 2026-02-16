@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.29', 
+        version: '2.12.30', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.29 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.30 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -54,8 +54,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            // Logs sem JSONs pesados na lista
-            pool.request().query("SELECT TOP 100 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT TOP 150 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
             pool.request().query("SELECT * FROM Models"), 
@@ -86,8 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- NOVO: SYNC ENDPOINT (v2.12.29 - Lightweight) ---
-// Este endpoint ignora fotos (Models) e dados de catálogo estáticos para economizar banda (~150KB vs 42MB)
+// --- SYNC ENDPOINT (v2.12.30 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -95,7 +93,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 100 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT TOP 150 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -157,7 +155,6 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- RESTO DO CRUD E LOGICA DE LOGS (MANTIDO) ---
 async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null, previousData = null, newData = null) {
     try {
         const pool = await sql.connect(dbConfig);
@@ -176,7 +173,6 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
-// CRUD Helper routes (marcas, modelos, tipos etc)
 const crud = (table, route, assetType) => {
     app.get(`/api/${route}`, async (req, res) => {
         try {
@@ -253,7 +249,6 @@ crud('CustomFields', 'custom-fields', 'CustomField');
 crud('MaintenanceRecords', 'maintenances', 'Maintenance');
 crud('SoftwareAccounts', 'accounts', 'Account');
 
-// System Settings
 app.get('/api/settings', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -272,7 +267,6 @@ app.put('/api/settings', async (req, res) => {
     res.json({success: true});
 });
 
-// System Users
 app.get('/api/system-users', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -281,7 +275,6 @@ app.get('/api/system-users', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Entidades Principais
 app.get('/api/users', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -310,7 +303,6 @@ app.get('/api/devices', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Logs e Auditoria
 app.get('/api/logs', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -319,7 +311,7 @@ app.get('/api/logs', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operations Checkout/Checkin
+// Operations Checkout/Checkin - v2.12.30 com metadados fixos leves (Notes/TargetName)
 app.post('/api/operations/checkout', async (req, res) => {
     try {
         const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
@@ -331,11 +323,16 @@ app.post('/api/operations/checkout', async (req, res) => {
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
         
         let assetDetails = notes || '';
+        let targetIdStr = assetId;
+
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
-            assetDetails = `[TAG: ${prev.AssetTag}] ${modelRes.recordset[0]?.Name || 'Dispositivo'}`;
+            const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
+            assetDetails = `[TAG: ${prev.AssetTag}] ${modelName}`;
+            targetIdStr = `${prev.AssetTag} (${modelName})`;
         } else if (prev) {
             assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+            targetIdStr = prev.PhoneNumber;
         }
 
         await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
@@ -347,7 +344,10 @@ app.post('/api/operations/checkout', async (req, res) => {
         }
         const termId = Math.random().toString(36).substr(2, 9);
         await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
-        await logAction(assetId, assetType, 'Entrega', _adminUser, assetId, notes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
+        
+        // v2.12.30: Persistimos o nome do colaborador nas Notes leves para garantir a visualização da Cadeia de Custódia
+        const lightweightNotes = `Entregue para: ${userName}${notes ? ` • Obs: ${notes}` : ''}`;
+        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, lightweightNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -362,11 +362,16 @@ app.post('/api/operations/checkin', async (req, res) => {
         const userId = prev?.CurrentUserId;
         
         let assetDetails = notes || '';
+        let targetIdStr = assetId;
+
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
-            assetDetails = `[TAG: ${prev.AssetTag}] ${modelRes.recordset[0]?.Name || 'Dispositivo'}`;
+            const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
+            assetDetails = `[TAG: ${prev.AssetTag}] ${modelName}`;
+            targetIdStr = `${prev.AssetTag} (${modelName})`;
         } else if (prev) {
             assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+            targetIdStr = prev.PhoneNumber;
         }
 
         let userName = 'Colaborador';
@@ -391,11 +396,13 @@ app.post('/api/operations/checkin', async (req, res) => {
             }
         }
         
-        await logAction(assetId, assetType, 'Devolução', _adminUser, assetId, notes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
+        // v2.12.30: Persistimos o nome do colaborador nas Notes leves
+        const lightweightNotes = `Devolvido por: ${userName}${notes ? ` • Obs: ${notes}` : ''}`;
+        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, lightweightNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null });
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.29 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.30 rodando na porta ${PORT}`);
 });
