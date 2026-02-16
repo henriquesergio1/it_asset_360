@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2 } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
 // Funções de Máscara
@@ -111,7 +110,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -140,6 +139,8 @@ const UserManager = () => {
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+
+  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
@@ -186,8 +187,8 @@ const UserManager = () => {
         }));
     };
     const onMouseUp = () => {
-        document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('mousemove', onMouseMove);
     };
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
@@ -261,19 +262,38 @@ const UserManager = () => {
       });
   };
 
-  const handleOpenFile = (fileUrl: string) => {
-      if (!fileUrl) return;
-      if (fileUrl.startsWith('data:')) {
-          const parts = fileUrl.split(',');
-          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-          const binary = atob(parts[1]);
-          const array = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-          const blob = new Blob([array], { type: mime });
-          const blobUrl = URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
-      } else { window.open(fileUrl, '_blank'); }
+  const handleOpenFile = async (termId: string, fileUrl?: string) => {
+      if (!fileUrl && termId) {
+          // Carregamento sob demanda (v2.12.27)
+          setLoadingFiles(prev => ({ ...prev, [termId]: true }));
+          try {
+              const url = await getTermFile(termId);
+              if (url) openBlobFromBase64(url);
+              else alert("Arquivo não encontrado no servidor.");
+          } catch (e) {
+              alert("Erro ao baixar arquivo.");
+          } finally {
+              setLoadingFiles(prev => ({ ...prev, [termId]: false }));
+          }
+          return;
+      }
+      if (fileUrl) openBlobFromBase64(fileUrl);
   };
+
+  const openBlobFromBase64 = (base64Url: string) => {
+      if (!base64Url.startsWith('data:')) {
+          window.open(base64Url, '_blank');
+          return;
+      }
+      const parts = base64Url.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+      const binary = atob(parts[1]);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+      const blob = new Blob([array], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+  }
 
   // Verificação de unicidade
   const checkUniqueness = (data: Partial<User>) => {
@@ -352,7 +372,7 @@ const UserManager = () => {
 
   const filteredUsers = users.filter(u => {
     if (viewMode === 'ACTIVE' ? !u.active : u.active) return false;
-    if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl)) return false;
+    if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl && !t.hasFile)) return false;
     return `${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => a.fullName.localeCompare(b.fullName));
 
@@ -415,7 +435,7 @@ const UserManager = () => {
           ))}
           <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-orange-400'}`}>
               Termos Pendentes
-              <span className="ml-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl)).length}</span>
+              <span className="ml-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span>
           </button>
       </div>
 
@@ -470,7 +490,7 @@ const UserManager = () => {
                 {paginatedUsers.map(u => {
                   const sector = sectors.find(s => s.id === u.sectorId);
                   const assets = devices.filter(d => d.currentUserId === u.id).length + sims.filter(s => s.currentUserId === u.id).length;
-                  const hasPending = (u.terms || []).some(t => !t.fileUrl);
+                  const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile);
 
                   return (
                     <tr 
@@ -694,9 +714,16 @@ const UserManager = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {term.fileUrl ? (
+                                        {(term.fileUrl || term.hasFile) ? (
                                             <>
-                                                <button onClick={() => handleOpenFile(term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all" title="Abrir Arquivo"><ExternalLink size={18}/></button>
+                                                <button 
+                                                    disabled={loadingFiles[term.id]}
+                                                    onClick={() => handleOpenFile(term.id, term.fileUrl)} 
+                                                    className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" 
+                                                    title="Abrir Arquivo"
+                                                >
+                                                    {loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}
+                                                </button>
                                                 {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}
                                             </>
                                         ) : (

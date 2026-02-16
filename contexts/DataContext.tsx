@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount } from '../types';
 
@@ -23,6 +22,14 @@ export interface DataContextType {
   loading?: boolean;
   error?: string | null;
   
+  // Sincronização
+  fetchData: (silent?: boolean) => Promise<void>;
+  
+  // Carregamento sob demanda (Otimização de Bootstrap)
+  getTermFile: (id: string) => Promise<string>;
+  getDeviceInvoice: (id: string) => Promise<string>;
+  getMaintenanceInvoice: (id: string) => Promise<string>;
+
   // CRUD Dispositivos
   addDevice: (device: Device, adminName: string) => void;
   updateDevice: (device: Device, adminName: string) => void;
@@ -59,7 +66,6 @@ export interface DataContextType {
 
   // Operations
   assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
-  // Updated signature to support user inactivation
   returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean) => void;
   
   // Term Management

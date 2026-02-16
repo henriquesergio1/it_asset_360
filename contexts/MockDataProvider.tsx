@@ -144,6 +144,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
+    // Fix: Implemented missing DataContextType properties in MockDataProvider
+    fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
+    getTermFile: async (id: string) => "",
+    getDeviceInvoice: async (id: string) => "",
+    getMaintenanceInvoice: async (id: string) => "",
     addDevice, updateDevice, deleteDevice, restoreDevice, 
     addSim, updateSim, deleteSim,
     addUser, updateUser, toggleUserActive,

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2 } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -275,7 +274,7 @@ const DeviceManager = () => {
     devices, addDevice, updateDevice, deleteDevice, restoreDevice,
     users, models, brands, assetTypes, sims, customFields, sectors,
     maintenances, addMaintenance, deleteMaintenance, accounts,
-    getHistory
+    getHistory, getDeviceInvoice, getMaintenanceInvoice
   } = useData();
   const { user: currentUser } = useAuth();
   const location = useLocation();
@@ -321,6 +320,8 @@ const DeviceManager = () => {
   
   const [isUploadingNF, setIsUploadingNF] = useState(false);
   const [isUploadingMaint, setIsUploadingMaint] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
+
   const [newMaint, setNewMaint] = useState<Partial<MaintenanceRecord>>({ 
       description: '', 
       cost: 0, 
@@ -400,20 +401,37 @@ const DeviceManager = () => {
     }
   };
 
-  const openBase64File = (url: string) => {
-      if (!url) return;
-      if (url.startsWith('data:')) {
-          const parts = url.split(',');
-          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-          const binary = atob(parts[1]);
-          const array = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-          const blob = new Blob([array], { type: mime });
-          const blobUrl = URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
-      } else {
-          window.open(url, '_blank');
+  const openBase64File = async (type: 'DEVICE' | 'MAINTENANCE', id?: string, url?: string) => {
+      if (!url && id) {
+          // Carregamento sob demanda (v2.12.27)
+          setLoadingFiles(prev => ({ ...prev, [id]: true }));
+          try {
+              const fileUrl = type === 'DEVICE' ? await getDeviceInvoice(id) : await getMaintenanceInvoice(id);
+              if (fileUrl) openBlob(fileUrl);
+              else alert("Documento não encontrado no servidor.");
+          } catch (e) {
+              alert("Erro ao baixar documento.");
+          } finally {
+              setLoadingFiles(prev => ({ ...prev, [id]: false }));
+          }
+          return;
       }
+      if (url) openBlob(url);
+  };
+
+  const openBlob = (base64: string) => {
+      if (!base64.startsWith('data:')) {
+          window.open(base64, '_blank');
+          return;
+      }
+      const parts = base64.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+      const binary = atob(parts[1]);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+      const blob = new Blob([array], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
   };
 
   const saveMaintenance = () => {
@@ -1076,7 +1094,7 @@ const DeviceManager = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label>
                                         <input 
                                             type="date" 
                                             disabled={isViewOnly} 
@@ -1093,10 +1111,10 @@ const DeviceManager = () => {
                             </div>
 
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center shadow-inner transition-colors">
-                                {formData.purchaseInvoiceUrl ? (
+                                {(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (
                                     <div className="space-y-4 w-full">
                                         <div className="h-48 w-full bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center shadow-xl overflow-hidden group relative">
-                                            {formData.purchaseInvoiceUrl.startsWith('data:image') ? (
+                                            {(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (
                                                 <img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain" alt="NF" />
                                             ) : (
                                                 <div className="flex flex-col items-center gap-2 text-blue-600 dark:text-blue-400">
@@ -1106,8 +1124,16 @@ const DeviceManager = () => {
                                             )}
                                         </div>
                                         <div className="flex gap-3">
-                                            <button type="button" onClick={() => openBase64File(formData.purchaseInvoiceUrl!)} className="flex-1 bg-white dark:bg-slate-800 border-2 border-emerald-100 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center justify-center gap-2 shadow-sm transition-all"><ExternalLink size={14}/> Abrir Documento</button>
-                                            {!isViewOnly && <button type="button" onClick={() => setFormData({...formData, purchaseInvoiceUrl: ''})} className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl border-2 border-red-100 dark:border-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all shadow-sm"><Trash2 size={18}/></button>}
+                                            <button 
+                                                type="button" 
+                                                disabled={loadingFiles[editingId!]}
+                                                onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} 
+                                                className="flex-1 bg-white dark:bg-slate-800 border-2 border-emerald-100 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-50 dark:hover:bg-emerald-900/20 flex items-center justify-center gap-2 shadow-sm transition-all"
+                                            >
+                                                {loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} 
+                                                Abrir Documento
+                                            </button>
+                                            {!isViewOnly && <button type="button" onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl border-2 border-red-100 dark:border-red-900/40 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all shadow-sm"><Trash2 size={18}/></button>}
                                         </div>
                                     </div>
                                 ) : (
@@ -1199,7 +1225,16 @@ const DeviceManager = () => {
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">
-                                                {m.invoiceUrl && <button type="button" onClick={() => openBase64File(m.invoiceUrl!)} className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all"><ExternalLink size={16}/></button>}
+                                                {(m.invoiceUrl || m.hasInvoice) && (
+                                                    <button 
+                                                        disabled={loadingFiles[m.id]}
+                                                        type="button" 
+                                                        onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} 
+                                                        className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all flex items-center justify-center"
+                                                    >
+                                                        {loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}
+                                                    </button>
+                                                )}
                                                 {!isViewOnly && <button type="button" onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 dark:text-red-800 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>}
                                             </div>
                                         </div>

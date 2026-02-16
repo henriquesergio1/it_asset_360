@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -6,6 +7,26 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+    version: '2.12.28',
+    date: 'Hoje',
+    title: 'Compiling Errors Fix & Mock Implementation',
+    changes: [
+      'Correção de Erro: Finalização e exportação do componente de Login que estava truncado.',
+      'Mock Data Provider: Implementação dos métodos fetchData, getTermFile, getDeviceInvoice e getMaintenanceInvoice para paridade com o Provedor de Produção.',
+      'Sincronização global da versão para 2.12.28.'
+    ]
+  },
+    {
+    version: '2.12.27',
+    date: 'Ontem',
+    title: 'High-Resolution Display Optimization',
+    changes: [
+      'Expansão de Layout: Aumento do limite de largura máxima do container principal para 1850px, melhorando o aproveitamento de espaço em monitores Ultra-wide e 4K.',
+      'Melhoria Visual: Redução das bordas laterais em resoluções altas para visualização otimizada de tabelas complexas.',
+      'Sincronização global da versão para 2.12.27.'
+    ]
+  },
     {
     version: '2.12.26',
     date: 'Hoje',

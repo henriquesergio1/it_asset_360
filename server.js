@@ -1,3 +1,4 @@
+
 const express = require('express');
 const sql = require('mssql');
 const cors = require('cors');
@@ -26,13 +27,14 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.26', 
+        // Fix: Synchronized version string
+        version: '2.12.28', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.26) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.28 - Optimized) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -41,18 +43,21 @@ app.get('/api/bootstrap', async (req, res) => {
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
-            pool.request().query("SELECT * FROM Devices"),
+            // Devices: Excluir PurchaseInvoiceUrl no bootstrap
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 100 * FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
-            pool.request().query("SELECT * FROM Models"),
+            pool.request().query("SELECT * FROM Models"), // Mantemos as fotos dos modelos
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
-            pool.request().query("SELECT * FROM MaintenanceRecords"),
+            // Maintenances: Excluir InvoiceUrl no bootstrap
+            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT * FROM Terms"),
+            // Terms: Excluir FileUrl no bootstrap
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -87,7 +92,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 purchaseCost: d.PurchaseCost,
                 invoiceNumber: d.InvoiceNumber,
                 supplier: d.Supplier,
-                purchaseInvoiceUrl: d.PurchaseInvoiceUrl,
+                hasInvoice: d.hasInvoice === 1,
                 customData: d.CustomData ? JSON.parse(d.CustomData) : {},
                 accessories: acc.recordset
             };
@@ -103,9 +108,9 @@ app.get('/api/bootstrap', async (req, res) => {
             models: format(modelsRes),
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']),
-            maintenances: format(maintRes),
+            maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes),
-            terms: format(termsRes),
+            terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes),
             accounts: format(accountsRes)
@@ -113,6 +118,31 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) {
         res.status(500).send(err.message);
     }
+});
+
+// --- NOVO: ENDPOINTS DE CARREGAMENTO SOB DEMANDA ---
+app.get('/api/terms/:id/file', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM Terms WHERE Id=@Id");
+        res.json({ fileUrl: result.recordset[0]?.FileUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/devices/:id/invoice', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl FROM Devices WHERE Id=@Id");
+        res.json({ invoiceUrl: result.recordset[0]?.PurchaseInvoiceUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/maintenances/:id/invoice', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceUrl FROM MaintenanceRecords WHERE Id=@Id");
+        res.json({ invoiceUrl: result.recordset[0]?.InvoiceUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 // --- MIGRAÇÕES E CRIAÇÃO DE TABELAS ---
@@ -342,10 +372,10 @@ app.get('/api/sims', async (req, res) => {
 app.get('/api/devices', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, PurchaseInvoiceUrl as purchaseInvoiceUrl, CustomData as customDataStr FROM Devices");
+        const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
         const devices = await Promise.all(result.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
-            return { ...d, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
+            return { ...d, hasInvoice: d.hasInvoice === 1, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
         }));
         res.json(devices);
     } catch (err) { res.status(500).send(err.message); }
@@ -547,7 +577,7 @@ app.post('/api/operations/checkin', async (req, res) => {
 app.get('/api/terms', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, UserId as userId, Type as type, AssetDetails as assetDetails, Date as date, FileUrl as fileUrl FROM Terms");
+        const result = await pool.request().query("SELECT Id as id, UserId as userId, Type as type, AssetDetails as assetDetails, Date as date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms");
         res.json(result.recordset);
     } catch (err) { res.status(500).send(err.message); }
 });
