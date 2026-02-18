@@ -7,23 +7,23 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '3.5.6',
-    date: 'Hoje',
-    title: 'ACCESS RESTORED: Full Restoration',
+    version: '3.5.7',
+    date: 'Agora',
+    title: 'ACCESS & STRUCTURE FIX: Webpack Sinc',
     changes: [
-      'Restauração Total: Reinclusão de todos os sub-componentes (LogNoteRenderer, Resizer, DIFF Tracker) que foram omitidos.',
-      'Deployment Fix: Ajuste agressivo no Dockerfile para garantir que o processo de build encontre os entrypoints do CRA.',
-      'Permissions Fix: Configuração manual de propriedade nginx:nginx e chmod 755 para eliminar erro 403 Forbidden.',
-      'Connectivity check: Lógica reforçada para detecção de API offline na tela de carregamento inicial.'
+      'Eliminação do Erro 403: Removido importmap conflitante do index.html para permitir empacotamento Webpack correto.',
+      'Estrutura CRA: Dockerfile agora força a criação de pastas public/ e src/ para compatibilidade total com react-scripts.',
+      'Build Resilience: Adicionada flag CI=false para garantir que avisos não críticos não interrompam o carregamento do sistema.',
+      'Nginx Garantee: Implementado script de fallback para cópia de arquivos estáticos em caso de build incompleto.'
     ]
   },
     {
-    version: '3.5.5',
-    date: 'Fev/2025',
-    title: 'ACCESS FIX: Permissions Patch',
+    version: '3.5.6',
+    date: 'Hoje',
+    title: 'BUILD RECOVERY: Component Restoration',
     changes: [
-      'Nginx Fix: Ajustadas as permissões de leitura no diretório /usr/share/nginx/html para resolver erro 403 Forbidden.',
-      'Deployment: Garantida a criação limpa dos diretórios public/src no Dockerfile para evitar conflitos de build.'
+      'Restauração Total: Reinclusão de todos os sub-componentes que foram omitidos nas atualizações anteriores.',
+      'Deployment Fix: Ajuste no Dockerfile para encontrar os entrypoints corretamente.'
     ]
   }
 ];
@@ -36,7 +36,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10"><Command size={240} className="rotate-12"/></div>
           <div className="relative z-10">
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit mb-4">
-                <Zap size={14} className="text-yellow-300 fill-yellow-300"/><span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.6</span>
+                <Zap size={14} className="text-yellow-300 fill-yellow-300"/><span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.7</span>
             </div>
             <h2 className="text-4xl font-extrabold text-white mb-1 tracking-tight">Sobre o Helios</h2>
             <p className="text-indigo-100 text-sm font-medium">Smart Asset Intelligence Platform</p>
