@@ -1,3 +1,5 @@
+
+
 export enum DeviceStatus {
   AVAILABLE = 'Disponível',
   IN_USE = 'Em Uso',
@@ -15,13 +17,14 @@ export enum AccountType {
 
 export interface SoftwareAccount {
   id: string;
-  name: string; 
+  name: string; // Nome amigável (ex: Office 365 Pro)
   type: AccountType;
   login: string;
   password?: string;
-  accessUrl?: string; 
+  accessUrl?: string; // Renomeado de licenseKey para accessUrl
   status: 'Ativo' | 'Inativo';
   
+  // Vínculos
   userId?: string | null;
   deviceId?: string | null;
   sectorId?: string | null;
@@ -29,11 +32,13 @@ export interface SoftwareAccount {
   notes?: string;
 }
 
+// Campos Personalizados
 export interface CustomField {
   id: string;
   name: string; 
 }
 
+// Configurações Dinâmicas (Tipo de Ativo)
 export interface AssetType {
   id: string;
   name: string;
@@ -53,6 +58,7 @@ export interface DeviceModel {
   imageUrl?: string; 
 }
 
+// Acessórios
 export interface AccessoryType {
     id: string;
     name: string; 
@@ -74,6 +80,7 @@ export interface MaintenanceRecord {
   cost: number;
   provider: string; 
   invoiceUrl?: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
   hasInvoice?: boolean;
 }
 
@@ -105,6 +112,7 @@ export interface Device {
   invoiceNumber?: string;
   supplier?: string;
   purchaseInvoiceUrl?: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
   hasInvoice?: boolean;
 }
 
@@ -130,8 +138,8 @@ export interface Term {
   assetDetails: string; 
   date: string;
   fileUrl: string; 
+  /* Adicionado para suportar indicador de anexo no lightweight sync */
   hasFile?: boolean;
-  snapshotData?: string; // NOVO: Snapshot JSON para reimpressão fiel
 }
 
 export type ReturnChecklist = Record<string, boolean>;
@@ -198,8 +206,8 @@ export interface AuditLog {
   notes?: string;
   adminUser: string;
   backupData?: string; 
-  previousData?: string; 
-  newData?: string;      
+  previousData?: string; // NOVO: Snapshot antes da alteração
+  newData?: string;      // NOVO: Snapshot depois da alteração
 }
 
 export interface DashboardStats {

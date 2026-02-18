@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -90,6 +91,7 @@ const Login = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute top-3 left-3 text-gray-400 h-5 w-5" />
+                {/* Fix: Added missing password input and closed the truncated block */}
                 <input 
                   type="password" 
                   required
@@ -121,9 +123,6 @@ const Login = () => {
           <div className="mt-8 pt-6 border-t dark:border-slate-800 text-center">
              <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Problemas no acesso?</p>
              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer">Contatar Suporte de T.I.</p>
-             <div className="mt-4 text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">
-               Helios Asset Suite v3.5.7
-             </div>
           </div>
         </div>
       </div>

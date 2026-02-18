@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, DeviceAccessory } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount } from '../types';
 
 const API_URL = ''; 
 
@@ -34,7 +35,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const fetchData = async (silent: boolean = false) => {
     try {
       if (!silent) setLoading(true);
+      
+      // Se for atualização silenciosa (navegação), usa o endpoint /api/sync que economiza 99% de banda (sem fotos)
       const endpoint = silent ? '/api/sync' : '/api/bootstrap';
+      console.log(`[ITAsset360] Sincronizando dados via ${endpoint}...`);
+
       const res = await fetch(`${API_URL}${endpoint}`);
       const data = await safeJson(res, endpoint);
 
@@ -51,8 +56,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })));
       setLogs(logsData);
       setMaintenances(maintData);
+      // setTerms call removed as state is not defined and data is mapped to users
       setAccounts(accountsData);
 
+      // Apenas atualiza catálogo no bootstrap inicial ou carregamento forçado
       if (!silent) {
           setSystemUsers(data.systemUsers || []);
           setSettings(data.settings || { appName: 'IT Asset', logoUrl: '' });
@@ -63,9 +70,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setAccessoryTypes(data.accessoryTypes || []);
           setCustomFields(data.customFields || []);
       }
+      
       setError(null);
     } catch (err: any) { 
         if (!silent) setError(err.message); 
+        console.error("Sync Error:", err.message);
     } finally { 
         if (!silent) setLoading(false); 
     }
@@ -106,6 +115,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return safeJson(res, endpoint);
   };
 
+  // CRUD Dispositivos
   const addDevice = async (device: Device, adminName: string) => { await postData('devices', { ...device, _adminUser: adminName }); fetchData(true); };
   const updateDevice = async (device: Device, adminName: string) => { await putData('devices', { ...device, _adminUser: adminName }); fetchData(true); };
   const deleteDevice = async (id: string, adminName: string, reason: string) => {
@@ -162,11 +172,12 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     accounts, fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
     addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
     updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); },
-    assignAsset: async (at, aid, uid, n, adm, acc, snap) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc, termSnapshot: snap }); fetchData(true); },
-    returnAsset: async (at, aid, n, adm, list, inactivate, snap) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate, termSnapshot: snap }); fetchData(true); },
+    assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
+    returnAsset: async (at, aid, n, adm, list, inactivate) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate }); fetchData(true); },
     updateTermFile, deleteTermFile, getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(true); },
     restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(true); },
+    // Fix: replaced 'a' with 'adm' to match function parameters
     addAssetType: async (t, adm) => { await postData('asset-types', {...t, _adminUser: adm}); fetchData(true); },
     updateAssetType: async (t, adm) => { await putData('asset-types', {...t, _adminUser: adm}); fetchData(true); },
     deleteAssetType: async (id) => { await fetch(`${API_URL}/api/asset-types/${id}`, {method: 'DELETE'}); fetchData(true); },

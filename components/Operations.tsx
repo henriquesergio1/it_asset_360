@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -113,6 +114,7 @@ const Operations = () => {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [notes, setNotes] = useState('');
   const [syncAssetData, setSyncAssetData] = useState(true);
+  // NOVO: Flag para inativar usuário no desligamento
   const [inactivateAfterReturn, setInactivateAfterReturn] = useState(false);
   const [isProcessed, setIsProcessed] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -128,7 +130,6 @@ const Operations = () => {
       checklistSnapshot?: ReturnChecklist;
       accessoriesSnapshot?: DeviceAccessory[]; 
       notes: string;
-      termSnapshot?: any;
   } | null>(null);
 
   useEffect(() => {
@@ -206,15 +207,6 @@ const Operations = () => {
 
     try {
         let deliveryAccessories: DeviceAccessory[] = [];
-        const targetUser = users.find(u => u.id === currentUserId);
-        let targetAsset = assetType === 'Device' ? devices.find(d => d.id === selectedAssetId) : sims.find(s => s.id === selectedAssetId);
-
-        // Prepara Snapshot v3.5.0 para Termo histórico fiel
-        let termSnapshot: any = {
-            notes: notes,
-            sectorName: sectors.find(s => s.id === targetUser?.sectorId)?.name,
-            checklist: activeTab === 'CHECKIN' ? { ...checklist } : null
-        };
 
         if (activeTab === 'CHECKOUT') {
             deliveryAccessories = selectedAccessoryTypeIds.map(typeId => {
@@ -228,34 +220,15 @@ const Operations = () => {
             });
 
             if (syncAssetData && assetType === 'Device') {
+                const user = users.find(u => u.id === selectedUserId);
                 const device = devices.find(d => d.id === selectedAssetId);
-                if (targetUser && device) await updateDevice({ ...device, sectorId: targetUser.sectorId }, adminName);
+                if (user && device) await updateDevice({ ...device, sectorId: user.sectorId }, adminName);
             }
 
-            // Ativo com acessórios aplicados para o snapshot
-            const assetWithAcc = assetType === 'Device' ? { ...targetAsset, accessories: deliveryAccessories } : targetAsset;
-            
-            termSnapshot.asset = assetWithAcc;
-            if (assetType === 'Device') {
-                const d = targetAsset as Device;
-                termSnapshot.model = models.find(m => m.id === d.modelId);
-                termSnapshot.brand = brands.find(b => b.id === termSnapshot.model?.brandId);
-                termSnapshot.type = assetTypes.find(t => t.id === termSnapshot.model?.typeId);
-                if (d.linkedSimId) termSnapshot.linkedSim = sims.find(s => s.id === d.linkedSimId);
-            }
-
-            await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories, termSnapshot);
+            await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
         } else {
-            termSnapshot.asset = targetAsset;
-            if (assetType === 'Device') {
-                const d = targetAsset as Device;
-                termSnapshot.model = models.find(m => m.id === d.modelId);
-                termSnapshot.brand = brands.find(b => b.id === termSnapshot.model?.brandId);
-                termSnapshot.type = assetTypes.find(t => t.id === termSnapshot.model?.typeId);
-                if (d.linkedSimId) termSnapshot.linkedSim = sims.find(s => s.id === d.linkedSimId);
-            }
-
-            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, termSnapshot);
+            // Pass the inactivation flag to the return process
+            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn);
         }
 
         setLastOperation({ 
@@ -265,8 +238,7 @@ const Operations = () => {
             action: activeTab, 
             checklistSnapshot: activeTab === 'CHECKIN' && assetType === 'Device' ? { ...checklist } : undefined,
             accessoriesSnapshot: activeTab === 'CHECKOUT' && assetType === 'Device' ? deliveryAccessories : undefined,
-            notes: notes,
-            termSnapshot: termSnapshot
+            notes: notes 
         });
         
         setIsProcessed(true);
@@ -278,23 +250,40 @@ const Operations = () => {
   };
 
   const handlePrint = () => {
-      if (!lastOperation || !lastOperation.termSnapshot) return;
+      if (!lastOperation) return;
       const user = users.find(u => u.id === lastOperation.userId);
-      if (!user) return;
+      let asset = lastOperation.assetType === 'Device' ? devices.find(d => d.id === lastOperation.assetId) : sims.find(s => s.id === lastOperation.assetId);
+      
+      if (!user || !asset) {
+          alert("Não foi possível localizar os dados para impressão.");
+          return;
+      }
 
-      const snap = lastOperation.termSnapshot;
+      if (lastOperation.assetType === 'Device' && lastOperation.accessoriesSnapshot) {
+          asset = { ...asset, accessories: lastOperation.accessoriesSnapshot } as Device;
+      }
+
+      let model, brand, type, linkedSim;
+      if (lastOperation.assetType === 'Device') {
+          const d = asset as Device;
+          model = models.find(m => m.id === d.modelId);
+          brand = brands.find(b => b.id === model?.brandId);
+          type = assetTypes.find(t => t.id === model?.typeId);
+          if (d.linkedSimId) linkedSim = sims.find(s => s.id === d.linkedSimId);
+      }
+
       generateAndPrintTerm({ 
           user, 
-          asset: snap.asset, 
+          asset, 
           settings, 
-          model: snap.model, 
-          brand: snap.brand, 
-          type: snap.type, 
-          linkedSim: snap.linkedSim, 
+          model, 
+          brand, 
+          type, 
+          linkedSim, 
           actionType: lastOperation.action === 'CHECKOUT' ? 'ENTREGA' : 'DEVOLUCAO', 
-          sectorName: snap.sectorName, 
-          checklist: snap.checklist, 
-          notes: snap.notes 
+          sectorName: sectors.find(s => s.id === user.sectorId)?.name, 
+          checklist: lastOperation.checklistSnapshot, 
+          notes: lastOperation.notes 
       });
   };
 
@@ -457,6 +446,7 @@ const Operations = () => {
                             </div>
                         )}
 
+                        {/* NOVO: OPÇÃO DE DESLIGAMENTO (INATIVAÇÃO AUTOMÁTICA) */}
                         <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                              <div className="flex items-center gap-4">
                                 <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-orange-600`}>

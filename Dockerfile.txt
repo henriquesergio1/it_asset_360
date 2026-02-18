@@ -3,50 +3,44 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
-# Install dependencies separately for cache optimization
+# Copy package.json and install dependencies
 COPY package.json ./
 RUN npm install
 
-# Copy all source files
+# Copy source code
 COPY . .
 
-# --- NORMALIZAÇÃO DE ESTRUTURA PARA BUILD (v3.5.8) ---
-RUN mkdir -p /app/src /app/public
-RUN [ -f index.tsx ] && mv index.tsx src/ || true
-RUN [ -f index.html ] && mv index.html public/ || true
-RUN [ -f App.tsx ] && mv App.tsx src/ || true
-RUN [ -f types.ts ] && mv types.ts src/ || true
-RUN [ -f metadata.json ] && mv metadata.json public/ || true
-RUN mv components src/ 2>/dev/null || true
-RUN mv contexts src/ 2>/dev/null || true
-RUN mv services src/ 2>/dev/null || true
-RUN mv utils src/ 2>/dev/null || true
-RUN find . -maxdepth 1 -name "*.tsx" -o -name "*.ts" ! -name "server.js" -exec mv {} src/ \; 2>/dev/null || true
+# --- FIX STRUCTURE FOR REACT SCRIPTS ---
+# Create standard CRA directories
+RUN mkdir -p public src
 
-# Configurações para forçar o build mesmo com avisos
-ENV CI=false
-ENV TSC_COMPILE_ON_ERROR=true
-ENV ESLINT_NO_DEV_ERRORS=true
-ENV GENERATE_SOURCEMAP=false
+# Move Static Assets to public/
+RUN [ -f index.html ] && mv index.html public/
+RUN [ -f metadata.json ] && mv metadata.json public/
 
-RUN npm run build
+# Move Source Code to src/
+# We explicitly move folders and TS/TSX files.
+# IMPORTANT: We DO NOT move 'server.js' so it stays in root and is IGNORED by react-scripts build.
+RUN mv components contexts services utils src/ 2>/dev/null || true
+RUN mv *.tsx *.ts src/ 2>/dev/null || true
+
+# IMPORTANT: Set CI=false to treat warnings as warnings, NOT errors.
+RUN CI=false npm run build
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
-# Limpa diretório padrão do Nginx
+# Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copia o resultado do build
+# Copy static assets from builder stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# GURANTE: Garante que o index.html existe e tem permissão (Fim do 403 Forbidden)
-RUN chmod -R 755 /usr/share/nginx/html && \
-    chown -R nginx:nginx /usr/share/nginx/html
-
-# Copia configuração customizada
+# Copy custom nginx config
 COPY nginx.conf.txt /etc/nginx/conf.d/default.conf
 
+# Expose port 80
 EXPOSE 80
 
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
