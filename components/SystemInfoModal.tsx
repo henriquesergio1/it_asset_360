@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.43',
+    date: 'Hoje',
+    title: 'Dashboard Navigation & Deep Linking',
+    changes: [
+      'Dashboard: Os cards de estatísticas superiores agora são clicáveis e redirecionam para as telas correspondentes.',
+      'Inventário: Implementado suporte a filtros via URL (Deep Linking), permitindo filtrar por status diretamente ao acessar a tela.',
+      'UX: Adicionados efeitos visuais de interatividade (hover scale e rotate) nos atalhos do dashboard.',
+      'Sincronização global para v2.12.43.'
+    ]
+  },
+    {
     version: '2.12.42',
     date: 'Hoje',
     title: 'Advanced Inventory Search Improvement',
@@ -27,16 +38,6 @@ const versions = [
       'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
       'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
       'Sincronização global para v2.12.41.'
-    ]
-  },
-    {
-    version: '2.12.40',
-    date: '02/2025',
-    title: 'TypeScript Stability & Missing Properties',
-    changes: [
-      'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
-      'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
-      'Sincronização global para v2.12.40.'
     ]
   }
 ];
