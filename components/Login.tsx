@@ -122,7 +122,7 @@ const Login = () => {
              <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Problemas no acesso?</p>
              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer">Contatar Suporte de T.I.</p>
              <div className="mt-4 text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">
-               Helios Asset Suite v3.5.3
+               Helios Asset Suite v3.5.4
              </div>
           </div>
         </div>

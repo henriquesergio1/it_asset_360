@@ -22,11 +22,11 @@ const dbConfig = {
     }
 };
 
-// --- HEALTH CHECK (v3.5.3) ---
+// --- HEALTH CHECK (v3.5.4) ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.5.3', 
+        version: '3.5.4', 
         timestamp: new Date().toISOString()
     });
 });
@@ -65,7 +65,7 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- BOOTSTRAP ENDPOINT (v3.5.3) ---
+// --- BOOTSTRAP ENDPOINT (v3.5.4) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -200,7 +200,7 @@ app.put('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operações (Checkout/Checkin) v3.5.3
+// Operações (Checkout/Checkin) v3.5.4
 app.post('/api/operations/checkout', async (req, res) => {
     const { assetId, assetType, userId, notes, _adminUser, accessories, termSnapshot } = req.body;
     try {
@@ -233,5 +233,5 @@ app.post('/api/operations/checkout', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Helios Server v3.5.3 em PRODUÇÃO na porta ${PORT}`);
+    console.log(`🚀 Helios Server v3.5.4 em PRODUÇÃO na porta ${PORT}`);
 });
