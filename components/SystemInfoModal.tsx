@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
@@ -7,8 +8,21 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.40',
+    version: '2.12.41',
     date: 'Hoje',
+    title: 'Admin Panel Restoration & Visual Consistency',
+    changes: [
+      'Administração: Restauradas as abas "Acesso", "Geral" e "Editor de Termos" com CRUD funcional.',
+      'Acesso: Implementado gerenciamento de operadores e administradores do sistema.',
+      'Geral: Adicionado formulário para edição de nome do app, logo e CNPJ.',
+      'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
+      'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
+      'Sincronização global para v2.12.41.'
+    ]
+  },
+    {
+    version: '2.12.40',
+    date: 'Ontem',
     title: 'TypeScript Stability & Missing Properties',
     changes: [
       'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
@@ -18,7 +32,7 @@ const versions = [
   },
     {
     version: '2.12.39',
-    date: 'Ontem',
+    date: '02/2025',
     title: 'Visual Standardization & Column Fixes',
     changes: [
       'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
@@ -26,16 +40,6 @@ const versions = [
       'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
       'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
       'Sincronização global para v2.12.39.'
-    ]
-  },
-    {
-    version: '2.12.38',
-    date: '02/2025',
-    title: 'Critical Fix: Term File Management',
-    changes: [
-      'Correção de Bug: Implementados endpoints ausentes para upload e exclusão de termos digitalizados (Fix 404 error).',
-      'Auditoria de Anexos: Inclusão automática de logs de auditoria ao digitalizar ou remover arquivos de termos.',
-      'Sincronização de Estado: Atualização global para v2.12.38.'
     ]
   }
 ];
@@ -45,21 +49,12 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] transition-colors duration-300">
         <div className="bg-slate-900 px-8 py-6 flex justify-between items-start shrink-0 relative border-b dark:border-slate-800">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2>
-            <p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
-            <X size={24} />
-          </button>
-          <div className="absolute -right-10 -top-10 text-slate-800 opacity-50">
-             <GitCommit size={150} />
-          </div>
+          <div className="relative z-10"><h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2><p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p></div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10"><X size={24} /></button>
+          <div className="absolute -right-10 -top-10 text-slate-800 opacity-50"><GitCommit size={150} /></div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900">
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-            <GitCommit className="text-blue-600 dark:text-blue-400" size={20}/> Histórico de Versões
-          </h3>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><GitCommit className="text-blue-600" size={20}/> Histórico de Versões</h3>
           <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-8 pb-4">
             {versions.map((ver, index) => (
               <div key={index} className="relative pl-8">

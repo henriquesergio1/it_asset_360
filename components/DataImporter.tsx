@@ -347,10 +347,7 @@ const DataImporter = () => {
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               } 
               else if (importType === 'DEVICES') {
-                  // --- SMART MERGE LOGIC ---
                   const existingDevice = item.existingId ? devices.find(d => d.id === item.existingId) : null;
-
-                  // 1. Resolver Marcas/Modelos apenas se houver valor no CSV ou se for novo
                   let bId = existingDevice?.modelId ? models.find(m => m.id === existingDevice.modelId)?.brandId : '';
                   let tId = existingDevice?.modelId ? models.find(m => m.id === existingDevice.modelId)?.typeId : '';
                   let mId = existingDevice?.modelId || '';
@@ -358,25 +355,20 @@ const DataImporter = () => {
                   if (r['Marca'] || r['Tipo'] || r['Modelo']) {
                       const finalBrandName = r['Marca'] || (bId ? brands.find(b => b.id === bId)?.name : 'Outros');
                       bId = await resolveBrand(finalBrandName);
-                      
                       const finalTypeName = r['Tipo'] || (tId ? assetTypes.find(t => t.id === tId)?.name : 'Outros');
                       tId = await resolveType(finalTypeName);
-                      
                       const finalModelName = r['Modelo'] || (mId ? models.find(m => m.id === mId)?.name : 'Padrão');
                       mId = await resolveModel(finalModelName, bId!, tId!);
                   }
                   
-                  // 2. Setor (Cargo)
                   let sId = existingDevice?.sectorId || '';
                   if (r['Cargo ou Funcao']) {
                       sId = await resolveSector(r['Cargo ou Funcao']);
                   }
 
-                  // 3. Colaborador (Vínculo)
                   const userCpfRaw = r['CPF Colaborador']?.trim();
                   let currentUserId = existingDevice?.currentUserId || null;
                   let linkedUser = null;
-                  
                   if (userCpfRaw) {
                       const userCpfFormatted = formatCPF(userCpfRaw);
                       linkedUser = users.find(u => cleanId(u.cpf) === cleanId(userCpfFormatted));
@@ -387,11 +379,9 @@ const DataImporter = () => {
                       }
                   }
                   
-                  // 4. Chip (Vínculo)
                   const simNumRaw = r['Numero da Linha']?.trim();
                   let resolvedSimId = existingDevice?.linkedSimId || null;
                   let foundSim = null;
-
                   if (simNumRaw) {
                       const simNumClean = cleanId(simNumRaw);
                       foundSim = sims.find(s => cleanId(s.phoneNumber) === simNumClean);
@@ -402,7 +392,6 @@ const DataImporter = () => {
                       }
                   }
 
-                  // 5. Status
                   const csvStatus = r['Status']?.trim();
                   const deviceStatus = csvStatus ? mapStatus(csvStatus, !!linkedUser || !!currentUserId) : (existingDevice?.status || mapStatus('', !!currentUserId));
 
@@ -424,22 +413,14 @@ const DataImporter = () => {
                       customData: existingDevice?.customData || {}
                   };
 
-                  // Salvar o Dispositivo
                   item.status === 'NEW' ? await addDevice(deviceData, adminName) : await updateDevice(deviceData, adminName);
-                  
-                  // SYNC CHIP STATUS: Se encontrou o chip novo ou existia, sincroniza
                   if (resolvedSimId) {
                       const simToSync = sims.find(s => s.id === resolvedSimId);
                       if (simToSync) {
-                          const updatedSim: SimCard = {
-                              ...simToSync,
-                              status: deviceStatus,
-                              currentUserId: currentUserId
-                          };
+                          const updatedSim: SimCard = { ...simToSync, status: deviceStatus, currentUserId: currentUserId };
                           await updateSim(updatedSim, `${adminName} (Sinc. Importação)`);
                       }
                   }
-
                   item.status === 'NEW' ? setProgress(p => ({ ...p, created: p.created + 1 })) : setProgress(p => ({ ...p, updated: p.updated + 1 }));
               }
               else if (importType === 'SIMS') {
@@ -472,16 +453,16 @@ const DataImporter = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-full animate-fade-in">
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-full animate-fade-in transition-colors">
         <div className="mb-6 flex justify-between items-start">
             <div>
-                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <Database className="text-blue-600"/> Importador de Dados
+                <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                    <Database className="text-blue-600 dark:text-blue-400"/> Importador de Dados
                 </h3>
-                <p className="text-sm text-gray-500">Mapeamento inteligente de cargos, funções e identificadores.</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Mapeamento inteligente de cargos, funções e identificadores.</p>
             </div>
             {step !== 'UPLOAD' && (
-                <button onClick={handleStartNew} className="text-sm text-blue-600 hover:underline flex items-center gap-1 font-bold">
+                <button onClick={handleStartNew} className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-bold">
                     <RefreshCw size={14}/> Recomeçar
                 </button>
             )}
@@ -491,22 +472,22 @@ const DataImporter = () => {
             <div className="space-y-6">
                 <div className="flex gap-4">
                     {(['USERS', 'DEVICES', 'SIMS'] as ImportType[]).map(t => (
-                        <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md scale-[1.02]' : 'hover:bg-gray-50 text-gray-500'}`}>
+                        <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-md scale-[1.02]' : 'hover:bg-gray-50 dark:hover:bg-slate-800 dark:border-slate-700 text-gray-500 dark:text-slate-500'}`}>
                             <span className="font-black text-lg uppercase tracking-tighter">{t === 'USERS' ? 'Colaboradores' : t === 'DEVICES' ? 'Dispositivos' : 'Chips'}</span>
                         </button>
                     ))}
                 </div>
-                <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-12 flex flex-col items-center justify-center gap-6">
+                <div className="bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-12 flex flex-col items-center justify-center gap-6">
                     <div className="flex gap-4">
-                        <button onClick={downloadTemplate} className="flex items-center gap-2 text-sm bg-white border border-gray-300 px-6 py-3 rounded-xl hover:bg-gray-100 shadow-sm font-bold text-gray-700 transition-all">
-                            <Download size={18} className="text-blue-600"/> Baixar Planilha Modelo
+                        <button onClick={downloadTemplate} className="flex items-center gap-2 text-sm bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 px-6 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 shadow-sm font-bold text-gray-700 dark:text-slate-300 transition-all">
+                            <Download size={18} className="text-blue-600 dark:text-blue-400"/> Baixar Planilha Modelo
                         </button>
                         <label className="flex items-center gap-2 text-sm bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 cursor-pointer shadow-lg transition-all font-bold">
                             <Upload size={18}/> Selecionar Arquivo CSV
                             <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
                         </label>
                     </div>
-                    <p className="text-[11px] text-gray-400 text-center max-w-md italic">
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500 text-center max-w-md italic">
                         {importType === 'USERS' ? 'Nota: CPF como ID. Unicidade validada para CPF, RG e PIS.' : 
                          importType === 'DEVICES' ? 'Nota: Unicidade validada para Patrimônio e IMEI. "Número da Linha" vincula chip automaticamente.' :
                          'Nota: Identificação única via Número do Chip.'}
@@ -518,37 +499,37 @@ const DataImporter = () => {
         {step === 'ANALYSIS' && (
             <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
                 <div className="flex gap-4 mb-4">
-                    <div className="bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
-                    <div className="bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
+                    <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-green-800">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
+                    <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-orange-800">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
                     {analyzedData.some(i => i.status === 'ERROR') && (
-                        <div className="bg-red-100 text-red-700 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
+                        <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-red-800">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
                     )}
                 </div>
-                <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-white">
+                <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-white dark:bg-slate-950 dark:border-slate-800">
                     <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-100 sticky top-0 shadow-sm z-10">
+                        <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 shadow-sm z-10">
                             <tr>
-                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Identificador</th>
-                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Ação</th>
-                                <th className="px-6 py-4 font-black text-slate-600 uppercase">Resumo / Erro</th>
+                                <th className="px-6 py-4 font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Identificador</th>
+                                <th className="px-6 py-4 font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Ação</th>
+                                <th className="px-6 py-4 font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Resumo / Erro</th>
                             </tr>
                         </thead>
                         <tbody>
                             {analyzedData.map((item, idx) => (
-                                <tr key={idx} className={`border-b hover:bg-blue-50/30 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20' : ''}`}>
-                                    <td className="px-6 py-3 font-mono font-bold text-blue-900">
+                                <tr key={idx} className={`border-b dark:border-slate-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20 dark:bg-red-900/5' : ''}`}>
+                                    <td className="px-6 py-3 font-mono font-bold text-blue-900 dark:text-blue-300">
                                         {importType === 'USERS' ? item.row['CPF'] : 
                                          importType === 'DEVICES' ? (item.row['Patrimonio'] || item.row['IMEI']) : 
                                          item.row['Numero']}
                                     </td>
                                     <td className="px-6 py-3">
-                                        <span className={`px-2.5 py-1 rounded font-black text-[10px] ${item.status === 'NEW' ? 'bg-green-100 text-green-700' : item.status === 'CONFLICT' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                                        <span className={`px-2.5 py-1 rounded font-black text-[10px] tracking-widest border ${item.status === 'NEW' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : item.status === 'CONFLICT' ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40'}`}>
                                             {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-3 text-gray-500 font-bold uppercase text-[10px]">
+                                    <td className="px-6 py-3 text-gray-500 dark:text-slate-400 font-bold uppercase text-[10px]">
                                         {item.status === 'ERROR' ? (
-                                            <span className="text-red-600 flex items-center gap-1"><AlertCircle size={12}/> {item.errorMsg}</span>
+                                            <span className="text-red-600 dark:text-red-400 flex items-center gap-1"><AlertCircle size={12}/> {item.errorMsg}</span>
                                         ) : (
                                             importType === 'USERS' ? item.row['Nome Completo'] :
                                             importType === 'DEVICES' ? `${item.row['Marca']} ${item.row['Modelo']}` :
@@ -570,8 +551,8 @@ const DataImporter = () => {
             <div className="flex flex-col items-center justify-center flex-1 space-y-8">
                 <Loader2 size={64} className="text-blue-600 animate-spin"/>
                 <div className="text-center">
-                    <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Processando {progress.current} de {progress.total}</h3>
-                    <div className="w-64 bg-gray-100 h-2 rounded-full mt-4 overflow-hidden border">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Processando {progress.current} de {progress.total}</h3>
+                    <div className="w-64 bg-gray-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border dark:border-slate-700 shadow-inner">
                         <div className="bg-blue-600 h-full transition-all duration-300" style={{width: `${(progress.current/progress.total)*100}%`}}></div>
                     </div>
                 </div>
@@ -581,16 +562,16 @@ const DataImporter = () => {
         {step === 'DONE' && (
             <div className="flex flex-col items-center justify-center flex-1 space-y-6 text-center">
                 <CheckCircle size={80} className="text-green-500 animate-bounce"/>
-                <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">Importação Concluída</h3>
-                <div className="grid grid-cols-3 gap-8 bg-slate-50 p-8 rounded-3xl border shadow-inner">
-                    <div><p className="text-3xl font-black text-green-600">{progress.created}</p><p className="text-[10px] font-bold uppercase text-gray-400">Criados</p></div>
-                    <div><p className="text-3xl font-black text-orange-500">{progress.updated}</p><p className="text-[10px] font-bold uppercase text-gray-400">Atualizados</p></div>
-                    <div><p className="text-3xl font-black text-red-500">{progress.errors}</p><p className="text-[10px] font-bold uppercase text-gray-400">Erros</p></div>
+                <h3 className="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter leading-none">Importação Concluída</h3>
+                <div className="grid grid-cols-3 gap-8 bg-slate-50 dark:bg-slate-950 p-8 rounded-3xl border dark:border-slate-800 shadow-inner transition-colors">
+                    <div><p className="text-3xl font-black text-green-600 dark:text-green-400">{progress.created}</p><p className="text-[10px] font-bold uppercase text-gray-400 dark:text-slate-500">Criados</p></div>
+                    <div><p className="text-3xl font-black text-orange-500 dark:text-orange-400">{progress.updated}</p><p className="text-[10px] font-bold uppercase text-gray-400 dark:text-slate-500">Atualizados</p></div>
+                    <div><p className="text-3xl font-black text-red-500 dark:text-red-400">{progress.errors}</p><p className="text-[10px] font-bold uppercase text-gray-400 dark:text-slate-500">Erros</p></div>
                 </div>
-                <button onClick={handleStartNew} className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95">Nova Importação</button>
+                <button onClick={handleStartNew} className="bg-slate-900 dark:bg-blue-600 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black dark:hover:bg-blue-700 transition-all shadow-xl active:scale-95">Nova Importação</button>
                 {logs.length > 0 && (
-                    <div className="w-full max-w-xl bg-red-50 p-4 rounded-xl text-left text-xs text-red-700 border border-red-200 overflow-y-auto max-h-40 shadow-sm font-mono">
-                        <p className="font-bold mb-2 uppercase text-[10px]">Logs de Erro Detalhados:</p>
+                    <div className="w-full max-w-xl bg-red-50 dark:bg-red-900/20 p-4 rounded-xl text-left text-xs text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40 overflow-y-auto max-h-40 shadow-sm font-mono transition-colors">
+                        <p className="font-bold mb-2 uppercase text-[10px] tracking-widest">Logs de Erro Detalhados:</p>
                         <ul className="list-decimal pl-6 space-y-1">{logs.map((l, i) => <li key={i}>{l}</li>)}</ul>
                     </div>
                 )}
