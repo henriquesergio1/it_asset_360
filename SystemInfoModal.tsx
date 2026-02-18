@@ -7,24 +7,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '3.5.0',
+    version: '3.5.1',
     date: 'Hoje',
-    title: 'PRODUCTION: Full Recall & Bidirectional Audit',
+    title: 'HOTFIX: Admin Restore & Data Integrity',
     changes: [
-      'Upgrade Cumulative: Migração estruturada da v2.12.40 para a arquitetura Helios Modern.',
-      'Document Recall: Implementação de snapshots JSON em termos para permitir reimpressão fiel.',
-      'Audit 360: Logs bidirecionais entre ativos e colaboradores com suporte a diff visual.',
-      'Data Integrity: Adicionado campo SnapshotData no banco para persistência histórica.',
-      'UX Flow: Restauração do botão de impressão direta e melhoria na busca inteligente.'
+      'File Fix: Resolvido erros 404 ao tentar abrir Notas Fiscais e Arquivos de Termos através de novas rotas de streaming.',
+      'Admin Restored: Restauração completa das telas de Usuários do Sistema, Configurações e Editor de Templates.',
+      'UX Contrast: Correção de legibilidade no tema escuro em textos que apareciam pretos em fundos escuros.',
+      'Term Fallback: Implementação de re-impressão inteligente para termos antigos sem snapshot JSON.',
+      'Pending Logic: Refinamento na detecção de pendências para evitar falsos positivos em colaboradores novos.'
     ]
   },
     {
-    version: '2.12.40',
+    version: '3.5.0',
     date: 'Fev/2025',
-    title: 'TypeScript Stability & Legacy Baseline',
+    title: 'PRODUCTION: Helios Modern Architecture',
     changes: [
-      'Estabilização: Última versão da arquitetura anterior focada em tipagem de arquivos.',
-      'Sincronização: Alinhamento de campos hasFile e hasInvoice.'
+      'Document Recall: Implementação de snapshots JSON em termos.',
+      'Audit 360: Logs bidirecionais entre ativos e colaboradores.'
     ]
   }
 ];
@@ -40,7 +40,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
           <div className="relative z-10">
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit mb-4">
                 <Zap size={14} className="text-yellow-300 fill-yellow-300"/>
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.0</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.1</span>
             </div>
             <h2 className="text-4xl font-extrabold text-white mb-1 tracking-tight">Sobre o Helios</h2>
             <p className="text-indigo-100 text-sm font-medium">Smart Asset Intelligence Platform</p>

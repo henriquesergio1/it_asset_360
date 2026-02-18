@@ -15,7 +15,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, to }: any) => (
       </div>
       <div className="text-right">
         <p className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] mb-1">{title}</p>
-        <h3 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+        <h3 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {value}
         </h3>
       </div>
@@ -48,6 +48,7 @@ const Dashboard = () => {
     { name: 'Em Reparo', value: maintenanceDevices, color: '#f59e0b' }, 
   ];
 
+  // Refined Logic: Apenas termos que existem mas não possuem arquivo associado (REAIS)
   const pendingTerms = users.flatMap(u => 
       (u.terms || []).filter(t => !t.fileUrl && !t.hasFile).map(t => ({
           term: t,
@@ -62,14 +63,14 @@ const Dashboard = () => {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none mb-2">Painel de Controle</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Resumo operacional e financeiro da infraestrutura de TI.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Resumo operacional e financeiro v3.5.1</p>
         </div>
         <Link to="/users" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm hover:shadow-md transition-all group">
             <div className="h-10 w-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center">
                 <Users size={20}/>
             </div>
             <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Colaboradores</p>
+                <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest leading-none mb-1">Colaboradores</p>
                 <p className="text-lg font-black text-slate-900 dark:text-white leading-none">{users.filter(u => u.active).length} Ativos</p>
             </div>
             <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 ml-2 transition-colors"/>
@@ -97,7 +98,7 @@ const Dashboard = () => {
           title="Investimento (TCO)" 
           value={`R$ ${(tcoValue/1000).toFixed(1)}k`}
           icon={DollarSign} 
-          color="bg-emerald-50" 
+          color="bg-emerald-600" 
           subtitle="Valor total: Aquisição + Reparos"
           to="/admin"
         />
@@ -112,7 +113,7 @@ const Dashboard = () => {
       </div>
 
       {pendingTerms.length > 0 && (
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-sm border border-slate-200 dark:border-slate-800 animate-scale-up relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 shadow-sm border border-slate-200 dark:border-slate-800 animate-scale-up relative overflow-hidden transition-colors">
               <div className="flex flex-col gap-8 relative z-10">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b dark:border-slate-800 pb-6">
                       <div className="flex items-center gap-4">
@@ -120,13 +121,13 @@ const Dashboard = () => {
                               <FileSearch size={24} strokeWidth={2.5}/>
                           </div>
                           <div>
-                              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
+                              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">
                                   Existem {pendingTerms.length} termos pendentes de digitalização
                               </h3>
-                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mt-1">Sincronize os arquivos assinados nos perfis dos colaboradores</p>
+                              <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] mt-1">Sincronize os arquivos assinados nos perfis dos colaboradores</p>
                           </div>
                       </div>
-                      <Link to="/users?pending=true" className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 hover:text-indigo-700 flex items-center gap-2">
+                      <Link to="/users?pending=true" className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-2">
                           Gerenciar Pendências <ArrowRight size={14}/>
                       </Link>
                   </div>
@@ -154,7 +155,7 @@ const Dashboard = () => {
                                                       </div>
                                                       <div className="flex flex-col">
                                                           <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{user.fullName}</span>
-                                                          <span className="text-[9px] font-black uppercase text-slate-400">{sector?.name || 'Geral'}</span>
+                                                          <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500">{sector?.name || 'Geral'}</span>
                                                       </div>
                                                   </div>
                                               </td>
@@ -191,9 +192,9 @@ const Dashboard = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-[500px] relative overflow-hidden group">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col h-[500px] relative overflow-hidden group transition-colors">
           <div className="flex items-center justify-between mb-8 relative z-10">
-              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">Monitoramento de Status <span title="Proporção baseada no Status atual de todos os ativos cadastrados no inventário."><HelpCircle size={14} className="text-slate-300 cursor-help" /></span></h2>
+              <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">Monitoramento de Status</h2>
               <div className="flex gap-2">
                   <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
                   <div className="h-2 w-2 rounded-full bg-slate-200 dark:bg-slate-800"></div>
@@ -202,31 +203,12 @@ const Dashboard = () => {
           <div className="flex-1 relative z-10 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie 
-                    data={dataStatus} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={70} 
-                    outerRadius={105} 
-                    paddingAngle={8} 
-                    dataKey="value"
-                    stroke="none"
-                >
+                <Pie data={dataStatus} cx="50%" cy="50%" innerRadius={70} outerRadius={105} paddingAngle={8} dataKey="value" stroke="none">
                   {dataStatus.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                    contentStyle={{ 
-                        borderRadius: '24px', 
-                        border: 'none', 
-                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        color: '#fff',
-                        padding: '16px'
-                    }}
-                    itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                />
+                <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff', padding: '16px' }} itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -246,7 +228,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 h-[500px] flex flex-col relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 h-[500px] flex flex-col relative overflow-hidden transition-colors">
             <div className="flex justify-between items-center mb-10 relative z-10">
                 <h2 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     <Lock size={20} className="text-indigo-600"/> Contas & Acessos
@@ -259,13 +241,6 @@ const Dashboard = () => {
                 {Object.values(AccountType).map(type => {
                     const count = accounts.filter(a => a.type === type).length;
                     const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
-                    const colorMap: any = {
-                        [AccountType.EMAIL]: 'bg-blue-500',
-                        [AccountType.GOOGLE]: 'bg-rose-500',
-                        [AccountType.ERP]: 'bg-emerald-500',
-                        [AccountType.OFFICE]: 'bg-indigo-500',
-                        [AccountType.OTHER]: 'bg-slate-500'
-                    };
                     return (
                         <div key={type} className="group cursor-default">
                             <div className="flex justify-between items-end mb-2">
@@ -273,15 +248,15 @@ const Dashboard = () => {
                                 <span className="text-sm font-bold text-slate-900 dark:text-white">{count}</span>
                             </div>
                             <div className="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                                <div className={`${colorMap[type] || 'bg-indigo-500'} h-full transition-all duration-1000 shadow-[0_0_8px_rgba(0,0,0,0.1)]`} style={{ width: `${percentage}%` }}></div>
+                                <div className={`bg-indigo-500 h-full transition-all duration-1000`} style={{ width: `${percentage}%` }}></div>
                             </div>
                         </div>
                     );
                 })}
             </div>
             <div className="mt-auto pt-8 border-t dark:border-slate-800 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <span>IT Asset v3.5.0</span>
-                <span className="text-emerald-500">Acesso Restrito</span>
+                <span>IT Asset v3.5.1</span>
+                <span className="text-emerald-500">Produção</span>
             </div>
         </div>
       </div>
