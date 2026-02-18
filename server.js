@@ -22,11 +22,11 @@ const dbConfig = {
     }
 };
 
-// --- HEALTH CHECK (v3.5.5) ---
+// --- HEALTH CHECK (v3.5.6) ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.5.5', 
+        version: '3.5.6', 
         timestamp: new Date().toISOString()
     });
 });
@@ -65,7 +65,7 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- BOOTSTRAP ENDPOINT (v3.5.5) ---
+// --- BOOTSTRAP ENDPOINT (v3.5.6) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -200,38 +200,6 @@ app.put('/api/settings', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operações (Checkout/Checkin) v3.5.5
-app.post('/api/operations/checkout', async (req, res) => {
-    const { assetId, assetType, userId, notes, _adminUser, accessories, termSnapshot } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        const transaction = new sql.Transaction(pool);
-        await transaction.begin();
-        try {
-            if (assetType === 'Device') {
-                await transaction.request().input('Aid', assetId).input('Uid', userId).query("UPDATE Devices SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid");
-                if (accessories) {
-                    for (const acc of accessories) {
-                        await transaction.request().input('Id', acc.id).input('Aid', assetId).input('Tid', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@Id, @Aid, @Tid, @N)");
-                    }
-                }
-            } else {
-                await transaction.request().input('Aid', assetId).input('Uid', userId).query("UPDATE SimCards SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid");
-            }
-
-            const termId = Math.random().toString(36).substr(2, 9);
-            await transaction.request()
-                .input('Id', termId).input('Uid', userId).input('Type', 'ENTREGA')
-                .input('Details', assetType === 'Device' ? 'Equipamento' : 'Chip SIM')
-                .input('Snap', JSON.stringify(termSnapshot))
-                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, SnapshotData) VALUES (@Id, @Uid, @Type, @Details, GETDATE(), @Snap)");
-
-            await transaction.commit();
-            res.json({ success: true });
-        } catch (err) { await transaction.rollback(); throw err; }
-    } catch (err) { res.status(500).send(err.message); }
-});
-
 app.listen(PORT, () => {
-    console.log(`🚀 Helios Server v3.5.5 em PRODUÇÃO na porta ${PORT}`);
+    console.log(`🚀 Helios Server v3.5.6 em PRODUÇÃO na porta ${PORT}`);
 });

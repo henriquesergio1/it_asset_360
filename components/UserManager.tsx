@@ -2,23 +2,75 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2, ArrowRight } from 'lucide-react';
+import { User, ActionType, Term, AuditLog } from '../types';
+import { Plus, Search, Edit2, Mail, X, FileText, History, ExternalLink, Printer, User as UserIcon, Upload, Loader2, ArrowRight, Save, Trash2, Smartphone, Cpu } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
-const formatCPF = (v: string): string => {
-    v = v.replace(/\D/g, "");
-    if (v.length > 11) v = v.substring(0, 11);
-    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-            .replace(/(\d{3})(\d{3})(\d{3})/, "$1.$2.$3")
-            .replace(/(\d{3})(\d{3})/, "$1.$2")
-            .replace(/-$/, "");
+// --- SUB-COMPONENTE: Resizer ---
+const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
+    <div onMouseDown={onMouseDown} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50" />
+);
+
+// --- SUB-COMPONENTE: LogNoteRenderer ---
+const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
+    const { sims, users, sectors, models, customFields } = useData();
+    
+    const resolveValue = (key: string, val: any): any => {
+        if (val === null || val === undefined || val === '---' || val === '') return <span className="opacity-30 italic">vazio</span>;
+        if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
+            try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
+        }
+        if (key === 'purchaseCost') return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+        if (key === 'sectorId') return sectors.find(s => s.id === val)?.name || val;
+        if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
+        if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
+        if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
+        if (key === 'active') return val ? 'Ativo' : 'Inativo';
+        return String(val);
+    };
+
+    let diffs: { field: string, rawKey: string, old: any, new: any }[] = [];
+    try {
+        if (log.previousData && log.newData) {
+            const prev = typeof log.previousData === 'string' ? JSON.parse(log.previousData) : log.previousData;
+            const next = typeof log.newData === 'string' ? JSON.parse(log.newData) : log.newData;
+            const allKeys = Array.from(new Set([...Object.keys(prev), ...Object.keys(next)]));
+            allKeys.forEach(key => {
+                if (key.startsWith('_')) return;
+                if (JSON.stringify(prev[key]) !== JSON.stringify(next[key])) {
+                    diffs.push({ field: key, rawKey: key, old: prev[key], new: next[key] });
+                }
+            });
+        }
+    } catch (e) {}
+
+    if (diffs.length > 0) {
+        return (
+            <div className="mt-2 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-2">
+                {diffs.map((d, i) => (
+                    <div key={i} className="flex flex-col gap-1">
+                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{d.field}</span>
+                        <div className="flex items-center gap-2 text-[11px]">
+                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 line-through opacity-70">{resolveValue(d.rawKey, d.old)}</span>
+                            <ArrowRight size={10} className="text-slate-300"/>
+                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 font-bold">{resolveValue(d.rawKey, d.new)}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    const lines = (log.notes || '').split('\n');
+    return (
+        <div className="space-y-1.5 py-1">
+            {lines.map((line, i) => line.trim() && <div key={i} className="text-slate-600 dark:text-slate-300 font-medium text-[11px] leading-relaxed">{line}</div>)}
+        </div>
+    );
 };
 
-// [LogNoteRenderer and Resizer components omitted for brevity, should be kept as per v3.5.0]
-
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, getTermFile } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,7 +79,7 @@ const UserManager = () => {
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE'); 
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [isFlyoutOpen, setIsFlyoutOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
+  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
@@ -70,18 +122,15 @@ const UserManager = () => {
       window.open(URL.createObjectURL(new Blob([array], { type: mime })), '_blank');
   };
 
-  // REIMPRESSÃO v3.5.1 (FALLBACK SYSTEM)
   const handleReprintTerm = (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
 
       if (!term.snapshotData) {
-          if (confirm("Este termo é antigo e não possui snapshot fiel. Deseja tentar gerar um termo baseado no estado ATUAL do equipamento e colaborador? (Pode haver divergências se acessórios foram trocados)")) {
-              // Fallback logic: tenta reconstruir o que for possível
+          if (confirm("Este termo é antigo e não possui snapshot fiel. Gerar baseado no estado ATUAL?")) {
               const tagMatch = term.assetDetails.match(/TAG: ([^\]]+)/);
               const tag = tagMatch ? tagMatch[1] : null;
               const device = devices.find(d => d.assetTag === tag);
-              
               if (device) {
                   const m = models.find(x => x.id === device.modelId);
                   generateAndPrintTerm({
@@ -92,9 +141,7 @@ const UserManager = () => {
                       sectorName: sectors.find(x => x.id === user.sectorId)?.name,
                       notes: "REIMPRESSÃO DE TERMO ANTIGO (ESTADO ATUAL)"
                   });
-              } else {
-                  alert("Não foi possível localizar o ativo original para este termo.");
-              }
+              } else { alert("Ativo original não localizado."); }
           }
           return;
       }
@@ -102,17 +149,9 @@ const UserManager = () => {
       try {
           const snapshot = JSON.parse(term.snapshotData);
           generateAndPrintTerm({
-              user,
-              asset: snapshot.asset,
-              settings,
-              model: snapshot.model,
-              brand: snapshot.brand,
-              type: snapshot.type,
-              actionType: term.type as any,
-              linkedSim: snapshot.linkedSim,
-              sectorName: snapshot.sectorName,
-              checklist: snapshot.checklist,
-              notes: snapshot.notes
+              user, asset: snapshot.asset, settings, model: snapshot.model, brand: snapshot.brand,
+              type: snapshot.type, actionType: term.type as any, linkedSim: snapshot.linkedSim,
+              sectorName: snapshot.sectorName, checklist: snapshot.checklist, notes: snapshot.notes
           });
       } catch (e) { alert("Erro ao reconstruir termo."); }
   };
@@ -130,13 +169,12 @@ const UserManager = () => {
   };
 
   const { userDevices, userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], userSims: [] };
-  const userAccounts = editingId ? accounts.filter(a => a.userId === editingId) : [];
   const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
 
   return (
     <div className="space-y-8 pb-20 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div><h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Colaboradores</h1><p className="text-slate-500 dark:text-slate-400 font-medium">Gestão de vínculos e termos v3.5.1</p></div>
+        <div><h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Colaboradores</h1><p className="text-slate-500 dark:text-slate-400 font-medium">Gestão de vínculos e termos v3.5.6</p></div>
         <button onClick={() => handleOpenFlyout()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-2xl flex items-center gap-2 shadow-xl shadow-indigo-600/20 font-black uppercase text-xs tracking-widest transition-all"><Plus size={20} /> Adicionar</button>
       </div>
 
@@ -218,10 +256,34 @@ const UserManager = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
                                     <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome Completo</label>
-                                    <input className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-4 text-sm font-black text-slate-800 dark:text-slate-100" value={formData.fullName} />
+                                    <input className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-4 text-sm font-black text-slate-800 dark:text-slate-100" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})}/>
                                 </div>
-                                {/* Mais campos de dados aqui conforme v3.5.0... */}
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">E-mail</label>
+                                    <input className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-4 text-sm font-bold" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}/>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Setor</label>
+                                    <select className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-4 text-sm font-bold" value={formData.sectorId} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                                        <option value="">Selecione...</option>
+                                        {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
                             </div>
+                        </div>
+                    )}
+                    {activeTab === 'ASSETS' && (
+                        <div className="space-y-6 animate-fade-in">
+                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Dispositivos em Posse</h4>
+                             {userDevices.map(d => (
+                                 <div key={d.id} className="p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-2xl flex items-center justify-between">
+                                     <div className="flex items-center gap-3">
+                                         <Smartphone className="text-indigo-600" size={20}/>
+                                         <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{d.assetTag} - {models.find(m => m.id === d.modelId)?.name}</span>
+                                     </div>
+                                 </div>
+                             ))}
+                             {userDevices.length === 0 && <p className="text-xs text-slate-400 italic">Nenhum dispositivo vinculado.</p>}
                         </div>
                     )}
                     {activeTab === 'TERMS' && (
@@ -233,7 +295,6 @@ const UserManager = () => {
                                         <p className="text-[9px] font-mono text-slate-400 mt-1 uppercase">{t.type} em {new Date(t.date).toLocaleDateString()}</p>
                                     </div>
                                     <div className="flex gap-2">
-                                        {/* Botão de Reimpressão RESTAURADO v3.5.1 */}
                                         <button onClick={() => handleReprintTerm(t)} title="Reimprimir Termo Original" className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 transition-colors">
                                             <Printer size={18}/>
                                         </button>
@@ -243,7 +304,14 @@ const UserManager = () => {
                                             </button>
                                         ) : (
                                             <label className="cursor-pointer p-2 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-100 transition-colors">
-                                                <Upload size={18}/><input type="file" className="hidden" />
+                                                <Upload size={18}/><input type="file" className="hidden" onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file && editingId) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => updateTermFile(t.id, editingId, reader.result as string, currentUser?.name || 'Sistema');
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }} />
                                             </label>
                                         )}
                                     </div>
@@ -251,10 +319,32 @@ const UserManager = () => {
                             )) : <div className="text-center py-20 text-slate-400 font-bold uppercase text-[10px] tracking-widest italic">Nenhum termo registrado.</div>}
                         </div>
                     )}
+                    {activeTab === 'LOGS' && editingId && (
+                         <div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-10 py-6 animate-fade-in">
+                            {getHistory(editingId).map(log => (
+                                <div key={log.id} className="relative pl-10">
+                                    <div className="absolute -left-[12px] top-1 h-5 w-5 rounded-full border-4 border-white dark:border-slate-900 shadow-md bg-indigo-600"></div>
+                                    <div className="text-[10px] text-slate-400 uppercase mb-1 font-black tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
+                                    <div className="font-black text-slate-900 dark:text-white text-sm tracking-tighter uppercase mb-2 flex items-center gap-2">
+                                        {log.action}
+                                        <span className="text-[9px] font-black text-slate-300 normal-case">• Por: {log.adminUser}</span>
+                                    </div>
+                                    <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700 shadow-sm transition-colors">
+                                        <LogNoteRenderer log={log} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-950 px-10 py-8 flex justify-end border-t dark:border-slate-800 transition-colors">
+                <div className="bg-slate-50 dark:bg-slate-950 px-10 py-8 flex justify-between border-t dark:border-slate-800 transition-colors">
                     <button onClick={() => setIsFlyoutOpen(false)} className="px-8 py-3 rounded-xl bg-white dark:bg-slate-800 border dark:border-slate-700 font-black text-[10px] uppercase text-slate-500">Fechar</button>
+                    <button onClick={() => {
+                        if (editingId) updateUser(formData as User, currentUser?.name || 'Sistema');
+                        else addUser({...formData, id: Math.random().toString(36).substr(2, 9)} as User, currentUser?.name || 'Sistema');
+                        setIsFlyoutOpen(false);
+                    }} className="px-10 py-3 rounded-xl bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest shadow-xl">Salvar Perfil</button>
                 </div>
             </div>
         </>
