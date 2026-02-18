@@ -96,7 +96,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                 <h1 className="text-lg font-extrabold text-slate-900 dark:text-white leading-none tracking-tight">
                   {settings.appName || 'HELIOS'}
                 </h1>
-                <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-1">Asset Suite v3.5.2</p>
+                <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-1">Asset Suite v3.5.3</p>
               </div>
             )}
           </div>
@@ -125,7 +125,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             {!isSidebarCollapsed && (
               <div className="flex items-center justify-between">
                 <button onClick={() => setIsAboutOpen(true)} className="text-[10px] font-black text-slate-400 hover:text-helios-primary dark:hover:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <Info size={14}/> v3.5.2
+                  <Info size={14}/> v3.5.3
                 </button>
                 <div className="flex gap-1">
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
