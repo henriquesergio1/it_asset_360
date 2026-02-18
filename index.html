@@ -1,49 +1,109 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR" class="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>IT Asset 360</title>
+    <title>Helios | IT Asset 360</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
+            colors: {
+              helios: {
+                primary: '#6366f1',
+                'primary-dark': '#4f46e5',
+                'primary-glow': 'rgba(99, 102, 241, 0.15)',
+                surface: {
+                  light: '#ffffff',
+                  dark: '#0f172a',
+                  alt: '#1e293b'
+                }
+              }
+            },
             animation: {
               'fade-in': 'fadeIn 0.3s ease-in-out',
               'scale-up': 'scaleUp 0.2s ease-out',
+              'slide-in': 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              'pulse-glow': 'pulseGlow 2s infinite',
             },
             keyframes: {
               fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-              scaleUp: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+              scaleUp: { '0%': { transform: 'scale(0.98)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+              slideIn: { '0%': { transform: 'translateX(20px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
+              pulseGlow: { 
+                '0%, 100%': { boxShadow: '0 0 0 0 rgba(99, 102, 241, 0)' },
+                '50%': { boxShadow: '0 0 20px 2px rgba(99, 102, 241, 0.3)' }
+              }
             }
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --helios-primary: #6366f1;
+        --helios-success: #10b981;
+        --helios-warning: #f59e0b;
+        --helios-danger: #ef4444;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
-      /* Custom Scrollbar for nicer tables */
+
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace !important;
+      }
+
+      /* Helios Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; 
-        border-radius: 4px;
+        background: #e2e8f0; 
+        border-radius: 10px;
       }
       .dark ::-webkit-scrollbar-thumb {
-        background: #475569;
+        background: #334155;
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
+      }
+
+      /* Utility: Glassmorphism */
+      .glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .dark .glass {
+        background: rgba(15, 23, 42, 0.8);
+      }
+
+      /* Sidebar Active Indicator */
+      .nav-active-glow {
+        position: relative;
+      }
+      .nav-active-glow::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 20%;
+        bottom: 20%;
+        width: 4px;
+        background: var(--helios-primary);
+        border-radius: 0 4px 4px 0;
+        box-shadow: 0 0 12px var(--helios-primary);
       }
     </style>
   <script type="importmap">
@@ -59,7 +119,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-100 dark:bg-slate-950 transition-colors duration-300">
+  <body class="bg-gray-50 dark:bg-slate-950 transition-colors duration-500 overflow-hidden selection:bg-indigo-100 dark:selection:bg-indigo-900">
     <div id="root"></div>
   </body>
 </html>

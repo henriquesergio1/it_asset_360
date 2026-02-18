@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType } from '../types';
@@ -148,7 +147,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getTermFile: async (id: string) => "",
     getDeviceInvoice: async (id: string) => "",
     getMaintenanceInvoice: async (id: string) => "",
-    // Fix: implemented getLogDetail to satisfy DataContextType
     getLogDetail: async (id: string) => {
       const log = logs.find(l => l.id === id);
       if (!log) throw new Error("Log não encontrado");
@@ -167,7 +165,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     deleteSystemUser: (id, adm) => { setSystemUsers(p => p.filter(x => x.id !== id)); },
     updateSettings,
-    assignAsset: (assetType, assetId, userId, notes, adminName, accessories) => {
+    assignAsset: (assetType, assetId, userId, notes, adminName, accessories, termSnapshot) => {
         const user = users.find(u => u.id === userId);
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
@@ -186,14 +184,14 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 type: 'ENTREGA',
                 assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
                 date: new Date().toISOString(),
-                fileUrl: ''
+                fileUrl: '',
+                snapshotData: JSON.stringify(termSnapshot)
             };
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
-            logAction(ActionType.CHECKOUT, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, old, { 
-                status: DeviceStatus.IN_USE, 
-                currentUserId: userId,
-                userName: user?.fullName || 'Desconhecido'
-            });
+            
+            // Auditoria Bidirecional v3.5.0
+            logAction(ActionType.CHECKOUT, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, old, { status: DeviceStatus.IN_USE, currentUserId: userId });
+            logAction(ActionType.CHECKOUT, 'User', userId, user?.fullName || 'Colaborador', adminName, `Recebeu dispositivo ${old?.assetTag}. ${notes}`);
         } else {
             const old = sims.find(s => s.id === assetId);
             setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
@@ -205,18 +203,17 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 type: 'ENTREGA',
                 assetDetails: `[CHIP: ${old?.phoneNumber}]`,
                 date: new Date().toISOString(),
-                fileUrl: ''
+                fileUrl: '',
+                snapshotData: JSON.stringify(termSnapshot)
             };
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
             
-            logAction(ActionType.CHECKOUT, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { 
-                status: DeviceStatus.IN_USE, 
-                currentUserId: userId,
-                userName: user?.fullName || 'Desconhecido'
-            });
+            // Auditoria Bidirecional v3.5.0
+            logAction(ActionType.CHECKOUT, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { status: DeviceStatus.IN_USE, currentUserId: userId });
+            logAction(ActionType.CHECKOUT, 'User', userId, user?.fullName || 'Colaborador', adminName, `Recebeu chip ${old?.phoneNumber}. ${notes}`);
         }
     },
-    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser) => {
+    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, termSnapshot) => {
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
             const oldUserId = old?.currentUserId;
@@ -237,7 +234,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     type: 'DEVOLUCAO',
                     assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
                     date: new Date().toISOString(),
-                    fileUrl: ''
+                    fileUrl: '',
+                    snapshotData: JSON.stringify(termSnapshot)
                 };
                 
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
@@ -249,12 +247,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 if (inactivateUser) {
                     logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
                 }
+                
+                // Auditoria Bidirecional v3.5.0
+                logAction(ActionType.CHECKIN, 'User', oldUserId, oldUser?.fullName || 'Colaborador', adminName, `Devolveu dispositivo ${old?.assetTag}. ${notes}`);
             }
-            logAction(ActionType.CHECKIN, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, {
-                status: DeviceStatus.IN_USE,
-                currentUserId: oldUserId,
-                userName: oldUser?.fullName || 'Desconhecido'
-            }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
+            logAction(ActionType.CHECKIN, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, old, { status: DeviceStatus.AVAILABLE, currentUserId: null });
         } else {
             const old = sims.find(s => s.id === assetId);
             const oldUserId = old?.currentUserId;
@@ -270,7 +267,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     type: 'DEVOLUCAO',
                     assetDetails: `[CHIP: ${old?.phoneNumber}]`,
                     date: new Date().toISOString(),
-                    fileUrl: ''
+                    fileUrl: '',
+                    snapshotData: JSON.stringify(termSnapshot)
                 };
 
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
@@ -282,13 +280,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 if (inactivateUser) {
                     logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
                 }
+                
+                // Auditoria Bidirecional v3.5.0
+                logAction(ActionType.CHECKIN, 'User', oldUserId, oldUser?.fullName || 'Colaborador', adminName, `Devolveu chip ${old?.phoneNumber}. ${notes}`);
             }
 
-            logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {
-                status: DeviceStatus.IN_USE,
-                currentUserId: oldUserId,
-                userName: oldUser?.fullName || 'Desconhecido'
-            }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
+            logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { status: DeviceStatus.AVAILABLE, currentUserId: null });
         }
     },
     updateTermFile: (tid, uid, furl, adm) => { 

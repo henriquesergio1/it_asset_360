@@ -1,15 +1,14 @@
 version: '3.8'
 
 services:
-  # Backend API (Node.js)
+  # Helios API - Backend Core (v3.5.0)
   api:
     build:
       context: .
       dockerfile: Dockerfile.api.txt
     container_name: it-asset-360-api
-    hostname: api # Importante para o Nginx encontrar http://api:5000
-    ports:
-      - "5001:5000" # Mantemos 5001 aberto apenas para debug direto se precisar
+    hostname: api
+    restart: always
     environment:
       - DB_SERVER=10.10.10.100
       - DB_PORT=1433
@@ -17,16 +16,16 @@ services:
       - DB_USER=sa
       - DB_PASSWORD=#41nhAsa#@@2
       - PORT=5000
+      - NODE_ENV=production
     networks:
-      - it-asset-net
+      - helios-net
 
-  # Frontend Application (React + Nginx)
+  # Helios App - Frontend & Nginx Proxy (v3.5.0)
   app:
     build:
       context: .
       dockerfile: Dockerfile.txt
-    image: it-asset-360:latest
-    pull_policy: build
+    image: it-asset-360:v3.5.0
     container_name: it-asset-360-app
     restart: unless-stopped
     ports:
@@ -36,8 +35,8 @@ services:
     depends_on:
       - api
     networks:
-      - it-asset-net
+      - helios-net
 
 networks:
-  it-asset-net:
+  helios-net:
     driver: bridge
