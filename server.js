@@ -22,11 +22,11 @@ const dbConfig = {
     }
 };
 
-// --- HEALTH CHECK (v3.5.7) ---
+// --- HEALTH CHECK (v3.5.9) ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.5.7', 
+        version: '3.5.9', 
         timestamp: new Date().toISOString()
     });
 });
@@ -40,32 +40,6 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- FILE FETCHING ROUTES ---
-app.get('/api/devices/:id/invoice', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl FROM Devices WHERE Id=@Id");
-        res.json({ invoiceUrl: result.recordset[0]?.PurchaseInvoiceUrl || '' });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/terms/:id/file', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM Terms WHERE Id=@Id");
-        res.json({ fileUrl: result.recordset[0]?.FileUrl || '' });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/maintenances/:id/invoice', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceUrl FROM MaintenanceRecords WHERE Id=@Id");
-        res.json({ invoiceUrl: result.recordset[0]?.InvoiceUrl || '' });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// --- BOOTSTRAP ENDPOINT (v3.5.7) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -108,98 +82,6 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- CRUD HELPER ---
-const logAction = async (assetId, assetType, action, adminUser, targetName, notes, prev = null, next = null) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
-            .input('AssetId', sql.NVarChar, assetId)
-            .input('AssetType', sql.NVarChar, assetType)
-            .input('Action', sql.NVarChar, action)
-            .input('AdminUser', sql.NVarChar, adminUser || 'Sistema')
-            .input('TargetName', sql.NVarChar, targetName || '')
-            .input('Notes', sql.NVarChar, notes || '')
-            .input('Prev', sql.NVarChar, prev ? JSON.stringify(prev) : null)
-            .input('Next', sql.NVarChar, next ? JSON.stringify(next) : null)
-            .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, TargetName, Notes, PreviousData, NewData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @TargetName, @Notes, @Prev, @Next)`);
-    } catch (e) { console.error('Erro Log:', e); }
-};
-
-const crud = (table, route, assetType) => {
-    app.post(`/api/${route}`, async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const request = pool.request();
-            let cols = []; let vals = [];
-            for (let key in req.body) {
-                if (key.startsWith('_') || ['accessories', 'terms', 'hasInvoice', 'hasFile', 'snapshotData'].includes(key)) continue;
-                const dbK = key.charAt(0).toUpperCase() + key.slice(1);
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
-                request.input(dbK, val);
-                cols.push(dbK); vals.push('@' + dbK);
-            }
-            await request.query(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${vals.join(',')})`);
-            logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.assetTag || req.body.fullName, 'Criado via sistema');
-            res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.put(`/api/${route}/:id`, async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const old = await pool.request().input('Id', sql.NVarChar, req.params.id).query(`SELECT * FROM ${table} WHERE Id=@Id`);
-            const request = pool.request();
-            let sets = [];
-            for (let key in req.body) {
-                if (key.startsWith('_') || ['accessories', 'terms', 'hasInvoice', 'hasFile', 'snapshotData'].includes(key)) continue;
-                const dbK = key.charAt(0).toUpperCase() + key.slice(1);
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
-                request.input(dbK, val);
-                sets.push(`${dbK}=@${dbK}`);
-            }
-            request.input('TargetId', req.params.id);
-            await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
-            logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.assetTag || req.body.fullName, req.body._reason || '', old.recordset[0], req.body);
-            res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.delete(`/api/${route}/:id`, async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            await pool.request().input('Id', req.params.id).query(`DELETE FROM ${table} WHERE Id=@Id`);
-            res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
-    });
-};
-
-crud('Sectors', 'sectors', 'Sector');
-crud('Brands', 'brands', 'Brand');
-crud('AssetTypes', 'asset-types', 'Type');
-crud('Models', 'models', 'Model');
-crud('AccessoryTypes', 'accessory-types', 'Accessory');
-crud('CustomFields', 'custom-fields', 'CustomField');
-crud('MaintenanceRecords', 'maintenances', 'Maintenance');
-crud('SoftwareAccounts', 'accounts', 'Account');
-crud('Users', 'users', 'User');
-crud('SimCards', 'sims', 'Sim');
-crud('Devices', 'devices', 'Device');
-crud('SystemUsers', 'system-users', 'System');
-
-app.put('/api/settings', async (req, res) => {
-    const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        await pool.request()
-            .input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl)
-            .input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate)
-            .query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-        logAction('settings', 'System', 'Atualização', _adminUser, 'Configurações Gerais', 'Alteração de configurações do sistema');
-        res.json({success: true});
-    } catch (err) { res.status(500).send(err.message); }
-});
-
 app.listen(PORT, () => {
-    console.log(`🚀 Helios Server v3.5.7 em PRODUÇÃO na porta ${PORT}`);
+    console.log(`🚀 Helios Server v3.5.9 em PRODUÇÃO na porta ${PORT}`);
 });

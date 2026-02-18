@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, GitCommit, Calendar, Tag, User, Command, Zap } from 'lucide-react';
+import { X, GitCommit, Calendar, Command, Zap } from 'lucide-react';
 
 interface SystemInfoModalProps {
   onClose: () => void;
@@ -7,23 +7,23 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '3.5.7',
+    version: '3.5.9',
     date: 'Agora',
-    title: 'ACCESS & STRUCTURE FIX: Webpack Sinc',
+    title: 'FULL UI RESTORATION',
     changes: [
-      'Eliminação do Erro 403: Removido importmap conflitante do index.html para permitir empacotamento Webpack correto.',
-      'Estrutura CRA: Dockerfile agora força a criação de pastas public/ e src/ para compatibilidade total com react-scripts.',
-      'Build Resilience: Adicionada flag CI=false para garantir que avisos não críticos não interrompam o carregamento do sistema.',
-      'Nginx Garantee: Implementado script de fallback para cópia de arquivos estáticos em caso de build incompleto.'
+      'Restauração de Menu: Sidebar e links de navegação recuperados após limpeza de build.',
+      'Proteção de Rotas: Lógica de autenticação e redirecionamento para Login restabelecida.',
+      'Dashboard Link: Correção de todos os gatilhos de navegação entre telas.',
+      'Sincronização de Estatísticas: Badges de contagem (Dispositivos, Chips, Usuários) reativados no menu.'
     ]
   },
     {
-    version: '3.5.6',
+    version: '3.5.8',
     date: 'Hoje',
-    title: 'BUILD RECOVERY: Component Restoration',
+    title: 'STABILITY PATCH: Legacy Access Restore',
     changes: [
-      'Restauração Total: Reinclusão de todos os sub-componentes que foram omitidos nas atualizações anteriores.',
-      'Deployment Fix: Ajuste no Dockerfile para encontrar os entrypoints corretamente.'
+      'Eliminação Radical do 403: Removido importmap conflitante do index.html.',
+      'Permission Hard-fix: Comando chmod 755 forçado recursivamente no Docker.'
     ]
   }
 ];
@@ -36,7 +36,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
           <div className="absolute top-0 right-0 p-4 opacity-10"><Command size={240} className="rotate-12"/></div>
           <div className="relative z-10">
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit mb-4">
-                <Zap size={14} className="text-yellow-300 fill-yellow-300"/><span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.7</span>
+                <Zap size={14} className="text-yellow-300 fill-yellow-300"/><span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.9</span>
             </div>
             <h2 className="text-4xl font-extrabold text-white mb-1 tracking-tight">Sobre o Helios</h2>
             <p className="text-indigo-100 text-sm font-medium">Smart Asset Intelligence Platform</p>
