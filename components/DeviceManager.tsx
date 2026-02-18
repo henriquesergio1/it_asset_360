@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -547,7 +548,8 @@ const DeviceManager = () => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
     const { model, brand } = getModelDetails(d.modelId);
     const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
-    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName}`.toLowerCase();
+    const assignedUser = users.find(u => u.id === d.currentUserId)?.fullName || ''; // v2.12.42: Inclusão do nome do colaborador
+    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${assignedUser}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   }).sort((a, b) => {
       const modelA = models.find(m => m.id === a.modelId)?.name || '';
@@ -646,7 +648,7 @@ const DeviceManager = () => {
 
       <div className="relative">
         <Search className="absolute left-4 top-3 text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+        <input type="text" placeholder="Pesquisar por Patrimônio, IMEI, Modelo ou Nome do Colaborador..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">

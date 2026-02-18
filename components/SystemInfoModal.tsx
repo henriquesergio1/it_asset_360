@@ -8,8 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.41',
+    version: '2.12.42',
     date: 'Hoje',
+    title: 'Advanced Inventory Search Improvement',
+    changes: [
+      'Inventário: A barra de pesquisa agora permite filtrar dispositivos pelo nome do colaborador responsável.',
+      'Sincronização global para v2.12.42.'
+    ]
+  },
+    {
+    version: '2.12.41',
+    date: 'Ontem',
     title: 'Admin Panel Restoration & Visual Consistency',
     changes: [
       'Administração: Restauradas as abas "Acesso", "Geral" e "Editor de Termos" com CRUD funcional.',
@@ -22,24 +31,12 @@ const versions = [
   },
     {
     version: '2.12.40',
-    date: 'Ontem',
+    date: '02/2025',
     title: 'TypeScript Stability & Missing Properties',
     changes: [
       'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
       'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
       'Sincronização global para v2.12.40.'
-    ]
-  },
-    {
-    version: '2.12.39',
-    date: '02/2025',
-    title: 'Visual Standardization & Column Fixes',
-    changes: [
-      'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
-      'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
-      'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
-      'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
-      'Sincronização global para v2.12.39.'
     ]
   }
 ];
