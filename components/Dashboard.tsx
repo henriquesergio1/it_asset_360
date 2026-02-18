@@ -63,7 +63,7 @@ const Dashboard = () => {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none mb-2">Painel de Controle</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Resumo operacional e financeiro v3.5.1</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Resumo operacional e financeiro v3.5.2</p>
         </div>
         <Link to="/users" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-sm hover:shadow-md transition-all group">
             <div className="h-10 w-10 bg-indigo-600/10 text-indigo-600 rounded-xl flex items-center justify-center">
@@ -255,7 +255,7 @@ const Dashboard = () => {
                 })}
             </div>
             <div className="mt-auto pt-8 border-t dark:border-slate-800 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <span>IT Asset v3.5.1</span>
+                <span>IT Asset v3.5.2</span>
                 <span className="text-emerald-500">Produção</span>
             </div>
         </div>

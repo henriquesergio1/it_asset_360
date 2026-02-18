@@ -7,37 +7,24 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '3.5.0',
+    version: '3.5.2',
     date: 'Hoje',
-    title: 'HELIOS IT: Full Recall & Bidirectional Audit',
+    title: 'STABILITY: Infra & Admin Restore',
     changes: [
-      'Document Recall: Implementação de snapshots JSON em termos para permitir reimpressão fiel (mantém acessórios da época).',
-      'Audit 360: Auditoria bidirecional agora gera logs tanto no dispositivo quanto no histórico do colaborador envolvido.',
-      'UX Flow: Restaurado o botão de impressão direta na aba de termos do colaborador.',
-      'Data Integrity: Adicionado campo SnapshotData no banco para persistência de estado histórico.',
-      'Versioning: Sincronização global para v3.5.0.'
+      'Docker Fix: Removida redundância de tag de imagem que causava erro de Pull Access Denied no Portainer.',
+      'Admin Restored: Restauração completa da gestão de Usuários do Sistema e Configurações Gerais no banco.',
+      'Template Sync: Corrigida a persistência do JSON de templates de termos no SQL Server.',
+      'Performance: Redução de redundância de chamadas de API no carregamento do bootstrap.'
     ]
   },
     {
-    version: '3.4.9',
+    version: '3.5.1',
     date: 'Fev/2025',
-    title: 'HELIOS IT: Audit UX Standardization',
+    title: 'HOTFIX: Admin Restore & Data Integrity',
     changes: [
-      'Audit Focus: Padronização do detalhamento de logs entre Dispositivos e Colaboradores.',
-      'UI Consistency: Renderização de comparação "De/Para" estruturada diretamente na linha do tempo.',
-      'Technical Clarity: Tradução de IDs técnicos para nomes amigáveis em tempo real.',
-      'UX Flow: Destaque visual para alterações de campos críticos via tags semânticas.'
-    ]
-  },
-    {
-    version: '3.4.8',
-    date: 'Fev/2025',
-    title: 'HELIOS IT: Pulsus MDM Integration & Quick Actions',
-    changes: [
-      'MDM Integration: Suporte visual e links diretos para dispositivos no Pulsus MDM via ID cadastrado.',
-      'Table Layout: Adição da coluna ID Pulsus e botões de ação rápida para acesso ao MDM.',
-      'UI Refinement: Reposicionamento do Serial Number para Identidade Primária.',
-      'Clean UI: Remoção do campo Centro de Custo no formulário de ativos.'
+      'File Fix: Resolvido erros 404 ao tentar abrir Notas Fiscais e Arquivos de Termos.',
+      'UX Contrast: Correção de legibilidade no tema escuro.',
+      'Term Fallback: Implementação de re-impressão inteligente para termos antigos.'
     ]
   }
 ];
@@ -53,7 +40,7 @@ const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
           <div className="relative z-10">
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit mb-4">
                 <Zap size={14} className="text-yellow-300 fill-yellow-300"/>
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.0</span>
+                <span className="text-[10px] font-black text-white uppercase tracking-widest">Release Helios 3.5.2</span>
             </div>
             <h2 className="text-4xl font-extrabold text-white mb-1 tracking-tight">Sobre o Helios</h2>
             <p className="text-indigo-100 text-sm font-medium">Smart Asset Intelligence Platform</p>

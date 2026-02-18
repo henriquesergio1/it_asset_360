@@ -22,11 +22,11 @@ const dbConfig = {
     }
 };
 
-// --- HEALTH CHECK (v3.5.1) ---
+// --- HEALTH CHECK (v3.5.2) ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.5.1', 
+        version: '3.5.2', 
         timestamp: new Date().toISOString()
     });
 });
@@ -40,7 +40,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- FILE FETCHING ROUTES (FIX 404) ---
+// --- FILE FETCHING ROUTES ---
 app.get('/api/devices/:id/invoice', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -65,7 +65,7 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- BOOTSTRAP ENDPOINT (v3.5.1) ---
+// --- BOOTSTRAP ENDPOINT (v3.5.2) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -109,7 +109,6 @@ app.get('/api/bootstrap', async (req, res) => {
 });
 
 // --- CRUD HELPER ---
-const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 'snapshotData'];
 const logAction = async (assetId, assetType, action, adminUser, targetName, notes, prev = null, next = null) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -134,14 +133,14 @@ const crud = (table, route, assetType) => {
             const request = pool.request();
             let cols = []; let vals = [];
             for (let key in req.body) {
-                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.startsWith('_') || ['accessories', 'terms', 'hasInvoice', 'hasFile', 'snapshotData'].includes(key)) continue;
                 const dbK = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 request.input(dbK, val);
                 cols.push(dbK); vals.push('@' + dbK);
             }
             await request.query(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${vals.join(',')})`);
-            logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.assetTag, 'Criado via sistema');
+            logAction(req.body.id, assetType, 'Criação', req.body._adminUser, req.body.name || req.body.assetTag || req.body.fullName, 'Criado via sistema');
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -153,7 +152,7 @@ const crud = (table, route, assetType) => {
             const request = pool.request();
             let sets = [];
             for (let key in req.body) {
-                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.startsWith('_') || ['accessories', 'terms', 'hasInvoice', 'hasFile', 'snapshotData'].includes(key)) continue;
                 const dbK = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 request.input(dbK, val);
@@ -161,7 +160,7 @@ const crud = (table, route, assetType) => {
             }
             request.input('TargetId', req.params.id);
             await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
-            logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.assetTag, req.body._reason || '', old.recordset[0], req.body);
+            logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, req.body.name || req.body.assetTag || req.body.fullName, req.body._reason || '', old.recordset[0], req.body);
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -196,13 +195,43 @@ app.put('/api/settings', async (req, res) => {
             .input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl)
             .input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate)
             .query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
+        logAction('settings', 'System', 'Atualização', _adminUser, 'Configurações Gerais', 'Alteração de configurações do sistema');
         res.json({success: true});
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// Operações (Checkout/Checkin) - Mantidas as da v3.5.0 conforme server.js anterior...
-// [Trecho omitido para brevidade, mas deve ser preservado conforme v3.5.0]
+// Operações (Checkout/Checkin) v3.5.2
+app.post('/api/operations/checkout', async (req, res) => {
+    const { assetId, assetType, userId, notes, _adminUser, accessories, termSnapshot } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+        try {
+            if (assetType === 'Device') {
+                await transaction.request().input('Aid', assetId).input('Uid', userId).query("UPDATE Devices SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid");
+                if (accessories) {
+                    for (const acc of accessories) {
+                        await transaction.request().input('Id', acc.id).input('Aid', assetId).input('Tid', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@Id, @Aid, @Tid, @N)");
+                    }
+                }
+            } else {
+                await transaction.request().input('Aid', assetId).input('Uid', userId).query("UPDATE SimCards SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid");
+            }
+
+            const termId = Math.random().toString(36).substr(2, 9);
+            await transaction.request()
+                .input('Id', termId).input('Uid', userId).input('Type', 'ENTREGA')
+                .input('Details', assetType === 'Device' ? 'Equipamento' : 'Chip SIM')
+                .input('Snap', JSON.stringify(termSnapshot))
+                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, SnapshotData) VALUES (@Id, @Uid, @Type, @Details, GETDATE(), @Snap)");
+
+            await transaction.commit();
+            res.json({ success: true });
+        } catch (err) { await transaction.rollback(); throw err; }
+    } catch (err) { res.status(500).send(err.message); }
+});
 
 app.listen(PORT, () => {
-    console.log(`🚀 Helios Server v3.5.1 em PRODUÇÃO na porta ${PORT}`);
+    console.log(`🚀 Helios Server v3.5.2 em PRODUÇÃO na porta ${PORT}`);
 });

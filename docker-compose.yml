@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Helios API - Backend Core (v3.5.0)
+  # Helios API - Backend Core (v3.5.2)
   api:
     build:
       context: .
@@ -20,12 +20,12 @@ services:
     networks:
       - helios-net
 
-  # Helios App - Frontend & Nginx Proxy (v3.5.0)
+  # Helios App - Frontend & Nginx Proxy (v3.5.2)
   app:
     build:
       context: .
       dockerfile: Dockerfile.txt
-    image: it-asset-360:v3.5.0
+    # Removido 'image:' para evitar erro de 'Pull Access Denied' no Portainer
     container_name: it-asset-360-app
     restart: unless-stopped
     ports:
