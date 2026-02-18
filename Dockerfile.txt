@@ -10,28 +10,22 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# --- BUILD RESILIENCE (v3.5.4) ---
-# 1. Remove redundant entry points and duplicate components at root level
+# --- BUILD RESILIENCE & PERMISSIONS (v3.5.5) ---
+# 1. Clean redundant files that cause build conflicts
 RUN rm -f index.prod.tsx SystemInfoModal.tsx 2>/dev/null || true
 
-# 2. Setup standard CRA directory structure
-RUN mkdir -p public src
+# 2. Recreate clean CRA structure
+RUN rm -rf public src build && mkdir -p public src
 
-# 3. Move static assets to public
+# 3. Move Static Assets to public/
 RUN [ -f index.html ] && mv index.html public/
 RUN [ -f metadata.json ] && mv metadata.json public/
 
-# 4. Move logical folders into src
+# 4. Move Source Code to src/
 RUN mv components contexts services utils src/ 2>/dev/null || true
-
-# 5. Move root logic files into src
 RUN mv *.tsx *.ts src/ 2>/dev/null || true
 
-# --- EXECUTE BUILD ---
-# CI=false: Warnings won't break the build
-# TSC_COMPILE_ON_ERROR: Allows build to complete even with minor TS errors
-# ESLINT_NO_DEV_ERRORS: Ignores linting errors during build
-# GENERATE_SOURCEMAP=false: Saves memory during compilation
+# 5. Build Flags
 ENV CI=false
 ENV TSC_COMPILE_ON_ERROR=true
 ENV ESLINT_NO_DEV_ERRORS=true
@@ -42,11 +36,14 @@ RUN npm run build
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
-# Remove default assets
+# Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built app
+# Copy build artifacts
 COPY --from=build /app/build /usr/share/nginx/html
+
+# --- FIX PERMISSIONS FOR 403 ERROR ---
+RUN chmod -R 755 /usr/share/nginx/html
 
 # Copy custom nginx config
 COPY nginx.conf.txt /etc/nginx/conf.d/default.conf
