@@ -137,10 +137,11 @@ const FIELD_LABELS: Record<string, string> = {
 const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
     const { devices, sims, users, sectors, models, customFields } = useData();
     const navigate = useNavigate();
-    const note = log.notes || '';
 
-    const resolveValue = (key: string, val: any): string => {
-        if (val === null || val === undefined || val === '---' || val === '') return 'Nenhum';
+    const resolveValue = (key: string, val: any): any => {
+        if (val === null || val === undefined || val === '---' || val === '' || val === 'null') {
+            return <span className="text-slate-300 dark:text-slate-600 italic text-[10px]">vazio</span>;
+        }
         
         // Formatação de data
         if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
@@ -157,74 +158,109 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
         if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
         if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
         if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
-        if (key === 'active') return val ? 'Ativo/Sim' : 'Inativo/Não';
+        if (key === 'active') return val ? 'Ativo' : 'Inativo';
 
         // Resolução de Dados Customizados
         if (key === 'customData') {
             try {
                 const data = typeof val === 'string' ? JSON.parse(val) : val;
-                return Object.entries(data).map(([fieldId, fieldVal]) => {
-                    const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
-                    return `${fieldName}: ${fieldVal || 'vazio'}`;
-                }).join('; ');
+                return (
+                    <div className="flex flex-col gap-0.5">
+                        {Object.entries(data).map(([fieldId, fieldVal]) => {
+                            const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
+                            return <div key={fieldId} className="text-[10px]"><span className="opacity-60">{fieldName}:</span> {String(fieldVal || '---')}</div>;
+                        })}
+                    </div>
+                );
             } catch (e) { return String(val); }
         }
 
         return String(val);
     };
 
-    const lines = note.split('\n');
+    // v2.12.44 - Lógica de Diff baseada em snapshot JSON
+    let diffs: { field: string, rawKey: string, old: any, new: any }[] = [];
+    try {
+        if (log.previousData && log.newData) {
+            const prev = JSON.parse(log.previousData);
+            const next = JSON.parse(log.newData);
+            const allKeys = Array.from(new Set([...Object.keys(prev), ...Object.keys(next)]));
+            allKeys.forEach(key => {
+                if (key.startsWith('_') || key === 'id') return;
+                const vOld = prev[key];
+                const vNew = next[key];
+                if (JSON.stringify(vOld) !== JSON.stringify(vNew)) {
+                    diffs.push({ field: FIELD_LABELS[key] || key, rawKey: key, old: vOld, new: vNew });
+                }
+            });
+        }
+    } catch (e) {}
+
+    // Fallback: Se não houver diffs via JSON, tentamos o parser de texto (notes) legado
+    if (diffs.length === 0) {
+        const note = log.notes || '';
+        const lines = note.split('\n');
+        return (
+            <div className="space-y-1.5 py-1">
+                {lines.map((line, i) => {
+                    if (!line.trim()) return null;
+                    if (line.includes('➔')) {
+                        const parts = line.split(':');
+                        const rawKey = parts[0]?.trim();
+                        const fieldLabel = FIELD_LABELS[rawKey] || rawKey;
+                        const valuesPart = parts.slice(1).join(':');
+                        const [oldVal, newVal] = (valuesPart || '').split('➔');
+                        return (
+                            <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
+                                <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">{resolveValue(rawKey, oldVal?.trim().replace(/'/g, ''))}</span>
+                                <ArrowRight size={10} className="text-slate-300"/>
+                                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">{resolveValue(rawKey, newVal?.trim().replace(/'/g, ''))}</span>
+                            </div>
+                        );
+                    }
+                    if (line.includes('Alvo:') || line.includes('Origem:')) {
+                        const [label, name] = line.split(':');
+                        const trimmedName = name?.trim();
+                        const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
+                        return (
+                            <div key={i} className="font-bold text-[11px] flex items-center gap-2">
+                                 <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
+                                 {foundUser ? (
+                                     <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1"><Users size={10}/> {trimmedName}</span>
+                                 ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
+                            </div>
+                        );
+                    }
+                    return <div key={i} className="text-slate-600 dark:text-slate-300 font-medium text-[11px]">{line}</div>;
+                })}
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-1.5 py-1">
-            {lines.map((line, i) => {
-                if (!line.trim()) return null;
-
-                // Caso 1: Mudança de valor (estilo Snipe-IT: 'Campo: 'antigo' ➔ 'novo'')
-                if (line.includes('➔')) {
-                    const parts = line.split(':');
-                    const rawKey = parts[0]?.trim();
-                    const fieldLabel = FIELD_LABELS[rawKey] || rawKey;
-                    const valuesPart = parts.slice(1).join(':');
-                    const [oldVal, newVal] = (valuesPart || '').split('➔');
-                    
-                    const cleanOld = oldVal?.trim().replace(/'/g, '');
-                    const cleanNew = newVal?.trim().replace(/'/g, '');
-
-                    return (
-                        <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                            <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
-                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
-                                {resolveValue(rawKey, cleanOld)}
-                            </span>
-                            <ArrowRight size={10} className="text-slate-300"/>
-                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
-                                {resolveValue(rawKey, cleanNew)}
-                            </span>
+        <div className="space-y-2 py-1">
+            {log.notes && !log.notes.includes('➔') && (
+                <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-2 border-b dark:border-slate-700 pb-1 italic">
+                    {log.notes.split('\n')[0]}
+                </div>
+            )}
+            <div className="grid grid-cols-1 gap-1.5">
+                {diffs.map((d, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-slate-100 dark:border-slate-800/50">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest min-w-[100px]">{d.field}:</span>
+                        <div className="flex flex-wrap items-center gap-2 flex-1">
+                            <div className="bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 px-2 py-0.5 rounded border border-red-100 dark:border-red-900/20 line-through opacity-60 text-[11px]">
+                                {resolveValue(d.rawKey, d.old)}
+                            </div>
+                            <ArrowRight size={10} className="text-slate-300 dark:text-slate-600"/>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/20 font-bold text-[11px]">
+                                {resolveValue(d.rawKey, d.new)}
+                            </div>
                         </div>
-                    );
-                }
-
-                // Caso 2: Menção a colaborador ou ativo (Linkable)
-                if (line.includes('Alvo:') || line.includes('Origem:')) {
-                    const [label, name] = line.split(':');
-                    const trimmedName = name?.trim();
-                    const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
-                    
-                    return (
-                        <div key={i} className="font-bold text-[11px] flex items-center gap-2">
-                             <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
-                             {foundUser ? (
-                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
-                                    <Users size={10}/> {trimmedName}
-                                 </span>
-                             ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
-                        </div>
-                    );
-                }
-
-                return <div key={i} className="text-slate-600 dark:text-slate-300 font-medium">{line}</div>;
-            })}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
@@ -727,7 +763,7 @@ const DeviceManager = () => {
                     {activeTab === 'MAINTENANCE' && (<div className="space-y-6 animate-fade-in">{!isViewOnly && (<div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-2xl border border-orange-200 dark:border-orange-900/40 space-y-4 shadow-sm transition-colors"><div className="flex items-center gap-2"><div className="h-8 w-8 bg-orange-200 dark:bg-orange-900/40 rounded-full flex items-center justify-center text-orange-700 dark:text-orange-400"><Wrench size={16}/></div><h5 className="text-[10px] font-black text-orange-800 dark:text-orange-200 uppercase tracking-widest">Nova Manutenção</h5></div><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-3"><label className="block text-[10px] font-bold text-orange-400 mb-1">Descrição</label><input placeholder="Ex: Troca de tela..." className="w-full border-2 border-orange-100 dark:border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100 shadow-inner" value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Custo (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span><input type="text" className="w-full border-2 border-orange-100 dark:border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100" value={formatCurrencyBR(newMaint.cost || 0)} onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Data</label><div className="relative"><Calendar className="absolute left-3 top-3 text-orange-300" size={16}/><input type="date" className="w-full border-2 border-orange-100 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-white dark:bg-slate-800 dark:text-slate-100" value={newMaint.date || ''} onChange={e => setNewMaint({...newMaint, date: e.target.value})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Anexo</label><label className={`w-full flex items-center gap-3 bg-white dark:bg-slate-800 border-2 border-dashed border-orange-200 p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}><div className="h-8 w-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-400">{isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}</div><span className="text-[10px] font-bold text-orange-700 uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span><input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*" /></label></div></div><div className="flex justify-end pt-2"><button type="button" onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 shadow-lg transition-all active:scale-95 disabled:opacity-50">Lançar</button></div></div>)}<div className="space-y-3"><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4><div className="grid grid-cols-1 gap-3">{deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (<div key={m.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-orange-200 transition-all group"><div className="flex items-center gap-4"><div className="h-10 w-10 bg-orange-50 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-600"><Wrench size={20}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{m.description}</p><div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-black text-slate-400 uppercase">{formatDateBR(m.date)}</span><span className="text-[10px] font-black text-emerald-600 uppercase">R$ {formatCurrencyBR(m.cost)}</span></div></div></div><div className="flex gap-2">{(m.invoiceUrl || m.hasInvoice) && (<button disabled={loadingFiles[m.id]} type="button" onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center">{loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}</button>)}{!isViewOnly && <button type="button" onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>}</div></div>)) : (<div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800"><p className="text-slate-400 font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p></div>)}</div></div></div>)}
                     {activeTab === 'LICENSES' && (<div className="space-y-4 animate-fade-in"><h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4><div className="grid grid-cols-1 gap-3">{deviceAccounts.length > 0 ? deviceAccounts.map(acc => (<div key={acc.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm flex items-center justify-between group hover:border-indigo-200 transition-all"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 text-blue-600' : acc.type === AccountType.OFFICE ? 'bg-orange-50 text-orange-600' : acc.type === AccountType.ERP ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>{acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}</div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{acc.name}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{acc.login}</p></div></div><div className="flex items-center gap-2">{acc.accessUrl && (<button type="button" onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><ExternalLink size={16}/></button>)}<div className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded font-mono text-[10px] text-slate-700 min-w-[80px] text-center">{showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}</div><button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-indigo-600">{showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></div>)) : (<div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800"><Globe size={32} className="mx-auto text-slate-200 mb-2"/><p className="text-xs text-slate-400 font-bold uppercase tracking-widest italic">Nenhuma licença vinculada.</p></div>)}</div></div>)}
                     {activeTab === 'CUSTODY' && (<PossessionHistory deviceId={editingId || ''} />)}
-                    {activeTab === 'HISTORY' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{getHistory(editingId || '').map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
+                    {activeTab === 'HISTORY' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{getHistory(editingId || '').map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
