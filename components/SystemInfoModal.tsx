@@ -8,18 +8,6 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.44',
-    date: 'Hoje',
-    title: 'Precision Audit & Differential Tracking',
-    changes: [
-      'Auditoria: Implementada visualização detalhada de "Antes e Depois" em todos os históricos (Dispositivos e Colaboradores).',
-      'Inteligência de Dados: O sistema agora compara snapshots JSON para identificar campos alterados automaticamente.',
-      'UI: Timeline aprimorada com badges semânticos e ícones para facilitar a leitura técnica de alterações.',
-      'Tradução de Campos: Mapeamento de labels técnicas para nomes amigáveis em todo o histórico.',
-      'Sincronização global para v2.12.44.'
-    ]
-  },
-    {
     version: '2.12.43',
     date: 'Hoje',
     title: 'Dashboard Navigation & Deep Linking',
@@ -37,6 +25,19 @@ const versions = [
     changes: [
       'Inventário: A barra de pesquisa agora permite filtrar dispositivos pelo nome do colaborador responsável.',
       'Sincronização global para v2.12.42.'
+    ]
+  },
+    {
+    version: '2.12.41',
+    date: 'Ontem',
+    title: 'Admin Panel Restoration & Visual Consistency',
+    changes: [
+      'Administração: Restauradas as abas "Acesso", "Geral" e "Editor de Termos" com CRUD funcional.',
+      'Acesso: Implementado gerenciamento de operadores e administradores do sistema.',
+      'Geral: Adicionado formulário para edição de nome do app, logo e CNPJ.',
+      'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
+      'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
+      'Sincronização global para v2.12.41.'
     ]
   }
 ];
