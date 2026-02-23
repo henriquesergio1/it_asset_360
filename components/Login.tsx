@@ -23,10 +23,9 @@ const Login = () => {
   };
 
   const switchToMockMode = () => {
-      if (window.confirm("Isso mudará o sistema para o modo de TESTE (Mock). Dados reais não serão salvos. Deseja continuar?")) {
-          localStorage.setItem('app_mode', 'mock');
-          window.location.reload();
-      }
+      // v2.12.45: Força a mudança para modo mock sem bloqueio de confirm
+      localStorage.setItem('app_mode', 'mock');
+      window.location.href = '/'; // Força recarregamento na raiz
   };
 
   return (

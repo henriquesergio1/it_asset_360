@@ -1,11 +1,20 @@
 
-const express = require('express');
-const sql = require('mssql');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import sql from 'mssql';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { createServer as createViteServer } from 'vite';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -25,10 +34,12 @@ const dbConfig = {
 
 // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {
+    const isDbConfigured = !!process.env.DB_SERVER;
     res.json({ 
-        status: 'ok', 
-        version: '2.12.45', 
+        status: isDbConfigured ? 'ok' : 'maintenance', 
+        version: '2.12.46', 
         timestamp: new Date().toISOString(),
+        databaseConfigured: isDbConfigured,
         environment: process.env.NODE_ENV || 'development'
     });
 });
@@ -42,8 +53,11 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.45 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.46 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
+    if (!process.env.DB_SERVER) {
+        return res.status(503).json({ error: "Banco de dados não configurado no ambiente." });
+    }
     try {
         const pool = await sql.connect(dbConfig);
         const [
@@ -85,8 +99,11 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.45 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.46 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
+    if (!process.env.DB_SERVER) {
+        return res.status(503).json({ error: "Banco de dados não configurado no ambiente." });
+    }
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes] = await Promise.all([
@@ -454,6 +471,43 @@ app.post('/api/operations/checkin', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.45 rodando na porta ${PORT}`);
-});
+async function startServer() {
+    try {
+        if (process.env.NODE_ENV !== 'production') {
+            const vite = await createViteServer({
+                server: { middlewareMode: true },
+                appType: 'spa',
+            });
+            app.use(vite.middlewares);
+
+            app.get('*', async (req, res, next) => {
+                const url = req.originalUrl;
+                try {
+                    let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+                    template = await vite.transformIndexHtml(url, template);
+                    res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+                } catch (e) {
+                    vite.ssrFixStacktrace(e as Error);
+                    next(e);
+                }
+            });
+        } else {
+            app.use(express.static(path.join(__dirname, 'dist')));
+            app.get('*', (req, res) => {
+                res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+            });
+        }
+
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Servidor v2.12.46 rodando na porta ${PORT}`);
+        });
+    } catch (e) {
+        console.error("Critical failure during server startup:", e);
+        // Fallback to a simple server if Vite fails
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Fallback server running on port ${PORT}`);
+        });
+    }
+}
+
+startServer();

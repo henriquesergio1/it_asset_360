@@ -18,9 +18,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         console.log("[ITAsset360] Verificando conectividade com a API...");
         
-        // Timeout reduzido para 1500ms para evitar longos períodos em branco
+        // v2.12.45: Timeout ajustado para 2000ms para maior resiliência em redes lentas
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
         
         const response = await fetch('/api/health', { 
             signal: controller.signal,
@@ -29,15 +29,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         clearTimeout(timeoutId);
         
-        if (response.ok) {
-          console.log("[ITAsset360] API detectada. Iniciando em modo PRODUÇÃO.");
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'ok') {
+          console.log("[ITAsset360] API detectada e configurada. Iniciando em modo PRODUÇÃO.");
           setMode('prod');
           localStorage.setItem('app_mode', 'prod');
         } else {
-          throw new Error("API retornou erro");
+          throw new Error(data.error || "API em modo de manutenção ou erro de configuração.");
         }
       } catch (err) {
         console.warn("[ITAsset360] API inacessível ou timeout. Iniciando em modo de TESTE (MOCK).");
+        // v2.12.45: Garante que o modo mock seja persistido em caso de falha de rede
         setMode('mock');
         localStorage.setItem('app_mode', 'mock');
       }
