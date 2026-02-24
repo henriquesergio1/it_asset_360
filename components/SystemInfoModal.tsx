@@ -8,6 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.44',
+    date: 'Hoje',
+    title: 'Vite Build & Docker Optimization',
+    changes: [
+      'Build: Removido tsc do processo de build para garantir sucesso na compilação do Docker.',
+      'Docker: Simplificado Dockerfile removendo lógica legada do CRA e adaptando para Vite.',
+      'Configuração: Definido outDir para "build" no vite.config.ts para manter compatibilidade com Nginx.',
+      'Versão: Atualizado para v2.12.44.',
+      'Sincronização global para v2.12.44.'
+    ]
+  },
+    {
     version: '2.12.43',
     date: 'Hoje',
     title: 'Deployment Optimization & Dependency Cleanup',

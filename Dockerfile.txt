@@ -10,20 +10,6 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# --- FIX STRUCTURE FOR REACT SCRIPTS ---
-# Create standard CRA directories
-RUN mkdir -p public src
-
-# Move Static Assets to public/
-RUN [ -f index.html ] && mv index.html public/
-RUN [ -f metadata.json ] && mv metadata.json public/
-
-# Move Source Code to src/
-# We explicitly move folders and TS/TSX files.
-# IMPORTANT: We DO NOT move 'server.js' so it stays in root and is IGNORED by react-scripts build.
-RUN mv components contexts services utils src/ 2>/dev/null || true
-RUN mv *.tsx *.ts src/ 2>/dev/null || true
-
 # IMPORTANT: Set CI=false to treat warnings as warnings, NOT errors.
 RUN CI=false npm run build
 
