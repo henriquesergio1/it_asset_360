@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.45', 
+        version: '2.12.52', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -42,7 +42,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.45 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.51 - Completo) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -85,7 +85,7 @@ app.get('/api/bootstrap', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// --- SYNC ENDPOINT (v2.12.45 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.51 - Lightweight) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -179,6 +179,48 @@ app.delete('/api/terms/:id/file', async (req, res) => {
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
 
         await logAction(term.UserId, 'User', 'Atualização', _adminUser, userName, `Anexo removido do termo (${term.AssetDetails}). Motivo: ${reason || 'Não informado'}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+// v2.12.52 - Endpoint para resolução manual de pendências sem anexo
+app.put('/api/terms/resolve/:id', async (req, res) => {
+    try {
+        const { reason, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails FROM Terms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+        
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        // Marca como resolvido manualmente
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Note', sql.NVarChar, `[RESOLVIDO_MANUALMENTE] Motivo: ${reason}`)
+            .query("UPDATE Terms SET FileUrl=@Note WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        // Log no Colaborador
+        await logAction(term.UserId, 'User', 'Resolução Manual', _adminUser, userName, `Pendência de termo resolvida manualmente. Motivo: ${reason}`);
+        
+        // Log no Sistema (Administração)
+        await logAction('system', 'System', 'Resolução Manual', _adminUser, 'Administração', `Termo de ${userName} resolvido sem anexo. Motivo: ${reason}`);
+
+        // Tenta encontrar o dispositivo para logar nele também
+        // Formato esperado: [TAG: XXX | S/N: YYY | IMEI: ZZZ] ModelName
+        const tagMatch = term.AssetDetails.match(/TAG:\s*([^|\]]+)/);
+        if (tagMatch && tagMatch[1] && tagMatch[1].trim() !== 'S/T') {
+            const assetTag = tagMatch[1].trim();
+            const devRes = await pool.request().input('Tag', sql.NVarChar, assetTag).query("SELECT Id, AssetTag FROM Devices WHERE AssetTag=@Tag");
+            const device = devRes.recordset[0];
+            if (device) {
+                await logAction(device.Id, 'Device', 'Resolução Manual', _adminUser, device.AssetTag, `Pendência de termo de entrega/devolução resolvida manualmente. Motivo: ${reason}`);
+            }
+        }
+
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -379,7 +421,7 @@ app.post('/api/operations/checkout', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.45: Snapshotting completo no log para identificação infalível
+            // v2.12.48: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -418,7 +460,7 @@ app.post('/api/operations/checkin', async (req, res) => {
         if (assetType === 'Device' && prev) {
             const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
             const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.45: Snapshotting completo no log para identificação infalível
+            // v2.12.48: Snapshotting completo no log para identificação infalível
             assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
             targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
         } else if (prev) {
@@ -455,5 +497,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.45 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.52 rodando na porta ${PORT}`);
 });

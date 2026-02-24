@@ -193,7 +193,8 @@ export enum ActionType {
   MAINTENANCE_END = 'Retorno Manutenção',
   LOGIN = 'Login',
   INACTIVATE = 'Inativação',
-  ACTIVATE = 'Ativação'
+  ACTIVATE = 'Ativação',
+  RESOLVE_PENDENCY = 'Resolução Manual'
 }
 
 export interface AuditLog {

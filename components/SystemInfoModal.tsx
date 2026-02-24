@@ -7,6 +7,75 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    { 
+        version: '2.12.52', 
+        date: 'Hoje',
+        title: 'Resolução Manual de Pendências', 
+        changes: [
+            'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
+            'Registro de justificativa obrigatória para resoluções manuais.',
+            'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.'
+        ] 
+    },
+    {
+    version: '2.12.51',
+    date: 'Hoje',
+    title: 'LCC Dashboard Redesign & Global Financials',
+    changes: [
+      'Dashboard: Redesign completo da seção de LCC para maior clareza e impacto visual.',
+      'Dashboard: Agrupamento de métricas financeiras globais (Aquisição vs Manutenção).',
+      'Dashboard: Tabela de alertas de saúde integrada com indicadores de obsolescência.',
+      'Versão: Atualizado para v2.12.51.',
+      'Sincronização global para v2.12.51.'
+    ]
+  },
+    {
+    version: '2.12.49',
+    date: 'Hoje',
+    title: 'Advanced LCC Dashboard & Financial Insights',
+    changes: [
+      'Dashboard: Nova seção "Saúde Financeira & LCC" com métricas globais de investimento.',
+      'Dashboard: Visualização de alertas críticos de manutenção (>60%) e obsolescência (>4 anos).',
+      'Dashboard: Gráfico de distribuição de custos (Aquisição vs Manutenção).',
+      'Versão: Atualizado para v2.12.49.',
+      'Sincronização global para v2.12.49.'
+    ]
+  },
+    {
+    version: '2.12.48',
+    date: 'Hoje',
+    title: 'LCC Breakdown & UI Refinement',
+    changes: [
+      'Financeiro: Detalhamento do LCC com separação de custos de aquisição e manutenção.',
+      'UI: Melhoria visual no card de Custo do Ciclo de Vida para maior clareza.',
+      'Versão: Atualizado para v2.12.48.',
+      'Sincronização global para v2.12.48.'
+    ]
+  },
+    {
+    version: '2.12.47',
+    date: 'Hoje',
+    title: 'LCC (Life Cycle Cost) & Asset Health',
+    changes: [
+      'Financeiro: Implementado cálculo de LCC (Custo do Ciclo de Vida) na aba financeira dos dispositivos.',
+      'Alertas: Adicionados alertas visuais para dispositivos com gastos de manutenção > 60% do valor de compra.',
+      'Alertas: Adicionados alertas para dispositivos com mais de 4 anos de uso.',
+      'Dashboard: Nova seção de "Saúde dos Ativos" com indicadores de LCC e obsolescência.',
+      'Versão: Atualizado para v2.12.47.',
+      'Sincronização global para v2.12.47.'
+    ]
+  },
+    {
+    version: '2.12.46',
+    date: 'Hoje',
+    title: 'Enhanced Device Search',
+    changes: [
+      'Busca: Agora é possível pesquisar dispositivos pelo nome do colaborador responsável.',
+      'Busca: Adicionada pesquisa pelo número do chip (linha) vinculado ao dispositivo.',
+      'Versão: Atualizado para v2.12.46.',
+      'Sincronização global para v2.12.46.'
+    ]
+  },
     {
     version: '2.12.45',
     date: 'Hoje',
