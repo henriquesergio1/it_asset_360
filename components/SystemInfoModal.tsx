@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.43',
+    date: 'Hoje',
+    title: 'Deployment Optimization & Dependency Cleanup',
+    changes: [
+      'Infraestrutura: Removido react-scripts e dependências legadas para resolver erro de build no Portainer.',
+      'Dependências: Organizado devDependencies e atualizado TypeScript/Vite para versões estáveis.',
+      'Versão: Atualizado para v2.12.43.',
+      'Sincronização global para v2.12.43.'
+    ]
+  },
+    {
     version: '2.12.42',
     date: 'Hoje',
     title: 'Vite Environment & Sync Stability',
