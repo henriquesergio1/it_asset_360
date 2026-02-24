@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.45',
+    date: 'Hoje',
+    title: 'Infrastructure Renaming & Port Updates',
+    changes: [
+      'Docker: Renomeados containers para it-asset-new-api e it-asset-new-app.',
+      'Portas: Alterada porta da API para 5002 e do App para 8084 no docker-compose.',
+      'Versão: Atualizado para v2.12.45.',
+      'Sincronização global para v2.12.45.'
+    ]
+  },
+    {
     version: '2.12.44',
     date: 'Hoje',
     title: 'Vite Build & Docker Optimization',
