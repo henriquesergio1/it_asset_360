@@ -8,28 +8,19 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.43',
-    date: 'Hoje',
-    title: 'Dashboard Navigation & Deep Linking',
-    changes: [
-      'Dashboard: Os cards de estatísticas superiores agora são clicáveis e redirecionam para as telas correspondentes.',
-      'Inventário: Implementado suporte a filtros via URL (Deep Linking), permitindo filtrar por status diretamente ao acessar a tela.',
-      'UX: Adicionados efeitos visuais de interatividade (hover scale e rotate) nos atalhos do dashboard.',
-      'Sincronização global para v2.12.43.'
-    ]
-  },
-    {
     version: '2.12.42',
     date: 'Hoje',
-    title: 'Advanced Inventory Search Improvement',
+    title: 'Vite Environment & Sync Stability',
     changes: [
-      'Inventário: A barra de pesquisa agora permite filtrar dispositivos pelo nome do colaborador responsável.',
+      'Ambiente: Configurado proxy do Vite para evitar conflitos de rotas API/SPA.',
+      'Estabilidade: Corrigido erro de "Unexpected token <" na detecção de ambiente.',
+      'Versão: Atualizado para v2.12.42 em todos os componentes.',
       'Sincronização global para v2.12.42.'
     ]
   },
     {
     version: '2.12.41',
-    date: 'Ontem',
+    date: 'Hoje',
     title: 'Admin Panel Restoration & Visual Consistency',
     changes: [
       'Administração: Restauradas as abas "Acesso", "Geral" e "Editor de Termos" com CRUD funcional.',
@@ -38,6 +29,28 @@ const versions = [
       'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
       'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
       'Sincronização global para v2.12.41.'
+    ]
+  },
+    {
+    version: '2.12.40',
+    date: 'Ontem',
+    title: 'TypeScript Stability & Missing Properties',
+    changes: [
+      'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
+      'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
+      'Sincronização global para v2.12.40.'
+    ]
+  },
+    {
+    version: '2.12.39',
+    date: '02/2025',
+    title: 'Visual Standardization & Column Fixes',
+    changes: [
+      'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
+      'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
+      'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
+      'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
+      'Sincronização global para v2.12.39.'
     ]
   }
 ];

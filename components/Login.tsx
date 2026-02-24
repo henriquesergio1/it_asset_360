@@ -23,10 +23,11 @@ const Login = () => {
   };
 
   const switchToMockMode = () => {
-      // v2.12.45: Força a mudança para modo mock sem bloqueio de confirm
       localStorage.setItem('app_mode', 'mock');
-      window.location.href = '/'; // Força recarregamento na raiz
+      window.location.reload();
   };
+
+  const currentMode = localStorage.getItem('app_mode') || 'auto';
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
@@ -45,8 +46,8 @@ const Login = () => {
           <p className="text-gray-400 mt-2 text-sm">Entre para gerenciar seus ativos de TI</p>
           
           <div className="absolute top-4 right-4">
-             <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${loading ? 'bg-slate-700 text-slate-400' : 'bg-green-600 text-white'}`}>
-                {loading ? 'AUTO' : 'PROD'}
+             <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${currentMode === 'mock' ? 'bg-amber-600 text-white' : 'bg-green-600 text-white'}`}>
+                {currentMode === 'mock' ? 'MOCK' : 'PROD'}
              </span>
           </div>
         </div>

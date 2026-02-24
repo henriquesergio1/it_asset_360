@@ -8,36 +8,6 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
-    version: '2.12.46',
-    date: 'Hoje',
-    title: 'Database Configuration Resilience',
-    changes: [
-      'Estabilidade: Tratamento de erro 500/503 quando o SQL Server não está configurado.',
-      'Recuperação: Ativação automática do modo Mock em caso de falha de configuração da API.',
-      'Sincronização global para v2.12.46.'
-    ]
-  },
-    {
-    version: '2.12.45',
-    date: 'Hoje',
-    title: 'Emergency Recovery Fix',
-    changes: [
-      'Recuperação: Correção do botão de "Modo de Emergência (Mock)" na tela de login.',
-      'Estabilidade: Ajuste na detecção automática de ambiente para maior resiliência.',
-      'Sincronização global para v2.12.45.'
-    ]
-  },
-    {
-    version: '2.12.44',
-    date: 'Hoje',
-    title: 'Vite Migration & Dev Environment Fix',
-    changes: [
-      'Infraestrutura: Migração do ambiente de desenvolvimento para Vite + Express (Full-Stack).',
-      'Correção de Bug: Resolvido problema de carregamento da tela de login no modo desenvolvimento.',
-      'Sincronização global para v2.12.44.'
-    ]
-  },
-    {
     version: '2.12.40',
     date: 'Hoje',
     title: 'TypeScript Stability & Missing Properties',

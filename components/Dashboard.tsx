@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
@@ -6,20 +5,17 @@ import { Smartphone, Users, Wifi, AlertTriangle, FileWarning, ArrowRight, Globe,
 import { DeviceStatus, ActionType, AccountType } from '../types';
 import { Link } from 'react-router-dom';
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle, to }: any) => (
-  <Link 
-    to={to} 
-    className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 flex items-start justify-between hover:shadow-md hover:scale-[1.02] hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer group"
-  >
+const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
+  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 flex items-start justify-between hover:shadow-md transition-all">
     <div>
-      <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1 group-hover:text-blue-500 transition-colors">{title}</p>
+      <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">{title}</p>
       <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{value}</h3>
       {subtitle && <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">{subtitle}</p>}
     </div>
-    <div className={`p-3 rounded-lg ${color} shadow-lg transition-transform group-hover:rotate-12`}>
+    <div className={`p-3 rounded-lg ${color}`}>
       <Icon className="w-6 h-6 text-white" />
     </div>
-  </Link>
+  </div>
 );
 
 const Dashboard = () => {
@@ -59,7 +55,6 @@ const Dashboard = () => {
           icon={Smartphone} 
           color="bg-blue-600" 
           subtitle={`${availableDevices} disponíveis`}
-          to="/devices"
         />
         <StatCard 
           title="Licenças / Contas" 
@@ -67,7 +62,6 @@ const Dashboard = () => {
           icon={Globe} 
           color="bg-indigo-600"
           subtitle={`${accounts.filter(a => a.type === AccountType.EMAIL).length} e-mails ativos`}
-          to="/accounts"
         />
         <StatCard 
           title="Colaboradores" 
@@ -75,7 +69,6 @@ const Dashboard = () => {
           icon={Users} 
           color="bg-emerald-500"
           subtitle={`${users.filter(u => u.active).length} ativos`}
-          to="/users"
         />
         <StatCard 
           title="Em Manutenção" 
@@ -83,7 +76,6 @@ const Dashboard = () => {
           icon={AlertTriangle} 
           color="bg-amber-500"
           subtitle="Aguardando reparo"
-          to={`/devices?status=${DeviceStatus.MAINTENANCE}`}
         />
       </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
@@ -517,12 +516,6 @@ const DeviceManager = () => {
         const device = devices.find(d => d.id === deviceId);
         if (device) handleOpenModal(device, true);
     }
-    
-    // v2.12.43 - Filtro por status vindo da URL
-    const statusParam = params.get('status');
-    if (statusParam && Object.values(DeviceStatus).includes(statusParam as DeviceStatus)) {
-        setViewStatus(statusParam as DeviceStatus);
-    }
   }, [location, devices]);
 
   const adminName = currentUser?.name || 'Sistema';
@@ -554,8 +547,7 @@ const DeviceManager = () => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
     const { model, brand } = getModelDetails(d.modelId);
     const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
-    const assignedUser = users.find(u => u.id === d.currentUserId)?.fullName || ''; // v2.12.42: Inclusão do nome do colaborador
-    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${assignedUser}`.toLowerCase();
+    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   }).sort((a, b) => {
       const modelA = models.find(m => m.id === a.modelId)?.name || '';
@@ -637,7 +629,7 @@ const DeviceManager = () => {
                 {isColumnSelectorOpen && (
                     <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center"><span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button></div>
-                        <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
+                        <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
                     </div>
                 )}
             </div>
@@ -654,7 +646,7 @@ const DeviceManager = () => {
 
       <div className="relative">
         <Search className="absolute left-4 top-3 text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar por Patrimônio, IMEI, Modelo ou Nome do Colaborador..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+        <input type="text" placeholder="Pesquisar..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
