@@ -6,10 +6,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api.txt
-    container_name: it-asset-new-api
+    container_name: it-asset-360-api
     hostname: api # Importante para o Nginx encontrar http://api:5000
     ports:
-      - "5002:5000" # Porta 5002 conforme solicitado
+      - "5001:5000" # Porta 5002 conforme solicitado
     environment:
       - DB_SERVER=10.10.10.100
       - DB_PORT=1433
@@ -27,10 +27,10 @@ services:
       dockerfile: Dockerfile.txt
     image: it-asset-new:latest
     pull_policy: build
-    container_name: it-asset-new-app
+    container_name: it-asset-360-app
     restart: unless-stopped
     ports:
-      - "8084:80"
+      - "8083:80"
     environment:
       - NODE_ENV=production
     depends_on:
