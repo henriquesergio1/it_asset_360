@@ -1,183 +1,177 @@
-
--- Script Completo de Criação de Tabelas - IT Asset 360
--- Versão 2.3 (Auditoria Detalhada)
-
--- Configurações e Sistema
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemSettings')
-CREATE TABLE SystemSettings (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    AppName NVARCHAR(100),
-    Cnpj NVARCHAR(20),
-    LogoUrl NVARCHAR(MAX),
-    TermTemplate NVARCHAR(MAX),
-    ReturnTermTemplate NVARCHAR(MAX)
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SystemUsers')
-CREATE TABLE SystemUsers (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL,
-    Email NVARCHAR(100) NOT NULL,
-    Password NVARCHAR(100) NOT NULL,
-    Role NVARCHAR(20) NOT NULL,
-    AvatarUrl NVARCHAR(MAX)
-);
-
--- Dados Auxiliares
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Sectors')
-CREATE TABLE Sectors (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Brands')
-CREATE TABLE Brands (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AccessoryTypes')
-CREATE TABLE AccessoryTypes (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CustomFields')
-CREATE TABLE CustomFields (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL
-);
-
--- Tipos de Ativo (Configuração Dinâmica)
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AssetTypes')
-CREATE TABLE AssetTypes (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL,
-    CustomFieldIds NVARCHAR(MAX) -- JSON Array: ["id1", "id2"]
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Models')
-CREATE TABLE Models (
-    Id NVARCHAR(50) PRIMARY KEY,
-    Name NVARCHAR(100) NOT NULL,
-    BrandId NVARCHAR(50),
-    TypeId NVARCHAR(50),
-    ImageUrl NVARCHAR(MAX),
-    CONSTRAINT FK_Models_Brands FOREIGN KEY (BrandId) REFERENCES Brands(Id),
-    CONSTRAINT FK_Models_AssetTypes FOREIGN KEY (TypeId) REFERENCES AssetTypes(Id)
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users')
-CREATE TABLE Users (
-    Id NVARCHAR(50) PRIMARY KEY,
-    FullName NVARCHAR(100) NOT NULL,
-    Cpf NVARCHAR(20),
-    Rg NVARCHAR(20),
-    Pis NVARCHAR(20),
-    Address NVARCHAR(255),
-    Email NVARCHAR(100) NOT NULL,
-    SectorId NVARCHAR(50),
-    JobTitle NVARCHAR(100),
-    InternalCode NVARCHAR(50), 
-    Active BIT DEFAULT 1,
-    HasPendingIssues BIT DEFAULT 0, 
-    PendingIssuesNote NVARCHAR(MAX), 
-    CONSTRAINT FK_Users_Sectors FOREIGN KEY (SectorId) REFERENCES Sectors(Id)
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SimCards')
-CREATE TABLE SimCards (
-    Id NVARCHAR(50) PRIMARY KEY,
-    PhoneNumber NVARCHAR(50) NOT NULL,
-    Operator NVARCHAR(50),
-    Iccid NVARCHAR(50),
-    PlanDetails NVARCHAR(100),
-    Status NVARCHAR(50) NOT NULL,
-    CurrentUserId NVARCHAR(50) NULL,
-    CONSTRAINT FK_SimCards_Users FOREIGN KEY (CurrentUserId) REFERENCES Users(Id)
-);
+-- IT Asset 360 - Script Completo de Banco de Dados (SQL Server)
+-- Versão: 2.13.0
+-- Este script contém todas as tabelas necessárias para o funcionamento inicial do sistema.
 
 -- Tabela de Dispositivos
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Devices')
 CREATE TABLE Devices (
-    Id NVARCHAR(50) PRIMARY KEY,
-    ModelId NVARCHAR(50), 
-    SerialNumber NVARCHAR(50),
-    AssetTag NVARCHAR(50),
-    InternalCode NVARCHAR(50), 
-    
-    -- Identificadores Especiais (Mantidos por uso intensivo na UI)
-    Imei NVARCHAR(50),
-    PulsusId NVARCHAR(50),
-    
-    -- DADOS DINÂMICOS (RAM, Storage, IDs Apps, etc)
-    CustomData NVARCHAR(MAX), -- JSON Object: {"id_ram": "16gb"}
-
-    Status NVARCHAR(50) NOT NULL,
-    CurrentUserId NVARCHAR(50) NULL,
-    SectorId NVARCHAR(50),
-    CostCenter NVARCHAR(50),
-    LinkedSimId NVARCHAR(50) NULL,
-    PurchaseDate DATE,
-    PurchaseCost DECIMAL(18, 2),
-    InvoiceNumber NVARCHAR(50),
-    Supplier NVARCHAR(100),
+    Id NVARCHAR(255) PRIMARY KEY,
+    AssetTag NVARCHAR(255) UNIQUE,
+    Status NVARCHAR(50),
+    PreviousStatus NVARCHAR(50) NULL,
+    ModelId NVARCHAR(255),
+    SerialNumber NVARCHAR(255),
+    InternalCode NVARCHAR(255),
+    Imei NVARCHAR(255) UNIQUE,
+    PulsusId NVARCHAR(255),
+    CurrentUserId NVARCHAR(255),
+    SectorId NVARCHAR(255),
+    CostCenter NVARCHAR(255),
+    LinkedSimId NVARCHAR(255),
+    PurchaseDate DATETIME,
+    PurchaseCost FLOAT,
+    InvoiceNumber NVARCHAR(255),
+    Supplier NVARCHAR(255),
     PurchaseInvoiceUrl NVARCHAR(MAX),
-    CONSTRAINT FK_Devices_Models FOREIGN KEY (ModelId) REFERENCES Models(Id),
-    CONSTRAINT FK_Devices_Users FOREIGN KEY (CurrentUserId) REFERENCES Users(Id),
-    CONSTRAINT FK_Devices_Sectors FOREIGN KEY (SectorId) REFERENCES Sectors(Id),
-    CONSTRAINT FK_Devices_SimCards FOREIGN KEY (LinkedSimId) REFERENCES SimCards(Id)
+    CustomData NVARCHAR(MAX)
 );
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DeviceAccessories')
-CREATE TABLE DeviceAccessories (
-    Id NVARCHAR(50) PRIMARY KEY,
-    DeviceId NVARCHAR(50) NOT NULL,
-    AccessoryTypeId NVARCHAR(50) NOT NULL,
-    Name NVARCHAR(100), 
-    CONSTRAINT FK_DevAcc_Devices FOREIGN KEY (DeviceId) REFERENCES Devices(Id) ON DELETE CASCADE,
-    CONSTRAINT FK_DevAcc_Type FOREIGN KEY (AccessoryTypeId) REFERENCES AccessoryTypes(Id)
+-- Tabela de Chips (SIM Cards)
+CREATE TABLE SimCards (
+    Id NVARCHAR(255) PRIMARY KEY,
+    PhoneNumber NVARCHAR(50) UNIQUE,
+    Operator NVARCHAR(100),
+    Iccid NVARCHAR(255) UNIQUE,
+    Status NVARCHAR(50),
+    CurrentUserId NVARCHAR(255),
+    PlanDetails NVARCHAR(MAX)
 );
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MaintenanceRecords')
-CREATE TABLE MaintenanceRecords (
-    Id NVARCHAR(50) PRIMARY KEY,
-    DeviceId NVARCHAR(50) NOT NULL,
-    Type NVARCHAR(50),
-    Date DATETIME2,
-    Description NVARCHAR(MAX),
-    Cost DECIMAL(18, 2),
-    Provider NVARCHAR(100),
-    InvoiceUrl NVARCHAR(MAX),
-    CONSTRAINT FK_Maintenance_Devices FOREIGN KEY (DeviceId) REFERENCES Devices(Id) ON DELETE CASCADE
+-- Tabela de Colaboradores
+CREATE TABLE Users (
+    Id NVARCHAR(255) PRIMARY KEY,
+    FullName NVARCHAR(255),
+    Cpf NVARCHAR(50) UNIQUE,
+    Rg NVARCHAR(50),
+    Pis NVARCHAR(50),
+    Address NVARCHAR(MAX),
+    Email NVARCHAR(255) UNIQUE,
+    SectorId NVARCHAR(255),
+    InternalCode NVARCHAR(255),
+    Active BIT,
+    HasPendingIssues BIT,
+    PendingIssuesNote NVARCHAR(MAX)
 );
 
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Terms')
-CREATE TABLE Terms (
-    Id NVARCHAR(50) PRIMARY KEY,
-    UserId NVARCHAR(50) NOT NULL,
-    Type NVARCHAR(20),
-    AssetDetails NVARCHAR(255),
-    Date DATETIME2,
-    FileUrl NVARCHAR(MAX),
-    CONSTRAINT FK_Terms_Users FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE
-);
-
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs')
+-- Tabela de Logs de Auditoria
 CREATE TABLE AuditLogs (
-    Id NVARCHAR(50) PRIMARY KEY,
-    AssetId NVARCHAR(50),
-    AssetType NVARCHAR(50),
-    TargetName NVARCHAR(100),
-    Action NVARCHAR(50),
-    Timestamp DATETIME2 DEFAULT GETDATE(),
+    Id NVARCHAR(255) PRIMARY KEY,
+    AssetId NVARCHAR(255),
+    AssetType NVARCHAR(100),
+    Action NVARCHAR(100),
+    Timestamp DATETIME DEFAULT GETDATE(),
+    AdminUser NVARCHAR(255),
+    TargetName NVARCHAR(255),
     Notes NVARCHAR(MAX),
-    AdminUser NVARCHAR(100),
     BackupData NVARCHAR(MAX),
-    PreviousData NVARCHAR(MAX), -- NOVO
-    NewData NVARCHAR(MAX)      -- NOVO
+    PreviousData NVARCHAR(MAX),
+    NewData NVARCHAR(MAX)
 );
 
--- Seed Minimal
-IF NOT EXISTS (SELECT * FROM SystemSettings) INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
-IF NOT EXISTS (SELECT * FROM SystemUsers) INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES ('admin1', 'Administrador', 'admin@empresa.com', 'admin', 'ADMIN');
+-- Tabela de Usuários do Sistema (Administradores/Operadores)
+CREATE TABLE SystemUsers (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255),
+    Email NVARCHAR(255) UNIQUE,
+    Password NVARCHAR(255),
+    Role NVARCHAR(50)
+);
+
+-- Tabela de Configurações do Sistema
+CREATE TABLE SystemSettings (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    AppName NVARCHAR(255),
+    LogoUrl NVARCHAR(MAX),
+    Cnpj NVARCHAR(50),
+    TermTemplate NVARCHAR(MAX)
+);
+
+-- Tabela de Modelos de Ativos
+CREATE TABLE Models (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255),
+    BrandId NVARCHAR(255),
+    TypeId NVARCHAR(255),
+    ImageUrl NVARCHAR(MAX)
+);
+
+-- Tabela de Marcas
+CREATE TABLE Brands (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) UNIQUE
+);
+
+-- Tabela de Tipos de Ativos
+CREATE TABLE AssetTypes (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) UNIQUE,
+    CustomFieldIds NVARCHAR(MAX)
+);
+
+-- Tabela de Registros de Manutenção
+CREATE TABLE MaintenanceRecords (
+    Id NVARCHAR(255) PRIMARY KEY,
+    DeviceId NVARCHAR(255),
+    Description NVARCHAR(MAX),
+    Cost FLOAT,
+    Date DATETIME,
+    Type NVARCHAR(100),
+    Provider NVARCHAR(255),
+    InvoiceUrl NVARCHAR(MAX)
+);
+
+-- Tabela de Setores/Cargos
+CREATE TABLE Sectors (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) UNIQUE
+);
+
+-- Tabela de Termos de Responsabilidade
+CREATE TABLE Terms (
+    Id NVARCHAR(255) PRIMARY KEY,
+    UserId NVARCHAR(255),
+    Type NVARCHAR(50),
+    AssetDetails NVARCHAR(MAX),
+    Date DATETIME,
+    FileUrl NVARCHAR(MAX)
+);
+
+-- Tabela de Tipos de Acessórios
+CREATE TABLE AccessoryTypes (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) UNIQUE
+);
+
+-- Tabela de Acessórios Vinculados a Dispositivos
+CREATE TABLE DeviceAccessories (
+    Id NVARCHAR(255) PRIMARY KEY,
+    DeviceId NVARCHAR(255),
+    AccessoryTypeId NVARCHAR(255),
+    Name NVARCHAR(255)
+);
+
+-- Tabela de Campos Personalizados
+CREATE TABLE CustomFields (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) UNIQUE
+);
+
+-- Tabela de Contas e Licenças de Software
+CREATE TABLE SoftwareAccounts (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255),
+    Type NVARCHAR(100),
+    Login NVARCHAR(255),
+    Password NVARCHAR(255),
+    AccessUrl NVARCHAR(MAX),
+    Status NVARCHAR(50),
+    UserId NVARCHAR(255),
+    DeviceId NVARCHAR(255),
+    SectorId NVARCHAR(255),
+    Notes NVARCHAR(MAX)
+);
+
+-- Populando dados iniciais essenciais
+INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
+
+PRINT 'Banco de dados inicializado com sucesso.';
+
