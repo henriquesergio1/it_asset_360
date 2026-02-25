@@ -21,6 +21,116 @@ const dbConfig = {
     }
 };
 
+const DB_SCHEMAS = {
+    Devices: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        AssetTag NVARCHAR(255) UNIQUE,
+        Status NVARCHAR(50),
+        PreviousStatus NVARCHAR(50) NULL,
+        ModelId NVARCHAR(255),
+        SerialNumber NVARCHAR(255),
+        InternalCode NVARCHAR(255),
+        Imei NVARCHAR(255) UNIQUE,
+        PulsusId NVARCHAR(255),
+        CurrentUserId NVARCHAR(255),
+        SectorId NVARCHAR(255),
+        CostCenter NVARCHAR(255),
+        LinkedSimId NVARCHAR(255),
+        PurchaseDate DATETIME,
+        PurchaseCost FLOAT,
+        InvoiceNumber NVARCHAR(255),
+        Supplier NVARCHAR(255),
+        PurchaseInvoiceUrl NVARCHAR(MAX),
+        CustomData NVARCHAR(MAX)
+    )`,
+    SimCards: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        PhoneNumber NVARCHAR(50) UNIQUE,
+        Operator NVARCHAR(100),
+        Iccid NVARCHAR(255) UNIQUE,
+        Status NVARCHAR(50),
+        CurrentUserId NVARCHAR(255),
+        PlanDetails NVARCHAR(MAX)
+    )`,
+    Users: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        FullName NVARCHAR(255),
+        Cpf NVARCHAR(50) UNIQUE,
+        Rg NVARCHAR(50),
+        Pis NVARCHAR(50),
+        Address NVARCHAR(MAX),
+        Email NVARCHAR(255) UNIQUE,
+        SectorId NVARCHAR(255),
+        InternalCode NVARCHAR(255),
+        Active BIT,
+        HasPendingIssues BIT,
+        PendingIssuesNote NVARCHAR(MAX)
+    )`,
+    AuditLogs: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        AssetId NVARCHAR(255),
+        AssetType NVARCHAR(100),
+        Action NVARCHAR(100),
+        Timestamp DATETIME DEFAULT GETDATE(),
+        AdminUser NVARCHAR(255),
+        TargetName NVARCHAR(255),
+        Notes NVARCHAR(MAX),
+        BackupData NVARCHAR(MAX),
+        PreviousData NVARCHAR(MAX),
+        NewData NVARCHAR(MAX)
+    )`,
+    SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
+    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX))`,
+    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageUrl NVARCHAR(MAX))`,
+    Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
+    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
+    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX))`,
+    Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
+    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX))`,
+    AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
+    DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
+    CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
+    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`
+};
+
+async function initializeDatabase() {
+    console.log('Verificando e inicializando banco de dados...');
+    try {
+        const pool = await sql.connect(dbConfig);
+        for (const table in DB_SCHEMAS) {
+            const checkTable = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '${table}'`);
+            if (checkTable.recordset.length === 0) {
+                console.log(`- Tabela ${table} não encontrada. Criando...`);
+                await pool.request().query(`CREATE TABLE ${table} ${DB_SCHEMAS[table]}`);
+                console.log(`  ... Tabela ${table} criada com sucesso.`);
+            } else {
+                 // Verifica colunas específicas que podem faltar
+                 if (table === 'Devices') {
+                    const checkColumn = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'PreviousStatus'`);
+                    if (checkColumn.recordset.length === 0) {
+                        console.log(`- Coluna PreviousStatus não encontrada em Devices. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Devices ADD PreviousStatus NVARCHAR(50) NULL');
+                        console.log('  ... Coluna PreviousStatus adicionada.');
+                    }
+                }
+            }
+        }
+
+        // Garante que a tabela de settings tenha pelo menos uma linha
+        const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
+        if (settingsCheck.recordset[0].count === 0) {
+            console.log('- Populando SystemSettings com valores padrão...');
+            await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '')");
+        }
+
+        console.log('Banco de dados pronto.');
+
+    } catch (err) {
+        console.error('ERRO FATAL na inicialização do banco de dados:', err.message);
+        process.exit(1); // Encerra o processo se o DB falhar
+    }
+}
+
 async function startServer() {
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
@@ -338,177 +448,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
 
 
-const DB_SCHEMAS = {
-    Devices: `(
-        Id NVARCHAR(255) PRIMARY KEY,
-        AssetTag NVARCHAR(255) UNIQUE,
-        Status NVARCHAR(50),
-        PreviousStatus NVARCHAR(50) NULL,
-        ModelId NVARCHAR(255),
-        SerialNumber NVARCHAR(255),
-        InternalCode NVARCHAR(255),
-        Imei NVARCHAR(255) UNIQUE,
-        PulsusId NVARCHAR(255),
-        CurrentUserId NVARCHAR(255),
-        SectorId NVARCHAR(255),
-        CostCenter NVARCHAR(255),
-        LinkedSimId NVARCHAR(255),
-        PurchaseDate DATETIME,
-        PurchaseCost FLOAT,
-        InvoiceNumber NVARCHAR(255),
-        Supplier NVARCHAR(255),
-        PurchaseInvoiceUrl NVARCHAR(MAX),
-        CustomData NVARCHAR(MAX)
-    )`,
-    SimCards: `(
-        Id NVARCHAR(255) PRIMARY KEY,
-        PhoneNumber NVARCHAR(50) UNIQUE,
-        Operator NVARCHAR(100),
-        Iccid NVARCHAR(255) UNIQUE,
-        Status NVARCHAR(50),
-        CurrentUserId NVARCHAR(255),
-        PlanDetails NVARCHAR(MAX)
-    )`,
-    Users: `(
-        Id NVARCHAR(255) PRIMARY KEY,
-        FullName NVARCHAR(255),
-        Cpf NVARCHAR(50) UNIQUE,
-        Rg NVARCHAR(50),
-        Pis NVARCHAR(50),
-        Address NVARCHAR(MAX),
-        Email NVARCHAR(255) UNIQUE,
-        SectorId NVARCHAR(255),
-        InternalCode NVARCHAR(255),
-        Active BIT,
-        HasPendingIssues BIT,
-        PendingIssuesNote NVARCHAR(MAX)
-    )`,
-    AuditLogs: `(
-        Id NVARCHAR(255) PRIMARY KEY,
-        AssetId NVARCHAR(255),
-        AssetType NVARCHAR(100),
-        Action NVARCHAR(100),
-        Timestamp DATETIME DEFAULT GETDATE(),
-        AdminUser NVARCHAR(255),
-        TargetName NVARCHAR(255),
-        Notes NVARCHAR(MAX),
-        BackupData NVARCHAR(MAX),
-        PreviousData NVARCHAR(MAX),
-        NewData NVARCHAR(MAX)
-    )`,
-    SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
-    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX))`,
-    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageUrl NVARCHAR(MAX))`,
-    Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
-    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX))`,
-    Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX))`,
-    AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
-    CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`
-};
 
-async function initializeDatabase() {
-    console.log('Verificando e inicializando banco de dados...');
-    try {
-        const pool = await sql.connect(dbConfig);
-        for (const table in DB_SCHEMAS) {
-            const checkTable = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '${table}'`);
-            if (checkTable.recordset.length === 0) {
-                console.log(`- Tabela ${table} não encontrada. Criando...`);
-                await pool.request().query(`CREATE TABLE ${table} ${DB_SCHEMAS[table]}`);
-                console.log(`  ... Tabela ${table} criada com sucesso.`);
-            } else {
-                 // Verifica colunas específicas que podem faltar
-                 if (table === 'Devices') {
-                    const checkColumn = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'PreviousStatus'`);
-                    if (checkColumn.recordset.length === 0) {
-                        console.log(`- Coluna PreviousStatus não encontrada em Devices. Adicionando...`);
-                        await pool.request().query('ALTER TABLE Devices ADD PreviousStatus NVARCHAR(50) NULL');
-                        console.log('  ... Coluna PreviousStatus adicionada.');
-                    }
-                }
-            }
-        }
 
-        // Garante que a tabela de settings tenha pelo menos uma linha
-        const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
-        if (settingsCheck.recordset[0].count === 0) {
-            console.log('- Populando SystemSettings com valores padrão...');
-            await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '')");
-        }
 
-        console.log('Banco de dados pronto.');
-
-    } catch (err) {
-        console.error('ERRO FATAL na inicialização do banco de dados:', err.message);
-        process.exit(1); // Encerra o processo se o DB falhar
-    }
-}
-
-        app.get('/api/settings', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings");
-            res.json(result.recordset[0] || {});
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.put('/api/settings', async (req, res) => {
-        const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
-        const prev = oldRes.recordset[0];
-        await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-        await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj });
-        res.json({success: true});
-    });
-
-    app.get('/api/system-users', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers");
-            res.json(result.recordset);
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.get('/api/users', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT Id as id, FullName as fullName, Email as email, SectorId as sectorId, InternalCode as internalCode, Active as active, Cpf as cpf, Rg as rg, Pis as pis, Address as address FROM Users");
-            res.json(result.recordset);
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.get('/api/sims', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards");
-            res.json(result.recordset);
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.get('/api/devices', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
-            const devices = await Promise.all(result.recordset.map(async d => {
-                const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
-                return { ...d, hasInvoice: d.hasInvoice === 1, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
-            }));
-            res.json(devices);
-        } catch (err) { res.status(500).send(err.message); }
-    });
-
-    app.get('/api/logs', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request().query("SELECT Id as id, AssetId as assetId, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes FROM AuditLogs ORDER BY Timestamp DESC");
-            res.json(result.recordset);
-        } catch (err) { res.status(500).send(err.message); }
-    });
 
     // Operations Checkout/Checkin
     app.post('/api/operations/checkout', async (req, res) => {
