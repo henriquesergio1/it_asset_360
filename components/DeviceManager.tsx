@@ -692,11 +692,11 @@ const DeviceManager = () => {
         <div className="flex items-center justify-end gap-4 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-lg">
             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Filtros:</span>
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 dark:bg-slate-800" />
+                <input type="checkbox" checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors cursor-pointer" />
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem ID Pulsus</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 dark:bg-slate-800" />
+                <input type="checkbox" checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors cursor-pointer" />
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem Nota Fiscal</span>
             </label>
         </div>

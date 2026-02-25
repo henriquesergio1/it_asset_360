@@ -1,6 +1,6 @@
 {
   "name": "it-asset-360",
-  "version": "2.14.2",
+  "version": "2.14.4",
   "private": true,
   "dependencies": {
     "cors": "^2.8.5",
