@@ -105,6 +105,7 @@ export interface DataContextType {
   // --- Manutenção ---
   addMaintenance: (record: MaintenanceRecord, adminName: string) => void;
   deleteMaintenance: (id: string, adminName: string) => void;
+  finishMaintenance: (deviceId: string, maintenanceRecord: MaintenanceRecord, adminName: string) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

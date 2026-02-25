@@ -343,7 +343,18 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     deleteCustomField: (id, adm) => setCustomFields(p => p.filter(x => x.id !== id)),
     addMaintenance: (r, adm) => { setMaintenances(p => [...p, r]); logAction(ActionType.create, 'Device', r.deviceId, 'Manutenção', adm, r.description); },
-    deleteMaintenance: (id, adm) => setMaintenances(p => p.filter(x => x.id !== id))
+    deleteMaintenance: (id, adm) => setMaintenances(p => p.filter(x => x.id !== id)),
+    finishMaintenance: (deviceId, record, adminName) => {
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return;
+
+      setMaintenances(prev => [...prev, record]);
+      
+      const updatedDevice = { ...device, status: DeviceStatus.AVAILABLE };
+      setDevices(prev => prev.map(d => d.id === deviceId ? updatedDevice : d));
+
+      logAction(ActionType.UPDATE, 'Device', deviceId, device.assetTag, adminName, `Manutenção Concluída: ${record.description}`);
+    }
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

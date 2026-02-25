@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '2.12.54',
+    date: 'Hoje',
+    title: 'Flexibilização da Manutenção & Correção de Atalho',
+    changes: [
+      'Dispositivos: Agora é possível enviar para manutenção ativos que estão em uso.',
+      'Fluxo de Manutenção: Ao concluir um reparo, o sistema agora solicita os detalhes e a nota fiscal.',
+      'Dashboard: O atalho de termos pendentes agora redireciona corretamente para a aba de termos do colaborador.',
+      'Sincronização global para v2.12.54.'
+    ]
+  },
+    {
     version: '2.12.40',
     date: 'Hoje',
     title: 'TypeScript Stability & Missing Properties',

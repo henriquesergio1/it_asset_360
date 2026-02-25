@@ -174,7 +174,7 @@ const Dashboard = () => {
                                               <AlertCircle size={18} />
                                           </button>
                                           <Link 
-                                              to={`/users?userId=${user.id}`}
+                                              to={`/users?userId=${user.id}&tab=terms`}
                                               className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/40 rounded-lg transition-colors"
                                               title="Ver detalhes do termo e colaborador"
                                           >

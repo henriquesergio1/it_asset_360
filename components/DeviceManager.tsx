@@ -399,6 +399,16 @@ const DeviceManager = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+  const [isFinishMaintenanceModalOpen, setIsFinishMaintenanceModalOpen] = useState(false);
+  const [maintenanceFinishTarget, setMaintenanceFinishTarget] = useState<Device | null>(null);
+  const [finishMaintenanceData, setFinishMaintenanceData] = useState<Partial<MaintenanceRecord>>({
+      description: '',
+      cost: 0,
+      invoiceUrl: '',
+      type: MaintenanceType.CORRECTIVE,
+      date: new Date().toISOString().split('T')[0]
+  });
+  const [isUploadingFinishMaint, setIsUploadingFinishMaint] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -601,11 +611,11 @@ const DeviceManager = () => {
       setDeleteTargetId(device.id); setDeleteReason(''); setIsDeleteModalOpen(true);
   };
 
-  const toggleMaintenanceStatus = (device: Device) => {
-      if (device.status === DeviceStatus.IN_USE) { alert("Realize a devolução antes de enviar para manutenção."); return; }
-      const newStatus = device.status === DeviceStatus.MAINTENANCE ? DeviceStatus.AVAILABLE : DeviceStatus.MAINTENANCE;
-      const confirmMsg = newStatus === DeviceStatus.MAINTENANCE ? `Enviar para Manutenção?` : `Retornar para o Estoque Disponível?`;
-      if (window.confirm(confirmMsg)) { updateDevice({ ...device, status: newStatus }, adminName); }
+  const handleSendToMaintenance = (device: Device) => {
+    const confirmMsg = `Enviar o dispositivo ${device.assetTag || device.imei} para Manutenção?`;
+    if (window.confirm(confirmMsg)) {
+      updateDevice({ ...device, status: DeviceStatus.MAINTENANCE }, adminName);
+    }
   };
 
   const handleOpenUrl = (url?: string) => {
@@ -613,6 +623,53 @@ const DeviceManager = () => {
     let finalUrl = url.trim();
     if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://') && !finalUrl.startsWith('ftp://')) { finalUrl = 'https://' + finalUrl; }
     window.open(finalUrl, '_blank');
+  };
+
+  const handleFinishMaintFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIsUploadingFinishMaint(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFinishMaintenanceData({ ...finishMaintenanceData, invoiceUrl: reader.result as string });
+        setIsUploadingFinishMaint(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenFinishMaintenanceModal = (device: Device) => {
+    setMaintenanceFinishTarget(device);
+    setFinishMaintenanceData({
+        description: '',
+        cost: 0,
+        invoiceUrl: '',
+        type: MaintenanceType.CORRECTIVE,
+        date: new Date().toISOString().split('T')[0]
+    });
+    setIsFinishMaintenanceModalOpen(true);
+  };
+
+  const handleConfirmFinishMaintenance = () => {
+    if (!maintenanceFinishTarget || !finishMaintenanceData.description) {
+        alert('A descrição do reparo é obrigatória.');
+        return;
+    }
+    
+    const record: MaintenanceRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      deviceId: maintenanceFinishTarget.id,
+      type: finishMaintenanceData.type || MaintenanceType.CORRECTIVE,
+      date: finishMaintenanceData.date ? `${finishMaintenanceData.date}T12:00:00.000Z` : new Date().toISOString(),
+      description: finishMaintenanceData.description,
+      cost: finishMaintenanceData.cost || 0,
+      provider: 'Interno',
+      invoiceUrl: finishMaintenanceData.invoiceUrl
+    };
+    finishMaintenance(maintenanceFinishTarget.id, record, adminName);
+
+    setIsFinishMaintenanceModalOpen(false);
+    setMaintenanceFinishTarget(null);
   };
 
   const deviceMaintenances = maintenances.filter(m => m.deviceId === editingId);
@@ -698,7 +755,7 @@ const DeviceManager = () => {
                       {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[9px] text-slate-400 dark:text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
                       <td className="px-6 py-4 truncate"><span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${d.status === DeviceStatus.AVAILABLE ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : d.status === DeviceStatus.MAINTENANCE ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : d.status === DeviceStatus.RETIRED ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/40'}`}>{d.status}</span></td>
                       <td className="px-6 py-4 truncate">{user ? (<div className="flex flex-col" onClick={(e) => e.stopPropagation()}><span className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-700" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span><span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase">{user.internalCode || 'S/ Cód'}</span></div>) : <span className="text-[9px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-tighter italic">Livre no Estoque</span>}</td>
-                      <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>{d.status === DeviceStatus.AVAILABLE && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>)}{d.status === DeviceStatus.MAINTENANCE && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-all" title="Concluir Manutenção"><CheckCircle size={16}/></button>)}{d.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Abrir MDM Pulsus"><ShieldCheck size={16}/></a>)}{isRet ? (<button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Restaurar Ativo"><RotateCcw size={16}/></button>) : (<><button onClick={() => handleOpenModal(d, false)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Editar"><Edit2 size={16}/></button><button onClick={() => handleDeleteAttempt(d)} className="p-1.5 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Descartar"><Trash2 size={16}/></button></>)}</div></td>
+                      <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>{(d.status === DeviceStatus.AVAILABLE || d.status === DeviceStatus.IN_USE) && (<button onClick={() => handleSendToMaintenance(d)} className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>)}{d.status === DeviceStatus.MAINTENANCE && (<button onClick={() => handleOpenFinishMaintenanceModal(d)} className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-all" title="Concluir Manutenção"><CheckCircle size={16}/></button>)}{d.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Abrir MDM Pulsus"><ShieldCheck size={16}/></a>)}{isRet ? (<button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Restaurar Ativo"><RotateCcw size={16}/></button>) : (<><button onClick={() => handleOpenModal(d, false)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Editar"><Edit2 size={16}/></button><button onClick={() => handleDeleteAttempt(d)} className="p-1.5 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Descartar"><Trash2 size={16}/></button></>)}</div></td>
                     </tr>
                   )
                 })}
@@ -795,6 +852,77 @@ const DeviceManager = () => {
       {isDeleteModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-red-100"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar</button></div></div></div></div>)}
       {isRestoreModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100"><RotateCcw size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 transition-all">Restaurar</button></div></div></div></div>)}
       {isModelSettingsOpen && <ModelSettings onClose={() => setIsModelSettingsOpen(false)} />}
+
+      {isFinishMaintenanceModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[250] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-green-200 dark:border-green-800">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="h-16 w-16 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-500 mb-4 shadow-inner border border-green-100 dark:border-green-800">
+                  <Wrench size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Concluir Manutenção</h3>
+                <p className="text-xs text-slate-400 mt-2">Registre os detalhes do reparo para o ativo <span className="font-bold">{maintenanceFinishTarget?.assetTag || maintenanceFinishTarget?.imei}</span>.</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Descrição do Reparo <span className="text-red-500">*</span></label>
+                  <input 
+                    placeholder="Ex: Troca de tela e bateria..."
+                    className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-green-500 outline-none bg-white dark:bg-slate-800 dark:text-slate-100 shadow-inner"
+                    value={finishMaintenanceData.description || ''} 
+                    onChange={e => setFinishMaintenanceData({...finishMaintenanceData, description: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Custo (R$)</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-3 text-slate-400 text-xs font-bold">R$</span>
+                            <input 
+                                type="text" 
+                                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 text-sm focus:border-green-500 outline-none bg-white dark:bg-slate-800 dark:text-slate-100"
+                                value={formatCurrencyBR(finishMaintenanceData.cost || 0)} 
+                                onChange={e => setFinishMaintenanceData({...finishMaintenanceData, cost: parseCurrencyBR(e.target.value)})}
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-slate-400 mb-1">Data</label>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-3 text-slate-300" size={16}/>
+                            <input 
+                                type="date" 
+                                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 text-sm focus:border-green-500 outline-none bg-white dark:bg-slate-800 dark:text-slate-100"
+                                value={finishMaintenanceData.date || ''} 
+                                onChange={e => setFinishMaintenanceData({...finishMaintenanceData, date: e.target.value})}
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-[10px] font-bold text-slate-400 mb-1">Anexo / Nota Fiscal</label>
+                    <label className={`w-full flex items-center gap-3 bg-white dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 p-2.5 rounded-xl cursor-pointer hover:bg-slate-50 transition-all ${isUploadingFinishMaint ? 'opacity-50' : ''}`}>
+                        <div className="h-8 w-8 bg-slate-50 dark:bg-slate-700 rounded-lg flex items-center justify-center text-slate-400">
+                            {isUploadingFinishMaint ? <Loader2 size={16} className="animate-spin"/> : <Paperclip size={16}/>}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase truncate">
+                            {finishMaintenanceData.invoiceUrl ? 'Arquivo Carregado' : 'Importar Documento'}
+                        </span>
+                        <input type="file" className="hidden" onChange={handleFinishMaintFileChange} accept="application/pdf,image/*" />
+                    </label>
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-8">
+                <button onClick={() => setIsFinishMaintenanceModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Cancelar</button>
+                <button onClick={handleConfirmFinishMaintenance} disabled={!finishMaintenanceData.description?.trim()} className="flex-1 py-3 bg-green-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-green-700 disabled:opacity-50 transition-all">Concluir e Disponibilizar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

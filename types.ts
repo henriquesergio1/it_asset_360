@@ -106,6 +106,8 @@ export interface Device {
   costCenter?: string;   
   linkedSimId?: string | null;
   accessories?: DeviceAccessory[]; 
+  previousStatus?: DeviceStatus;
+  previousUserId?: string | null;
 
   purchaseDate: string;
   purchaseCost: number;
