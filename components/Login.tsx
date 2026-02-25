@@ -28,6 +28,11 @@ const Login = () => {
       window.location.reload();
   };
 
+  const exitMockMode = () => {
+      localStorage.removeItem('app_mode');
+      window.location.reload();
+  };
+
   const currentMode = localStorage.getItem('app_mode') || 'auto';
 
   return (
@@ -120,6 +125,17 @@ const Login = () => {
               {loading ? 'Sincronizando...' : 'Entrar no Sistema'}
             </button>
           </form>
+
+          {currentMode === 'mock' && (
+            <div className="mt-6 text-center">
+                <button 
+                    onClick={exitMockMode}
+                    className="text-xs text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white underline transition-colors"
+                >
+                    Voltar para o modo de Produção
+                </button>
+            </div>
+          )}
           
           <div className="mt-8 pt-6 border-t dark:border-slate-800 text-center">
              <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Problemas no acesso?</p>

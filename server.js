@@ -25,7 +25,7 @@ async function startServer() {
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
 
-// --- HEALTH CHECK ---
+    // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
@@ -261,9 +261,11 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } catch (e) { console.error('Erro de Log:', e); }
 }
 
-const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
+// ... (código das rotas movido para dentro de startServer)
 
-const crud = (table, route, assetType) => {
+    const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
+
+    const crud = (table, route, assetType) => {
     app.post(`/api/${route}`, async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
@@ -332,171 +334,9 @@ const crud = (table, route, assetType) => {
     });
 };
 
-crud('Sectors', 'sectors', 'Sector');
-crud('Brands', 'brands', 'Brand');
-crud('AssetTypes', 'asset-types', 'Type');
-crud('Models', 'models', 'Model');
-crud('AccessoryTypes', 'accessory-types', 'Accessory');
-crud('CustomFields', 'custom-fields', 'CustomField');
-crud('MaintenanceRecords', 'maintenances', 'Maintenance');
-crud('SoftwareAccounts', 'accounts', 'Account');
-crud('Users', 'users', 'User');
-crud('SimCards', 'sims', 'Sim');
-crud('Devices', 'devices', 'Device');
 
-app.get('/api/settings', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings");
-        res.json(result.recordset[0] || {});
-    } catch (err) { res.status(500).send(err.message); }
-});
 
-app.put('/api/settings', async (req, res) => {
-    const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
-    const pool = await sql.connect(dbConfig);
-    const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
-    const prev = oldRes.recordset[0];
-    await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
-    await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj });
-    res.json({success: true});
-});
 
-app.get('/api/system-users', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/users', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, FullName as fullName, Email as email, SectorId as sectorId, InternalCode as internalCode, Active as active, Cpf as cpf, Rg as rg, Pis as pis, Address as address FROM Users");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/sims', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/devices', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
-        const devices = await Promise.all(result.recordset.map(async d => {
-            const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
-            return { ...d, hasInvoice: d.hasInvoice === 1, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
-        }));
-        res.json(devices);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.get('/api/logs', async (req, res) => {
-    try {
-        const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, AssetId as assetId, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes FROM AuditLogs ORDER BY Timestamp DESC");
-        res.json(result.recordset);
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// Operations Checkout/Checkin
-app.post('/api/operations/checkout', async (req, res) => {
-    try {
-        const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-        const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
-        const prev = oldRes.recordset[0];
-        const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
-        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
-        
-        let assetDetails = notes || '';
-        let targetIdStr = assetId;
-
-        if (assetType === 'Device' && prev) {
-            const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
-            const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.48: Snapshotting completo no log para identificação infalível
-            assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
-            targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
-        } else if (prev) {
-            assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
-            targetIdStr = prev.PhoneNumber;
-        }
-
-        await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
-        if (assetType === 'Device' && accessories) {
-            await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
-            for (let acc of accessories) {
-                await pool.request().input('I', acc.id).input('Did', assetId).input('At', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@I, @Did, @At, @N)");
-            }
-        }
-        const termId = Math.random().toString(36).substr(2, 9);
-        await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
-        
-        const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
-        res.json({success: true});
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.post('/api/operations/checkin', async (req, res) => {
-    try {
-        const { assetId, assetType, notes, _adminUser, inactivateUser } = req.body;
-        const pool = await sql.connect(dbConfig);
-        const table = assetType === 'Device' ? 'Devices' : 'SimCards';
-        const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
-        const prev = oldRes.recordset[0];
-        const userId = prev?.CurrentUserId;
-        
-        let assetDetails = notes || '';
-        let targetIdStr = assetId;
-
-        if (assetType === 'Device' && prev) {
-            const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
-            const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
-            // v2.12.48: Snapshotting completo no log para identificação infalível
-            assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
-            targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
-        } else if (prev) {
-            assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
-            targetIdStr = prev.PhoneNumber;
-        }
-
-        let userName = 'Colaborador';
-        if (userId) {
-            const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
-            userName = userRes.recordset[0]?.FullName || 'Colaborador';
-        }
-        
-        if (assetType === 'Device' && prev && prev.LinkedSimId) {
-            await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
-        }
-
-        await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
-        
-        if (userId) {
-            const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
-            
-            if (inactivateUser) {
-                await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
-                await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
-            }
-        }
-        
-        const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
-        await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
-        res.json({success: true});
-    } catch (err) { res.status(500).send(err.message); }
-});
 
 const DB_SCHEMAS = {
     Devices: `(
@@ -607,6 +447,172 @@ async function initializeDatabase() {
         process.exit(1); // Encerra o processo se o DB falhar
     }
 }
+
+        app.get('/api/settings', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings");
+            res.json(result.recordset[0] || {});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.put('/api/settings', async (req, res) => {
+        const { appName, logoUrl, cnpj, termTemplate, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        const oldRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const prev = oldRes.recordset[0];
+        await pool.request().input('N', sql.NVarChar, appName).input('L', sql.NVarChar, logoUrl).input('C', sql.NVarChar, cnpj).input('T', sql.NVarChar, termTemplate).query("UPDATE SystemSettings SET AppName=@N, LogoUrl=@L, Cnpj=@C, TermTemplate=@T");
+        await logAction('settings', 'System', 'Configuração', _adminUser, 'Configurações Gerais', 'Configurações globais atualizadas', null, prev, { appName, logoUrl, cnpj });
+        res.json({success: true});
+    });
+
+    app.get('/api/system-users', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers");
+            res.json(result.recordset);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/users', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT Id as id, FullName as fullName, Email as email, SectorId as sectorId, InternalCode as internalCode, Active as active, Cpf as cpf, Rg as rg, Pis as pis, Address as address FROM Users");
+            res.json(result.recordset);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/sims', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT Id as id, PhoneNumber as phoneNumber, Operator as operator, Iccid as iccid, PlanDetails as planDetails, Status as status, CurrentUserId as currentUserId FROM SimCards");
+            res.json(result.recordset);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/devices', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
+            const devices = await Promise.all(result.recordset.map(async d => {
+                const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
+                return { ...d, hasInvoice: d.hasInvoice === 1, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
+            }));
+            res.json(devices);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/logs', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT Id as id, AssetId as assetId, Action as action, Timestamp as timestamp, AdminUser as adminUser, TargetName as targetName, Notes as notes FROM AuditLogs ORDER BY Timestamp DESC");
+            res.json(result.recordset);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    // Operations Checkout/Checkin
+    app.post('/api/operations/checkout', async (req, res) => {
+        try {
+            const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
+            const pool = await sql.connect(dbConfig);
+            const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+            const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
+            const prev = oldRes.recordset[0];
+            const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+            const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+            
+            let assetDetails = notes || '';
+            let targetIdStr = assetId;
+
+            if (assetType === 'Device' && prev) {
+                const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
+                const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
+                // v2.12.48: Snapshotting completo no log para identificação infalível
+                assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
+                targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
+            } else if (prev) {
+                assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+                targetIdStr = prev.PhoneNumber;
+            }
+
+            await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+            if (assetType === 'Device' && accessories) {
+                await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
+                for (let acc of accessories) {
+                    await pool.request().input('I', acc.id).input('Did', assetId).input('At', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@I, @Did, @At, @N)");
+                }
+            }
+            const termId = Math.random().toString(36).substr(2, 9);
+            await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            
+            const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
+            await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
+            res.json({success: true});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/operations/checkin', async (req, res) => {
+        try {
+            const { assetId, assetType, notes, _adminUser, inactivateUser } = req.body;
+            const pool = await sql.connect(dbConfig);
+            const table = assetType === 'Device' ? 'Devices' : 'SimCards';
+            const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
+            const prev = oldRes.recordset[0];
+            const userId = prev?.CurrentUserId;
+            
+            let assetDetails = notes || '';
+            let targetIdStr = assetId;
+
+            if (assetType === 'Device' && prev) {
+                const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
+                const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
+                // v2.12.48: Snapshotting completo no log para identificação infalível
+                assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
+                targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
+            } else if (prev) {
+                assetDetails = `[CHIP: ${prev.PhoneNumber}]`;
+                targetIdStr = prev.PhoneNumber;
+            }
+
+            let userName = 'Colaborador';
+            if (userId) {
+                const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
+                userName = userRes.recordset[0]?.FullName || 'Colaborador';
+            }
+            
+            if (assetType === 'Device' && prev && prev.LinkedSimId) {
+                await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
+            }
+
+            await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
+            
+            if (userId) {
+                const termId = Math.random().toString(36).substr(2, 9);
+                await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+                
+                if (inactivateUser) {
+                    await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
+                    await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
+                }
+            }
+            
+            const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
+            await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
+            res.json({success: true});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    crud('Sectors', 'sectors', 'Sector');
+    crud('Brands', 'brands', 'Brand');
+    crud('AssetTypes', 'asset-types', 'Type');
+    crud('Models', 'models', 'Model');
+    crud('AccessoryTypes', 'accessory-types', 'Accessory');
+    crud('CustomFields', 'custom-fields', 'CustomField');
+    crud('MaintenanceRecords', 'maintenances', 'Maintenance');
+    crud('SoftwareAccounts', 'accounts', 'Account');
+    crud('Users', 'users', 'User');
+    crud('SimCards', 'sims', 'Sim');
+    crud('Devices', 'devices', 'Device');
 
     app.listen(PORT, () => {
         console.log(`🚀 Servidor v${packageJson.version} rodando na porta ${PORT}`);
