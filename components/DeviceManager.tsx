@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 
 interface Option {
@@ -399,7 +399,6 @@ const DeviceManager = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
   const [filterNoInvoice, setFilterNoInvoice] = useState(false);
 
@@ -421,15 +420,7 @@ const DeviceManager = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, viewStatus, itemsPerPage, filterNoPulsusId, filterNoInvoice]);
-
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
+  }, [searchTerm, viewStatus, itemsPerPage]);
 
   const toggleColumn = (id: string) => {
       setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
@@ -564,53 +555,7 @@ const DeviceManager = () => {
 
   const relevantFields = getRelevantFields();
 
-  const sortedDevices = React.useMemo(() => {
-    let sortableItems = [...devices];
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue: any = a[sortConfig.key as keyof Device];
-        let bValue: any = b[sortConfig.key as keyof Device];
-
-        // Resolução de nomes para chaves de ID e campos complexos
-        if (sortConfig.key === 'modelId') {
-            aValue = models.find(m => m.id === a.modelId)?.name || '';
-            bValue = models.find(m => m.id === b.modelId)?.name || '';
-        } else if (sortConfig.key === 'currentUserId') {
-            aValue = users.find(u => u.id === a.currentUserId)?.fullName || '';
-            bValue = users.find(u => u.id === b.currentUserId)?.fullName || '';
-        } else if (sortConfig.key === 'sectorId') {
-            aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
-            bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
-        } else if (sortConfig.key === 'linkedSimId') {
-            aValue = sims.find(s => s.id === a.linkedSimId)?.phoneNumber || '';
-            bValue = sims.find(s => s.id === b.linkedSimId)?.phoneNumber || '';
-        }
-
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-            return sortConfig.direction === 'asc' 
-                ? aValue.localeCompare(bValue) 
-                : bValue.localeCompare(aValue);
-        }
-
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    } else {
-        // Ordenação padrão por modelo se não houver config
-        sortableItems.sort((a, b) => {
-            const nameA = models.find(m => m.id === a.modelId)?.name || '';
-            const nameB = models.find(m => m.id === b.modelId)?.name || '';
-            return nameA.localeCompare(nameB);
-        });
-    }
-    return sortableItems;
-  }, [devices, sortConfig, models, users]);
-
-  const filteredDevices = sortedDevices.filter(d => {
+  const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
 
     // Lógica dos novos filtros
@@ -623,6 +568,10 @@ const DeviceManager = () => {
     const chipNumber = sims.find(s => s.id === d.linkedSimId)?.phoneNumber || '';
     const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
+  }).sort((a, b) => {
+      const modelA = models.find(m => m.id === a.modelId)?.name || '';
+      const modelB = models.find(m => m.id === b.modelId)?.name || '';
+      return modelA.localeCompare(modelB);
   });
 
   const totalItems = filteredDevices.length;
@@ -743,11 +692,11 @@ const DeviceManager = () => {
         <div className="flex items-center justify-end gap-4 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-lg">
             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Filtros:</span>
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300" />
+                <input type="checkbox" checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 dark:bg-slate-800" />
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem ID Pulsus</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300" />
+                <input type="checkbox" checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-700 dark:bg-slate-800" />
                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem Nota Fiscal</span>
             </label>
         </div>
@@ -758,17 +707,17 @@ const DeviceManager = () => {
             <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
-                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['model'] || '200px' }} onClick={() => handleSort('modelId')}><div className="flex items-center gap-1">Foto/Modelo {sortConfig?.key === 'modelId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} /></th>
-                  {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['assetTag'] || '120px' }} onClick={() => handleSort('assetTag')}><div className="flex items-center gap-1">Patrimônio {sortConfig?.key === 'assetTag' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} /></th>)}
-                  {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['imei'] || '150px' }} onClick={() => handleSort('imei')}><div className="flex items-center gap-1">IMEI {sortConfig?.key === 'imei' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} /></th>)}
-                  {visibleColumns.includes('serial') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['serial'] || '120px' }} onClick={() => handleSort('serialNumber')}><div className="flex items-center gap-1">S/N {sortConfig?.key === 'serialNumber' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} /></th>)}
-                  {visibleColumns.includes('sectorCode') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['sectorCode'] || '100px' }} onClick={() => handleSort('internalCode')}><div className="flex items-center gap-1">Cód. Setor {sortConfig?.key === 'internalCode' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} /></th>)}
-                  {visibleColumns.includes('sectorName') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['sectorName'] || '150px' }} onClick={() => handleSort('sectorId')}><div className="flex items-center gap-1">Cargo / Função {sortConfig?.key === 'sectorId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} /></th>)}
-                  {visibleColumns.includes('pulsusId') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['pulsusId'] || '100px' }} onClick={() => handleSort('pulsusId')}><div className="flex items-center justify-center gap-1">Pulsus ID {sortConfig?.key === 'pulsusId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} /></th>)}
-                  {visibleColumns.includes('linkedSim') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['linkedSim'] || '150px' }} onClick={() => handleSort('linkedSimId')}><div className="flex items-center gap-1">Chip {sortConfig?.key === 'linkedSimId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} /></th>)}
-                  {visibleColumns.includes('purchaseInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['purchaseInfo'] || '120px' }} onClick={() => handleSort('purchaseDate')}><div className="flex items-center gap-1">Aquisição {sortConfig?.key === 'purchaseDate' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} /></th>)}
-                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['status'] || '120px' }} onClick={() => handleSort('status')}><div className="flex items-center gap-1">Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
-                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['user'] || '180px' }} onClick={() => handleSort('currentUserId')}><div className="flex items-center gap-1">Responsável Atual {sortConfig?.key === 'currentUserId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} /></th>
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['model'] || '200px' }}>Foto/Modelo<Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} /></th>
+                  {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['assetTag'] || '120px' }}>Patrimônio<Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} /></th>)}
+                  {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['imei'] || '150px' }}>IMEI<Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} /></th>)}
+                  {visibleColumns.includes('serial') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['serial'] || '120px' }}>S/N<Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} /></th>)}
+                  {visibleColumns.includes('sectorCode') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['sectorCode'] || '100px' }}>Cód. Setor<Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} /></th>)}
+                  {visibleColumns.includes('sectorName') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['sectorName'] || '150px' }}>Cargo / Função<Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} /></th>)}
+                  {visibleColumns.includes('pulsusId') && (<th className="px-6 py-4 relative text-center" style={{ width: columnWidths['pulsusId'] || '100px' }}>Pulsus ID<Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} /></th>)}
+                  {visibleColumns.includes('linkedSim') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['linkedSim'] || '150px' }}>Chip<Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} /></th>)}
+                  {visibleColumns.includes('purchaseInfo') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['purchaseInfo'] || '120px' }}>Aquisição<Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} /></th>)}
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['status'] || '120px' }}>Status<Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
+                  <th className="px-6 py-4 relative" style={{ width: columnWidths['user'] || '180px' }}>Responsável Atual<Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} /></th>
                   <th className="px-6 py-4 text-right" style={{ width: '150px' }}>Ações</th>
                 </tr>
               </thead>
