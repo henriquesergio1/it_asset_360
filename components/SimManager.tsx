@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SimCard, DeviceStatus } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save, ArrowUp, ArrowDown } from 'lucide-react';
 
 // Componente divisor para redimensionamento
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
@@ -26,6 +26,7 @@ const SimManager = () => {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [formData, setFormData] = useState<Partial<SimCard>>({ status: DeviceStatus.AVAILABLE });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
       const saved = localStorage.getItem('sim_manager_widths');
@@ -86,7 +87,7 @@ const SimManager = () => {
         setEditReason('');
         setIsReasonModalOpen(true);
     } else {
-        addSim({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as SimCard, adminName);
+        addSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim(), id: Math.random().toString(36).substr(2, 9), currentUserId: null } as SimCard, adminName);
         setIsModalOpen(false);
     }
   };
@@ -96,7 +97,7 @@ const SimManager = () => {
         alert('Por favor, informe o motivo da alteração.');
         return;
     }
-    updateSim(formData as SimCard, `${adminName} (Motivo: ${editReason})`);
+    updateSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim() } as SimCard, `${adminName} (Motivo: ${editReason})`);
     setIsReasonModalOpen(false);
     setIsModalOpen(false);
   };
@@ -118,11 +119,45 @@ const SimManager = () => {
       }
   };
 
-  const filteredSims = sims.filter(s => 
+    const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedSims = React.useMemo(() => {
+    let sortableItems = [...sims];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key as keyof SimCard];
+        const bValue = b[sortConfig.key as keyof SimCard];
+        
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return sortConfig.direction === 'asc' 
+                ? aValue.localeCompare(bValue) 
+                : bValue.localeCompare(aValue);
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+        sortableItems.sort((a, b) => a.phoneNumber.localeCompare(b.phoneNumber));
+    }
+    return sortableItems;
+  }, [sims, sortConfig]);
+
+  const filteredSims = sortedSims.filter(s => 
     s.phoneNumber.includes(searchTerm) || 
     s.iccid.includes(searchTerm) ||
     s.operator.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a,b) => a.phoneNumber.localeCompare(b.phoneNumber));
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -178,26 +213,11 @@ const SimManager = () => {
           <table className="w-full text-sm text-left text-gray-500 dark:text-slate-400 table-fixed">
             <thead className="text-[10px] text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50 font-black tracking-widest border-b dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4 relative" style={{ width: columnWidths['phone'] || '180px' }}>
-                    Número
-                    <Resizer onMouseDown={(e) => handleResize('phone', e.clientX, columnWidths['phone'] || 180)} />
-                </th>
-                <th className="px-6 py-4 relative" style={{ width: columnWidths['operator'] || '140px' }}>
-                    Operadora
-                    <Resizer onMouseDown={(e) => handleResize('operator', e.clientX, columnWidths['operator'] || 140)} />
-                </th>
-                <th className="px-6 py-4 relative" style={{ width: columnWidths['iccid'] || '200px' }}>
-                    ICCID
-                    <Resizer onMouseDown={(e) => handleResize('iccid', e.clientX, columnWidths['iccid'] || 200)} />
-                </th>
-                <th className="px-6 py-4 relative text-center" style={{ width: columnWidths['status'] || '120px' }}>
-                    Status
-                    <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} />
-                </th>
-                <th className="px-6 py-4 relative" style={{ width: columnWidths['user'] || '200px' }}>
-                    Usuário
-                    <Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 200)} />
-                </th>
+                <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['phone'] || '180px' }} onClick={() => handleSort('phoneNumber')}><div className="flex items-center gap-1">Número {sortConfig?.key === 'phoneNumber' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('phone', e.clientX, columnWidths['phone'] || 180)} /></th>
+                <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['operator'] || '140px' }} onClick={() => handleSort('operator')}><div className="flex items-center gap-1">Operadora {sortConfig?.key === 'operator' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('operator', e.clientX, columnWidths['operator'] || 140)} /></th>
+                <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['iccid'] || '200px' }} onClick={() => handleSort('iccid')}><div className="flex items-center gap-1">ICCID {sortConfig?.key === 'iccid' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('iccid', e.clientX, columnWidths['iccid'] || 200)} /></th>
+                <th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['status'] || '120px' }} onClick={() => handleSort('status')}><div className="flex items-center justify-center gap-1">Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
+                <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['user'] || '200px' }} onClick={() => handleSort('currentUserId')}><div className="flex items-center gap-1">Usuário {sortConfig?.key === 'currentUserId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 200)} /></th>
                 <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
               </tr>
             </thead>
@@ -259,7 +279,7 @@ const SimManager = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Número da Linha</label>
-                              <input disabled={isViewOnly} required type="text" placeholder="(00) 00000-0000" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold transition-colors" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})}/>
+                              <input disabled={isViewOnly} required type="text" placeholder="(00) 00000-0000" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold transition-colors" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
                           </div>
                           <div>
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Operadora</label>
@@ -274,7 +294,7 @@ const SimManager = () => {
                           </div>
                           <div className="md:col-span-2">
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">ICCID (20 dígitos)</label>
-                              <input disabled={isViewOnly} required type="text" placeholder="8955..." className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-mono transition-colors" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value})}/>
+                              <input disabled={isViewOnly} required type="text" placeholder="8955..." className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-mono transition-colors" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value.trim()})}/>
                           </div>
                           <div className="md:col-span-2">
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Detalhes do Plano</label>

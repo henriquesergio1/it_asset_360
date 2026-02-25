@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown } from 'lucide-react';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
 interface Option {
@@ -145,6 +145,7 @@ const AccountManager = () => {
     // Paginação
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -222,7 +223,50 @@ const AccountManager = () => {
         window.open(finalUrl, '_blank');
     };
 
-    const filteredAccounts = accounts.filter(acc => {
+        const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedAccounts = React.useMemo(() => {
+        let sortableItems = [...accounts];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                let aValue: any = a[sortConfig.key as keyof SoftwareAccount];
+                let bValue: any = b[sortConfig.key as keyof SoftwareAccount];
+
+                // Resolução de nomes para chaves de ID
+                if (sortConfig.key === 'userId') {
+                    aValue = users.find(u => u.id === a.userId)?.fullName || '';
+                    bValue = users.find(u => u.id === b.userId)?.fullName || '';
+                } else if (sortConfig.key === 'deviceId') {
+                    aValue = devices.find(d => d.id === a.deviceId)?.assetTag || '';
+                    bValue = devices.find(d => d.id === b.deviceId)?.assetTag || '';
+                }
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            sortableItems.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return sortableItems;
+    }, [accounts, sortConfig, users, devices]);
+
+    const filteredAccounts = sortedAccounts.filter(acc => {
         const matchesSearch = acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             acc.login.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (acc.accessUrl || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -231,7 +275,7 @@ const AccountManager = () => {
         const matchesType = activeFilter === 'ALL' || acc.type === activeFilter;
         
         return matchesSearch && matchesType;
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    });
 
     // Paginação
     const totalItems = filteredAccounts.length;

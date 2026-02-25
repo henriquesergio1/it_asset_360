@@ -49,31 +49,31 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
 
   const handleTypeSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!editingType.name) return;
+      if(!editingType.name?.trim()) return;
       if(editingType.id) updateAssetType(editingType as AssetType, adminName);
-      else addAssetType({ id: Math.random().toString(36).substr(2, 9), name: editingType.name, customFieldIds: editingType.customFieldIds || [] }, adminName);
+      else addAssetType({ id: Math.random().toString(36).substr(2, 9), name: editingType.name.trim(), customFieldIds: editingType.customFieldIds || [] }, adminName);
       setEditingType({ name: '', customFieldIds: [] });
   };
 
   const handleBrandSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!editingBrand.name) return;
+      if(!editingBrand.name?.trim()) return;
       if(editingBrand.id) updateBrand(editingBrand as DeviceBrand, adminName);
-      else addBrand({ id: Math.random().toString(36).substr(2, 9), name: editingBrand.name }, adminName);
+      else addBrand({ id: Math.random().toString(36).substr(2, 9), name: editingBrand.name.trim() }, adminName);
       setEditingBrand({ name: '' });
   };
 
   const handleAccessorySubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!editingAccessory.name) return;
+      if(!editingAccessory.name?.trim()) return;
       if(editingAccessory.id) updateAccessoryType(editingAccessory as AccessoryType, adminName);
-      else addAccessoryType({ id: Math.random().toString(36).substr(2, 9), name: editingAccessory.name }, adminName);
+      else addAccessoryType({ id: Math.random().toString(36).substr(2, 9), name: editingAccessory.name.trim() }, adminName);
       setEditingAccessory({ name: '' });
   };
 
   const handleModelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!modelForm.name || !modelForm.brandId || !modelForm.typeId) return;
+    if (!modelForm.name?.trim() || !modelForm.brandId || !modelForm.typeId) return;
     if (modelForm.id) updateModel(modelForm as DeviceModel, adminName);
     else addModel({ ...modelForm, id: Math.random().toString(36).substr(2, 9) } as DeviceModel, adminName);
     setModelForm({ imageUrl: '' });
@@ -83,7 +83,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     e.preventDefault();
     if (!editingField.name?.trim()) return;
     if (editingField.id) updateCustomField(editingField as CustomField, adminName);
-    else addCustomField({ id: Math.random().toString(36).substr(2, 9), name: editingField.name }, adminName);
+    else addCustomField({ id: Math.random().toString(36).substr(2, 9), name: editingField.name.trim() }, adminName);
     setEditingField({ name: '' });
   };
 
@@ -93,7 +93,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     if (editingSector.id) {
         updateSector(editingSector as UserSector, adminName);
     } else {
-        addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name }, adminName);
+        addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name.trim() }, adminName);
     }
     setEditingSector({ name: '' });
   };
@@ -241,7 +241,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                     <form onSubmit={handleSectorSubmit} className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/40 mb-6 shadow-sm transition-colors">
                        <h5 className="font-black text-emerald-900 dark:text-emerald-300 mb-4 uppercase text-xs tracking-widest">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
                        <div className="flex gap-3">
-                           <input required type="text" placeholder="Ex: Analista de RH, Gerente de Vendas..." className="flex-1 border-2 border-emerald-200 dark:border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value})} />
+                           <input required type="text" placeholder="Ex: Analista de RH, Gerente de Vendas..." className="flex-1 border-2 border-emerald-200 dark:border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
                            <button type="submit" className="bg-emerald-600 dark:bg-emerald-500 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
                            {editingSector.id && <button type="button" onClick={() => setEditingSector({})} className="p-3 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><X size={20}/></button>}
                        </div>
@@ -269,7 +269,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                     <form onSubmit={handleTypeSubmit} className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/40 mb-6 shadow-sm transition-colors">
                        <h5 className="font-black text-blue-900 dark:text-blue-300 mb-4 uppercase text-xs tracking-widest">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
                        <div className="flex gap-3 mb-6">
-                           <input required type="text" placeholder="Ex: Notebook, Smartphone..." className="flex-1 border-2 border-blue-200 dark:border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value})} />
+                           <input required type="text" placeholder="Ex: Notebook, Smartphone..." className="flex-1 border-2 border-blue-200 dark:border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
                            <button type="submit" className="bg-blue-600 dark:bg-blue-500 text-white px-8 py-3 rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">Salvar</button>
                        </div>
                        
@@ -323,7 +323,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                     <h4 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">Campos Personalizados</h4>
                     <form onSubmit={handleFieldSubmit} className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 mb-6 shadow-sm transition-colors">
                        <div className="flex gap-2">
-                          <input required type="text" placeholder="Nome do Campo (ex: Memória RAM)" className="flex-1 border-2 border-indigo-200 dark:border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 dark:focus:ring-indigo-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value})} />
+                          <input required type="text" placeholder="Nome do Campo (ex: Memória RAM)" className="flex-1 border-2 border-indigo-200 dark:border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 dark:focus:ring-indigo-900/20 outline-none font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-all" value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
                           <button type="submit" className="bg-indigo-600 dark:bg-indigo-500 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">Adicionar</button>
                        </div>
                     </form>
@@ -341,7 +341,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                 <div className="max-w-xl">
                     <h4 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">Marcas e Fabricantes</h4>
                     <form onSubmit={handleBrandSubmit} className="flex gap-2 mb-6">
-                       <input required type="text" placeholder="Ex: Dell, Apple, Samsung..." className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-colors" value={editingBrand.name || ''} onChange={e => setEditingBrand({...editingBrand, name: e.target.value})}/>
+                       <input required type="text" placeholder="Ex: Dell, Apple, Samsung..." className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-colors" value={editingBrand.name || ''} onChange={e => setEditingBrand({...editingBrand, name: e.target.value.trim()})}/>
                        <button type="submit" className="bg-blue-600 dark:bg-blue-500 text-white px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">Adicionar</button>
                     </form>
                     <div className="space-y-2">
@@ -358,7 +358,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                 <div className="max-w-xl">
                     <h4 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-4">Tipos de Acessórios</h4>
                     <form onSubmit={handleAccessorySubmit} className="flex gap-2 mb-6">
-                       <input required type="text" placeholder="Ex: Carregador, Cabo USB, Mouse..." className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-colors" value={editingAccessory.name || ''} onChange={e => setEditingAccessory({...editingAccessory, name: e.target.value})}/>
+                       <input required type="text" placeholder="Ex: Carregador, Cabo USB, Mouse..." className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-colors" value={editingAccessory.name || ''} onChange={e => setEditingAccessory({...editingAccessory, name: e.target.value.trim()})}/>
                        <button type="submit" className="bg-blue-600 dark:bg-blue-500 text-white px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg transition-all active:scale-95">Adicionar</button>
                     </form>
                     <div className="space-y-2">
