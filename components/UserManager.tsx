@@ -436,11 +436,35 @@ const UserManager = () => {
     let sortableItems = [...users];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof User];
-        const bValue = b[sortConfig.key as keyof User];
+        let aValue: any = a[sortConfig.key as keyof User];
+        let bValue: any = b[sortConfig.key as keyof User];
         
-        if (aValue === null || aValue === undefined) return 1;
-        if (bValue === null || bValue === undefined) return -1;
+        // Resolução de nomes e campos calculados
+        if (sortConfig.key === 'sectorId') {
+            aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
+            bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
+        } else if (sortConfig.key === 'assetsCount') {
+            const assetsA = getUserAssets(a.id);
+            const assetsB = getUserAssets(b.id);
+            aValue = assetsA.userDevices.length + assetsA.allUserSims.length;
+            bValue = assetsB.userDevices.length + assetsB.allUserSims.length;
+        } else if (sortConfig.key === 'activeSims') {
+            const assetsA = getUserAssets(a.id);
+            const assetsB = getUserAssets(b.id);
+            aValue = assetsA.allUserSims.map(s => s.phoneNumber).join(', ');
+            bValue = assetsB.allUserSims.map(s => s.phoneNumber).join(', ');
+        } else if (sortConfig.key === 'devicesInfo') {
+            const assetsA = getUserAssets(a.id);
+            const assetsB = getUserAssets(b.id);
+            aValue = assetsA.userDevices.map(d => {
+                const m = models.find(mod => mod.id === d.modelId);
+                return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+            }).join(', ');
+            bValue = assetsB.userDevices.map(d => {
+                const m = models.find(mod => mod.id === d.modelId);
+                return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+            }).join(', ');
+        }
 
         if (typeof aValue === 'string' && typeof bValue === 'string') {
             return sortConfig.direction === 'asc' 
@@ -526,11 +550,11 @@ const UserManager = () => {
                   <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
                   {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
                   {visibleColumns.includes('cpf') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['cpf'] || '140px' }} onClick={() => handleSort('cpf')}><div className="flex items-center gap-1">CPF {sortConfig?.key === 'cpf' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('cpf', e.clientX, columnWidths['cpf'] || 140)} /></th>)}
-                  {visibleColumns.includes('rg') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['rg'] || '120px' }}>RG<Resizer onMouseDown={(e) => handleResize('rg', e.clientX, columnWidths['rg'] || 120)} /></th>)}
+                  {visibleColumns.includes('rg') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['rg'] || '120px' }} onClick={() => handleSort('rg')}><div className="flex items-center gap-1">RG {sortConfig?.key === 'rg' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('rg', e.clientX, columnWidths['rg'] || 120)} /></th>)}
                   {visibleColumns.includes('sector') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['sector'] || '180px' }} onClick={() => handleSort('sectorId')}><div className="flex items-center gap-1">Setor / Função {sortConfig?.key === 'sectorId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sector', e.clientX, columnWidths['sector'] || 180)} /></th>)}
-                  {visibleColumns.includes('assetsCount') && (<th className="px-6 py-4 relative text-center" style={{ width: columnWidths['assetsCount'] || '100px' }}>Ativos<Resizer onMouseDown={(e) => handleResize('assetsCount', e.clientX, columnWidths['assetsCount'] || 100)} /></th>)}
-                  {visibleColumns.includes('activeSims') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['activeSims'] || '160px' }}>Números de Chip<Resizer onMouseDown={(e) => handleResize('activeSims', e.clientX, columnWidths['activeSims'] || 160)} /></th>)}
-                  {visibleColumns.includes('devicesInfo') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['devicesInfo'] || '250px' }}>Detalhes de Aparelho<Resizer onMouseDown={(e) => handleResize('devicesInfo', e.clientX, columnWidths['devicesInfo'] || 250)} /></th>)}
+                  {visibleColumns.includes('assetsCount') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['assetsCount'] || '100px' }} onClick={() => handleSort('assetsCount')}><div className="flex items-center justify-center gap-1">Ativos {sortConfig?.key === 'assetsCount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('assetsCount', e.clientX, columnWidths['assetsCount'] || 100)} /></th>)}
+                  {visibleColumns.includes('activeSims') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['activeSims'] || '160px' }} onClick={() => handleSort('activeSims')}><div className="flex items-center gap-1">Números de Chip {sortConfig?.key === 'activeSims' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('activeSims', e.clientX, columnWidths['activeSims'] || 160)} /></th>)}
+                  {visibleColumns.includes('devicesInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['devicesInfo'] || '250px' }} onClick={() => handleSort('devicesInfo')}><div className="flex items-center gap-1">Detalhes de Aparelho {sortConfig?.key === 'devicesInfo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('devicesInfo', e.clientX, columnWidths['devicesInfo'] || 250)} /></th>)}
                   <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
                 </tr>
               </thead>

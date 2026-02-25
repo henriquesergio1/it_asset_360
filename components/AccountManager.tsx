@@ -367,38 +367,38 @@ const AccountManager = () => {
                         <thead className="text-[10px] text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50 font-black tracking-widest border-b dark:border-slate-800">
                             <tr>
                                 {visibleColumns.includes('name') && (
-                                    <th className="px-6 py-4 relative" style={{ width: columnWidths['name'] || '180px' }}>
-                                        Nome / Adicional
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '180px' }} onClick={() => handleSort('name')}>
+                                        <div className="flex items-center gap-1">Nome / Adicional {sortConfig?.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 180)} />
                                     </th>
                                 )}
                                 {visibleColumns.includes('login') && (
-                                    <th className="px-6 py-4 relative" style={{ width: columnWidths['login'] || '200px' }}>
-                                        Login / E-mail / Acesso
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['login'] || '200px' }} onClick={() => handleSort('login')}>
+                                        <div className="flex items-center gap-1">Login / E-mail / Acesso {sortConfig?.key === 'login' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('login', e.clientX, columnWidths['login'] || 200)} />
                                     </th>
                                 )}
                                 {visibleColumns.includes('password') && (
-                                    <th className="px-6 py-4 relative" style={{ width: columnWidths['password'] || '150px' }}>
-                                        Senha
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['password'] || '150px' }} onClick={() => handleSort('password')}>
+                                        <div className="flex items-center gap-1">Senha {sortConfig?.key === 'password' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('password', e.clientX, columnWidths['password'] || 150)} />
                                     </th>
                                 )}
                                 {visibleColumns.includes('accessUrl') && (
-                                    <th className="px-6 py-4 relative" style={{ width: columnWidths['accessUrl'] || '220px' }}>
-                                        Endereço de Acesso / URL
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['accessUrl'] || '220px' }} onClick={() => handleSort('accessUrl')}>
+                                        <div className="flex items-center gap-1">Endereço de Acesso / URL {sortConfig?.key === 'accessUrl' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('accessUrl', e.clientX, columnWidths['accessUrl'] || 220)} />
                                     </th>
                                 )}
                                 {visibleColumns.includes('link') && (
-                                    <th className="px-6 py-4 relative" style={{ width: columnWidths['link'] || '200px' }}>
-                                        Vínculo
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['link'] || '200px' }} onClick={() => handleSort('userId')}>
+                                        <div className="flex items-center gap-1">Vínculo {sortConfig?.key === 'userId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('link', e.clientX, columnWidths['link'] || 200)} />
                                     </th>
                                 )}
                                 {visibleColumns.includes('status') && (
-                                    <th className="px-6 py-4 relative text-center" style={{ width: columnWidths['status'] || '110px' }}>
-                                        Status
+                                    <th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['status'] || '110px' }} onClick={() => handleSort('status')}>
+                                        <div className="flex items-center justify-center gap-1">Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 110)} />
                                     </th>
                                 )}
