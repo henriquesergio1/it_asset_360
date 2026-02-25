@@ -5,11 +5,8 @@ const sql = require('mssql');
 const cors = require('cors');
 require('dotenv').config();
 
-const app = express();
 const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+const app = express();
 
 const dbConfig = {
     user: process.env.DB_USER,
@@ -23,6 +20,10 @@ const dbConfig = {
         enableArithAbort: true
     }
 };
+
+async function startServer() {
+    app.use(cors());
+    app.use(express.json({ limit: '50mb' }));
 
 // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {
@@ -607,7 +608,10 @@ async function initializeDatabase() {
     }
 }
 
-initializeDatabase().then(() => {
     app.listen(PORT, () => {
-    console.log(`🚀 Servidor v${packageJson.version} rodando na porta ${PORT}`);
-});
+        console.log(`🚀 Servidor v${packageJson.version} rodando na porta ${PORT}`);
+    });
+}
+
+// Inicia o processo
+initializeDatabase().then(startServer);
