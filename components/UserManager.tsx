@@ -207,9 +207,16 @@ const UserManager = () => {
   useEffect(() => {
       const params = new URLSearchParams(location.search);
       const userId = params.get('userId');
+      const tab = params.get('tab');
       if (userId) {
           const user = users.find(u => u.id === userId);
-          if (user) { handleOpenModal(user, true); navigate('/users', { replace: true }); }
+          if (user) {
+              handleOpenModal(user, true);
+              if (tab === 'terms') {
+                  setActiveTab('TERMS');
+              }
+              navigate('/users', { replace: true });
+          }
       }
   }, [location, users, navigate]);
 

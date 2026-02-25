@@ -1,5 +1,6 @@
 
 const express = require('express');
+const packageJson = require('./package.json');
 const sql = require('mssql');
 const cors = require('cors');
 require('dotenv').config();
@@ -27,7 +28,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.55', 
+        version: packageJson.version, 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -51,7 +52,7 @@ app.get('/api/bootstrap', async (req, res) => {
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, PreviousStatus, PreviousUserId, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -90,7 +91,7 @@ app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, PreviousStatus, PreviousUserId, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -387,7 +388,7 @@ app.get('/api/sims', async (req, res) => {
 app.get('/api/devices', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, PreviousStatus as previousStatus, PreviousUserId as previousUserId, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
+        const result = await pool.request().query("SELECT Id as id, ModelId as modelId, SerialNumber as serialNumber, AssetTag as assetTag, InternalCode as internalCode, Imei as imei, PulsusId as pulsusId, Status as status, CurrentUserId as currentUserId, SectorId as sectorId, CostCenter as costCenter, LinkedSimId as linkedSimId, PurchaseDate as purchaseDate, PurchaseCost as purchaseCost, InvoiceNumber as invoiceNumber, Supplier as supplier, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice, CustomData as customDataStr FROM Devices");
         const devices = await Promise.all(result.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return { ...d, hasInvoice: d.hasInvoice === 1, customData: d.customDataStr ? JSON.parse(d.customDataStr) : {}, accessories: acc.recordset };
@@ -405,69 +406,6 @@ app.get('/api/logs', async (req, res) => {
 });
 
 // Operations Checkout/Checkin
-app.post('/api/operations/maintenance-start', async (req, res) => {
-    try {
-        const { deviceId, notes, _adminUser } = req.body;
-        const pool = await sql.connect(dbConfig);
-
-        const oldRes = await pool.request().input('Id', sql.NVarChar, deviceId).query("SELECT Status, CurrentUserId, AssetTag FROM Devices WHERE Id=@Id");
-        const prevDevice = oldRes.recordset[0];
-
-        if (!prevDevice) return res.status(404).send("Dispositivo não encontrado");
-
-        await pool.request()
-            .input('Id', sql.NVarChar, deviceId)
-            .input('Status', sql.NVarChar, 'Manutenção')
-            .input('PrevStatus', sql.NVarChar, prevDevice.Status)
-            .input('PrevUserId', sql.NVarChar, prevDevice.CurrentUserId)
-            .query("UPDATE Devices SET Status=@Status, PreviousStatus=@PrevStatus, PreviousUserId=@PrevUserId WHERE Id=@Id");
-
-        await logAction(deviceId, 'Device', 'Envio Manutenção', _adminUser, prevDevice.AssetTag, notes);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-app.post('/api/operations/maintenance-end', async (req, res) => {
-    try {
-        const { deviceId, notes, _adminUser, cost, provider, invoiceUrl } = req.body;
-        const pool = await sql.connect(dbConfig);
-
-        const oldRes = await pool.request().input('Id', sql.NVarChar, deviceId).query("SELECT Status, CurrentUserId, AssetTag, PreviousStatus, PreviousUserId FROM Devices WHERE Id=@Id");
-        const prevDevice = oldRes.recordset[0];
-
-        if (!prevDevice) return res.status(404).send("Dispositivo não encontrado");
-
-        // Restaurar status e usuário anterior
-        const restoredStatus = prevDevice.PreviousStatus || 'Disponível';
-        const restoredUserId = prevDevice.PreviousUserId || null;
-
-        await pool.request()
-            .input('Id', sql.NVarChar, deviceId)
-            .input('Status', sql.NVarChar, restoredStatus)
-            .input('CurrentUserId', sql.NVarChar, restoredUserId)
-            .query("UPDATE Devices SET Status=@Status, CurrentUserId=@CurrentUserId, PreviousStatus=NULL, PreviousUserId=NULL WHERE Id=@Id");
-
-        // Criar registro de manutenção
-        const maintId = Math.random().toString(36).substr(2, 9);
-        await pool.request()
-            .input('Id', sql.NVarChar, maintId)
-            .input('DeviceId', sql.NVarChar, deviceId)
-            .input('Type', sql.NVarChar, 'Corretiva') // Assumindo corretiva por padrão, pode ser parametrizado
-            .input('Date', sql.DateTime, new Date())
-            .input('Description', sql.NVarChar, notes)
-            .input('Cost', sql.Decimal(10, 2), cost)
-            .input('Provider', sql.NVarChar, provider)
-            .input('InvoiceUrl', sql.NVarChar, invoiceUrl)
-            .query("INSERT INTO MaintenanceRecords (Id, DeviceId, Type, Date, Description, Cost, Provider, InvoiceUrl) VALUES (@Id, @DeviceId, @Type, @Date, @Description, @Cost, @Provider, @InvoiceUrl)");
-
-        await logAction(deviceId, 'Device', 'Retorno Manutenção', _adminUser, prevDevice.AssetTag, notes);
-        res.json({ success: true });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-
-
-
 app.post('/api/operations/checkout', async (req, res) => {
     try {
         const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
@@ -560,5 +498,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.55 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v${packageJson.version} rodando na porta ${PORT}`);
 });

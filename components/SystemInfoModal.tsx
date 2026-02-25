@@ -1,5 +1,6 @@
 
 import React from 'react';
+import packageJson from '../package.json';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
 interface SystemInfoModalProps {
@@ -8,7 +9,7 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
-        version: '2.12.53', 
+        version: packageJson.version, 
         date: 'Hoje',
         title: 'Resolução Manual de Pendências',
         changes: [

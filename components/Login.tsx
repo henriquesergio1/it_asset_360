@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import packageJson from '../package.json';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { Cpu, Lock, Mail, AlertTriangle, Database, Loader2 } from 'lucide-react';
@@ -123,6 +124,7 @@ const Login = () => {
           <div className="mt-8 pt-6 border-t dark:border-slate-800 text-center">
              <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Problemas no acesso?</p>
              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer">Contatar Suporte de T.I.</p>
+             <p className="text-[10px] text-gray-400 dark:text-slate-600 mt-4 font-mono">v{packageJson.version}</p>
           </div>
         </div>
       </div>
