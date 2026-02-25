@@ -399,6 +399,8 @@ const DeviceManager = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+  const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
+  const [filterNoInvoice, setFilterNoInvoice] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -555,6 +557,11 @@ const DeviceManager = () => {
 
   const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
+
+    // Lógica dos novos filtros
+    if (filterNoPulsusId && (d.pulsusId && d.pulsusId.trim() !== '')) return false;
+    if (filterNoInvoice && d.hasInvoice) return false;
+
     const { model, brand } = getModelDetails(d.modelId);
     const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
     const userName = users.find(u => u.id === d.currentUserId)?.fullName || '';
@@ -677,9 +684,22 @@ const DeviceManager = () => {
           ))}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-3 text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div className="relative">
+          <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+          <input type="text" placeholder="Pesquisar por modelo, tag, IMEI, S/N, responsável..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+        </div>
+        <div className="flex items-center justify-end gap-4 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-lg">
+            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Filtros:</span>
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300" />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem ID Pulsus</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300" />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Sem Nota Fiscal</span>
+            </label>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
