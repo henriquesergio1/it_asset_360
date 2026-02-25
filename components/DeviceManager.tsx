@@ -507,6 +507,16 @@ const DeviceManager = () => {
     };
     addMaintenance(record, adminName);
     setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE, date: new Date().toISOString().split('T')[0] });
+
+    // Após salvar, pergunta se deseja concluir a manutenção
+    if (window.confirm('Registro salvo. Deseja concluir a manutenção e retornar o ativo ao status anterior?')) {
+        const device = devices.find(d => d.id === editingId);
+        if (device) {
+            const statusToRestore = device.previousStatus || DeviceStatus.AVAILABLE;
+            updateDevice({ ...device, status: statusToRestore, previousStatus: undefined }, adminName);
+            setIsModalOpen(false); // Fecha o modal após a ação
+        }
+    }
   };
 
   useEffect(() => {
@@ -603,9 +613,22 @@ const DeviceManager = () => {
 
   const toggleMaintenanceStatus = (device: Device) => {
       
-      const newStatus = device.status === DeviceStatus.MAINTENANCE ? DeviceStatus.AVAILABLE : (device.status === DeviceStatus.AVAILABLE || device.status === DeviceStatus.IN_USE) ? DeviceStatus.MAINTENANCE : device.status;
-      const confirmMsg = newStatus === DeviceStatus.MAINTENANCE ? `Enviar para Manutenção?` : `Retornar para o Estoque Disponível?`;
-      if (window.confirm(confirmMsg)) { updateDevice({ ...device, status: newStatus }, adminName); }
+      if (device.status === DeviceStatus.MAINTENANCE) {
+          // Ao invés de apenas mudar o status, abrimos o modal na aba de manutenção
+          handleOpenModal(device, false); // false para permitir edição
+          // Forçar a aba de manutenção a ser a ativa
+          setTimeout(() => setActiveTab('MAINTENANCE'), 50);
+      } else if (device.status === DeviceStatus.AVAILABLE || device.status === DeviceStatus.IN_USE) {
+          if (window.confirm('Enviar para Manutenção?')) {
+              // Salva o status atual antes de enviar para manutenção
+              const deviceWithPrevStatus = { 
+                  ...device, 
+                  status: DeviceStatus.MAINTENANCE, 
+                  previousStatus: device.status 
+              };
+              updateDevice(deviceWithPrevStatus, adminName);
+          }
+      }
   };
 
   const handleOpenUrl = (url?: string) => {

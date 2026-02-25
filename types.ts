@@ -96,6 +96,7 @@ export interface Device {
   serialNumber: string;
   assetTag: string; 
   status: DeviceStatus;
+  previousStatus?: DeviceStatus;
   currentUserId?: string | null;
   internalCode?: string; 
   
@@ -106,8 +107,6 @@ export interface Device {
   costCenter?: string;   
   linkedSimId?: string | null;
   accessories?: DeviceAccessory[]; 
-  previousStatus?: DeviceStatus;
-  previousUserId?: string | null;
 
   purchaseDate: string;
   purchaseCost: number;
