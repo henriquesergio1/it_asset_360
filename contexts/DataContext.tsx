@@ -24,6 +24,7 @@ export interface DataContextType {
   
   // Sincronização
   fetchData: (silent?: boolean) => Promise<void>;
+  refreshData: () => Promise<void>;
   
   // Carregamento sob demanda (Otimização de Bootstrap)
   getTermFile: (id: string) => Promise<string>;

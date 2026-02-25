@@ -27,7 +27,7 @@ const dbConfig = {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.12.52', 
+        version: '2.12.53', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -497,5 +497,5 @@ app.post('/api/operations/checkin', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor v2.12.52 rodando na porta ${PORT}`);
+    console.log(`🚀 Servidor v2.12.53 rodando na porta ${PORT}`);
 });

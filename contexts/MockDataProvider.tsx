@@ -145,6 +145,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
+    refreshData: async () => { console.log("[Mock] Data refreshed."); },
     getTermFile: async (id: string) => "",
     getDeviceInvoice: async (id: string) => "",
     getMaintenanceInvoice: async (id: string) => "",

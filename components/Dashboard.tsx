@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, ShieldCheck, Info } from 'lucide-react';
+import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info } from 'lucide-react';
 import { DeviceStatus, AccountType } from '../types';
 import { Link } from 'react-router-dom';
 
@@ -153,29 +153,34 @@ const Dashboard = () => {
                       <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[500px] overflow-y-auto pr-2' : 'max-h-[220px] overflow-hidden'}`}>
                           {visiblePendingTerms.map(({term, user}) => (
                               <div key={term.id} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 transition-all">
-                                  <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 font-bold text-xs">
+                                  <div className="flex flex-1 items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
                                           {user.fullName.charAt(0)}
                                       </div>
-                                      <div>
+                                      <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
                                           <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{user.fullName}</p>
-                                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter">Setor: {sectors.find(s => s.id === user.sectorId)?.name || 'N/A'}</p>
+                                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">Setor: {sectors.find(s => s.id === user.sectorId)?.name || 'N/A'}</p>
+                                          <p className="text-[10px] text-slate-500 italic md:mt-0">{term.assetDetails}</p>
                                       </div>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                      <button 
-                                          onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
-                                          className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 rounded-lg transition-colors"
-                                          title="Resolver sem termo"
-                                      >
-                                          <ShieldCheck size={18} />
-                                      </button>
-                                      <Link 
-                                          to={`/users?userId=${user.id}`}
-                                          className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/40 rounded-lg transition-colors"
-                                      >
-                                          <ArrowRight size={18} />
-                                      </Link>
+                                  <div className="flex items-center gap-x-4 shrink-0">
+                                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight hidden md:block">{new Date(term.date).toLocaleDateString('pt-BR')}</p>
+                                      <div className="flex items-center gap-1">
+                                          <button 
+                                              onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
+                                              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                                              title="Resolver sem termo (Contingência)"
+                                          >
+                                              <AlertCircle size={18} />
+                                          </button>
+                                          <Link 
+                                              to={`/users?userId=${user.id}`}
+                                              className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/40 rounded-lg transition-colors"
+                                              title="Ver detalhes do termo e colaborador"
+                                          >
+                                              <FileText size={18} />
+                                          </Link>
+                                      </div>
                                   </div>
                               </div>
                           ))}
@@ -189,6 +194,47 @@ const Dashboard = () => {
                               Ver mais {pendingTerms.length - 3} pendências
                           </button>
                       )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {resolvingTerm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">Resolver Pendência Manualmente</h3>
+                  <p className="text-sm text-gray-600 dark:text-slate-400 mb-4">
+                      Você está prestes a resolver uma pendência de termo para <span className="font-bold">{resolvingTerm.userName}</span> sem anexar um documento.
+                      Esta ação deve ser usada APENAS em casos onde não há necessidade de termo físico ou digital.
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400 font-bold mb-4">
+                      Um registro de auditoria será criado para esta ação.
+                  </p>
+                  <div className="mb-4">
+                      <label htmlFor="resolveReason" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Motivo da Resolução <span className="text-red-500">*</span></label>
+                      <textarea
+                          id="resolveReason"
+                          rows={4}
+                          className="w-full p-3 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Descreva o motivo pelo qual esta pendência está sendo resolvida sem um termo..."
+                          value={resolveReason}
+                          onChange={(e) => setResolveReason(e.target.value)}
+                      ></textarea>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                      <button
+                          onClick={() => { setResolvingTerm(null); setResolveReason(''); }}
+                          className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                          Cancelar
+                      </button>
+                      <button
+                          onClick={handleResolveManual}
+                          disabled={!resolveReason.trim()}
+                          className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                          Confirmar Resolução
+                      </button>
                   </div>
               </div>
           </div>
@@ -369,7 +415,6 @@ const Dashboard = () => {
                                   </table>
                               ) : (
                                   <div className="flex flex-col items-center justify-center py-16 text-slate-300 dark:text-slate-700 gap-4">
-                                      <ShieldCheck size={48} className="opacity-20"/>
                                       <p className="text-xs font-black uppercase tracking-widest italic">Nenhum alerta crítico detectado.</p>
                                   </div>
                               )}

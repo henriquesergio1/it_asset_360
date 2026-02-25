@@ -8,6 +8,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.12.53', 
+        date: 'Hoje',
+        title: 'Resolução Manual de Pendências',
+        changes: [
+            'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
+            'Registro de justificativa obrigatória para resoluções manuais.',
+            'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.',
+            'Restaurada exibição detalhada de dispositivos nos termos pendentes (modelo, patrimônio, serial, IMEI e data do termo).',
+            'Atualizados ícones dos botões de ação nos termos pendentes para maior clareza.'
+        ] 
+    },
+    { 
         version: '2.12.52', 
         date: 'Hoje',
         title: 'Resolução Manual de Pendências', 

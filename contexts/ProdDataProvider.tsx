@@ -169,7 +169,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    accounts, fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+    accounts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
     addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
     updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); },
     assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
