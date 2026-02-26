@@ -579,7 +579,20 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         try {
             const pool = await sql.connect(dbConfig);
             const result = await pool.request().query("SELECT TOP 1 * FROM ExternalDbConfig");
-            res.json(result.recordset[0] || {});
+            const config = result.recordset[0];
+            if (!config) return res.json({});
+            
+            // Normaliza as chaves para minúsculas para o frontend
+            const normalized = {
+                technology: config.Technology,
+                host: config.Host,
+                port: config.Port,
+                username: config.Username,
+                password: config.Password,
+                databaseName: config.DatabaseName,
+                selectionQuery: config.SelectionQuery
+            };
+            res.json(normalized);
         } catch (err) { res.status(500).send(err.message); }
     });
 
