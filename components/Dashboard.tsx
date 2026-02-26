@@ -92,6 +92,12 @@ const Dashboard = () => {
   const lccAlerts = deviceLCCData.filter(item => item.ratio >= 0.6 || item.age >= 4)
     .sort((a, b) => b.ratio - a.ratio);
 
+  // Filtra alertas de expediente para exibir apenas colaboradores ativos no sistema local
+  const filteredExpedienteAlerts = expedienteAlerts.filter(alert => {
+      const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
+      return localUser && localUser.active;
+  });
+
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
@@ -132,87 +138,55 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Alerta de Validação de Expediente (ERP) */}
-      {expedienteAlerts.length > 0 && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
-              <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg shrink-0">
-                      <Clock size={24} />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                      <div className="flex justify-between items-center mb-1">
-                          <h3 className="text-lg font-bold text-red-900 dark:text-red-200 flex items-center gap-2">
-                              Validação do Expediente (ERP)
-                              <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{expedienteAlerts.length} Alertas</span>
-                          </h3>
-                          <button 
-                              onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
-                              className="text-red-600 dark:text-red-400 hover:text-red-700 transition-colors"
-                          >
-                              {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                          </button>
-                      </div>
-                      <p className="text-sm text-red-800/70 dark:text-red-300/60 mb-4">
-                          Colaboradores da equipe de vendas identificados com expediente <span className="font-bold">FALSO</span> no ERP.
-                      </p>
-                      
-                      {isExpedienteExpanded && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                              {expedienteAlerts.map((alert) => {
-                                  // Tenta encontrar o colaborador local pelo CPF
-                                  const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
-                                  return (
-                                      <div key={alert.codigo} className="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-red-100 dark:border-red-900/30 flex flex-col gap-2 hover:border-red-300 transition-all group">
-                                          <div className="flex justify-between items-start">
-                                              <div className="flex items-center gap-2">
-                                                  <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 font-bold text-xs">
-                                                      {alert.nome.charAt(0)}
-                                                  </div>
-                                                  <div>
-                                                      <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{alert.nome}</p>
-                                                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Cód: {alert.codigo}</p>
-                                                  </div>
-                                              </div>
-                                              <div className="bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded border border-red-100 dark:border-red-900/40">
-                                                  <span className="text-[9px] font-black text-red-600 dark:text-red-400 uppercase">Exp. Falso</span>
-                                              </div>
-                                          </div>
-                                          
-                                          <div className="grid grid-cols-2 gap-2 mt-1">
-                                              <div className="text-[9px]">
-                                                  <span className="text-slate-400 uppercase font-bold block">CPF</span>
-                                                  <span className="text-slate-700 dark:text-slate-300 font-mono">{alert.cpf || '---'}</span>
-                                              </div>
-                                              <div className="text-[9px]">
-                                                  <span className="text-slate-400 uppercase font-bold block">PIS</span>
-                                                  <span className="text-slate-700 dark:text-slate-300 font-mono">{alert.pis || '---'}</span>
-                                              </div>
-                                          </div>
-
-                                          {localUser ? (
-                                              <Link 
-                                                  to={`/users?userId=${localUser.id}`}
-                                                  className="mt-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-[10px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
-                                              >
-                                                  <span>Ver Colaborador Local</span>
-                                                  <ArrowRight size={12}/>
-                                              </Link>
-                                          ) : (
-                                              <div className="mt-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-[9px] text-slate-400 italic flex items-center gap-1">
-                                                  <AlertTriangle size={10}/> Não encontrado no sistema local
-                                              </div>
-                                          )}
-                                      </div>
-                                  );
-                              })}
-                          </div>
-                      )}
-                  </div>
-              </div>
+      {/* Gráficos de Status e Licenças - Reduzidos e Reordenados para 2ª posição */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[320px]">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">Status dos Dispositivos</h2>
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={dataStatus} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+                  {dataStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-      )}
+        </div>
 
-      {/* Alerta de Termos Pendentes Restaurado */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[320px] flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
+                    <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
+                </h2>
+                <Link to="/accounts" className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline">Ver Tudo</Link>
+            </div>
+            <div className="space-y-4 overflow-y-auto custom-scrollbar">
+                {Object.values(AccountType).map(type => {
+                    const count = accounts.filter(a => a.type === type).length;
+                    const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
+                    return (
+                        <div key={type} className="space-y-1">
+                            <div className="flex justify-between text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                                <span>{type}</span>
+                                <span>{count}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div className="bg-indigo-600 dark:bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+      </div>
+
+      {/* Alerta de Termos Pendentes - 3ª posição */}
       {pendingTerms.length > 0 && (
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
               <div className="flex items-start gap-4">
@@ -325,55 +299,68 @@ const Dashboard = () => {
           </div>
       )}
 
-      {/* Gráficos de Status e Licenças */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[380px]">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">Status dos Dispositivos</h2>
-          <div className="flex-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={dataStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {dataStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* Alerta de Validação de Expediente (ERP) - 4ª posição, Formato Lista */}
+      {filteredExpedienteAlerts.length > 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
+              <div className="flex items-start gap-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg shrink-0">
+                      <Clock size={24} />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-1">
+                          <h3 className="text-lg font-bold text-red-900 dark:text-red-200">
+                              {filteredExpedienteAlerts.length} Alertas de Expediente (ERP)
+                          </h3>
+                          <button 
+                              onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 transition-colors"
+                          >
+                              {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                          </button>
+                      </div>
+                      <p className="text-sm text-red-800/70 dark:text-red-300/60 mb-4">
+                          Colaboradores ativos da equipe de vendas identificados com expediente <span className="font-bold">FALSO</span> no ERP.
+                      </p>
+                      
+                      <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
+                          {filteredExpedienteAlerts.map((alert) => {
+                              const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
+                              return (
+                                  <div key={alert.codigo} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center justify-between group hover:border-red-300 transition-all">
+                                      <div className="flex flex-1 items-center gap-3">
+                                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 font-bold text-xs shrink-0">
+                                              {alert.nome.charAt(0)}
+                                          </div>
+                                          <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
+                                              <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{alert.nome}</p>
+                                              <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">Cód ERP: {alert.codigo}</p>
+                                              <p className="text-[10px] text-slate-500 italic md:mt-0">CPF: {alert.cpf}</p>
+                                              <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest md:mt-0 ml-auto md:ml-0">Expediente Falso</p>
+                                          </div>
+                                      </div>
+                                      <div className="flex items-center gap-x-4 shrink-0">
+                                          <div className="flex items-center gap-1">
+                                              {localUser && (
+                                                  <Link 
+                                                      to={`/users?userId=${localUser.id}`}
+                                                      className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+                                                      title="Ver Colaborador Local"
+                                                  >
+                                                      <ArrowRight size={18} />
+                                                  </Link>
+                                              )}
+                                          </div>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
+              </div>
           </div>
-        </div>
+      )}
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[380px] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                    <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
-                </h2>
-                <Link to="/accounts" className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline">Ver Tudo</Link>
-            </div>
-            <div className="space-y-4 overflow-y-auto custom-scrollbar">
-                {Object.values(AccountType).map(type => {
-                    const count = accounts.filter(a => a.type === type).length;
-                    const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
-                    return (
-                        <div key={type} className="space-y-1">
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
-                                <span>{type}</span>
-                                <span>{count}</span>
-                            </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                                <div className="bg-indigo-600 dark:bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-      </div>
-
-      {/* Seção LCC e Saúde dos Ativos - Expansível no Final */}
+      {/* Seção LCC e Saúde dos Ativos - 5ª posição */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
           <button 
               onClick={() => setIsLccExpanded(!isLccExpanded)}
