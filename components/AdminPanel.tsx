@@ -166,14 +166,12 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
 };
 
 const AdminPanel = () => {
-  const { systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs } = useData();
   const { user: currentUser } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP'>('USERS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
-  const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
   const [logSearch, setLogSearch] = useState('');
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
@@ -182,7 +180,12 @@ const AdminPanel = () => {
       return: { declaration: '', clauses: '' }
   });
 
-  const { externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData } = useData();
+  const { 
+      systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs,
+      clearLogs, restoreItem, 
+      externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData, migrateBinary 
+  } = useData();
+  const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
   const [erpForm, setErpForm] = useState({
       technology: 'SQL Server',
       host: '',
@@ -193,6 +196,7 @@ const AdminPanel = () => {
       selectionQuery: ''
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
   const [isPasswordModified, setIsPasswordModified] = useState(false);
 
   useEffect(() => {
@@ -397,6 +401,41 @@ const AdminPanel = () => {
                             </button>
                             <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition-all"><Save size={14}/> Salvar Configuração</button>
                         </div>
+                    </div>
+
+                    <div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-2xl border border-orange-100 dark:border-orange-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="flex items-start gap-4">
+                            <div className="bg-orange-100 dark:bg-orange-900/40 p-3 rounded-xl text-orange-600">
+                                <AlertTriangle size={24}/>
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-orange-800 dark:text-orange-300">Migração de Armazenamento Binário</h4>
+                                <p className="text-xs text-orange-700/70 dark:text-orange-400/70 max-w-xl">
+                                    Converte todas as notas fiscais e imagens de dispositivos atualmente em Base64 para o formato VARBINARY(MAX). 
+                                    Isso melhora a performance do banco de dados e reduz o tamanho total.
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button"
+                            disabled={isMigrating}
+                            onClick={async () => {
+                                if (!window.confirm('Deseja iniciar a migração de todos os arquivos para o formato binário? Isso pode levar alguns minutos dependendo da quantidade de dados.')) return;
+                                setIsMigrating(true);
+                                try {
+                                    const res = await migrateBinary(currentUser?.name || 'Admin');
+                                    alert(`Migração concluída com sucesso! ${res.migratedCount} arquivos foram processados.`);
+                                } catch (e) {
+                                    alert('Erro durante a migração.');
+                                } finally {
+                                    setIsMigrating(false);
+                                }
+                            }}
+                            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {isMigrating ? <Loader2 size={16} className="animate-spin"/> : <Database size={16}/>}
+                            {isMigrating ? 'Migrando...' : 'Iniciar Migração'}
+                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

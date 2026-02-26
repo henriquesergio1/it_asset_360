@@ -207,6 +207,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return safeJson(res, '/api/admin/external-db/test');
   };
 
+  const migrateBinary = async (adminName: string) => {
+    const res = await fetch(`${API_URL}/api/admin/migrate-binary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _adminUser: adminName })
+    });
+    return safeJson(res, '/api/admin/migrate-binary');
+  };
+
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
@@ -226,7 +235,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateBrand: async (b, adm) => { await putData('brands', {...b, _adminUser: adm}); fetchData(true); },
     deleteBrand: async (id) => { await fetch(`${API_URL}/api/brands/${id}`, {method: 'DELETE'}); fetchData(true); },
     addModel: async (m, adm) => { await postData('models', {...m, _adminUser: adm}); fetchData(true); },
-    updateModel: async (m, adm) => { await putData('models', {...m, _adminUser: adm}); fetchData(true); },
+    updateModel: async (m, adm) => { await putData('models', {...m, _adminName: adm}); fetchData(true); },
     deleteModel: async (id) => { await fetch(`${API_URL}/api/models/${id}`, {method: 'DELETE'}); fetchData(true); },
     addMaintenance: async (m, adm) => { await postData('maintenances', {...m, _adminUser: adm}); fetchData(true); },
     deleteMaintenance: async (id) => { await fetch(`${API_URL}/api/maintenances/${id}`, {method: 'DELETE'}); fetchData(true); },
@@ -243,7 +252,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); },
-    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts
+    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, migrateBinary
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

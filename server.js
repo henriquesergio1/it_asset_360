@@ -41,6 +41,8 @@ const DB_SCHEMAS = {
         InvoiceNumber NVARCHAR(255),
         Supplier NVARCHAR(255),
         PurchaseInvoiceUrl NVARCHAR(MAX),
+        PurchaseInvoiceBinary VARBINARY(MAX),
+        DeviceImageBinary VARBINARY(MAX),
         CustomData NVARCHAR(MAX)
     )`,
     SimCards: `(
@@ -81,12 +83,12 @@ const DB_SCHEMAS = {
     )`,
     SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
     SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX))`,
-    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageUrl NVARCHAR(MAX))`,
+    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageUrl NVARCHAR(MAX), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
-    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX))`,
+    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX))`,
+    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX), FileBinary VARBINARY(MAX))`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
@@ -122,6 +124,33 @@ async function initializeDatabase() {
                         console.log(`- Coluna PreviousStatus não encontrada em Devices. Adicionando...`);
                         await pool.request().query('ALTER TABLE Devices ADD PreviousStatus NVARCHAR(50) NULL');
                         console.log('  ... Coluna PreviousStatus adicionada.');
+                    }
+                    
+                    const checkBin1 = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'PurchaseInvoiceBinary'`);
+                    if (checkBin1.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Devices ADD PurchaseInvoiceBinary VARBINARY(MAX) NULL');
+                    }
+                    const checkBin2 = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'DeviceImageBinary'`);
+                    if (checkBin2.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Devices ADD DeviceImageBinary VARBINARY(MAX) NULL');
+                    }
+                }
+                if (table === 'Models') {
+                    const checkBin = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Models' AND COLUMN_NAME = 'ImageBinary'`);
+                    if (checkBin.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Models ADD ImageBinary VARBINARY(MAX) NULL');
+                    }
+                }
+                if (table === 'MaintenanceRecords') {
+                    const checkBin = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MaintenanceRecords' AND COLUMN_NAME = 'InvoiceBinary'`);
+                    if (checkBin.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE MaintenanceRecords ADD InvoiceBinary VARBINARY(MAX) NULL');
+                    }
+                }
+                if (table === 'Terms') {
+                    const checkBin = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'FileBinary'`);
+                    if (checkBin.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Terms ADD FileBinary VARBINARY(MAX) NULL');
                     }
                 }
             }
@@ -263,8 +292,10 @@ app.get('/api/logs/:id', async (req, res) => {
 app.get('/api/terms/:id/file', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM Terms WHERE Id=@Id");
-        res.json({ fileUrl: result.recordset[0]?.FileUrl || '' });
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl, FileBinary FROM Terms WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row) return res.json({ fileUrl: '' });
+        res.json({ fileUrl: getBase64FromBuffer(row.FileBinary, row.FileUrl) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -358,18 +389,96 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
 app.get('/api/devices/:id/invoice', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl FROM Devices WHERE Id=@Id");
-        res.json({ invoiceUrl: result.recordset[0]?.PurchaseInvoiceUrl || '' });
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl, PurchaseInvoiceBinary FROM Devices WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row) return res.json({ invoiceUrl: '' });
+        res.json({ invoiceUrl: getBase64FromBuffer(row.PurchaseInvoiceBinary, row.PurchaseInvoiceUrl) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.get('/api/maintenances/:id/invoice', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceUrl FROM MaintenanceRecords WHERE Id=@Id");
-        res.json({ invoiceUrl: result.recordset[0]?.InvoiceUrl || '' });
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceUrl, InvoiceBinary FROM MaintenanceRecords WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row) return res.json({ invoiceUrl: '' });
+        res.json({ invoiceUrl: getBase64FromBuffer(row.InvoiceBinary, row.InvoiceUrl) });
     } catch (err) { res.status(500).send(err.message); }
 });
+
+// MIGRATION ENDPOINT
+app.post('/api/admin/migrate-binary', async (req, res) => {
+    const { _adminUser } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        let migratedCount = 0;
+
+        // 1. Devices (Invoices)
+        const devices = await pool.request().query("SELECT Id, PurchaseInvoiceUrl FROM Devices WHERE PurchaseInvoiceBinary IS NULL AND PurchaseInvoiceUrl LIKE 'data:%'");
+        for (const dev of devices.recordset) {
+            const buffer = getBufferFromBase64(dev.PurchaseInvoiceUrl);
+            if (buffer) {
+                await pool.request().input('Id', dev.Id).input('Bin', buffer).query("UPDATE Devices SET PurchaseInvoiceBinary=@Bin WHERE Id=@Id");
+                migratedCount++;
+            }
+        }
+
+        // 2. MaintenanceRecords
+        const maints = await pool.request().query("SELECT Id, InvoiceUrl FROM MaintenanceRecords WHERE InvoiceBinary IS NULL AND InvoiceUrl LIKE 'data:%'");
+        for (const m of maints.recordset) {
+            const buffer = getBufferFromBase64(m.InvoiceUrl);
+            if (buffer) {
+                await pool.request().input('Id', m.Id).input('Bin', buffer).query("UPDATE MaintenanceRecords SET InvoiceBinary=@Bin WHERE Id=@Id");
+                migratedCount++;
+            }
+        }
+
+        // 3. Models (Images)
+        const models = await pool.request().query("SELECT Id, ImageUrl FROM Models WHERE ImageBinary IS NULL AND ImageUrl LIKE 'data:%'");
+        for (const mod of models.recordset) {
+            const buffer = getBufferFromBase64(mod.ImageUrl);
+            if (buffer) {
+                await pool.request().input('Id', mod.Id).input('Bin', buffer).query("UPDATE Models SET ImageBinary=@Bin WHERE Id=@Id");
+                migratedCount++;
+            }
+        }
+
+        // 4. Terms
+        const terms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE FileBinary IS NULL AND FileUrl LIKE 'data:%'");
+        for (const t of terms.recordset) {
+            const buffer = getBufferFromBase64(t.FileUrl);
+            if (buffer) {
+                await pool.request().input('Id', t.Id).input('Bin', buffer).query("UPDATE Terms SET FileBinary=@Bin WHERE Id=@Id");
+                migratedCount++;
+            }
+        }
+
+        await logAction('system', 'System', 'Migração Binária', _adminUser, 'Banco de Dados', `Migração concluída: ${migratedCount} arquivos convertidos para VARBINARY(MAX)`);
+        res.json({ success: true, migratedCount });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+const isBase64 = (str) => {
+    if (!str || typeof str !== 'string') return false;
+    return str.startsWith('data:') && str.includes(';base64,');
+};
+
+const getBufferFromBase64 = (str) => {
+    if (!isBase64(str)) return null;
+    const base64Data = str.split(';base64,').pop();
+    return Buffer.from(base64Data, 'base64');
+};
+
+const getBase64FromBuffer = (buffer, originalUrl) => {
+    if (!buffer) return originalUrl || '';
+    let mime = 'image/png';
+    if (originalUrl && originalUrl.startsWith('data:')) {
+        mime = originalUrl.split(';')[0].split(':')[1];
+    } else if (originalUrl && originalUrl.toLowerCase().endsWith('.pdf')) {
+        mime = 'application/pdf';
+    }
+    return `data:${mime};base64,${buffer.toString('base64')}`;
+};
 
 async function logAction(assetId, assetType, action, adminUser, targetName, notes, backupData = null, previousData = null, newData = null) {
     try {
@@ -407,6 +516,22 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 request.input(dbKey, val);
                 columns.push(dbKey);
                 values.push('@' + dbKey);
+
+                // Mirror to binary column if Base64
+                if (isBase64(val)) {
+                    const buffer = getBufferFromBase64(val);
+                    let binKey = null;
+                    if (key === 'purchaseInvoiceUrl') binKey = 'PurchaseInvoiceBinary';
+                    if (key === 'imageUrl') binKey = 'ImageBinary';
+                    if (key === 'invoiceUrl') binKey = 'InvoiceBinary';
+                    if (key === 'fileUrl') binKey = 'FileBinary';
+
+                    if (binKey) {
+                        request.input(binKey, buffer);
+                        columns.push(binKey);
+                        values.push('@' + binKey);
+                    }
+                }
             }
             await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
@@ -431,6 +556,21 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 
                 request.input(dbKey, val);
                 sets.push(`${dbKey}=@${dbKey}`);
+
+                // Mirror to binary column if Base64
+                if (isBase64(val)) {
+                    const buffer = getBufferFromBase64(val);
+                    let binKey = null;
+                    if (key === 'purchaseInvoiceUrl') binKey = 'PurchaseInvoiceBinary';
+                    if (key === 'imageUrl') binKey = 'ImageBinary';
+                    if (key === 'invoiceUrl') binKey = 'InvoiceBinary';
+                    if (key === 'fileUrl') binKey = 'FileBinary';
+
+                    if (binKey) {
+                        request.input(binKey, buffer);
+                        sets.push(`${binKey}=@${binKey}`);
+                    }
+                }
 
                 if (prev) {
                     let oldVal = prev[dbKey];

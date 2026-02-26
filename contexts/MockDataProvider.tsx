@@ -361,7 +361,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     updateExternalDbConfig: async (c, adm) => { setExternalDbConfig(c); },
     testExternalDbConnection: async (c) => ({ success: true, message: "[Mock] Conexão simulada com sucesso!" }),
-    fetchExpedienteAlerts: async () => { setExpedienteAlerts([]); }
+    fetchExpedienteAlerts: async () => { setExpedienteAlerts([]); },
+    migrateBinary: async (adm) => ({ success: true, migratedCount: 0 })
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
