@@ -169,7 +169,7 @@ const AdminPanel = () => {
   const { systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs } = useData();
   const { user: currentUser } = useAuth();
   
-  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP'>('USERS');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
@@ -182,6 +182,18 @@ const AdminPanel = () => {
       return: { declaration: '', clauses: '' }
   });
 
+  const { externalDbConfig, updateExternalDbConfig, testExternalDbConnection } = useData();
+  const [erpForm, setErpForm] = useState({
+      technology: 'SQL Server',
+      host: '',
+      port: 1433,
+      username: '',
+      password: '',
+      databaseName: '',
+      selectionQuery: ''
+  });
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+
   useEffect(() => {
     setSettingsForm(settings);
     try {
@@ -190,6 +202,20 @@ const AdminPanel = () => {
         }
     } catch (e) {}
   }, [settings]);
+
+  useEffect(() => {
+      if (externalDbConfig) {
+          setErpForm({
+              technology: externalDbConfig.technology || 'SQL Server',
+              host: externalDbConfig.host || '',
+              port: externalDbConfig.port || 1433,
+              username: externalDbConfig.username || '',
+              password: externalDbConfig.password || '',
+              databaseName: externalDbConfig.databaseName || '',
+              selectionQuery: externalDbConfig.selectionQuery || ''
+          });
+      }
+  }, [externalDbConfig]);
 
   const handleOpenModal = (user?: SystemUser) => {
     if (user) { setEditingId(user.id); setUserForm(user); } 
@@ -233,6 +259,7 @@ const AdminPanel = () => {
         <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
         <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
         <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
+        <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
         <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
         <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
       </div>
@@ -337,6 +364,78 @@ const AdminPanel = () => {
         )}
 
         {activeTab === 'IMPORT' && <DataImporter />}
+
+        {activeTab === 'ERP' && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 p-8 shadow-sm">
+                <form onSubmit={(e) => { e.preventDefault(); updateExternalDbConfig(erpForm, currentUser?.name || 'Admin'); alert('Configurações salvas!'); }} className="space-y-8">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2"><Database size={20} className="text-blue-600"/> Configuração de Banco de Dados Externo</h3>
+                        <div className="flex gap-3">
+                            <button 
+                                type="button" 
+                                onClick={async () => {
+                                    setIsTestingConnection(true);
+                                    try {
+                                        const res = await testExternalDbConnection(erpForm);
+                                        alert(res.message);
+                                    } catch (e) { alert('Erro ao testar conexão.'); }
+                                    finally { setIsTestingConnection(false); }
+                                }}
+                                disabled={isTestingConnection}
+                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 transition-all disabled:opacity-50"
+                            >
+                                {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
+                                Testar Conexão
+                            </button>
+                            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition-all"><Save size={14}/> Salvar Configuração</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Tecnologia</label>
+                            <select className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
+                                <option value="SQL Server">SQL Server</option>
+                            </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Host / Servidor</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Porta</label>
+                            <input required type="number" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Usuário</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Senha</label>
+                            <input type="password" required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.password} onChange={e => setErpForm({...erpForm, password: e.target.value})}/>
+                        </div>
+                        <div className="md:col-span-3">
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nome do Banco de Dados</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
+                        </div>
+                        <div className="md:col-span-3">
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Query SQL de Seleção</label>
+                            <div className="relative">
+                                <FileCode className="absolute left-3 top-3 text-slate-300" size={18}/>
+                                <textarea 
+                                    rows={8} 
+                                    className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" 
+                                    value={erpForm.selectionQuery} 
+                                    onChange={e => setErpForm({...erpForm, selectionQuery: e.target.value})}
+                                    placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-2 italic">A query deve retornar obrigatoriamente as colunas: <span className="font-bold">Codigo, Nome, CPF, RG, PIS, ValidaExpediente</span>.</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        )}
 
         {activeTab === 'LOGS' && (
           <div className="space-y-4 animate-fade-in">

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert } from '../types';
 
 const API_URL = ''; 
 
@@ -20,6 +20,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
+  
+  // ERP Integration State
+  const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
+  const [expedienteAlerts, setExpedienteAlerts] = useState<ExpedienteAlert[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +73,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setSectors(data.sectors || []);
           setAccessoryTypes(data.accessoryTypes || []);
           setCustomFields(data.customFields || []);
+          
+          // Busca configuração do ERP no bootstrap
+          fetchExternalDbConfig();
       }
       
       setError(null);
@@ -166,10 +173,44 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       fetchData(true);
   };
 
+  const fetchExternalDbConfig = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/external-db/config`);
+      const data = await safeJson(res, '/api/admin/external-db/config');
+      setExternalDbConfig(data);
+    } catch (err) {
+      console.error("Erro ao buscar config ERP:", err);
+    }
+  };
+
+  const fetchExpedienteAlerts = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts`);
+      const data = await safeJson(res, '/api/dashboard/expediente-alerts');
+      setExpedienteAlerts(data);
+    } catch (err) {
+      console.error("Erro ao buscar alertas de expediente:", err);
+    }
+  };
+
+  const updateExternalDbConfig = async (config: ExternalDbConfig, adminName: string) => {
+    await postData('admin/external-db/config', { ...config, _adminUser: adminName });
+    setExternalDbConfig(config);
+  };
+
+  const testExternalDbConnection = async (config: ExternalDbConfig) => {
+    const res = await fetch(`${API_URL}/api/admin/external-db/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    return safeJson(res, '/api/admin/external-db/test');
+  };
+
   const value: DataContextType = {
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-    accounts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+    accounts, externalDbConfig, expedienteAlerts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
     addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
     updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); },
     assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
@@ -189,6 +230,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteModel: async (id) => { await fetch(`${API_URL}/api/models/${id}`, {method: 'DELETE'}); fetchData(true); },
     addMaintenance: async (m, adm) => { await postData('maintenances', {...m, _adminUser: adm}); fetchData(true); },
     deleteMaintenance: async (id) => { await fetch(`${API_URL}/api/maintenances/${id}`, {method: 'DELETE'}); fetchData(true); },
+    finishMaintenance: async (did, m, adm) => { await putData('maintenances/finish', { ...m, deviceId: did, _adminUser: adm }); fetchData(true); },
     addSector: async (s, adm) => { await postData('sectors', { ...s, _adminUser: adm }); fetchData(true); },
     updateSector: async (s, adm) => { await putData('sectors', { ...s, _adminUser: adm }); fetchData(true); },
     deleteSector: async (id) => { await fetch(`${API_URL}/api/sectors/${id}`, {method: 'DELETE'}); fetchData(true); },
@@ -200,7 +242,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteCustomField: async (id) => { await fetch(`${API_URL}/api/custom-fields/${id}`, {method: 'DELETE'}); fetchData(true); },
     addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); fetchData(true); },
-    deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); }
+    deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); },
+    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

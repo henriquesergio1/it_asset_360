@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info } from 'lucide-react';
+import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock } from 'lucide-react';
 import { DeviceStatus, AccountType } from '../types';
 import { Link } from 'react-router-dom';
 
@@ -19,11 +19,16 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData } = useData();
+  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts } = useData();
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
+  const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
   const [isLccExpanded, setIsLccExpanded] = useState(false);
   const [resolvingTerm, setResolvingTerm] = useState<{termId: string, userName: string} | null>(null);
   const [resolveReason, setResolveReason] = useState('');
+
+  useEffect(() => {
+      fetchExpedienteAlerts();
+  }, []);
 
   const availableDevices = devices.filter(d => d.status === DeviceStatus.AVAILABLE).length;
   const maintenanceDevices = devices.filter(d => d.status === DeviceStatus.MAINTENANCE).length;
@@ -126,6 +131,86 @@ const Dashboard = () => {
           subtitle="Aguardando reparo"
         />
       </div>
+
+      {/* Alerta de Validação de Expediente (ERP) */}
+      {expedienteAlerts.length > 0 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
+              <div className="flex items-start gap-4">
+                  <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg shrink-0">
+                      <Clock size={24} />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-1">
+                          <h3 className="text-lg font-bold text-red-900 dark:text-red-200 flex items-center gap-2">
+                              Validação do Expediente (ERP)
+                              <span className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse">{expedienteAlerts.length} Alertas</span>
+                          </h3>
+                          <button 
+                              onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 transition-colors"
+                          >
+                              {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                          </button>
+                      </div>
+                      <p className="text-sm text-red-800/70 dark:text-red-300/60 mb-4">
+                          Colaboradores da equipe de vendas identificados com expediente <span className="font-bold">FALSO</span> no ERP.
+                      </p>
+                      
+                      {isExpedienteExpanded && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                              {expedienteAlerts.map((alert) => {
+                                  // Tenta encontrar o colaborador local pelo CPF
+                                  const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
+                                  return (
+                                      <div key={alert.codigo} className="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-red-100 dark:border-red-900/30 flex flex-col gap-2 hover:border-red-300 transition-all group">
+                                          <div className="flex justify-between items-start">
+                                              <div className="flex items-center gap-2">
+                                                  <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 font-bold text-xs">
+                                                      {alert.nome.charAt(0)}
+                                                  </div>
+                                                  <div>
+                                                      <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{alert.nome}</p>
+                                                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Cód: {alert.codigo}</p>
+                                                  </div>
+                                              </div>
+                                              <div className="bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded border border-red-100 dark:border-red-900/40">
+                                                  <span className="text-[9px] font-black text-red-600 dark:text-red-400 uppercase">Exp. Falso</span>
+                                              </div>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-2 gap-2 mt-1">
+                                              <div className="text-[9px]">
+                                                  <span className="text-slate-400 uppercase font-bold block">CPF</span>
+                                                  <span className="text-slate-700 dark:text-slate-300 font-mono">{alert.cpf || '---'}</span>
+                                              </div>
+                                              <div className="text-[9px]">
+                                                  <span className="text-slate-400 uppercase font-bold block">PIS</span>
+                                                  <span className="text-slate-700 dark:text-slate-300 font-mono">{alert.pis || '---'}</span>
+                                              </div>
+                                          </div>
+
+                                          {localUser ? (
+                                              <Link 
+                                                  to={`/users?userId=${localUser.id}`}
+                                                  className="mt-2 flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-[10px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white transition-all"
+                                              >
+                                                  <span>Ver Colaborador Local</span>
+                                                  <ArrowRight size={12}/>
+                                              </Link>
+                                          ) : (
+                                              <div className="mt-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-[9px] text-slate-400 italic flex items-center gap-1">
+                                                  <AlertTriangle size={10}/> Não encontrado no sistema local
+                                              </div>
+                                          )}
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Alerta de Termos Pendentes Restaurado */}
       {pendingTerms.length > 0 && (

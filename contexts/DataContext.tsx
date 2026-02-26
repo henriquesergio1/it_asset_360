@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert } from '../types';
 
 export interface DataContextType {
   devices: Device[];
@@ -8,6 +8,10 @@ export interface DataContextType {
   systemUsers: SystemUser[];
   logs: AuditLog[];
   settings: SystemSettings;
+  
+  // ERP Integration
+  externalDbConfig: ExternalDbConfig | null;
+  expedienteAlerts: ExpedienteAlert[];
   
   // Novos dados
   models: DeviceModel[];
@@ -106,6 +110,11 @@ export interface DataContextType {
   addMaintenance: (record: MaintenanceRecord, adminName: string) => void;
   deleteMaintenance: (id: string, adminName: string) => void;
   finishMaintenance: (deviceId: string, maintenanceRecord: MaintenanceRecord, adminName: string) => void;
+
+  // ERP Integration Actions
+  updateExternalDbConfig: (config: ExternalDbConfig, adminName: string) => Promise<void>;
+  testExternalDbConnection: (config: ExternalDbConfig) => Promise<{ success: boolean; message: string }>;
+  fetchExpedienteAlerts: () => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

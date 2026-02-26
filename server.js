@@ -90,7 +90,18 @@ const DB_SCHEMAS = {
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`
+    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`,
+    ExternalDbConfig: `(
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Technology NVARCHAR(50),
+        Host NVARCHAR(255),
+        Port INT,
+        Username NVARCHAR(255),
+        Password NVARCHAR(255),
+        DatabaseName NVARCHAR(255),
+        SelectionQuery NVARCHAR(MAX),
+        LastSync DATETIME
+    )`
 };
 
 async function initializeDatabase() {
@@ -121,6 +132,13 @@ async function initializeDatabase() {
         if (settingsCheck.recordset[0].count === 0) {
             console.log('- Populando SystemSettings com valores padrão...');
             await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '')");
+        }
+
+        // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
+        const extDbCheck = await pool.request().query('SELECT COUNT(*) as count FROM ExternalDbConfig');
+        if (extDbCheck.recordset[0].count === 0) {
+            console.log('- Inicializando ExternalDbConfig...');
+            await pool.request().query("INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server')");
         }
 
         console.log('Banco de dados pronto.');
@@ -555,6 +573,114 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     crud('Users', 'users', 'User');
     crud('SimCards', 'sims', 'Sim');
     crud('Devices', 'devices', 'Device');
+
+    // --- EXTERNAL ERP INTEGRATION ---
+    app.get('/api/admin/external-db/config', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT TOP 1 * FROM ExternalDbConfig");
+            res.json(result.recordset[0] || {});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/admin/external-db/config', async (req, res) => {
+        try {
+            const { technology, host, port, username, password, databaseName, selectionQuery, _adminUser } = req.body;
+            const pool = await sql.connect(dbConfig);
+            
+            const check = await pool.request().query("SELECT COUNT(*) as count FROM ExternalDbConfig");
+            if (check.recordset[0].count > 0) {
+                await pool.request()
+                    .input('tech', sql.NVarChar, technology)
+                    .input('host', sql.NVarChar, host)
+                    .input('port', sql.Int, parseInt(port))
+                    .input('user', sql.NVarChar, username)
+                    .input('pass', sql.NVarChar, password)
+                    .input('db', sql.NVarChar, databaseName)
+                    .input('query', sql.NVarChar, selectionQuery)
+                    .query("UPDATE ExternalDbConfig SET Technology=@tech, Host=@host, Port=@port, Username=@user, Password=@pass, DatabaseName=@db, SelectionQuery=@query");
+            } else {
+                await pool.request()
+                    .input('tech', sql.NVarChar, technology)
+                    .input('host', sql.NVarChar, host)
+                    .input('port', sql.Int, parseInt(port))
+                    .input('user', sql.NVarChar, username)
+                    .input('pass', sql.NVarChar, password)
+                    .input('db', sql.NVarChar, databaseName)
+                    .input('query', sql.NVarChar, selectionQuery)
+                    .query("INSERT INTO ExternalDbConfig (Technology, Host, Port, Username, Password, DatabaseName, SelectionQuery) VALUES (@tech, @host, @port, @user, @pass, @db, @query)");
+            }
+
+            await logAction('system', 'System', 'Configuração ERP', _adminUser, 'Integração DB', 'Configurações de banco de dados externo atualizadas');
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/admin/external-db/test', async (req, res) => {
+        const { technology, host, port, username, password, databaseName } = req.body;
+        const config = {
+            user: username,
+            password: password,
+            server: host,
+            port: parseInt(port),
+            database: databaseName,
+            options: { encrypt: false, trustServerCertificate: true, connectTimeout: 10000 }
+        };
+
+        try {
+            const externalPool = await new sql.ConnectionPool(config).connect();
+            await externalPool.request().query("SELECT 1 as test");
+            await externalPool.close();
+            res.json({ success: true, message: 'Conexão estabelecida com sucesso!' });
+        } catch (err) {
+            res.status(500).json({ success: false, message: err.message });
+        }
+    });
+
+    app.get('/api/dashboard/expediente-alerts', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const configRes = await pool.request().query("SELECT TOP 1 * FROM ExternalDbConfig");
+            const config = configRes.recordset[0];
+
+            if (!config || !config.Host || !config.SelectionQuery) {
+                return res.json([]);
+            }
+
+            const extConfig = {
+                user: config.Username,
+                password: config.Password,
+                server: config.Host,
+                port: config.Port,
+                database: config.DatabaseName,
+                options: { encrypt: false, trustServerCertificate: true, connectTimeout: 15000 }
+            };
+
+            const externalPool = await new sql.ConnectionPool(extConfig).connect();
+            const result = await externalPool.request().query(config.SelectionQuery);
+            await externalPool.close();
+
+            // Filtra apenas os que estão com ValidaExpediente = 0 (FALSO)
+            // A query do usuário traz BOLVLAEXDEPG AS ValidaExpediente
+            const alerts = result.recordset.filter(row => {
+                // Aceita 0, '0', false, 'F', 'N' como falso
+                const val = row.ValidaExpediente;
+                return val === 0 || val === '0' || val === false || val === 'F' || val === 'N';
+            }).map(row => ({
+                codigo: row.Codigo,
+                nome: row.Nome,
+                cpf: row.CPF,
+                rg: row.RG,
+                pis: row.PIS,
+                validaExpediente: false
+            }));
+
+            res.json(alerts);
+        } catch (err) {
+            console.error('Erro ao buscar alertas externos:', err.message);
+            res.status(500).send(err.message);
+        }
+    });
 
     app.listen(PORT, () => {
         console.log(`🚀 Servidor v${packageJson.version} rodando na porta ${PORT}`);

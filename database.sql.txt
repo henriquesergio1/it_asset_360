@@ -170,8 +170,22 @@ CREATE TABLE SoftwareAccounts (
     Notes NVARCHAR(MAX)
 );
 
+-- Tabela de Configuração de Banco de Dados Externo (ERP)
+CREATE TABLE ExternalDbConfig (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    Technology NVARCHAR(50),
+    Host NVARCHAR(255),
+    Port INT,
+    Username NVARCHAR(255),
+    Password NVARCHAR(255),
+    DatabaseName NVARCHAR(255),
+    SelectionQuery NVARCHAR(MAX),
+    LastSync DATETIME
+);
+
 -- Populando dados iniciais essenciais
 INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
+INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server');
 
 PRINT 'Banco de dados inicializado com sucesso.';
 

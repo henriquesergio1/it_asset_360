@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -24,6 +24,9 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>(mockAccessoryTypes || []);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
+
+  const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
+  const [expedienteAlerts, setExpedienteAlerts] = useState<ExpedienteAlert[]>([]);
 
   const logAction = (
     action: ActionType, 
@@ -144,6 +147,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
+    externalDbConfig, expedienteAlerts,
     fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
     refreshData: async () => { console.log("[Mock] Data refreshed."); },
     getTermFile: async (id: string) => "",
@@ -354,7 +358,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setDevices(prev => prev.map(d => d.id === deviceId ? updatedDevice : d));
 
       logAction(ActionType.UPDATE, 'Device', deviceId, device.assetTag, adminName, `Manutenção Concluída: ${record.description}`);
-    }
+    },
+    updateExternalDbConfig: async (c, adm) => { setExternalDbConfig(c); },
+    testExternalDbConnection: async (c) => ({ success: true, message: "[Mock] Conexão simulada com sucesso!" }),
+    fetchExpedienteAlerts: async () => { setExpedienteAlerts([]); }
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

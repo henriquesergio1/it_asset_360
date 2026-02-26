@@ -183,6 +183,27 @@ export interface SystemSettings {
   returnTermTemplate?: string; 
 }
 
+export interface ExternalDbConfig {
+  id?: number;
+  technology: string;
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  databaseName: string;
+  selectionQuery: string;
+  lastSync?: string;
+}
+
+export interface ExpedienteAlert {
+  codigo: string;
+  nome: string;
+  cpf: string;
+  rg: string;
+  pis: string;
+  validaExpediente: boolean;
+}
+
 export enum ActionType {
   create = 'Criação',
   UPDATE = 'Atualização',
