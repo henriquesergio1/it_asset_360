@@ -140,12 +140,12 @@ const Dashboard = () => {
 
       {/* Gráficos de Status e Licenças - Reduzidos e Reordenados para 2ª posição */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[320px]">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-4">Status dos Dispositivos</h2>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[280px]">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-3">Status dos Dispositivos</h2>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dataStatus} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+                <Pie data={dataStatus} cx="40%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={5} dataKey="value">
                   {dataStatus.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -153,30 +153,30 @@ const Dashboard = () => {
                 <Tooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
-                <Legend />
+                <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[320px] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[280px] flex flex-col">
+            <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                     <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
                 </h2>
                 <Link to="/accounts" className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 hover:underline">Ver Tudo</Link>
             </div>
-            <div className="space-y-4 overflow-y-auto custom-scrollbar">
+            <div className="space-y-2 overflow-hidden">
                 {Object.values(AccountType).map(type => {
                     const count = accounts.filter(a => a.type === type).length;
                     const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
                     return (
                         <div key={type} className="space-y-1">
-                            <div className="flex justify-between text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                            <div className="flex justify-between text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
                                 <span>{type}</span>
                                 <span>{count}</span>
                             </div>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                 <div className="bg-indigo-600 dark:bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
                             </div>
                         </div>

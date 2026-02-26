@@ -182,7 +182,7 @@ const AdminPanel = () => {
       return: { declaration: '', clauses: '' }
   });
 
-  const { externalDbConfig, updateExternalDbConfig, testExternalDbConnection } = useData();
+  const { externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData } = useData();
   const [erpForm, setErpForm] = useState({
       technology: 'SQL Server',
       host: '',
@@ -193,6 +193,7 @@ const AdminPanel = () => {
       selectionQuery: ''
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isPasswordModified, setIsPasswordModified] = useState(false);
 
   useEffect(() => {
     setSettingsForm(settings);
@@ -214,8 +215,15 @@ const AdminPanel = () => {
               databaseName: externalDbConfig.databaseName || '',
               selectionQuery: externalDbConfig.selectionQuery || ''
           });
+          setIsPasswordModified(false);
       }
   }, [externalDbConfig]);
+
+  useEffect(() => {
+      if (activeTab === 'ERP' && !externalDbConfig) {
+          fetchData(); // Força atualização para garantir que temos a config
+      }
+  }, [activeTab, externalDbConfig]);
 
   const handleOpenModal = (user?: SystemUser) => {
     if (user) { setEditingId(user.id); setUserForm(user); } 
@@ -412,7 +420,22 @@ const AdminPanel = () => {
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Senha</label>
-                            <input type="password" required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.password} onChange={e => setErpForm({...erpForm, password: e.target.value})}/>
+                            <input 
+                                type="password" 
+                                required 
+                                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" 
+                                value={isPasswordModified ? erpForm.password : (erpForm.password ? '********' : '')} 
+                                onChange={e => {
+                                    setErpForm({...erpForm, password: e.target.value});
+                                    setIsPasswordModified(true);
+                                }}
+                                onFocus={() => {
+                                    if (!isPasswordModified) {
+                                        setErpForm({...erpForm, password: ''});
+                                        setIsPasswordModified(true);
+                                    }
+                                }}
+                            />
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nome do Banco de Dados</label>
