@@ -215,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.17.0', 
+        version: '2.17.1', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -266,7 +266,7 @@ app.get('/api/bootstrap', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes), systemUsers: sysUsersRes.recordset,
             settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' }, 
-            models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.ImageBinary) })), 
+            models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.imageBinary) })), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
@@ -501,30 +501,32 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 
-                // Ignore legacy URL columns in input
-                if (['purchaseInvoiceUrl', 'imageUrl', 'invoiceUrl', 'fileUrl'].includes(key)) continue;
-
-                const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+
+                // Map legacy URL columns to Binary columns
+                if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
+                else if (key === 'imageUrl') dbKey = 'ImageBinary';
+                else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
+                else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
+                    if (isBase64(val)) {
+                        const buffer = getBufferFromBase64(val);
+                        request.input(dbKey, buffer);
+                        columns.push(dbKey);
+                        values.push('@' + dbKey);
+                    } else if (val === null || val === '') {
+                        request.input(dbKey, null);
+                        columns.push(dbKey);
+                        values.push('@' + dbKey);
+                    }
+                    continue;
+                }
+
                 request.input(dbKey, val);
                 columns.push(dbKey);
                 values.push('@' + dbKey);
-
-                // Mirror to binary column if Base64
-                if (isBase64(val)) {
-                    const buffer = getBufferFromBase64(val);
-                    let binKey = null;
-                    if (key === 'purchaseInvoiceUrl') binKey = 'PurchaseInvoiceBinary';
-                    if (key === 'imageUrl') binKey = 'ImageBinary';
-                    if (key === 'invoiceUrl') binKey = 'InvoiceBinary';
-                    if (key === 'fileUrl') binKey = 'FileBinary';
-
-                    if (binKey) {
-                        request.input(binKey, buffer);
-                        columns.push(binKey);
-                        values.push('@' + binKey);
-                    }
-                }
             }
             await request.query(`INSERT INTO ${table} (${columns.join(',')}) VALUES (${values.join(',')})`);
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
@@ -545,29 +547,29 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
 
-                // Ignore legacy URL columns in input
-                if (['purchaseInvoiceUrl', 'imageUrl', 'invoiceUrl', 'fileUrl'].includes(key)) continue;
-
-                const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
-                
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+
+                // Map legacy URL columns to Binary columns
+                if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
+                else if (key === 'imageUrl') dbKey = 'ImageBinary';
+                else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
+                else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
+                    if (isBase64(val)) {
+                        const buffer = getBufferFromBase64(val);
+                        request.input(dbKey, buffer);
+                        sets.push(`${dbKey}=@${dbKey}`);
+                    } else if (val === null || val === '') {
+                        request.input(dbKey, null);
+                        sets.push(`${dbKey}=@${dbKey}`);
+                    }
+                    continue;
+                }
+
                 request.input(dbKey, val);
                 sets.push(`${dbKey}=@${dbKey}`);
-
-                // Mirror to binary column if Base64
-                if (isBase64(val)) {
-                    const buffer = getBufferFromBase64(val);
-                    let binKey = null;
-                    if (key === 'purchaseInvoiceUrl') binKey = 'PurchaseInvoiceBinary';
-                    if (key === 'imageUrl') binKey = 'ImageBinary';
-                    if (key === 'invoiceUrl') binKey = 'InvoiceBinary';
-                    if (key === 'fileUrl') binKey = 'FileBinary';
-
-                    if (binKey) {
-                        request.input(binKey, buffer);
-                        sets.push(`${binKey}=@${binKey}`);
-                    }
-                }
 
                 if (prev) {
                     let oldVal = prev[dbKey];

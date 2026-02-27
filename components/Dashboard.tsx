@@ -437,10 +437,10 @@ const Dashboard = () => {
                                   {lccAlerts.length} Críticos
                               </span>
                           </div>
-                          <div className="flex-1 overflow-x-auto">
+                          <div className="flex-1 overflow-y-auto max-h-[320px] custom-scrollbar">
                               {lccAlerts.length > 0 ? (
                                   <table className="w-full text-sm text-left">
-                                      <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-black text-slate-500 tracking-widest border-b dark:border-slate-700">
+                                      <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-black text-slate-500 tracking-widest border-b dark:border-slate-700 sticky top-0 z-10">
                                           <tr>
                                               <th className="px-6 py-4">Equipamento</th>
                                               <th className="px-6 py-4 text-center">Índice LCC</th>
@@ -449,7 +449,7 @@ const Dashboard = () => {
                                           </tr>
                                       </thead>
                                       <tbody className="divide-y dark:divide-slate-800">
-                                          {lccAlerts.slice(0, 5).map((item) => {
+                                          {lccAlerts.map((item) => {
                                               const model = models.find(m => m.id === item.device.modelId);
                                               const brand = brands.find(b => b.id === model?.brandId);
                                               return (
