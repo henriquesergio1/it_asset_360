@@ -207,13 +207,13 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return safeJson(res, '/api/admin/external-db/test');
   };
 
-  const migrateBinary = async (adminName: string) => {
-    const res = await fetch(`${API_URL}/api/admin/migrate-binary`, {
+  const optimizeDatabase = async (adminName: string) => {
+    const res = await fetch(`${API_URL}/api/admin/optimize-database`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _adminUser: adminName })
     });
-    return safeJson(res, '/api/admin/migrate-binary');
+    return safeJson(res, '/api/admin/optimize-database');
   };
 
   const value: DataContextType = {
@@ -252,7 +252,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); },
-    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, migrateBinary
+    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, optimizeDatabase
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

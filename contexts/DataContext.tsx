@@ -115,7 +115,7 @@ export interface DataContextType {
   updateExternalDbConfig: (config: ExternalDbConfig, adminName: string) => Promise<void>;
   testExternalDbConnection: (config: ExternalDbConfig) => Promise<{ success: boolean; message: string }>;
   fetchExpedienteAlerts: () => Promise<void>;
-  migrateBinary: (adminName: string) => Promise<{ success: boolean; migratedCount: number }>;
+  optimizeDatabase: (adminName: string) => Promise<{ success: boolean; migratedCount: number; manualCount: number; cleanedCount: number }>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

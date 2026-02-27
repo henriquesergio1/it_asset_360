@@ -88,7 +88,7 @@ const DB_SCHEMAS = {
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
     MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX), FileBinary VARBINARY(MAX))`,
+    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX), FileBinary VARBINARY(MAX), IsManual BIT DEFAULT 0, ResolutionReason NVARCHAR(MAX))`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
@@ -152,6 +152,14 @@ async function initializeDatabase() {
                     if (checkBin.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE Terms ADD FileBinary VARBINARY(MAX) NULL');
                     }
+                    const checkManual = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'IsManual'`);
+                    if (checkManual.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Terms ADD IsManual BIT DEFAULT 0');
+                    }
+                    const checkReason = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'ResolutionReason'`);
+                    if (checkReason.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Terms ADD ResolutionReason NVARCHAR(MAX) NULL');
+                    }
                 }
             }
         }
@@ -186,7 +194,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: packageJson.version, 
+        version: '2.16.1', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -221,7 +229,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileUrl IS NOT NULL AND FileUrl <> '') OR (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -253,8 +261,8 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT Id as id, DeviceId as deviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, (CASE WHEN FileUrl IS NOT NULL AND FileUrl <> '' THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileUrl IS NOT NULL AND FileUrl <> '') OR (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
         ]);
 
@@ -358,8 +366,9 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
         // Marca como resolvido manualmente
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
+            .input('Reason', sql.NVarChar, reason)
             .input('Note', sql.NVarChar, `[RESOLVIDO_MANUALMENTE] Motivo: ${reason}`)
-            .query("UPDATE Terms SET FileUrl=@Note WHERE Id=@Id");
+            .query("UPDATE Terms SET FileUrl=@Note, IsManual=1, ResolutionReason=@Reason WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
@@ -406,14 +415,16 @@ app.get('/api/maintenances/:id/invoice', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// MIGRATION ENDPOINT
-app.post('/api/admin/migrate-binary', async (req, res) => {
+// DATABASE OPTIMIZATION ENDPOINT
+app.post('/api/admin/optimize-database', async (req, res) => {
     const { _adminUser } = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         let migratedCount = 0;
+        let manualCount = 0;
+        let cleanedCount = 0;
 
-        // 1. Devices (Invoices)
+        // 1. Binary Migration (if not done)
         const devices = await pool.request().query("SELECT Id, PurchaseInvoiceUrl FROM Devices WHERE PurchaseInvoiceBinary IS NULL AND PurchaseInvoiceUrl LIKE 'data:%'");
         for (const dev of devices.recordset) {
             const buffer = getBufferFromBase64(dev.PurchaseInvoiceUrl);
@@ -423,7 +434,6 @@ app.post('/api/admin/migrate-binary', async (req, res) => {
             }
         }
 
-        // 2. MaintenanceRecords
         const maints = await pool.request().query("SELECT Id, InvoiceUrl FROM MaintenanceRecords WHERE InvoiceBinary IS NULL AND InvoiceUrl LIKE 'data:%'");
         for (const m of maints.recordset) {
             const buffer = getBufferFromBase64(m.InvoiceUrl);
@@ -433,7 +443,6 @@ app.post('/api/admin/migrate-binary', async (req, res) => {
             }
         }
 
-        // 3. Models (Images)
         const models = await pool.request().query("SELECT Id, ImageUrl FROM Models WHERE ImageBinary IS NULL AND ImageUrl LIKE 'data:%'");
         for (const mod of models.recordset) {
             const buffer = getBufferFromBase64(mod.ImageUrl);
@@ -443,7 +452,6 @@ app.post('/api/admin/migrate-binary', async (req, res) => {
             }
         }
 
-        // 4. Terms
         const terms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE FileBinary IS NULL AND FileUrl LIKE 'data:%'");
         for (const t of terms.recordset) {
             const buffer = getBufferFromBase64(t.FileUrl);
@@ -453,8 +461,35 @@ app.post('/api/admin/migrate-binary', async (req, res) => {
             }
         }
 
-        await logAction('system', 'System', 'Migração Binária', _adminUser, 'Banco de Dados', `Migração concluída: ${migratedCount} arquivos convertidos para VARBINARY(MAX)`);
-        res.json({ success: true, migratedCount });
+        // 2. Manual Resolution Extraction
+        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE IsManual = 0 AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
+        for (const t of manualTerms.recordset) {
+            const reason = t.FileUrl.replace('[RESOLVIDO_MANUALMENTE] Motivo: ', '').trim();
+            await pool.request()
+                .input('Id', t.Id)
+                .input('Reason', reason)
+                .query("UPDATE Terms SET IsManual=1, ResolutionReason=@Reason WHERE Id=@Id");
+            manualCount++;
+        }
+
+        // 3. Base64 Cleanup (Releasing space)
+        const cleanDev = await pool.request().query("UPDATE Devices SET PurchaseInvoiceUrl=NULL WHERE PurchaseInvoiceBinary IS NOT NULL AND PurchaseInvoiceUrl LIKE 'data:%'");
+        cleanedCount += cleanDev.rowsAffected[0];
+
+        const cleanMaint = await pool.request().query("UPDATE MaintenanceRecords SET InvoiceUrl=NULL WHERE InvoiceBinary IS NOT NULL AND InvoiceUrl LIKE 'data:%'");
+        cleanedCount += cleanMaint.rowsAffected[0];
+
+        const cleanMod = await pool.request().query("UPDATE Models SET ImageUrl=NULL WHERE ImageBinary IS NOT NULL AND ImageUrl LIKE 'data:%'");
+        cleanedCount += cleanMod.rowsAffected[0];
+
+        const cleanTerms = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE FileBinary IS NOT NULL AND FileUrl LIKE 'data:%'");
+        cleanedCount += cleanTerms.rowsAffected[0];
+
+        const cleanManual = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE IsManual=1 AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
+        cleanedCount += cleanManual.rowsAffected[0];
+
+        await logAction('system', 'System', 'Otimização de Banco', _adminUser, 'Banco de Dados', `Otimização concluída: ${migratedCount} binários migrados, ${manualCount} resoluções manuais estruturadas, ${cleanedCount} campos Base64 limpos.`);
+        res.json({ success: true, migratedCount, manualCount, cleanedCount });
     } catch (err) { res.status(500).send(err.message); }
 });
 

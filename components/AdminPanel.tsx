@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap } from 'lucide-react';
 import DataImporter from './DataImporter';
 
 const FIELD_LABELS: Record<string, string> = {
@@ -183,7 +183,7 @@ const AdminPanel = () => {
   const { 
       systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs,
       clearLogs, restoreItem, 
-      externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData, migrateBinary 
+      externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData, optimizeDatabase 
   } = useData();
   const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
   const [erpForm, setErpForm] = useState({
@@ -403,16 +403,15 @@ const AdminPanel = () => {
                         </div>
                     </div>
 
-                    <div className="bg-orange-50 dark:bg-orange-900/20 p-6 rounded-2xl border border-orange-100 dark:border-orange-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="flex items-start gap-4">
-                            <div className="bg-orange-100 dark:bg-orange-900/40 p-3 rounded-xl text-orange-600">
-                                <AlertTriangle size={24}/>
+                            <div className="bg-blue-100 dark:bg-blue-900/40 p-3 rounded-xl text-blue-600">
+                                <Database size={24}/>
                             </div>
                             <div>
-                                <h4 className="text-sm font-bold text-orange-800 dark:text-orange-300">Migração de Armazenamento Binário</h4>
-                                <p className="text-xs text-orange-700/70 dark:text-orange-400/70 max-w-xl">
-                                    Converte todas as notas fiscais e imagens de dispositivos atualmente em Base64 para o formato VARBINARY(MAX). 
-                                    Isso melhora a performance do banco de dados e reduz o tamanho total.
+                                <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300">Otimização de Banco de Dados</h4>
+                                <p className="text-xs text-blue-700/70 dark:text-blue-400/70 max-w-xl">
+                                    Migra arquivos para binário, estrutura resoluções manuais e remove dados Base64 redundantes para liberar espaço e melhorar a performance.
                                 </p>
                             </div>
                         </div>
@@ -420,21 +419,21 @@ const AdminPanel = () => {
                             type="button"
                             disabled={isMigrating}
                             onClick={async () => {
-                                if (!window.confirm('Deseja iniciar a migração de todos os arquivos para o formato binário? Isso pode levar alguns minutos dependendo da quantidade de dados.')) return;
+                                if (!window.confirm('Deseja iniciar a otimização do banco de dados? Isso irá converter arquivos para binário e remover o Base64 redundante para liberar espaço.')) return;
                                 setIsMigrating(true);
                                 try {
-                                    const res = await migrateBinary(currentUser?.name || 'Admin');
-                                    alert(`Migração concluída com sucesso! ${res.migratedCount} arquivos foram processados.`);
+                                    const res = await optimizeDatabase(currentUser?.name || 'Admin');
+                                    alert(`Otimização concluída com sucesso!\n- ${res.migratedCount} arquivos migrados\n- ${res.manualCount} resoluções manuais estruturadas\n- ${res.cleanedCount} campos Base64 limpos.`);
                                 } catch (e) {
-                                    alert('Erro durante a migração.');
+                                    alert('Erro durante a otimização.');
                                 } finally {
                                     setIsMigrating(false);
                                 }
                             }}
-                            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
                         >
-                            {isMigrating ? <Loader2 size={16} className="animate-spin"/> : <Database size={16}/>}
-                            {isMigrating ? 'Migrando...' : 'Iniciar Migração'}
+                            {isMigrating ? <Loader2 size={16} className="animate-spin"/> : <Zap size={16}/>}
+                            {isMigrating ? 'Otimizando...' : 'Otimizar Banco'}
                         </button>
                     </div>
 

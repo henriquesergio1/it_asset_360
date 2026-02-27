@@ -141,6 +141,8 @@ export interface Term {
   fileUrl: string; 
   /* Adicionado para suportar indicador de anexo no lightweight sync */
   hasFile?: boolean;
+  isManual?: boolean;
+  resolutionReason?: string;
 }
 
 export type ReturnChecklist = Record<string, boolean>;
