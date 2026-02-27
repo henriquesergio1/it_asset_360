@@ -194,7 +194,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.16.3', 
+        version: '2.16.4', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -462,7 +462,7 @@ app.post('/api/admin/optimize-database', async (req, res) => {
         }
 
         // 2. Manual Resolution Extraction
-        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE (IsManual = 0 OR IsManual IS NULL) AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
+        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE (IsManual = 0 OR IsManual IS NULL) AND FileUrl LIKE '[[]RESOLVIDO_MANUALMENTE]%'");
         for (const t of manualTerms.recordset) {
             // Extração mais robusta do motivo
             let reason = t.FileUrl.split('Motivo:')[1] || t.FileUrl.replace('[RESOLVIDO_MANUALMENTE]', '');
@@ -488,7 +488,7 @@ app.post('/api/admin/optimize-database', async (req, res) => {
         const cleanTerms = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE FileBinary IS NOT NULL AND FileUrl LIKE 'data:%'");
         cleanedCount += cleanTerms.rowsAffected[0];
 
-        const cleanManual = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE IsManual=1 AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
+        const cleanManual = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE IsManual=1 AND FileUrl LIKE '[[]RESOLVIDO_MANUALMENTE]%'");
         cleanedCount += cleanManual.rowsAffected[0];
 
         await logAction('system', 'System', 'Otimização de Banco', _adminUser, 'Banco de Dados', `Otimização concluída: ${migratedCount} binários migrados, ${manualCount} resoluções manuais estruturadas, ${cleanedCount} campos Base64 limpos.`);
