@@ -194,7 +194,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.16.2', 
+        version: '2.16.3', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -462,9 +462,12 @@ app.post('/api/admin/optimize-database', async (req, res) => {
         }
 
         // 2. Manual Resolution Extraction
-        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE IsManual = 0 AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
+        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE (IsManual = 0 OR IsManual IS NULL) AND FileUrl LIKE '[RESOLVIDO_MANUALMENTE]%'");
         for (const t of manualTerms.recordset) {
-            const reason = t.FileUrl.replace('[RESOLVIDO_MANUALMENTE] Motivo: ', '').trim();
+            // Extração mais robusta do motivo
+            let reason = t.FileUrl.split('Motivo:')[1] || t.FileUrl.replace('[RESOLVIDO_MANUALMENTE]', '');
+            reason = reason.trim();
+            
             await pool.request()
                 .input('Id', t.Id)
                 .input('Reason', reason)
