@@ -183,7 +183,7 @@ const AdminPanel = () => {
   const { 
       systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs,
       clearLogs, restoreItem, 
-      externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData, optimizeDatabase 
+      externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData 
   } = useData();
   const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
   const [erpForm, setErpForm] = useState({
@@ -196,7 +196,6 @@ const AdminPanel = () => {
       selectionQuery: ''
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isMigrating, setIsMigrating] = useState(false);
   const [isPasswordModified, setIsPasswordModified] = useState(false);
 
   useEffect(() => {
@@ -401,40 +400,6 @@ const AdminPanel = () => {
                             </button>
                             <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition-all"><Save size={14}/> Salvar Configuração</button>
                         </div>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className="bg-blue-100 dark:bg-blue-900/40 p-3 rounded-xl text-blue-600">
-                                <Database size={24}/>
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300">Otimização de Banco de Dados</h4>
-                                <p className="text-xs text-blue-700/70 dark:text-blue-400/70 max-w-xl">
-                                    Migra arquivos para binário, estrutura resoluções manuais e remove dados Base64 redundantes para liberar espaço e melhorar a performance.
-                                </p>
-                            </div>
-                        </div>
-                        <button 
-                            type="button"
-                            disabled={isMigrating}
-                            onClick={async () => {
-                                if (!window.confirm('Deseja iniciar a otimização do banco de dados? Isso irá converter arquivos para binário e remover o Base64 redundante para liberar espaço.')) return;
-                                setIsMigrating(true);
-                                try {
-                                    const res = await optimizeDatabase(currentUser?.name || 'Admin');
-                                    alert(`Otimização concluída com sucesso!\n- ${res.migratedCount} arquivos migrados\n- ${res.manualCount} resoluções manuais estruturadas\n- ${res.cleanedCount} campos Base64 limpos.`);
-                                } catch (e) {
-                                    alert('Erro durante a otimização.');
-                                } finally {
-                                    setIsMigrating(false);
-                                }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
-                        >
-                            {isMigrating ? <Loader2 size={16} className="animate-spin"/> : <Zap size={16}/>}
-                            {isMigrating ? 'Otimizando...' : 'Otimizar Banco'}
-                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

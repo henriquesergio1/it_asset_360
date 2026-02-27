@@ -40,7 +40,6 @@ const DB_SCHEMAS = {
         PurchaseCost FLOAT,
         InvoiceNumber NVARCHAR(255),
         Supplier NVARCHAR(255),
-        PurchaseInvoiceUrl NVARCHAR(MAX),
         PurchaseInvoiceBinary VARBINARY(MAX),
         DeviceImageBinary VARBINARY(MAX),
         CustomData NVARCHAR(MAX)
@@ -83,12 +82,12 @@ const DB_SCHEMAS = {
     )`,
     SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
     SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX))`,
-    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageUrl NVARCHAR(MAX), ImageBinary VARBINARY(MAX))`,
+    Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
-    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceUrl NVARCHAR(MAX), InvoiceBinary VARBINARY(MAX))`,
+    MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileUrl NVARCHAR(MAX), FileBinary VARBINARY(MAX), IsManual BIT DEFAULT 0, ResolutionReason NVARCHAR(MAX))`,
+    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileBinary VARBINARY(MAX), IsManual BIT DEFAULT 0, ResolutionReason NVARCHAR(MAX))`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
@@ -134,17 +133,34 @@ async function initializeDatabase() {
                     if (checkBin2.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE Devices ADD DeviceImageBinary VARBINARY(MAX) NULL');
                     }
+
+                    // Cleanup legacy columns
+                    const checkLegacy = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'PurchaseInvoiceUrl'`);
+                    if (checkLegacy.recordset.length > 0) {
+                        console.log('- Removendo coluna legada PurchaseInvoiceUrl de Devices...');
+                        await pool.request().query('ALTER TABLE Devices DROP COLUMN PurchaseInvoiceUrl');
+                    }
                 }
                 if (table === 'Models') {
                     const checkBin = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Models' AND COLUMN_NAME = 'ImageBinary'`);
                     if (checkBin.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE Models ADD ImageBinary VARBINARY(MAX) NULL');
                     }
+                    const checkLegacy = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Models' AND COLUMN_NAME = 'ImageUrl'`);
+                    if (checkLegacy.recordset.length > 0) {
+                        console.log('- Removendo coluna legada ImageUrl de Models...');
+                        await pool.request().query('ALTER TABLE Models DROP COLUMN ImageUrl');
+                    }
                 }
                 if (table === 'MaintenanceRecords') {
                     const checkBin = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MaintenanceRecords' AND COLUMN_NAME = 'InvoiceBinary'`);
                     if (checkBin.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE MaintenanceRecords ADD InvoiceBinary VARBINARY(MAX) NULL');
+                    }
+                    const checkLegacy = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'MaintenanceRecords' AND COLUMN_NAME = 'InvoiceUrl'`);
+                    if (checkLegacy.recordset.length > 0) {
+                        console.log('- Removendo coluna legada InvoiceUrl de MaintenanceRecords...');
+                        await pool.request().query('ALTER TABLE MaintenanceRecords DROP COLUMN InvoiceUrl');
                     }
                 }
                 if (table === 'Terms') {
@@ -159,6 +175,11 @@ async function initializeDatabase() {
                     const checkReason = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'ResolutionReason'`);
                     if (checkReason.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE Terms ADD ResolutionReason NVARCHAR(MAX) NULL');
+                    }
+                    const checkLegacy = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'FileUrl'`);
+                    if (checkLegacy.recordset.length > 0) {
+                        console.log('- Removendo coluna legada FileUrl de Terms...');
+                        await pool.request().query('ALTER TABLE Terms DROP COLUMN FileUrl');
                     }
                 }
             }
@@ -194,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.16.5', 
+        version: '2.17.0', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -218,7 +239,7 @@ app.get('/api/bootstrap', async (req, res) => {
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -227,9 +248,9 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
-            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileUrl IS NOT NULL AND FileUrl <> '') OR (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -245,7 +266,7 @@ app.get('/api/bootstrap', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes), systemUsers: sysUsersRes.recordset,
             settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' }, 
-            models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.imageBinary, m.imageUrl) })), 
+            models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.ImageBinary) })), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
@@ -259,12 +280,12 @@ app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceUrl IS NOT NULL AND PurchaseInvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query("SELECT * FROM SimCards"),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceUrl IS NOT NULL AND InvoiceUrl <> '' THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileUrl IS NOT NULL AND FileUrl <> '') OR (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
         ]);
 
@@ -302,10 +323,10 @@ app.get('/api/logs/:id', async (req, res) => {
 app.get('/api/terms/:id/file', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl, FileBinary FROM Terms WHERE Id=@Id");
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileBinary FROM Terms WHERE Id=@Id");
         const row = result.recordset[0];
         if (!row) return res.json({ fileUrl: '' });
-        res.json({ fileUrl: getBase64FromBuffer(row.FileBinary, row.FileUrl) });
+        res.json({ fileUrl: getBase64FromBuffer(row.FileBinary) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -320,10 +341,11 @@ app.put('/api/terms/file/:id', async (req, res) => {
         
         if (!term) return res.status(404).send("Termo não encontrado");
 
+        const buffer = getBufferFromBase64(fileUrl);
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
-            .input('Url', sql.NVarChar, fileUrl)
-            .query("UPDATE Terms SET FileUrl=@Url WHERE Id=@Id");
+            .input('Bin', buffer)
+            .query("UPDATE Terms SET FileBinary=@Bin WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
@@ -344,7 +366,7 @@ app.delete('/api/terms/:id/file', async (req, res) => {
 
         if (!term) return res.status(404).send("Termo não encontrado");
 
-        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE Terms SET FileUrl=NULL WHERE Id=@Id");
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE Terms SET FileBinary=NULL WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
@@ -369,8 +391,7 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
             .input('Reason', sql.NVarChar, reason)
-            .input('Note', sql.NVarChar, `[RESOLVIDO_MANUALMENTE] Motivo: ${reason}`)
-            .query("UPDATE Terms SET FileUrl=@Note, IsManual=1, ResolutionReason=@Reason WHERE Id=@Id");
+            .query("UPDATE Terms SET IsManual=1, ResolutionReason=@Reason WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
@@ -400,101 +421,20 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
 app.get('/api/devices/:id/invoice', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceUrl, PurchaseInvoiceBinary FROM Devices WHERE Id=@Id");
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT PurchaseInvoiceBinary FROM Devices WHERE Id=@Id");
         const row = result.recordset[0];
         if (!row) return res.json({ invoiceUrl: '' });
-        res.json({ invoiceUrl: getBase64FromBuffer(row.PurchaseInvoiceBinary, row.PurchaseInvoiceUrl) });
+        res.json({ invoiceUrl: getBase64FromBuffer(row.PurchaseInvoiceBinary) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.get('/api/maintenances/:id/invoice', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceUrl, InvoiceBinary FROM MaintenanceRecords WHERE Id=@Id");
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT InvoiceBinary FROM MaintenanceRecords WHERE Id=@Id");
         const row = result.recordset[0];
         if (!row) return res.json({ invoiceUrl: '' });
-        res.json({ invoiceUrl: getBase64FromBuffer(row.InvoiceBinary, row.InvoiceUrl) });
-    } catch (err) { res.status(500).send(err.message); }
-});
-
-// DATABASE OPTIMIZATION ENDPOINT
-app.post('/api/admin/optimize-database', async (req, res) => {
-    const { _adminUser } = req.body;
-    try {
-        const pool = await sql.connect(dbConfig);
-        let migratedCount = 0;
-        let manualCount = 0;
-        let cleanedCount = 0;
-
-        // 1. Binary Migration (if not done)
-        const devices = await pool.request().query("SELECT Id, PurchaseInvoiceUrl FROM Devices WHERE PurchaseInvoiceBinary IS NULL AND PurchaseInvoiceUrl LIKE 'data:%'");
-        for (const dev of devices.recordset) {
-            const buffer = getBufferFromBase64(dev.PurchaseInvoiceUrl);
-            if (buffer) {
-                await pool.request().input('Id', dev.Id).input('Bin', buffer).query("UPDATE Devices SET PurchaseInvoiceBinary=@Bin WHERE Id=@Id");
-                migratedCount++;
-            }
-        }
-
-        const maints = await pool.request().query("SELECT Id, InvoiceUrl FROM MaintenanceRecords WHERE InvoiceBinary IS NULL AND InvoiceUrl LIKE 'data:%'");
-        for (const m of maints.recordset) {
-            const buffer = getBufferFromBase64(m.InvoiceUrl);
-            if (buffer) {
-                await pool.request().input('Id', m.Id).input('Bin', buffer).query("UPDATE MaintenanceRecords SET InvoiceBinary=@Bin WHERE Id=@Id");
-                migratedCount++;
-            }
-        }
-
-        const models = await pool.request().query("SELECT Id, ImageUrl FROM Models WHERE ImageBinary IS NULL AND ImageUrl LIKE 'data:%'");
-        for (const mod of models.recordset) {
-            const buffer = getBufferFromBase64(mod.ImageUrl);
-            if (buffer) {
-                await pool.request().input('Id', mod.Id).input('Bin', buffer).query("UPDATE Models SET ImageBinary=@Bin WHERE Id=@Id");
-                migratedCount++;
-            }
-        }
-
-        const terms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE FileBinary IS NULL AND FileUrl LIKE 'data:%'");
-        for (const t of terms.recordset) {
-            const buffer = getBufferFromBase64(t.FileUrl);
-            if (buffer) {
-                await pool.request().input('Id', t.Id).input('Bin', buffer).query("UPDATE Terms SET FileBinary=@Bin WHERE Id=@Id");
-                migratedCount++;
-            }
-        }
-
-        // 2. Manual Resolution Extraction
-        const manualTerms = await pool.request().query("SELECT Id, FileUrl FROM Terms WHERE (IsManual = 0 OR IsManual IS NULL) AND FileUrl LIKE '[[]RESOLVIDO_MANUALMENTE]%'");
-        for (const t of manualTerms.recordset) {
-            // Extração mais robusta do motivo
-            let reason = t.FileUrl.split('Motivo:')[1] || t.FileUrl.replace('[RESOLVIDO_MANUALMENTE]', '');
-            reason = reason.trim();
-            
-            await pool.request()
-                .input('Id', t.Id)
-                .input('Reason', reason)
-                .query("UPDATE Terms SET IsManual=1, ResolutionReason=@Reason WHERE Id=@Id");
-            manualCount++;
-        }
-
-        // 3. Base64 Cleanup (Releasing space)
-        const cleanDev = await pool.request().query("UPDATE Devices SET PurchaseInvoiceUrl=NULL WHERE PurchaseInvoiceBinary IS NOT NULL AND PurchaseInvoiceUrl LIKE 'data:%'");
-        cleanedCount += cleanDev.rowsAffected[0];
-
-        const cleanMaint = await pool.request().query("UPDATE MaintenanceRecords SET InvoiceUrl=NULL WHERE InvoiceBinary IS NOT NULL AND InvoiceUrl LIKE 'data:%'");
-        cleanedCount += cleanMaint.rowsAffected[0];
-
-        const cleanMod = await pool.request().query("UPDATE Models SET ImageUrl=NULL WHERE ImageBinary IS NOT NULL AND ImageUrl LIKE 'data:%'");
-        cleanedCount += cleanMod.rowsAffected[0];
-
-        const cleanTerms = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE FileBinary IS NOT NULL AND FileUrl LIKE 'data:%'");
-        cleanedCount += cleanTerms.rowsAffected[0];
-
-        const cleanManual = await pool.request().query("UPDATE Terms SET FileUrl=NULL WHERE IsManual=1 AND FileUrl LIKE '[[]RESOLVIDO_MANUALMENTE]%'");
-        cleanedCount += cleanManual.rowsAffected[0];
-
-        await logAction('system', 'System', 'Otimização de Banco', _adminUser, 'Banco de Dados', `Otimização concluída: ${migratedCount} binários migrados, ${manualCount} resoluções manuais estruturadas, ${cleanedCount} campos Base64 limpos.`);
-        res.json({ success: true, migratedCount, manualCount, cleanedCount });
+        res.json({ invoiceUrl: getBase64FromBuffer(row.InvoiceBinary) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -509,8 +449,8 @@ const getBufferFromBase64 = (str) => {
     return Buffer.from(base64Data, 'base64');
 };
 
-const getBase64FromBuffer = (buffer, originalUrl) => {
-    if (!buffer) return originalUrl || '';
+const getBase64FromBuffer = (buffer) => {
+    if (!buffer) return '';
     
     let mime = 'image/png'; // Default
     
@@ -523,10 +463,6 @@ const getBase64FromBuffer = (buffer, originalUrl) => {
             mime = 'image/png';
         } else if (hex.startsWith('FFD8FF')) {
             mime = 'image/jpeg';
-        } else if (originalUrl && originalUrl.startsWith('data:')) {
-            mime = originalUrl.split(';')[0].split(':')[1];
-        } else if (originalUrl && originalUrl.toLowerCase().endsWith('.pdf')) {
-            mime = 'application/pdf';
         }
     }
     
@@ -564,6 +500,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             let values = [];
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                
+                // Ignore legacy URL columns in input
+                if (['purchaseInvoiceUrl', 'imageUrl', 'invoiceUrl', 'fileUrl'].includes(key)) continue;
+
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 request.input(dbKey, val);
@@ -604,6 +544,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             let sets = [];
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+
+                // Ignore legacy URL columns in input
+                if (['purchaseInvoiceUrl', 'imageUrl', 'invoiceUrl', 'fileUrl'].includes(key)) continue;
+
                 const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 
