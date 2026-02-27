@@ -89,7 +89,7 @@ const Dashboard = () => {
   const globalMaintTotal = deviceLCCData.reduce((sum, item) => sum + item.totalMaint, 0);
   const globalLCCTotal = globalPurchaseTotal + globalMaintTotal;
 
-  const lccAlerts = deviceLCCData.filter(item => item.ratio >= 0.6 || item.age >= 4)
+  const lccAlerts = deviceLCCData.filter(item => item.ratio >= 0.6 || item.age >= 5)
     .sort((a, b) => b.ratio - a.ratio);
 
   // Filtra alertas de expediente para exibir apenas colaboradores ativos no sistema local
@@ -471,7 +471,7 @@ const Dashboard = () => {
                                                           </div>
                                                       </td>
                                                       <td className="px-6 py-4 text-center">
-                                                          <span className={`text-xs font-bold ${item.age >= 4 ? 'text-orange-500' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                          <span className={`text-xs font-bold ${item.age >= 5 ? 'text-orange-500' : 'text-slate-600 dark:text-slate-400'}`}>
                                                               {item.age.toFixed(1)}a
                                                           </span>
                                                       </td>
