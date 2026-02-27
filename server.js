@@ -194,7 +194,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.16.1', 
+        version: '2.16.2', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -506,12 +506,25 @@ const getBufferFromBase64 = (str) => {
 
 const getBase64FromBuffer = (buffer, originalUrl) => {
     if (!buffer) return originalUrl || '';
-    let mime = 'image/png';
-    if (originalUrl && originalUrl.startsWith('data:')) {
-        mime = originalUrl.split(';')[0].split(':')[1];
-    } else if (originalUrl && originalUrl.toLowerCase().endsWith('.pdf')) {
-        mime = 'application/pdf';
+    
+    let mime = 'image/png'; // Default
+    
+    // Detect MIME from buffer magic numbers
+    if (buffer.length > 4) {
+        const hex = buffer.toString('hex', 0, 4).toUpperCase();
+        if (hex === '25504446') {
+            mime = 'application/pdf';
+        } else if (hex === '89504E47') {
+            mime = 'image/png';
+        } else if (hex.startsWith('FFD8FF')) {
+            mime = 'image/jpeg';
+        } else if (originalUrl && originalUrl.startsWith('data:')) {
+            mime = originalUrl.split(';')[0].split(':')[1];
+        } else if (originalUrl && originalUrl.toLowerCase().endsWith('.pdf')) {
+            mime = 'application/pdf';
+        }
     }
+    
     return `data:${mime};base64,${buffer.toString('base64')}`;
 };
 
