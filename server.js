@@ -215,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.6', 
+        version: '2.18.7', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -501,6 +501,8 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const processedKeys = new Set();
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
+                if (key.endsWith('Binary')) continue;
                 
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
@@ -551,6 +553,8 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const processedKeys = new Set();
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
+                if (key.endsWith('Binary')) continue;
 
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
