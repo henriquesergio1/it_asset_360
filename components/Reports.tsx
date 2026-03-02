@@ -20,32 +20,153 @@ const Reports = () => {
   };
 
   const reportData = useMemo(() => {
-    return users.map(user => {
-      // Find SIMs directly linked to the user
-      const directSims = sims.filter(s => s.currentUserId === user.id);
+    // Helper to extract numbers from email (e.g., vendas101@... -> "101")
+    const extractSectorFromEmail = (email: string) => {
+      if (!email) return null;
+      const match = email.match(/\d+/);
+      return match ? match[0] : null;
+    };
+
+    // 1. Map all users and their expected sector from email
+    const usersMap = new Map(users.map(u => [u.id, {
+      ...u,
+      expectedSectorCode: extractSectorFromEmail(u.email),
+      assignedSims: [] as any[],
+      assignedSectorCodes: new Set<string>()
+    }]));
+
+    // 2. Create a list for "Vago" (unassigned) items
+    const unassignedItems: any[] = [];
+
+    // 3. Process all SIMs
+    sims.forEach(sim => {
+      // Is this SIM linked to a device?
+      const linkedDevice = devices.find(d => d.linkedSimId === sim.id);
       
-      // Find SIMs linked to devices that are linked to the user
-      const userDevices = devices.filter(d => d.currentUserId === user.id);
-      const indirectSimIds = userDevices.map(d => d.linkedSimId).filter(Boolean);
-      const indirectSims = sims.filter(s => indirectSimIds.includes(s.id));
+      if (linkedDevice) {
+        const deviceSectorCode = linkedDevice.internalCode || '';
+        
+        if (linkedDevice.currentUserId) {
+          const user = usersMap.get(linkedDevice.currentUserId);
+          if (user) {
+            // Check if user has multiple devices with DIFFERENT sector codes
+            const userDevices = devices.filter(d => d.currentUserId === user.id);
+            const uniqueDeviceCodes = new Set(userDevices.map(d => d.internalCode).filter(Boolean));
+            
+            // If user has multiple different codes, try to match with email
+            if (uniqueDeviceCodes.size > 1 && user.expectedSectorCode) {
+              // Does this device's code match the email?
+              // Or if the device has no code, we can't match it, so we might just assign it anyway or leave it.
+              // Let's say if it matches the email, it goes to the user.
+              // If it DOES NOT match the email, it goes to "Vago".
+              if (deviceSectorCode && deviceSectorCode.includes(user.expectedSectorCode)) {
+                user.assignedSims.push(sim);
+                if (deviceSectorCode) user.assignedSectorCodes.add(deviceSectorCode);
+              } else {
+                // Doesn't match email -> Vago
+                unassignedItems.push({
+                  id: `vago-${sim.id}`,
+                  fullName: 'Vago (Sem Colaborador)',
+                  sectorName: 'Dispositivo sem usuário correspondente',
+                  sectorCode: deviceSectorCode || '-',
+                  email: '-',
+                  lines: sim.phoneNumber,
+                  hasLine: true,
+                  isVago: true
+                });
+              }
+            } else {
+              // User has only 1 code (or none), or no expected code from email -> assign to user normally
+              user.assignedSims.push(sim);
+              if (deviceSectorCode) user.assignedSectorCodes.add(deviceSectorCode);
+            }
+          } else {
+            // Device has a userId but user not found in DB -> Vago
+            unassignedItems.push({
+              id: `vago-${sim.id}`,
+              fullName: 'Vago (Usuário não encontrado)',
+              sectorName: '-',
+              sectorCode: deviceSectorCode || '-',
+              email: '-',
+              lines: sim.phoneNumber,
+              hasLine: true,
+              isVago: true
+            });
+          }
+        } else {
+          // Device has NO user -> Vago
+          unassignedItems.push({
+            id: `vago-${sim.id}`,
+            fullName: 'Vago (Dispositivo em Estoque)',
+            sectorName: '-',
+            sectorCode: deviceSectorCode || '-',
+            email: '-',
+            lines: sim.phoneNumber,
+            hasLine: true,
+            isVago: true
+          });
+        }
+      } else if (sim.currentUserId) {
+        // SIM is directly linked to a user (no device)
+        const user = usersMap.get(sim.currentUserId);
+        if (user) {
+          user.assignedSims.push(sim);
+        } else {
+          // User not found -> Vago
+          unassignedItems.push({
+            id: `vago-${sim.id}`,
+            fullName: 'Vago (Chip avulso - Usuário não encontrado)',
+            sectorName: '-',
+            sectorCode: '-',
+            email: '-',
+            lines: sim.phoneNumber,
+            hasLine: true,
+            isVago: true
+          });
+        }
+      } else {
+        // SIM is completely unassigned (no device, no user)
+        // We only show these if they have a line, but usually they are in stock.
+        // Let's add them as Vago as well.
+        unassignedItems.push({
+          id: `vago-${sim.id}`,
+          fullName: 'Vago (Chip em Estoque)',
+          sectorName: '-',
+          sectorCode: '-',
+          email: '-',
+          lines: sim.phoneNumber,
+          hasLine: true,
+          isVago: true
+        });
+      }
+    });
+
+    // 4. Format User Data
+    const formattedUsers = Array.from(usersMap.values()).map(user => {
+      const sector = sectors.find(s => s.id === user.sectorId);
       
-      // Combine and deduplicate SIMs
-      const allSims = [...directSims, ...indirectSims].filter((sim, index, self) => 
+      // Deduplicate SIMs just in case
+      const uniqueSims = user.assignedSims.filter((sim, index, self) => 
         index === self.findIndex((t) => t.id === sim.id)
       );
 
-      const sector = sectors.find(s => s.id === user.sectorId);
-      
       return {
         ...user,
         sectorName: sector?.name || 'Não definido',
-        sectorCode: userDevices.map(d => d.internalCode).filter(Boolean).join(', ') || '-',
-        lines: allSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
-        hasLine: allSims.length > 0
+        sectorCode: Array.from(user.assignedSectorCodes).join(', ') || '-',
+        lines: uniqueSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
+        hasLine: uniqueSims.length > 0,
+        isVago: false
       };
-    }).filter(item => {
+    });
+
+    // 5. Combine Users and Vagos
+    const allData = [...formattedUsers, ...unassignedItems];
+
+    // 6. Apply Filters and Sorting
+    return allData.filter(item => {
       if (showOnlyWithLine && !item.hasLine) return false;
-      if (selectedSector && item.sectorId !== selectedSector) return false;
+      if (selectedSector && !item.isVago && item.sectorId !== selectedSector) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         return item.fullName.toLowerCase().includes(term) || 
@@ -55,7 +176,11 @@ const Reports = () => {
       }
       return true;
     }).sort((a, b) => {
+      // Always put "Vago" at the bottom if sorting by name
       if (sortConfig.key === 'name') {
+        if (a.isVago && !b.isVago) return 1;
+        if (!a.isVago && b.isVago) return -1;
+        
         return sortConfig.direction === 'asc' 
           ? a.fullName.localeCompare(b.fullName)
           : b.fullName.localeCompare(a.fullName);
