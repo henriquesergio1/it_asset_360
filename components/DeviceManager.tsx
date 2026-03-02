@@ -801,16 +801,16 @@ const DeviceManager = () => {
                                     </div>
                                     {maintenanceRatio >= 0.6 && <p className="text-[9px] text-red-600 dark:text-red-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Gastos excedem 60% do valor do ativo!</p>}
                                 </div>
-                                <div className={`p-5 rounded-2xl border shadow-xl transition-all ${deviceAgeYears >= 4 ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-900/40' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
+                                <div className={`p-5 rounded-2xl border shadow-xl transition-all ${deviceAgeYears >= 5 ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-900/40' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
                                     <div className="flex justify-between items-start">
-                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 4 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-500'}`}>Tempo de Uso</span>
-                                        {deviceAgeYears >= 4 && <RefreshCw size={16} className="text-orange-500 animate-spin-slow"/>}
+                                        <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 5 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-500'}`}>Tempo de Uso</span>
+                                        {deviceAgeYears >= 5 && <RefreshCw size={16} className="text-orange-500 animate-spin-slow"/>}
                                     </div>
                                     <div className="flex items-baseline gap-2 mt-1">
-                                        <span className={`text-2xl font-black ${deviceAgeYears >= 4 ? 'text-orange-700 dark:text-orange-400' : 'text-slate-900 dark:text-slate-100'}`}>{deviceAgeYears.toFixed(1)} Anos</span>
+                                        <span className={`text-2xl font-black ${deviceAgeYears >= 5 ? 'text-orange-700 dark:text-orange-400' : 'text-slate-900 dark:text-slate-100'}`}>{deviceAgeYears.toFixed(1)} Anos</span>
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mt-2 font-medium italic">Ciclo de vida recomendado: 4 anos.</p>
-                                    {deviceAgeYears >= 4 && <p className="text-[9px] text-orange-600 dark:text-orange-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Ativo atingiu fim do ciclo de vida!</p>}
+                                    <p className="text-[10px] text-slate-400 mt-2 font-medium italic">Ciclo de vida recomendado: 5 anos.</p>
+                                    {deviceAgeYears >= 5 && <p className="text-[9px] text-orange-600 dark:text-orange-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Ativo atingiu fim do ciclo de vida!</p>}
                                 </div>
                             </div>
 
