@@ -28,8 +28,8 @@ const Reports = () => {
       return match ? match[0] : null;
     };
 
-    // 1. Map all users and their expected sector from email
-    const usersMap = new Map(users.map(u => [u.id, {
+    // 1. Map all ACTIVE users and their expected sector from email
+    const usersMap = new Map(users.filter(u => u.active).map(u => [u.id, {
       ...u,
       expectedSectorCode: extractSectorFromEmail(u.email),
       assignedSims: [] as any[],
@@ -291,32 +291,38 @@ const Reports = () => {
             </div>
 
             <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className={`w-8 h-4 rounded-full transition-colors relative ${showEmail ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showEmail ? 'left-4.5' : 'left-0.5'}`}></div>
-                </div>
-                <input type="checkbox" className="hidden" checked={showEmail} onChange={(e) => setShowEmail(e.target.checked)} />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 flex items-center gap-1 uppercase tracking-wider">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                  checked={showEmail} 
+                  onChange={(e) => setShowEmail(e.target.checked)} 
+                />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Exibir E-mail
                 </span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className={`w-8 h-4 rounded-full transition-colors relative ${showOnlyWithLine ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showOnlyWithLine ? 'left-4.5' : 'left-0.5'}`}></div>
-                </div>
-                <input type="checkbox" className="hidden" checked={showOnlyWithLine} onChange={(e) => setShowOnlyWithLine(e.target.checked)} />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 uppercase tracking-wider">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                  checked={showOnlyWithLine} 
+                  onChange={(e) => setShowOnlyWithLine(e.target.checked)} 
+                />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Apenas com linha
                 </span>
               </label>
 
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <div className={`w-8 h-4 rounded-full transition-colors relative ${showVagos ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showVagos ? 'left-4.5' : 'left-0.5'}`}></div>
-                </div>
-                <input type="checkbox" className="hidden" checked={showVagos} onChange={(e) => setShowVagos(e.target.checked)} />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 uppercase tracking-wider">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                  checked={showVagos} 
+                  onChange={(e) => setShowVagos(e.target.checked)} 
+                />
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   Exibir Vagos
                 </span>
               </label>
