@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import * as XLSX from 'xlsx';
 
@@ -9,6 +9,15 @@ const Reports = () => {
   const [selectedSector, setSelectedSector] = useState('');
   const [showEmail, setShowEmail] = useState(true);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(true);
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  const requestSort = (key: 'name' | 'sector' | 'sectorCode') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const reportData = useMemo(() => {
     return users.map(user => {
@@ -30,6 +39,7 @@ const Reports = () => {
       return {
         ...user,
         sectorName: sector?.name || 'Não definido',
+        sectorCode: userDevices.map(d => d.internalCode).filter(Boolean).join(', ') || '-',
         lines: allSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
         hasLine: allSims.length > 0
       };
@@ -40,23 +50,42 @@ const Reports = () => {
         const term = searchTerm.toLowerCase();
         return item.fullName.toLowerCase().includes(term) || 
                item.lines.toLowerCase().includes(term) ||
-               item.email.toLowerCase().includes(term);
+               item.email.toLowerCase().includes(term) ||
+               item.sectorCode.toLowerCase().includes(term);
       }
       return true;
-    }).sort((a, b) => a.fullName.localeCompare(b.fullName));
-  }, [users, sectors, sims, searchTerm, selectedSector, showOnlyWithLine]);
+    }).sort((a, b) => {
+      if (sortConfig.key === 'name') {
+        return sortConfig.direction === 'asc' 
+          ? a.fullName.localeCompare(b.fullName)
+          : b.fullName.localeCompare(a.fullName);
+      }
+      if (sortConfig.key === 'sector') {
+        return sortConfig.direction === 'asc' 
+          ? a.sectorName.localeCompare(b.sectorName)
+          : b.sectorName.localeCompare(a.sectorName);
+      }
+      if (sortConfig.key === 'sectorCode') {
+        return sortConfig.direction === 'asc' 
+          ? a.sectorCode.localeCompare(b.sectorCode)
+          : b.sectorCode.localeCompare(a.sectorCode);
+      }
+      return 0;
+    });
+  }, [users, sectors, sims, devices, searchTerm, selectedSector, showOnlyWithLine, sortConfig]);
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportXLSX = () => {
-    const headers = ['Nome', 'Cargo / Setor', ...(showEmail ? ['E-mail'] : []), 'Linha(s)'];
+    const headers = ['Nome', 'Cargo / Setor', 'Cód. Setor', ...(showEmail ? ['E-mail'] : []), 'Linha(s)'];
     
     const data = reportData.map(item => {
       const row: any = {
         'Nome': item.fullName,
         'Cargo / Setor': item.sectorName,
+        'Cód. Setor': item.sectorCode,
       };
       
       if (showEmail) {
@@ -170,8 +199,24 @@ const Reports = () => {
           <table className="w-full text-sm text-left">
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 tracking-widest border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Colaborador</th>
-                <th className="px-6 py-4">Cargo / Setor</th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('name')}>
+                  <div className="flex items-center gap-2">
+                    Colaborador
+                    <ArrowUpDown size={12} className={sortConfig.key === 'name' ? 'text-blue-500' : 'text-slate-300'} />
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sector')}>
+                  <div className="flex items-center gap-2">
+                    Cargo / Setor
+                    <ArrowUpDown size={12} className={sortConfig.key === 'sector' ? 'text-blue-500' : 'text-slate-300'} />
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sectorCode')}>
+                  <div className="flex items-center gap-2">
+                    Cód. Setor
+                    <ArrowUpDown size={12} className={sortConfig.key === 'sectorCode' ? 'text-blue-500' : 'text-slate-300'} />
+                  </div>
+                </th>
                 {showEmail && <th className="px-6 py-4">E-mail</th>}
                 <th className="px-6 py-4">Linha(s)</th>
               </tr>
@@ -194,6 +239,11 @@ const Reports = () => {
                         {item.sectorName}
                       </span>
                     </td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                        {item.sectorCode}
+                      </span>
+                    </td>
                     {showEmail && (
                       <td className="px-6 py-4">
                         <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs">
@@ -212,7 +262,7 @@ const Reports = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={showEmail ? 4 : 3} className="px-6 py-12 text-center">
+                  <td colSpan={showEmail ? 5 : 4} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
                       <User size={48} className="mb-4 text-slate-300 dark:text-slate-600" />
                       <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Nenhum contato encontrado</p>
