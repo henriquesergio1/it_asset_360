@@ -74,8 +74,12 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   const handleModelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!modelForm.name?.trim() || !modelForm.brandId || !modelForm.typeId) return;
-    if (modelForm.id) updateModel(modelForm as DeviceModel, adminName);
-    else addModel({ ...modelForm, id: Math.random().toString(36).substr(2, 9) } as DeviceModel, adminName);
+    
+    // Ensure we send the image data correctly
+    const modelData = { ...modelForm };
+    
+    if (modelForm.id) updateModel(modelData as DeviceModel, adminName);
+    else addModel({ ...modelData, id: Math.random().toString(36).substr(2, 9) } as DeviceModel, adminName);
     setModelForm({ imageUrl: '' });
   };
 
