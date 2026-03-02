@@ -215,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.4', 
+        version: '2.18.5', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -498,6 +498,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const request = pool.request();
             let columns = [];
             let values = [];
+            const processedKeys = new Set();
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 
@@ -509,6 +510,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
                 else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (processedKeys.has(dbKey)) continue;
+                processedKeys.add(dbKey);
 
                 if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
                     if (isBase64(val)) {
@@ -544,6 +548,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             let diffNotes = [];
             let sets = [];
+            const processedKeys = new Set();
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
 
@@ -555,6 +560,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
                 else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (processedKeys.has(dbKey)) continue;
+                processedKeys.add(dbKey);
 
                 if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
                     if (isBase64(val)) {
