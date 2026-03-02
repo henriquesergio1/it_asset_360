@@ -215,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.3', 
+        version: '2.18.4', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -513,11 +513,11 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
                     if (isBase64(val)) {
                         const buffer = getBufferFromBase64(val);
-                        request.input(dbKey, buffer);
+                        request.input(dbKey, sql.VarBinary, buffer);
                         columns.push(dbKey);
                         values.push('@' + dbKey);
-                    } else if (val === null || val === '') {
-                        request.input(dbKey, null);
+                    } else {
+                        request.input(dbKey, sql.VarBinary, null);
                         columns.push(dbKey);
                         values.push('@' + dbKey);
                     }
@@ -559,10 +559,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
                     if (isBase64(val)) {
                         const buffer = getBufferFromBase64(val);
-                        request.input(dbKey, buffer);
+                        request.input(dbKey, sql.VarBinary, buffer);
                         sets.push(`${dbKey}=@${dbKey}`);
-                    } else if (val === null || val === '') {
-                        request.input(dbKey, null);
+                    } else {
+                        request.input(dbKey, sql.VarBinary, null);
                         sets.push(`${dbKey}=@${dbKey}`);
                     }
                     continue;
