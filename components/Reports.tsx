@@ -9,6 +9,7 @@ const Reports = () => {
   const [selectedSector, setSelectedSector] = useState('');
   const [showEmail, setShowEmail] = useState(true);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(true);
+  const [showVagos, setShowVagos] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   const requestSort = (key: 'name' | 'sector' | 'sectorCode') => {
@@ -69,6 +70,7 @@ const Reports = () => {
                   fullName: 'Vago (Sem Colaborador)',
                   sectorName: 'Dispositivo sem usuário correspondente',
                   sectorCode: deviceSectorCode || '-',
+                  sectorId: linkedDevice.sectorId,
                   email: '-',
                   lines: sim.phoneNumber,
                   hasLine: true,
@@ -87,6 +89,7 @@ const Reports = () => {
               fullName: 'Vago (Usuário não encontrado)',
               sectorName: '-',
               sectorCode: deviceSectorCode || '-',
+              sectorId: linkedDevice.sectorId,
               email: '-',
               lines: sim.phoneNumber,
               hasLine: true,
@@ -100,6 +103,7 @@ const Reports = () => {
             fullName: 'Vago (Dispositivo em Estoque)',
             sectorName: '-',
             sectorCode: deviceSectorCode || '-',
+            sectorId: linkedDevice.sectorId,
             email: '-',
             lines: sim.phoneNumber,
             hasLine: true,
@@ -118,27 +122,15 @@ const Reports = () => {
             fullName: 'Vago (Chip avulso - Usuário não encontrado)',
             sectorName: '-',
             sectorCode: '-',
+            sectorId: null,
             email: '-',
             lines: sim.phoneNumber,
             hasLine: true,
             isVago: true
           });
         }
-      } else {
-        // SIM is completely unassigned (no device, no user)
-        // We only show these if they have a line, but usually they are in stock.
-        // Let's add them as Vago as well.
-        unassignedItems.push({
-          id: `vago-${sim.id}`,
-          fullName: 'Vago (Chip em Estoque)',
-          sectorName: '-',
-          sectorCode: '-',
-          email: '-',
-          lines: sim.phoneNumber,
-          hasLine: true,
-          isVago: true
-        });
       }
+      // REMOVED: Completely unassigned SIMs (no device, no user) are now hidden as requested.
     });
 
     // 4. Format User Data
@@ -166,7 +158,9 @@ const Reports = () => {
     // 6. Apply Filters and Sorting
     return allData.filter(item => {
       if (showOnlyWithLine && !item.hasLine) return false;
-      if (selectedSector && !item.isVago && item.sectorId !== selectedSector) return false;
+      if (!showVagos && item.isVago) return false;
+      if (selectedSector && item.sectorId !== selectedSector) return false;
+      
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         return item.fullName.toLowerCase().includes(term) || 
@@ -296,24 +290,34 @@ const Reports = () => {
               </select>
             </div>
 
-            <div className="flex flex-col justify-center gap-2">
+            <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
               <label className="flex items-center gap-2 cursor-pointer group">
-                <div className={`w-10 h-5 rounded-full transition-colors relative ${showEmail ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${showEmail ? 'left-6' : 'left-1'}`}></div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${showEmail ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showEmail ? 'left-4.5' : 'left-0.5'}`}></div>
                 </div>
                 <input type="checkbox" className="hidden" checked={showEmail} onChange={(e) => setShowEmail(e.target.checked)} />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 flex items-center gap-1">
-                  {showEmail ? <Eye size={14}/> : <EyeOff size={14}/>} Exibir E-mail
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 flex items-center gap-1 uppercase tracking-wider">
+                  Exibir E-mail
                 </span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer group">
-                <div className={`w-10 h-5 rounded-full transition-colors relative ${showOnlyWithLine ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${showOnlyWithLine ? 'left-6' : 'left-1'}`}></div>
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${showOnlyWithLine ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showOnlyWithLine ? 'left-4.5' : 'left-0.5'}`}></div>
                 </div>
                 <input type="checkbox" className="hidden" checked={showOnlyWithLine} onChange={(e) => setShowOnlyWithLine(e.target.checked)} />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200">
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 uppercase tracking-wider">
                   Apenas com linha
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <div className={`w-8 h-4 rounded-full transition-colors relative ${showVagos ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showVagos ? 'left-4.5' : 'left-0.5'}`}></div>
+                </div>
+                <input type="checkbox" className="hidden" checked={showVagos} onChange={(e) => setShowVagos(e.target.checked)} />
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 uppercase tracking-wider">
+                  Exibir Vagos
                 </span>
               </label>
             </div>
