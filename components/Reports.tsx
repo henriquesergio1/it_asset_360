@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
+import * as XLSX from 'xlsx';
 
 const Reports = () => {
-  const { users, sectors, sims } = useData();
+  const { users, sectors, sims, devices } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [showEmail, setShowEmail] = useState(true);
@@ -11,14 +12,26 @@ const Reports = () => {
 
   const reportData = useMemo(() => {
     return users.map(user => {
-      const userSims = sims.filter(s => s.currentUserId === user.id);
+      // Find SIMs directly linked to the user
+      const directSims = sims.filter(s => s.currentUserId === user.id);
+      
+      // Find SIMs linked to devices that are linked to the user
+      const userDevices = devices.filter(d => d.currentUserId === user.id);
+      const indirectSimIds = userDevices.map(d => d.linkedSimId).filter(Boolean);
+      const indirectSims = sims.filter(s => indirectSimIds.includes(s.id));
+      
+      // Combine and deduplicate SIMs
+      const allSims = [...directSims, ...indirectSims].filter((sim, index, self) => 
+        index === self.findIndex((t) => t.id === sim.id)
+      );
+
       const sector = sectors.find(s => s.id === user.sectorId);
       
       return {
         ...user,
         sectorName: sector?.name || 'Não definido',
-        lines: userSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
-        hasLine: userSims.length > 0
+        lines: allSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
+        hasLine: allSims.length > 0
       };
     }).filter(item => {
       if (showOnlyWithLine && !item.hasLine) return false;
@@ -37,23 +50,32 @@ const Reports = () => {
     window.print();
   };
 
-  const handleExportCSV = () => {
+  const handleExportXLSX = () => {
     const headers = ['Nome', 'Cargo / Setor', ...(showEmail ? ['E-mail'] : []), 'Linha(s)'];
-    const csvContent = [
-      headers.join(';'),
-      ...reportData.map(item => [
-        `"${item.fullName}"`,
-        `"${item.sectorName}"`,
-        ...(showEmail ? [`"${item.email}"`] : []),
-        `"${item.lines}"`
-      ].join(';'))
-    ].join('\n');
+    
+    const data = reportData.map(item => {
+      const row: any = {
+        'Nome': item.fullName,
+        'Cargo / Setor': item.sectorName,
+      };
+      
+      if (showEmail) {
+        row['E-mail'] = item.email;
+      }
+      
+      row['Linha(s)'] = item.lines;
+      return row;
+    });
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `relatorio_contatos_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Contatos");
+    
+    // Auto-size columns
+    const colWidths = headers.map(h => ({ wch: Math.max(h.length, 20) }));
+    worksheet['!cols'] = colWidths;
+
+    XLSX.writeFile(workbook, `relatorio_contatos_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
@@ -86,11 +108,11 @@ const Reports = () => {
                 <span className="hidden md:inline">Imprimir</span>
               </button>
               <button 
-                onClick={handleExportCSV}
+                onClick={handleExportXLSX}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
               >
                 <Download size={16} />
-                <span className="hidden md:inline">Exportar CSV</span>
+                <span className="hidden md:inline">Exportar Excel</span>
               </button>
             </div>
           </div>
