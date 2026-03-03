@@ -155,11 +155,18 @@ const SimManager = () => {
     return sortableItems;
   }, [sims, sortConfig]);
 
-  const filteredSims = sortedSims.filter(s => 
-    s.phoneNumber.includes(searchTerm) || 
-    s.iccid.includes(searchTerm) ||
-    s.operator.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSims = sortedSims.filter(s => {
+    const assignedUser = users.find(u => u.id === s.currentUserId);
+    const userName = assignedUser ? assignedUser.fullName.toLowerCase() : '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+        s.phoneNumber.includes(searchTerm) || 
+        s.iccid.includes(searchTerm) ||
+        s.operator.toLowerCase().includes(searchLower) ||
+        userName.includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
