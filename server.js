@@ -274,7 +274,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.11', 
+        version: '2.18.12', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -299,7 +299,13 @@ app.get('/api/bootstrap', async (req, res) => {
             accTypesRes, customFieldsRes, accountsRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
-            pool.request().query("SELECT * FROM SimCards"),
+            pool.request().query(`
+                SELECT 
+                    s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
+                    COALESCE(s.CurrentUserId, d.CurrentUserId) as CurrentUserId
+                FROM SimCards s
+                LEFT JOIN Devices d ON d.LinkedSimId = s.Id
+            `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
@@ -340,7 +346,13 @@ app.get('/api/sync', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
-            pool.request().query("SELECT * FROM SimCards"),
+            pool.request().query(`
+                SELECT 
+                    s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
+                    COALESCE(s.CurrentUserId, d.CurrentUserId) as CurrentUserId
+                FROM SimCards s
+                LEFT JOIN Devices d ON d.LinkedSimId = s.Id
+            `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
