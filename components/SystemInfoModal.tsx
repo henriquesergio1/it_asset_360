@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Correção na Impressão de Termos',
+        changes: [
+            'Termos: Corrigido o campo "Setor" no cabeçalho dos termos de entrega/devolução.',
+            'Termos: Agora o sistema prioriza o código do setor vinculado ao DISPOSITIVO, evitando campos em branco para novos colaboradores ou dados incorretos.',
+            'Versão: Atualizado para v2.18.17.',
+            'Sincronização global para v2.18.17.'
+        ] 
+    },
+    { 
+        version: '2.18.16', 
+        date: 'Hoje',
         title: 'Busca Inteligente & Normalização',
         changes: [
             'Busca: Implementada busca case-insensitive e ignorando acentos em todo o sistema (Colaboradores, Dispositivos, Chips, Contas, Modelos, Relatórios, Logs).',

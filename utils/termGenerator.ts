@@ -124,6 +124,12 @@ export const generateAndPrintTerm = ({
   });
 
   // 1. Tabela do Usuário
+  // Priorizar o código do setor do dispositivo, se disponível
+  let sectorCode = user.internalCode || '-';
+  if ('internalCode' in asset && asset.internalCode) {
+      sectorCode = asset.internalCode;
+  }
+
   const userTable = `
     <table style="width: 100%; font-size: 10.5px; color: #000; border-collapse: collapse;">
         <tr>
@@ -136,7 +142,7 @@ export const generateAndPrintTerm = ({
             <td style="font-weight: bold; padding: 3px 0;">Cargo / Função:</td>
             <td style="padding: 4px 0;">${sectorName || 'Não Informado'}</td>
             <td style="font-weight: bold; padding: 3px 0;">Setor:</td>
-            <td style="padding: 3px 0;">${user.internalCode || '-'}</td>
+            <td style="padding: 3px 0;">${sectorCode}</td>
         </tr>
     </table>
   `;
