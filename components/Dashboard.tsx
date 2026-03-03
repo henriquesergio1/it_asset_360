@@ -210,7 +210,25 @@ const Dashboard = () => {
                       </p>
                       
                       <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[500px] overflow-y-auto pr-2' : 'max-h-[220px] overflow-hidden'}`}>
-                          {visiblePendingTerms.map(({term, user}) => (
+                          {visiblePendingTerms.map(({term, user}) => {
+                              // Tenta extrair identificadores para encontrar o dispositivo e seu código de setor
+                              const tagMatch = term.assetDetails.match(/TAG:\s*([^|\]]+)/);
+                              const snMatch = term.assetDetails.match(/S\/N:\s*([^|\]]+)/);
+                              const imeiMatch = term.assetDetails.match(/IMEI:\s*([^|\]]+)/);
+
+                              const tag = tagMatch ? tagMatch[1].trim() : null;
+                              const sn = snMatch ? snMatch[1].trim() : null;
+                              const imei = imeiMatch ? imeiMatch[1].trim() : null;
+
+                              const foundDevice = devices.find(d => 
+                                  (tag && tag !== 'S/T' && d.assetTag === tag) || 
+                                  (sn && sn !== 'S/N' && d.serialNumber === sn) || 
+                                  (imei && d.imei === imei)
+                              );
+                              
+                              const sectorCode = foundDevice?.internalCode;
+
+                              return (
                               <div key={term.id} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 transition-all">
                                   <div className="flex flex-1 items-center gap-3">
                                       <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
@@ -218,7 +236,10 @@ const Dashboard = () => {
                                       </div>
                                       <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
                                           <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{user.fullName}</p>
-                                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">Setor: {sectors.find(s => s.id === user.sectorId)?.name || 'N/A'}</p>
+                                          <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">
+                                              Setor: {sectors.find(s => s.id === user.sectorId)?.name || 'N/A'}
+                                              {sectorCode && <span className="ml-2 text-slate-500">Código: {sectorCode}</span>}
+                                          </p>
                                           <p className="text-[10px] text-slate-500 italic md:mt-0">{term.assetDetails}</p>
                                       </div>
                                   </div>
@@ -242,7 +263,8 @@ const Dashboard = () => {
                                       </div>
                                   </div>
                               </div>
-                          ))}
+                          );
+                          })}
                       </div>
                       
                       {!isTermsExpanded && pendingTerms.length > 3 && (

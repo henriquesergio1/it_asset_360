@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Dashboard: Código do Setor em Termos Pendentes',
+        changes: [
+            'Dashboard: Adicionado o código do setor do dispositivo na lista de termos pendentes.',
+            'Dashboard: Agora exibe "Setor: [Nome] Código: [Código]" para facilitar a identificação.',
+            'Versão: Atualizado para v2.18.18.',
+            'Sincronização global para v2.18.18.'
+        ] 
+    },
+    { 
+        version: '2.18.17', 
+        date: 'Hoje',
         title: 'Correção na Impressão de Termos',
         changes: [
             'Termos: Corrigido o campo "Setor" no cabeçalho dos termos de entrega/devolução.',
