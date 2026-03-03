@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import * as XLSX from 'xlsx';
+import { normalizeString } from '../utils/stringUtils';
 
 const Reports = () => {
   const { users, sectors, sims, devices } = useData();
@@ -162,11 +163,11 @@ const Reports = () => {
       if (selectedSector && item.sectorId !== selectedSector) return false;
       
       if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        return item.fullName.toLowerCase().includes(term) || 
-               item.lines.toLowerCase().includes(term) ||
-               item.email.toLowerCase().includes(term) ||
-               item.sectorCode.toLowerCase().includes(term);
+        const term = normalizeString(searchTerm);
+        return normalizeString(item.fullName).includes(term) || 
+               normalizeString(item.lines).includes(term) ||
+               normalizeString(item.email).includes(term) ||
+               normalizeString(item.sectorCode).includes(term);
       }
       return true;
     }).sort((a, b) => {

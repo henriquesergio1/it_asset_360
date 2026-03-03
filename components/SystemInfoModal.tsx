@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Busca Inteligente & Normalização',
+        changes: [
+            'Busca: Implementada busca case-insensitive e ignorando acentos em todo o sistema (Colaboradores, Dispositivos, Chips, Contas, Modelos, Relatórios, Logs).',
+            'UX: Melhoria na experiência de busca, permitindo encontrar "André" buscando por "andre" ou "Caçapava" por "cacapava".',
+            'Versão: Atualizado para v2.18.16.',
+            'Sincronização global para v2.18.16.'
+        ] 
+    },
+    { 
+        version: '2.18.15', 
+        date: 'Ontem',
         title: 'Resolução Manual de Pendências',
         changes: [
             'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',

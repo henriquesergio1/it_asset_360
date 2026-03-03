@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
 import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
+import { normalizeString } from '../utils/stringUtils';
 
 type OperationType = 'CHECKOUT' | 'CHECKIN';
 type AssetType = 'Device' | 'Sim';
@@ -39,9 +40,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const searchNormalized = normalizeString(searchTerm);
     const filteredOptions = options.filter(opt => 
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (opt.subLabel && opt.subLabel.toLowerCase().includes(searchTerm.toLowerCase()))
+        normalizeString(opt.label).includes(searchNormalized) || 
+        (opt.subLabel && normalizeString(opt.subLabel).includes(searchNormalized))
     );
 
     const selectedOption = options.find(o => o.value === value);

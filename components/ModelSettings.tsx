@@ -3,6 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { AssetType, DeviceBrand, DeviceModel, AccessoryType, CustomField, UserSector } from '../types';
 import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown, Search, Briefcase } from 'lucide-react';
+import { normalizeString } from '../utils/stringUtils';
 
 interface ModelSettingsProps {
   onClose: () => void;
@@ -41,7 +42,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   
   const filteredModels = models.filter(m => {
       const brand = brands.find(b => b.id === m.brandId)?.name || '';
-      return `${brand} ${m.name}`.toLowerCase().includes(modelSearchTerm.toLowerCase());
+      return normalizeString(`${brand} ${m.name}`).includes(normalizeString(modelSearchTerm));
   }).sort((a, b) => a.name.localeCompare(b.name));
 
   const sortedAccessories = [...accessoryTypes].sort((a, b) => a.name.localeCompare(b.name));

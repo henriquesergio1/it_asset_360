@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
 import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap } from 'lucide-react';
 import DataImporter from './DataImporter';
+import { normalizeString } from '../utils/stringUtils';
 
 const FIELD_LABELS: Record<string, string> = {
     sectorId: 'Setor/Cargo',
@@ -255,7 +256,7 @@ const AdminPanel = () => {
     alert("Templates de Termos salvos!");
   };
 
-  const filteredLogs = logs.filter(l => `${l.adminUser} ${l.targetName} ${l.action} ${l.notes || ''}`.toLowerCase().includes(logSearch.toLowerCase()));
+  const filteredLogs = logs.filter(l => normalizeString(`${l.adminUser} ${l.targetName} ${l.action} ${l.notes || ''}`).includes(normalizeString(logSearch)));
 
   return (
     <div className="space-y-6">

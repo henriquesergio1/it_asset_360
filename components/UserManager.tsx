@@ -6,6 +6,8 @@ import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, Audit
 import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2, ArrowRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 
+import { normalizeString } from '../utils/stringUtils';
+
 const formatCPF = (v: string): string => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.substring(0, 11);
@@ -485,7 +487,7 @@ const UserManager = () => {
   const filteredUsers = sortedUsers.filter(u => {
     if (viewMode === 'ACTIVE' ? !u.active : u.active) return false;
     if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl && !t.hasFile)) return false;
-    return `${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
+    return normalizeString(`${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`).includes(normalizeString(searchTerm));
   });
 
   const totalItems = filteredUsers.length;

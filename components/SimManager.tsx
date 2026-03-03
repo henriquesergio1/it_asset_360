@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SimCard, DeviceStatus } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save, ArrowUp, ArrowDown } from 'lucide-react';
+import { normalizeString } from '../utils/stringUtils';
 
 // Componente divisor para redimensionamento
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
@@ -157,14 +158,14 @@ const SimManager = () => {
 
   const filteredSims = sortedSims.filter(s => {
     const assignedUser = users.find(u => u.id === s.currentUserId);
-    const userName = assignedUser ? assignedUser.fullName.toLowerCase() : '';
-    const searchLower = searchTerm.toLowerCase();
+    const userName = assignedUser ? assignedUser.fullName : '';
+    const searchNormalized = normalizeString(searchTerm);
     
     return (
-        s.phoneNumber.includes(searchTerm) || 
-        s.iccid.includes(searchTerm) ||
-        s.operator.toLowerCase().includes(searchLower) ||
-        userName.includes(searchLower)
+        normalizeString(s.phoneNumber).includes(searchNormalized) || 
+        normalizeString(s.iccid).includes(searchNormalized) ||
+        normalizeString(s.operator).includes(searchNormalized) ||
+        normalizeString(userName).includes(searchNormalized)
     );
   });
 

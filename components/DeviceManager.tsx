@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import ModelSettings from './ModelSettings';
+import { normalizeString } from '../utils/stringUtils';
 
 interface Option {
     value: string;
@@ -36,9 +37,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const searchNormalized = normalizeString(searchTerm);
     const filteredOptions = options.filter(opt => 
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (opt.subLabel && opt.subLabel.toLowerCase().includes(searchTerm.toLowerCase()))
+        normalizeString(opt.label).includes(searchNormalized) || 
+        (opt.subLabel && normalizeString(opt.subLabel).includes(searchNormalized))
     );
 
     const selectedOption = options.find(o => o.value === value);
@@ -566,8 +568,8 @@ const DeviceManager = () => {
     const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
     const userName = users.find(u => u.id === d.currentUserId)?.fullName || '';
     const chipNumber = sims.find(s => s.id === d.linkedSimId)?.phoneNumber || '';
-    const searchString = `${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`.toLowerCase();
-    return searchString.includes(searchTerm.toLowerCase());
+    const searchString = normalizeString(`${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`);
+    return searchString.includes(normalizeString(searchTerm));
   }).sort((a, b) => {
       const modelA = models.find(m => m.id === a.modelId)?.name || '';
       const modelB = models.find(m => m.id === b.modelId)?.name || '';

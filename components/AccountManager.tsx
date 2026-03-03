@@ -4,6 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown } from 'lucide-react';
+import { normalizeString } from '../utils/stringUtils';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
 interface Option {
@@ -36,9 +37,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const searchNormalized = normalizeString(searchTerm);
     const filteredOptions = options.filter(opt => 
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (opt.subLabel && opt.subLabel.toLowerCase().includes(searchTerm.toLowerCase()))
+        normalizeString(opt.label).includes(searchNormalized) || 
+        (opt.subLabel && normalizeString(opt.subLabel).includes(searchNormalized))
     );
 
     const selectedOption = options.find(o => o.value === value);
@@ -267,10 +269,11 @@ const AccountManager = () => {
     }, [accounts, sortConfig, users, devices]);
 
     const filteredAccounts = sortedAccounts.filter(acc => {
-        const matchesSearch = acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            acc.login.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (acc.accessUrl || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (acc.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const searchNormalized = normalizeString(searchTerm);
+        const matchesSearch = normalizeString(acc.name).includes(searchNormalized) ||
+            normalizeString(acc.login).includes(searchNormalized) ||
+            normalizeString(acc.accessUrl || '').includes(searchNormalized) ||
+            normalizeString(acc.notes || '').includes(searchNormalized);
         
         const matchesType = activeFilter === 'ALL' || acc.type === activeFilter;
         
