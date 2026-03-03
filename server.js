@@ -274,7 +274,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.12', 
+        version: '2.18.14', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -763,7 +763,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             }
             
             if (assetType === 'Device' && prev && prev.LinkedSimId) {
-                await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
+                // v2.18.14: Do NOT free the SIM card on device checkin. 
+                // The SIM remains inside the device (Status='Em Uso'), just without a user.
+                // Only free if explicitly unlinked via device edit.
+                // await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("UPDATE SimCards SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Sid");
             }
 
             await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
@@ -793,8 +796,167 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     crud('SoftwareAccounts', 'accounts', 'Account');
     crud('Users', 'users', 'User');
+    // v2.18.14: Custom Device CRUD to handle SIM card status
+    app.post('/api/devices', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const request = pool.request();
+            let columns = [];
+            let values = [];
+            const processedKeys = new Set();
+
+            for (let key in req.body) {
+                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.endsWith('Binary')) continue;
+                
+                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+
+                if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
+                else if (key === 'imageUrl') dbKey = 'ImageBinary';
+                else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
+                else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (processedKeys.has(dbKey)) continue;
+                processedKeys.add(dbKey);
+
+                if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
+                    if (isBase64(val)) {
+                        const buffer = getBufferFromBase64(val);
+                        request.input(dbKey, sql.VarBinary, buffer);
+                        columns.push(dbKey);
+                        values.push('@' + dbKey);
+                    } else {
+                        request.input(dbKey, sql.VarBinary, null);
+                        columns.push(dbKey);
+                        values.push('@' + dbKey);
+                    }
+                    continue;
+                }
+
+                request.input(dbKey, val);
+                columns.push(dbKey);
+                values.push('@' + dbKey);
+            }
+            await request.query(`INSERT INTO Devices (${columns.join(',')}) VALUES (${values.join(',')})`);
+
+            // Handle SIM Card Status
+            if (req.body.linkedSimId) {
+                await pool.request()
+                    .input('Sid', sql.NVarChar, req.body.linkedSimId)
+                    .query("UPDATE SimCards SET Status='Em Uso' WHERE Id=@Sid");
+            }
+
+            const tName = req.body.assetTag || req.body.serialNumber || 'Novo Dispositivo';
+            await logAction(req.body.id, 'Device', 'Criação', req.body._adminUser, tName, 'Dispositivo criado manualmente');
+            res.json({success: true});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.put('/api/devices/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const request = pool.request();
+            
+            // Get previous state to check SIM changes
+            const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT * FROM Devices WHERE Id=@Id");
+            const prev = oldRes.recordset[0];
+            
+            let diffNotes = [];
+            let sets = [];
+            const processedKeys = new Set();
+
+            for (let key in req.body) {
+                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.endsWith('Binary')) continue;
+
+                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+
+                if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
+                else if (key === 'imageUrl') dbKey = 'ImageBinary';
+                else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
+                else if (key === 'fileUrl') dbKey = 'FileBinary';
+
+                if (processedKeys.has(dbKey)) continue;
+                processedKeys.add(dbKey);
+
+                if (['PurchaseInvoiceBinary', 'ImageBinary', 'InvoiceBinary', 'FileBinary'].includes(dbKey)) {
+                    if (isBase64(val)) {
+                        const buffer = getBufferFromBase64(val);
+                        request.input(dbKey, sql.VarBinary, buffer);
+                        sets.push(`${dbKey}=@${dbKey}`);
+                    } else {
+                        request.input(dbKey, sql.VarBinary, null);
+                        sets.push(`${dbKey}=@${dbKey}`);
+                    }
+                    continue;
+                }
+
+                request.input(dbKey, val);
+                sets.push(`${dbKey}=@${dbKey}`);
+
+                if (prev) {
+                    let oldVal = prev[dbKey];
+                    let newVal = req.body[key];
+                    if (key === 'customData' || key === 'customFieldIds') newVal = JSON.stringify(newVal);
+                    
+                    if (String(oldVal || '') !== String(newVal || '')) {
+                        diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);
+                    }
+                }
+            }
+            request.input('TargetId', req.params.id);
+            await request.query(`UPDATE Devices SET ${sets.join(',')} WHERE Id=@TargetId`);
+            
+            // Handle SIM Card Changes
+            const oldSimId = prev?.LinkedSimId;
+            const newSimId = req.body.linkedSimId;
+
+            if (oldSimId !== newSimId) {
+                // If SIM was removed or changed, free the old one
+                if (oldSimId) {
+                    await pool.request()
+                        .input('Sid', sql.NVarChar, oldSimId)
+                        .query("UPDATE SimCards SET Status='Disponível' WHERE Id=@Sid");
+                }
+                // If SIM was added or changed, occupy the new one
+                if (newSimId) {
+                    await pool.request()
+                        .input('Sid', sql.NVarChar, newSimId)
+                        .query("UPDATE SimCards SET Status='Em Uso' WHERE Id=@Sid");
+                }
+            }
+
+            const richNotes = (req.body._notes || req.body._reason ? `Motivo: ${req.body._notes || req.body._reason}\n\n` : '') + diffNotes.join('\n');
+            const tName = req.body.assetTag || req.body.serialNumber || 'Dispositivo';
+            
+            await logAction(req.params.id, 'Device', 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body);
+            res.json({success: true});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.delete('/api/devices/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            
+            // Check for linked SIM before delete
+            const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT LinkedSimId FROM Devices WHERE Id=@Id");
+            const device = oldRes.recordset[0];
+
+            if (device && device.LinkedSimId) {
+                await pool.request()
+                    .input('Sid', sql.NVarChar, device.LinkedSimId)
+                    .query("UPDATE SimCards SET Status='Disponível' WHERE Id=@Sid");
+            }
+
+            await pool.request().input('Id', req.params.id).query("DELETE FROM Devices WHERE Id=@Id");
+            res.json({success: true});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
     crud('SimCards', 'sims', 'Sim');
-    crud('Devices', 'devices', 'Device');
+    // crud('Devices', 'devices', 'Device'); // Replaced by custom handlers above
 
     // --- Admin Tools ---
     app.post('/api/admin/fix-sim-status', async (req, res) => {

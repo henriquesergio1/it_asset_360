@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SimCard, DeviceStatus } from '../types';
@@ -16,6 +17,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 const SimManager = () => {
   const { sims, addSim, updateSim, deleteSim, users } = useData();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
@@ -239,7 +241,15 @@ const SimManager = () => {
                     </td>
                     <td className="px-6 py-4 truncate">
                       {assignedUser ? (
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300 truncate block">{assignedUser.fullName}</span>
+                          <span 
+                            className="text-xs font-bold text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300 truncate block"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/users?userId=${assignedUser.id}`);
+                            }}
+                          >
+                            {assignedUser.fullName}
+                          </span>
                       ) : <span className="text-gray-300 dark:text-slate-700 font-bold text-[10px] uppercase tracking-wider italic">Disponível</span>}
                     </td>
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
