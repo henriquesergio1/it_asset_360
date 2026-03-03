@@ -215,7 +215,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.9', 
+        version: '2.18.10', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -724,6 +724,67 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     crud('Users', 'users', 'User');
     crud('SimCards', 'sims', 'Sim');
     crud('Devices', 'devices', 'Device');
+
+    // --- Admin Tools ---
+    app.post('/api/admin/fix-sim-status', async (req, res) => {
+        try {
+            const adminUser = req.body._adminUser || 'System';
+            const pool = await sql.connect(dbConfig);
+            
+            // 1. Get all devices with linked SIMs
+            const devicesRes = await pool.request().query("SELECT LinkedSimId FROM Devices WHERE LinkedSimId IS NOT NULL AND Status != 'Descartado'");
+            const devices = devicesRes.recordset;
+
+            // 2. Get all SIMs assigned directly to users
+            const assignedSimsRes = await pool.request().query("SELECT Id FROM SimCards WHERE CurrentUserId IS NOT NULL AND Status != 'Descartado'");
+            const assignedSims = assignedSimsRes.recordset;
+
+            const inUseSimIds = new Set([
+                ...devices.map(d => d.LinkedSimId),
+                ...assignedSims.map(s => s.Id)
+            ]);
+
+            // 3. Get all SIMs to check status
+            const allSimsRes = await pool.request().query("SELECT Id, Status FROM SimCards");
+            const allSims = allSimsRes.recordset;
+
+            let updatedCount = 0;
+            const updates = [];
+
+            for (const sim of allSims) {
+                // Skip if Retired or Maintenance (manual states)
+                if (sim.Status === 'Descartado' || sim.Status === 'Manutenção') continue;
+
+                const shouldBeInUse = inUseSimIds.has(sim.Id);
+                const currentStatus = sim.Status;
+
+                if (shouldBeInUse && currentStatus !== 'Em Uso') {
+                    updates.push(
+                        pool.request()
+                            .input('Id', sql.NVarChar, sim.Id)
+                            .query("UPDATE SimCards SET Status='Em Uso' WHERE Id=@Id")
+                            .then(() => logAction(sim.Id, 'Sim', 'Atualização', adminUser, 'Correção Automática', 'Status alterado para Em Uso (Vinculado a dispositivo/usuário)'))
+                    );
+                    updatedCount++;
+                } else if (!shouldBeInUse && currentStatus === 'Em Uso') {
+                    updates.push(
+                        pool.request()
+                            .input('Id', sql.NVarChar, sim.Id)
+                            .query("UPDATE SimCards SET Status='Disponível' WHERE Id=@Id")
+                            .then(() => logAction(sim.Id, 'Sim', 'Atualização', adminUser, 'Correção Automática', 'Status alterado para Disponível (Sem vínculos)'))
+                    );
+                    updatedCount++;
+                }
+            }
+
+            await Promise.all(updates);
+            
+            res.json({ success: true, message: `Correção concluída. ${updatedCount} SIM cards atualizados.` });
+        } catch (error) {
+            console.error('Error fixing SIM status:', error);
+            res.status(500).json({ error: 'Failed to fix SIM status' });
+        }
+    });
 
     // --- EXTERNAL ERP INTEGRATION ---
     app.get('/api/admin/external-db/config', async (req, res) => {
