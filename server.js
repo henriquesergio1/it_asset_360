@@ -207,7 +207,66 @@ async function initializeDatabase() {
     }
 }
 
+async function fixSimStatus() {
+    try {
+        const pool = await sql.connect(dbConfig);
+        console.log('Verificando consistência de status de SIM Cards...');
+
+        // 1. Get all devices with linked SIMs
+        const devicesRes = await pool.request().query("SELECT LinkedSimId FROM Devices WHERE LinkedSimId IS NOT NULL AND Status != 'Descartado'");
+        const devices = devicesRes.recordset;
+
+        // 2. Get all SIMs assigned directly to users
+        const assignedSimsRes = await pool.request().query("SELECT Id FROM SimCards WHERE CurrentUserId IS NOT NULL AND Status != 'Descartado'");
+        const assignedSims = assignedSimsRes.recordset;
+
+        const inUseSimIds = new Set([
+            ...devices.map(d => d.LinkedSimId),
+            ...assignedSims.map(s => s.Id)
+        ]);
+
+        // 3. Get all SIMs to check status
+        const allSimsRes = await pool.request().query("SELECT Id, Status FROM SimCards");
+        const allSims = allSimsRes.recordset;
+
+        let updatedCount = 0;
+        const updates = [];
+
+        for (const sim of allSims) {
+            // Skip if Retired or Maintenance (manual states)
+            if (sim.Status === 'Descartado' || sim.Status === 'Manutenção') continue;
+
+            const shouldBeInUse = inUseSimIds.has(sim.Id);
+            const currentStatus = sim.Status;
+
+            if (shouldBeInUse && currentStatus !== 'Em Uso') {
+                updates.push(
+                    pool.request()
+                        .input('Id', sql.NVarChar, sim.Id)
+                        .query("UPDATE SimCards SET Status='Em Uso' WHERE Id=@Id")
+                );
+                updatedCount++;
+            } else if (!shouldBeInUse && currentStatus === 'Em Uso') {
+                updates.push(
+                    pool.request()
+                        .input('Id', sql.NVarChar, sim.Id)
+                        .query("UPDATE SimCards SET Status='Disponível' WHERE Id=@Id")
+                );
+                updatedCount++;
+            }
+        }
+
+        await Promise.all(updates);
+        console.log(`Correção de SIM Cards concluída. ${updatedCount} registros atualizados.`);
+    } catch (err) {
+        console.error('Erro ao corrigir status de SIM Cards:', err);
+    }
+}
+
 async function startServer() {
+    await initializeDatabase();
+    await fixSimStatus(); // Run fix on startup
+
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
 
@@ -215,7 +274,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.10', 
+        version: '2.18.11', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
