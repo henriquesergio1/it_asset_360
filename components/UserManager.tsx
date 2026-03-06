@@ -614,8 +614,16 @@ const UserManager = () => {
                 {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
                 {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p></div></div><div className="flex items-center gap-2">
   {term.isManual ? (
-    <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 flex items-center gap-2" title={term.resolutionReason}>
-      <Info size={14}/> Resolvido Manualmente
+    <div className="flex items-center gap-2">
+      <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 flex items-center gap-2" title={term.resolutionReason}>
+        <Info size={14}/> Resolvido Manualmente
+      </div>
+      {!isViewOnly && (
+        <label className="cursor-pointer bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-800 transition-all flex items-center justify-center" title="Substituir por arquivo digitalizado">
+          <Upload size={14}/>
+          <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
+        </label>
+      )}
     </div>
   ) : (term.fileUrl || term.hasFile) ? (
     <>

@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Substituição de Termos Manuais',
+        changes: [
+            'Termos: Agora é possível anexar um arquivo digitalizado mesmo em termos que foram "Resolvidos Manualmente".',
+            'Termos: Ao fazer o upload, a marcação de "Resolvido Manualmente" é removida e o termo passa a constar como digitalizado.',
+            'Versão: Atualizado para v2.18.19.',
+            'Sincronização global para v2.18.19.'
+        ] 
+    },
+    { 
+        version: '2.18.18', 
+        date: 'Hoje',
         title: 'Dashboard: Código do Setor em Termos Pendentes',
         changes: [
             'Dashboard: Adicionado o código do setor do dispositivo na lista de termos pendentes.',

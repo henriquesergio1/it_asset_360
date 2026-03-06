@@ -416,7 +416,7 @@ app.put('/api/terms/file/:id', async (req, res) => {
         await pool.request()
             .input('Id', sql.NVarChar, req.params.id)
             .input('Bin', buffer)
-            .query("UPDATE Terms SET FileBinary=@Bin WHERE Id=@Id");
+            .query("UPDATE Terms SET FileBinary=@Bin, IsManual=0, ResolutionReason=NULL WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
