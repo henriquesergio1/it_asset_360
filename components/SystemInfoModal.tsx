@@ -11,6 +11,30 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Relatório de Colaboradores Personalizável',
+        changes: [
+            'Relatórios: Adicionado seletor de colunas para personalizar a visualização e exportação do relatório.',
+            'Relatórios: Agora é possível escolher exibir ou ocultar: Cargo/Setor, Cód. Setor, E-mail, Linha(s) e ID Pulsus.',
+            'Relatórios: A exportação para Excel respeita exatamente as colunas selecionadas em tela.',
+            'Versão: Atualizado para v2.18.21.',
+            'Sincronização global para v2.18.21.'
+        ] 
+    },
+    { 
+        version: '2.18.20', 
+        date: 'Hoje',
+        title: 'Relatório de Colaboradores e Pulsus ID',
+        changes: [
+            'Relatórios: O antigo relatório "Lista de Contatos" foi aprimorado e renomeado para "Relatório de Colaboradores".',
+            'Relatórios: Adicionada a opção de exibir a coluna "ID Pulsus", que busca o ID do dispositivo vinculado ao colaborador.',
+            'Relatórios: O filtro "Apenas com linha" agora vem desmarcado por padrão para facilitar a visualização de todos os colaboradores.',
+            'Versão: Atualizado para v2.18.20.',
+            'Sincronização global para v2.18.20.'
+        ] 
+    },
+    { 
+        version: '2.18.19', 
+        date: 'Hoje',
         title: 'Substituição de Termos Manuais',
         changes: [
             'Termos: Agora é possível anexar um arquivo digitalizado mesmo em termos que foram "Resolvidos Manualmente".',

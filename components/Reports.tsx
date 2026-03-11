@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import * as XLSX from 'xlsx';
 import { normalizeString } from '../utils/stringUtils';
@@ -8,12 +8,35 @@ const Reports = () => {
   const { users, sectors, sims, devices } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
-  const [showEmail, setShowEmail] = useState(true);
-  const [showOnlyWithLine, setShowOnlyWithLine] = useState(true);
+  const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
   const [showVagos, setShowVagos] = useState(true);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode' | 'pulsusId', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
-  const requestSort = (key: 'name' | 'sector' | 'sectorCode') => {
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['sector', 'sectorCode', 'email', 'lines', 'pulsusId']);
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const columnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+        if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleColumn = (id: string) => {
+      setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const COLUMN_OPTIONS = [
+      { id: 'sector', label: 'Cargo / Setor' },
+      { id: 'sectorCode', label: 'Cód. Setor' },
+      { id: 'email', label: 'E-mail' },
+      { id: 'lines', label: 'Linha(s)' },
+      { id: 'pulsusId', label: 'ID Pulsus' }
+  ];
+
+  const requestSort = (key: 'name' | 'sector' | 'sectorCode' | 'pulsusId') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -34,11 +57,35 @@ const Reports = () => {
       ...u,
       expectedSectorCode: extractSectorFromEmail(u.email),
       assignedSims: [] as any[],
-      assignedSectorCodes: new Set<string>()
+      assignedSectorCodes: new Set<string>(),
+      assignedPulsusIds: new Set<string>()
     }]));
 
     // 2. Create a list for "Vago" (unassigned) items
     const unassignedItems: any[] = [];
+
+    // 2.5 Process all devices to get sector codes and pulsus IDs for users
+    devices.forEach(device => {
+      if (device.currentUserId) {
+        const user = usersMap.get(device.currentUserId);
+        if (user) {
+          const userDevices = devices.filter(d => d.currentUserId === user.id);
+          const uniqueDeviceCodes = new Set(userDevices.map(d => d.internalCode).filter(Boolean));
+          
+          let isVago = false;
+          if (uniqueDeviceCodes.size > 1 && user.expectedSectorCode) {
+            if (device.internalCode && !device.internalCode.includes(user.expectedSectorCode)) {
+              isVago = true;
+            }
+          }
+          
+          if (!isVago) {
+            if (device.internalCode) user.assignedSectorCodes.add(device.internalCode);
+            if (device.pulsusId) user.assignedPulsusIds.add(device.pulsusId);
+          }
+        }
+      }
+    });
 
     // 3. Process all SIMs
     sims.forEach(sim => {
@@ -47,6 +94,7 @@ const Reports = () => {
       
       if (linkedDevice) {
         const deviceSectorCode = linkedDevice.internalCode || '';
+        const devicePulsusId = linkedDevice.pulsusId || '';
         
         if (linkedDevice.currentUserId) {
           const user = usersMap.get(linkedDevice.currentUserId);
@@ -57,13 +105,8 @@ const Reports = () => {
             
             // If user has multiple different codes, try to match with email
             if (uniqueDeviceCodes.size > 1 && user.expectedSectorCode) {
-              // Does this device's code match the email?
-              // Or if the device has no code, we can't match it, so we might just assign it anyway or leave it.
-              // Let's say if it matches the email, it goes to the user.
-              // If it DOES NOT match the email, it goes to "Vago".
               if (deviceSectorCode && deviceSectorCode.includes(user.expectedSectorCode)) {
                 user.assignedSims.push(sim);
-                if (deviceSectorCode) user.assignedSectorCodes.add(deviceSectorCode);
               } else {
                 // Doesn't match email -> Vago
                 unassignedItems.push({
@@ -71,6 +114,7 @@ const Reports = () => {
                   fullName: 'Vago (Sem Colaborador)',
                   sectorName: 'Dispositivo sem usuário correspondente',
                   sectorCode: deviceSectorCode || '-',
+                  pulsusId: devicePulsusId || '-',
                   sectorId: linkedDevice.sectorId,
                   email: '-',
                   lines: sim.phoneNumber,
@@ -81,7 +125,6 @@ const Reports = () => {
             } else {
               // User has only 1 code (or none), or no expected code from email -> assign to user normally
               user.assignedSims.push(sim);
-              if (deviceSectorCode) user.assignedSectorCodes.add(deviceSectorCode);
             }
           } else {
             // Device has a userId but user not found in DB -> Vago
@@ -90,6 +133,7 @@ const Reports = () => {
               fullName: 'Vago (Usuário não encontrado)',
               sectorName: '-',
               sectorCode: deviceSectorCode || '-',
+              pulsusId: devicePulsusId || '-',
               sectorId: linkedDevice.sectorId,
               email: '-',
               lines: sim.phoneNumber,
@@ -104,6 +148,7 @@ const Reports = () => {
             fullName: 'Vago (Dispositivo em Estoque)',
             sectorName: '-',
             sectorCode: deviceSectorCode || '-',
+            pulsusId: devicePulsusId || '-',
             sectorId: linkedDevice.sectorId,
             email: '-',
             lines: sim.phoneNumber,
@@ -123,6 +168,7 @@ const Reports = () => {
             fullName: 'Vago (Chip avulso - Usuário não encontrado)',
             sectorName: '-',
             sectorCode: '-',
+            pulsusId: '-',
             sectorId: null,
             email: '-',
             lines: sim.phoneNumber,
@@ -131,7 +177,6 @@ const Reports = () => {
           });
         }
       }
-      // REMOVED: Completely unassigned SIMs (no device, no user) are now hidden as requested.
     });
 
     // 4. Format User Data
@@ -147,6 +192,7 @@ const Reports = () => {
         ...user,
         sectorName: sector?.name || 'Não definido',
         sectorCode: Array.from(user.assignedSectorCodes).join(', ') || '-',
+        pulsusId: Array.from(user.assignedPulsusIds).join(', ') || '-',
         lines: uniqueSims.map(s => s.phoneNumber).join(', ') || 'Sem linha',
         hasLine: uniqueSims.length > 0,
         isVago: false
@@ -167,7 +213,8 @@ const Reports = () => {
         return normalizeString(item.fullName).includes(term) || 
                normalizeString(item.lines).includes(term) ||
                normalizeString(item.email).includes(term) ||
-               normalizeString(item.sectorCode).includes(term);
+               normalizeString(item.sectorCode).includes(term) ||
+               normalizeString(item.pulsusId).includes(term);
       }
       return true;
     }).sort((a, b) => {
@@ -190,41 +237,46 @@ const Reports = () => {
           ? a.sectorCode.localeCompare(b.sectorCode)
           : b.sectorCode.localeCompare(a.sectorCode);
       }
+      if (sortConfig.key === 'pulsusId') {
+        return sortConfig.direction === 'asc' 
+          ? a.pulsusId.localeCompare(b.pulsusId)
+          : b.pulsusId.localeCompare(a.pulsusId);
+      }
       return 0;
     });
-  }, [users, sectors, sims, devices, searchTerm, selectedSector, showOnlyWithLine, sortConfig]);
+  }, [users, sectors, sims, devices, searchTerm, selectedSector, showOnlyWithLine, showVagos, sortConfig]);
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleExportXLSX = () => {
-    const headers = ['Nome', 'Cargo / Setor', 'Cód. Setor', ...(showEmail ? ['E-mail'] : []), 'Linha(s)'];
+    const headers = ['Nome'];
+    if (visibleColumns.includes('sector')) headers.push('Cargo / Setor');
+    if (visibleColumns.includes('sectorCode')) headers.push('Cód. Setor');
+    if (visibleColumns.includes('email')) headers.push('E-mail');
+    if (visibleColumns.includes('lines')) headers.push('Linha(s)');
+    if (visibleColumns.includes('pulsusId')) headers.push('ID Pulsus');
     
     const data = reportData.map(item => {
-      const row: any = {
-        'Nome': item.fullName,
-        'Cargo / Setor': item.sectorName,
-        'Cód. Setor': item.sectorCode,
-      };
-      
-      if (showEmail) {
-        row['E-mail'] = item.email;
-      }
-      
-      row['Linha(s)'] = item.lines;
+      const row: any = { 'Nome': item.fullName };
+      if (visibleColumns.includes('sector')) row['Cargo / Setor'] = item.sectorName;
+      if (visibleColumns.includes('sectorCode')) row['Cód. Setor'] = item.sectorCode;
+      if (visibleColumns.includes('email')) row['E-mail'] = item.email;
+      if (visibleColumns.includes('lines')) row['Linha(s)'] = item.lines;
+      if (visibleColumns.includes('pulsusId')) row['ID Pulsus'] = item.pulsusId;
       return row;
     });
 
     const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Contatos");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
     
     // Auto-size columns
     const colWidths = headers.map(h => ({ wch: Math.max(h.length, 20) }));
     worksheet['!cols'] = colWidths;
 
-    XLSX.writeFile(workbook, `relatorio_contatos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `relatorio_colaboradores_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
@@ -245,10 +297,31 @@ const Reports = () => {
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Lista de Contatos</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Relação de colaboradores e suas respectivas linhas telefônicas.</p>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Relatório de Colaboradores</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Relação personalizável de colaboradores, linhas telefônicas e dispositivos.</p>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative" ref={columnRef}>
+                  <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-bold text-sm transition-all">
+                      <SlidersHorizontal size={16} /> <span className="hidden md:inline">Colunas</span>
+                  </button>
+                  {isColumnSelectorOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                          <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span>
+                              <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                          </div>
+                          <div className="p-2 space-y-1">
+                              {COLUMN_OPTIONS.map(col => (
+                                  <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                      {col.label}
+                                      {visibleColumns.includes(col.id) && <Check size={14}/>}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  )}
+              </div>
               <button 
                 onClick={handlePrint}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -271,7 +344,7 @@ const Reports = () => {
               <Search className="absolute left-3 top-3 text-slate-400" size={18} />
               <input
                 type="text"
-                placeholder="Buscar por nome, e-mail ou linha..."
+                placeholder="Buscar por nome, e-mail, linha ou ID Pulsus..."
                 className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 transition-all"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -292,41 +365,31 @@ const Reports = () => {
             </div>
 
             <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                  checked={showEmail} 
-                  onChange={(e) => setShowEmail(e.target.checked)} 
-                />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Exibir E-mail
-                </span>
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                    checked={showOnlyWithLine} 
+                    onChange={(e) => setShowOnlyWithLine(e.target.checked)} 
+                  />
+                  <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    Com linha
+                  </span>
+                </label>
 
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                  checked={showOnlyWithLine} 
-                  onChange={(e) => setShowOnlyWithLine(e.target.checked)} 
-                />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Apenas com linha
-                </span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
-                  checked={showVagos} 
-                  onChange={(e) => setShowVagos(e.target.checked)} 
-                />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Exibir Vagos
-                </span>
-              </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-gray-300 dark:border-slate-600 dark:bg-slate-700"
+                    checked={showVagos} 
+                    onChange={(e) => setShowVagos(e.target.checked)} 
+                  />
+                  <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                    Vagos
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -341,20 +404,32 @@ const Reports = () => {
                     <ArrowUpDown size={12} className={sortConfig.key === 'name' ? 'text-blue-500' : 'text-slate-300'} />
                   </div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sector')}>
-                  <div className="flex items-center gap-2">
-                    Cargo / Setor
-                    <ArrowUpDown size={12} className={sortConfig.key === 'sector' ? 'text-blue-500' : 'text-slate-300'} />
-                  </div>
-                </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sectorCode')}>
-                  <div className="flex items-center gap-2">
-                    Cód. Setor
-                    <ArrowUpDown size={12} className={sortConfig.key === 'sectorCode' ? 'text-blue-500' : 'text-slate-300'} />
-                  </div>
-                </th>
-                {showEmail && <th className="px-6 py-4">E-mail</th>}
-                <th className="px-6 py-4">Linha(s)</th>
+                {visibleColumns.includes('sector') && (
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sector')}>
+                    <div className="flex items-center gap-2">
+                      Cargo / Setor
+                      <ArrowUpDown size={12} className={sortConfig.key === 'sector' ? 'text-blue-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('sectorCode') && (
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('sectorCode')}>
+                    <div className="flex items-center gap-2">
+                      Cód. Setor
+                      <ArrowUpDown size={12} className={sortConfig.key === 'sectorCode' ? 'text-blue-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
+                )}
+                {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
+                {visibleColumns.includes('lines') && <th className="px-6 py-4">Linha(s)</th>}
+                {visibleColumns.includes('pulsusId') && (
+                  <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('pulsusId')}>
+                    <div className="flex items-center gap-2">
+                      ID Pulsus
+                      <ArrowUpDown size={12} className={sortConfig.key === 'pulsusId' ? 'text-blue-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -369,18 +444,22 @@ const Reports = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-100">{item.fullName}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium">
-                        <Briefcase size={12} className="text-slate-400" />
-                        {item.sectorName}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
-                        {item.sectorCode}
-                      </span>
-                    </td>
-                    {showEmail && (
+                    {visibleColumns.includes('sector') && (
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium">
+                          <Briefcase size={12} className="text-slate-400" />
+                          {item.sectorName}
+                        </span>
+                      </td>
+                    )}
+                    {visibleColumns.includes('sectorCode') && (
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                          {item.sectorCode}
+                        </span>
+                      </td>
+                    )}
+                    {visibleColumns.includes('email') && (
                       <td className="px-6 py-4">
                         <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs">
                           <Mail size={14} className="text-slate-400" />
@@ -388,17 +467,27 @@ const Reports = () => {
                         </span>
                       </td>
                     )}
-                    <td className="px-6 py-4">
-                      <span className={`flex items-center gap-2 text-xs font-bold ${item.hasLine ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                        <Phone size={14} className={item.hasLine ? 'text-emerald-500' : 'text-slate-300'} />
-                        {item.lines}
-                      </span>
-                    </td>
+                    {visibleColumns.includes('lines') && (
+                      <td className="px-6 py-4">
+                        <span className={`flex items-center gap-2 text-xs font-bold ${item.hasLine ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                          <Phone size={14} className={item.hasLine ? 'text-emerald-500' : 'text-slate-300'} />
+                          {item.lines}
+                        </span>
+                      </td>
+                    )}
+                    {visibleColumns.includes('pulsusId') && (
+                      <td className="px-6 py-4">
+                        <span className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                          <ShieldCheck size={14} className="text-indigo-400" />
+                          {item.pulsusId}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={showEmail ? 5 : 4} className="px-6 py-12 text-center">
+                  <td colSpan={1 + visibleColumns.length} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
                       <User size={48} className="mb-4 text-slate-300 dark:text-slate-600" />
                       <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Nenhum contato encontrado</p>
@@ -459,6 +548,9 @@ const Reports = () => {
           .text-emerald-500 {
             color: #10b981 !important;
           }
+          .text-indigo-600, .dark\\:text-indigo-400 {
+            color: #4f46e5 !important;
+          }
           .print\\:hidden {
             display: none !important;
           }
@@ -491,7 +583,7 @@ const Reports = () => {
           
           /* Add a print header */
           .space-y-6 > div:nth-child(2)::before {
-            content: "Relatório: Lista de Contatos";
+            content: "Relatório de Colaboradores";
             display: block;
             font-size: 24px;
             font-weight: bold;
@@ -506,3 +598,4 @@ const Reports = () => {
 };
 
 export default Reports;
+
