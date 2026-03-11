@@ -7,7 +7,7 @@ import { normalizeString } from '../utils/stringUtils';
 const Reports = () => {
   const { users, sectors, sims, devices, models, assetTypes } = useData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSector, setSelectedSector] = useState('');
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
   const [showVagos, setShowVagos] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode' | 'pulsusId', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
@@ -20,6 +20,9 @@ const Reports = () => {
   const [hasInitializedAssetTypes, setHasInitializedAssetTypes] = useState(false);
   const [isAssetTypeSelectorOpen, setIsAssetTypeSelectorOpen] = useState(false);
   const assetTypeRef = useRef<HTMLDivElement>(null);
+
+  const [isSectorSelectorOpen, setIsSectorSelectorOpen] = useState(false);
+  const sectorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (assetTypes.length > 0 && !hasInitializedAssetTypes) {
@@ -35,6 +38,7 @@ const Reports = () => {
     const handleClickOutside = (e: MouseEvent) => {
         if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
         if (assetTypeRef.current && !assetTypeRef.current.contains(e.target as Node)) setIsAssetTypeSelectorOpen(false);
+        if (sectorRef.current && !sectorRef.current.contains(e.target as Node)) setIsSectorSelectorOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -46,6 +50,10 @@ const Reports = () => {
 
   const toggleAssetType = (id: string) => {
       setSelectedAssetTypes(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  };
+
+  const toggleSector = (id: string) => {
+      setSelectedSectors(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
   };
 
   const COLUMN_OPTIONS = [
@@ -246,7 +254,7 @@ const Reports = () => {
     return allData.filter(item => {
       if (showOnlyWithLine && !item.hasLine) return false;
       if (!showVagos && item.isVago) return false;
-      if (selectedSector && item.sectorId !== selectedSector) return false;
+      if (selectedSectors.length > 0 && (!item.sectorId || !selectedSectors.includes(item.sectorId))) return false;
       
       if (searchTerm) {
         const term = normalizeString(searchTerm);
@@ -284,7 +292,7 @@ const Reports = () => {
       }
       return 0;
     });
-  }, [users, sectors, sims, devices, models, selectedAssetTypes, searchTerm, selectedSector, showOnlyWithLine, showVagos, sortConfig]);
+  }, [users, sectors, sims, devices, models, selectedAssetTypes, searchTerm, selectedSectors, showOnlyWithLine, showVagos, sortConfig]);
 
   const handlePrint = () => {
     window.print();
@@ -412,17 +420,39 @@ const Reports = () => {
               />
             </div>
             
-            <div>
-              <select
-                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 transition-all font-medium"
-                value={selectedSector}
-                onChange={(e) => setSelectedSector(e.target.value)}
+            <div className="relative" ref={sectorRef}>
+              <button 
+                onClick={() => setIsSectorSelectorOpen(!isSectorSelectorOpen)} 
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-100 transition-all font-medium"
               >
-                <option value="">Todos os Cargos / Setores</option>
-                {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                <span className="truncate">
+                  {selectedSectors.length === 0 
+                    ? 'Todos os Cargos / Setores' 
+                    : `${selectedSectors.length} selecionado(s)`}
+                </span>
+                <SlidersHorizontal size={16} className="text-slate-400" />
+              </button>
+              
+              {isSectorSelectorOpen && (
+                <div className="absolute left-0 mt-2 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                  <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-slate-500">Filtrar por Setor</span>
+                    <button onClick={() => setIsSectorSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                  </div>
+                  <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
+                    {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => (
+                      <button 
+                        key={s.id} 
+                        onClick={() => toggleSector(s.id)} 
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedSectors.includes(s.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                      >
+                        <span className="truncate text-left">{s.name}</span>
+                        {selectedSectors.includes(s.id) && <Check size={14} className="flex-shrink-0 ml-2"/>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">

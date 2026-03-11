@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Filtro de Múltiplos Setores',
+        changes: [
+            'Relatórios: O filtro de Cargos/Setores agora permite a seleção múltipla.',
+            'Relatórios: Interface do filtro atualizada para um dropdown com checkboxes, padronizando com o filtro de Tipos de Dispositivo.',
+            'Versão: Atualizado para v2.18.23.',
+            'Sincronização global para v2.18.23.'
+        ] 
+    },
+    { 
+        version: '2.18.22', 
+        date: 'Hoje',
         title: 'Filtro de Tipo de Dispositivo no Relatório',
         changes: [
             'Relatórios: Adicionado filtro por Tipo de Dispositivo no Relatório de Colaboradores.',
