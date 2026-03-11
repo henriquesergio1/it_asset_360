@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import * as XLSX from 'xlsx';
 import { normalizeString } from '../utils/stringUtils';
 
 const Reports = () => {
-  const { users, sectors, sims, devices } = useData();
+  const { users, sectors, sims, devices, models, assetTypes } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState('');
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
@@ -16,9 +16,25 @@ const Reports = () => {
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
+  const [selectedAssetTypes, setSelectedAssetTypes] = useState<string[]>([]);
+  const [hasInitializedAssetTypes, setHasInitializedAssetTypes] = useState(false);
+  const [isAssetTypeSelectorOpen, setIsAssetTypeSelectorOpen] = useState(false);
+  const assetTypeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (assetTypes.length > 0 && !hasInitializedAssetTypes) {
+      const defaultTypes = assetTypes
+        .filter(t => t.name.toLowerCase().includes('smartphone') || t.name.toLowerCase().includes('celular'))
+        .map(t => t.id);
+      setSelectedAssetTypes(defaultTypes);
+      setHasInitializedAssetTypes(true);
+    }
+  }, [assetTypes, hasInitializedAssetTypes]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
         if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+        if (assetTypeRef.current && !assetTypeRef.current.contains(e.target as Node)) setIsAssetTypeSelectorOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -26,6 +42,10 @@ const Reports = () => {
 
   const toggleColumn = (id: string) => {
       setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const toggleAssetType = (id: string) => {
+      setSelectedAssetTypes(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
   };
 
   const COLUMN_OPTIONS = [
@@ -58,7 +78,8 @@ const Reports = () => {
       expectedSectorCode: extractSectorFromEmail(u.email),
       assignedSims: [] as any[],
       assignedSectorCodes: new Set<string>(),
-      assignedPulsusIds: new Set<string>()
+      assignedPulsusIds: new Set<string>(),
+      hasMatchingDeviceOrDirectSim: false
     }]));
 
     // 2. Create a list for "Vago" (unassigned) items
@@ -66,10 +87,17 @@ const Reports = () => {
 
     // 2.5 Process all devices to get sector codes and pulsus IDs for users
     devices.forEach(device => {
-      if (device.currentUserId) {
+      const model = models.find(m => m.id === device.modelId);
+      const isSelectedType = model && selectedAssetTypes.includes(model.typeId);
+
+      if (device.currentUserId && isSelectedType) {
         const user = usersMap.get(device.currentUserId);
         if (user) {
-          const userDevices = devices.filter(d => d.currentUserId === user.id);
+          user.hasMatchingDeviceOrDirectSim = true;
+          const userDevices = devices.filter(d => {
+            const dModel = models.find(m => m.id === d.modelId);
+            return d.currentUserId === user.id && dModel && selectedAssetTypes.includes(dModel.typeId);
+          });
           const uniqueDeviceCodes = new Set(userDevices.map(d => d.internalCode).filter(Boolean));
           
           let isVago = false;
@@ -93,14 +121,23 @@ const Reports = () => {
       const linkedDevice = devices.find(d => d.linkedSimId === sim.id);
       
       if (linkedDevice) {
+        const model = models.find(m => m.id === linkedDevice.modelId);
+        const isSelectedType = model && selectedAssetTypes.includes(model.typeId);
+        
+        if (!isSelectedType) return; // Skip SIMs linked to non-selected device types
+
         const deviceSectorCode = linkedDevice.internalCode || '';
         const devicePulsusId = linkedDevice.pulsusId || '';
         
         if (linkedDevice.currentUserId) {
           const user = usersMap.get(linkedDevice.currentUserId);
           if (user) {
+            user.hasMatchingDeviceOrDirectSim = true;
             // Check if user has multiple devices with DIFFERENT sector codes
-            const userDevices = devices.filter(d => d.currentUserId === user.id);
+            const userDevices = devices.filter(d => {
+              const dModel = models.find(m => m.id === d.modelId);
+              return d.currentUserId === user.id && dModel && selectedAssetTypes.includes(dModel.typeId);
+            });
             const uniqueDeviceCodes = new Set(userDevices.map(d => d.internalCode).filter(Boolean));
             
             // If user has multiple different codes, try to match with email
@@ -160,6 +197,7 @@ const Reports = () => {
         // SIM is directly linked to a user (no device)
         const user = usersMap.get(sim.currentUserId);
         if (user) {
+          user.hasMatchingDeviceOrDirectSim = true;
           user.assignedSims.push(sim);
         } else {
           // User not found -> Vago
@@ -180,7 +218,9 @@ const Reports = () => {
     });
 
     // 4. Format User Data
-    const formattedUsers = Array.from(usersMap.values()).map(user => {
+    const formattedUsers = Array.from(usersMap.values())
+      .filter(user => user.hasMatchingDeviceOrDirectSim)
+      .map(user => {
       const sector = sectors.find(s => s.id === user.sectorId);
       
       // Deduplicate SIMs just in case
@@ -244,7 +284,7 @@ const Reports = () => {
       }
       return 0;
     });
-  }, [users, sectors, sims, devices, searchTerm, selectedSector, showOnlyWithLine, showVagos, sortConfig]);
+  }, [users, sectors, sims, devices, models, selectedAssetTypes, searchTerm, selectedSector, showOnlyWithLine, showVagos, sortConfig]);
 
   const handlePrint = () => {
     window.print();
@@ -301,6 +341,27 @@ const Reports = () => {
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Relação personalizável de colaboradores, linhas telefônicas e dispositivos.</p>
             </div>
             <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative" ref={assetTypeRef}>
+                  <button onClick={() => setIsAssetTypeSelectorOpen(!isAssetTypeSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-bold text-sm transition-all">
+                      <Filter size={16} /> <span className="hidden md:inline">Tipos de Dispositivo</span>
+                  </button>
+                  {isAssetTypeSelectorOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
+                          <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase text-slate-500">Filtrar por Tipo</span>
+                              <button onClick={() => setIsAssetTypeSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
+                          </div>
+                          <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
+                              {assetTypes.map(type => (
+                                  <button key={type.id} onClick={() => toggleAssetType(type.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedAssetTypes.includes(type.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                      {type.name}
+                                      {selectedAssetTypes.includes(type.id) && <Check size={14}/>}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  )}
+              </div>
               <div className="relative" ref={columnRef}>
                   <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-bold text-sm transition-all">
                       <SlidersHorizontal size={16} /> <span className="hidden md:inline">Colunas</span>

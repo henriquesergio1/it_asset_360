@@ -11,6 +11,18 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Filtro de Tipo de Dispositivo no Relatório',
+        changes: [
+            'Relatórios: Adicionado filtro por Tipo de Dispositivo no Relatório de Colaboradores.',
+            'Relatórios: Por padrão, o relatório agora exibe apenas colaboradores com dispositivos do tipo "Smartphone" ou "Celular", ou com chips avulsos.',
+            'Relatórios: A lista de contatos foi otimizada para focar em dispositivos móveis, com a flexibilidade de incluir outros tipos via filtro.',
+            'Versão: Atualizado para v2.18.22.',
+            'Sincronização global para v2.18.22.'
+        ] 
+    },
+    { 
+        version: '2.18.21', 
+        date: 'Hoje',
         title: 'Relatório de Colaboradores Personalizável',
         changes: [
             'Relatórios: Adicionado seletor de colunas para personalizar a visualização e exportação do relatório.',
