@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Reimpressão de Termos com Evidência',
+        changes: [
+            'Termos: A funcionalidade de reimprimir termo no painel do colaborador agora inclui a imagem de evidência de dano, caso exista.',
+            'Versão: Atualizado para v2.18.26.',
+            'Sincronização global para v2.18.26.'
+        ] 
+    },
+    { 
+        version: '2.18.25', 
+        date: 'Hoje',
         title: 'Correção na Visualização de Termos',
         changes: [
             'Usuários: Corrigido um erro que causava tela branca ao acessar a aba de Termos no perfil do colaborador.',

@@ -289,7 +289,7 @@ const UserManager = () => {
       reader.readAsDataURL(file);
   };
 
-  const handleReprintTerm = (term: Term) => {
+  const handleReprintTerm = async (term: Term) => {
       const user = users.find(u => u.id === term.userId);
       if (!user) return;
       
@@ -354,11 +354,27 @@ const UserManager = () => {
           if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
       }
 
+      let evidenceFile = term.evidenceFile;
+      if (term.hasEvidence && !evidenceFile) {
+          try {
+              const res = await fetch(`/api/terms/evidence/${term.id}`);
+              const data = await res.json();
+              if (data.fileUrl) {
+                  evidenceFile = data.fileUrl;
+              }
+          } catch (e) {
+              console.error('Erro ao carregar evidência para reimpressão', e);
+          }
+      }
+
       generateAndPrintTerm({
           user, asset, settings, model, brand, type, linkedSim,
           actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
           sectorName: sectors.find(s => s.id === user.sectorId)?.name,
-          notes: 'Re-impressão via painel do colaborador.'
+          notes: 'Re-impressão via painel do colaborador.',
+          condition: term.condition,
+          damageDescription: term.damageDescription,
+          evidenceFile: evidenceFile
       });
   };
 
