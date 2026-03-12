@@ -11,12 +11,22 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Gestão de Termos e Devoluções - Melhorias',
+        changes: [
+            'Edição de Termos: Campo "Dados do Dispositivo" agora é apenas leitura para evitar quebras de integridade.',
+            'Devolução: Adicionado suporte para até 3 evidências (fotos/PDF) no ato da devolução.',
+            'Sincronização global para v2.18.30.'
+        ] 
+    },
+    { 
+        version: '2.18.29', 
+        date: 'Hoje',
         title: 'Edição de Termos de Responsabilidade - Melhorias',
         changes: [
             'Termos: Restrição de edição apenas para termos pendentes (sem arquivo digitalizado).',
             'Termos: Suporte para até 3 evidências (imagens/PDF) por termo editado.',
-            'Versão: Atualizado para v2.18.28.',
-            'Sincronização global para v2.18.28.'
+            'Versão: Atualizado para v2.18.29.',
+            'Sincronização global para v2.18.29.'
         ] 
     },
     { 

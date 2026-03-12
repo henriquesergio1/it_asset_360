@@ -72,7 +72,7 @@ export interface DataContextType {
 
   // Operations
   assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
-  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean, condition?: string, damageDescription?: string, evidenceFile?: string) => void;
+  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean, condition?: string, damageDescription?: string, evidenceFiles?: string[]) => void;
   
   // Term Management
   updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;

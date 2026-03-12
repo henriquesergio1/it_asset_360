@@ -811,7 +811,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
     app.post('/api/operations/checkin', async (req, res) => {
         try {
-            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFile } = req.body;
+            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
@@ -849,7 +849,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             if (userId) {
                 const termId = Math.random().toString(36).substr(2, 9);
-                const evidenceBuffer = evidenceFile ? getBufferFromBase64(evidenceFile) : null;
+                
+                const ev1 = evidenceFiles && evidenceFiles.length > 0 ? getBufferFromBase64(evidenceFiles[0]) : null;
+                const ev2 = evidenceFiles && evidenceFiles.length > 1 ? getBufferFromBase64(evidenceFiles[1]) : null;
+                const ev3 = evidenceFiles && evidenceFiles.length > 2 ? getBufferFromBase64(evidenceFiles[2]) : null;
                 
                 await pool.request()
                     .input('I', termId)
@@ -858,8 +861,11 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                     .input('Ad', assetDetails)
                     .input('Cond', condition || 'Perfeito')
                     .input('Desc', damageDescription || null)
-                    .input('Evid', evidenceBuffer)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, EvidenceBinary) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Evid)");
+                    .input('Notes', notes || null)
+                    .input('Evid', sql.VarBinary, ev1)
+                    .input('Evid2', sql.VarBinary, ev2)
+                    .input('Evid3', sql.VarBinary, ev3)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");

@@ -221,7 +221,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
         }
     },
-    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFile) => {
+    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFiles) => {
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
             const oldUserId = old?.currentUserId;
@@ -242,7 +242,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     type: 'DEVOLUCAO',
                     assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
                     date: new Date().toISOString(),
-                    fileUrl: ''
+                    fileUrl: '',
+                    condition: condition || 'Perfeito',
+                    damageDescription: damageDescription,
+                    evidenceFiles: evidenceFiles,
+                    notes: notes
                 };
                 
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
@@ -275,7 +279,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     type: 'DEVOLUCAO',
                     assetDetails: `[CHIP: ${old?.phoneNumber}]`,
                     date: new Date().toISOString(),
-                    fileUrl: ''
+                    fileUrl: '',
+                    condition: condition || 'Perfeito',
+                    damageDescription: damageDescription,
+                    evidenceFiles: evidenceFiles,
+                    notes: notes
                 };
 
                 setUsers(prev => prev.map(u => u.id === oldUserId ? { 
@@ -288,7 +296,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
                 }
             }
-
             logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {
                 status: DeviceStatus.IN_USE,
                 currentUserId: oldUserId,

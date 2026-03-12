@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX, Upload, Trash2 } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 import { normalizeString } from '../utils/stringUtils';
 
@@ -126,7 +126,7 @@ const Operations = () => {
   
   const [condition, setCondition] = useState('Perfeito');
   const [damageDescription, setDamageDescription] = useState('');
-  const [evidenceFile, setEvidenceFile] = useState<string | undefined>(undefined);
+  const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
 
   const [lastOperation, setLastOperation] = useState<{
       userId: string;
@@ -138,7 +138,7 @@ const Operations = () => {
       notes: string;
       condition?: string;
       damageDescription?: string;
-      evidenceFile?: string;
+      evidenceFiles?: string[];
   } | null>(null);
 
   useEffect(() => {
@@ -237,7 +237,7 @@ const Operations = () => {
             await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
         } else {
             // Pass the inactivation flag to the return process
-            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFile);
+            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFiles);
         }
 
         setLastOperation({ 
@@ -250,7 +250,7 @@ const Operations = () => {
             notes: notes,
             condition: activeTab === 'CHECKIN' ? condition : undefined,
             damageDescription: activeTab === 'CHECKIN' ? damageDescription : undefined,
-            evidenceFile: activeTab === 'CHECKIN' ? evidenceFile : undefined
+            evidenceFiles: activeTab === 'CHECKIN' ? evidenceFiles : undefined
         });
         
         setIsProcessed(true);
@@ -298,7 +298,7 @@ const Operations = () => {
           notes: lastOperation.notes,
           condition: lastOperation.condition,
           damageDescription: lastOperation.damageDescription,
-          evidenceFile: lastOperation.evidenceFile
+          evidenceFiles: lastOperation.evidenceFiles
       });
   };
 
@@ -313,7 +313,7 @@ const Operations = () => {
       setNotes(''); 
       setCondition('Perfeito');
       setDamageDescription('');
-      setEvidenceFile(undefined);
+      setEvidenceFiles([]);
       setLastOperation(null); 
       setSelectedAccessoryTypeIds([]);
       setInactivateAfterReturn(false);
@@ -539,24 +539,40 @@ const Operations = () => {
                           
                           {condition !== 'Perfeito' && condition !== 'Bom' && (
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Evidência (Opcional)</label>
-                                  <input 
-                                      type="file" 
-                                      accept="image/*,application/pdf"
-                                      onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file) {
-                                              const reader = new FileReader();
-                                              reader.onloadend = () => {
-                                                  setEvidenceFile(reader.result as string);
-                                              };
-                                              reader.readAsDataURL(file);
-                                          } else {
-                                              setEvidenceFile(undefined);
-                                          }
-                                      }}
-                                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-3 text-sm focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-900/50 focus:border-slate-300 dark:focus:border-slate-700 outline-none transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-red-900/30 dark:file:text-red-400"
-                                  />
+                                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Evidências (Máx 3)</label>
+                                  <div className="grid grid-cols-3 gap-2">
+                                      {evidenceFiles.map((file, idx) => (
+                                          <div key={idx} className="relative h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group">
+                                              <img src={file} alt="Evidência" className="w-full h-full object-cover" />
+                                              <button 
+                                                  onClick={() => setEvidenceFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                  className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                              >
+                                                  <Trash2 size={16} />
+                                              </button>
+                                          </div>
+                                      ))}
+                                      {evidenceFiles.length < 3 && (
+                                          <label className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+                                              <Upload size={16} className="text-slate-400" />
+                                              <input 
+                                                  type="file" 
+                                                  className="hidden" 
+                                                  accept="image/*,application/pdf"
+                                                  onChange={(e) => {
+                                                      const file = e.target.files?.[0];
+                                                      if (file) {
+                                                          const reader = new FileReader();
+                                                          reader.onloadend = () => {
+                                                              setEvidenceFiles(prev => [...prev, reader.result as string]);
+                                                          };
+                                                          reader.readAsDataURL(file);
+                                                      }
+                                                  }}
+                                              />
+                                          </label>
+                                      )}
+                                  </div>
                               </div>
                           )}
                       </div>

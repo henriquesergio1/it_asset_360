@@ -803,14 +803,10 @@ const UserManager = () => {
               )}
 
               <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Dados do Dispositivo</label>
-                <textarea 
-                  value={termEditData.assetDetails}
-                  onChange={(e) => setTermEditData({...termEditData, assetDetails: e.target.value})}
-                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
-                  rows={2}
-                  title="Atenção: Não apague os identificadores (TAG, S/N, IMEI) para não quebrar a reimpressão."
-                ></textarea>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Dados do Dispositivo (Apenas Leitura)</label>
+                <div className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-mono">
+                  {termEditData.assetDetails}
+                </div>
               </div>
 
               <div>
