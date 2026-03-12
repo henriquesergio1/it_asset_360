@@ -305,7 +305,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateTermDetails: (tid, cond, desc, ad, evid, adm) => {
         setUsers(prev => prev.map(u => ({
             ...u,
-            terms: (u.terms || []).map(t => t.id === tid ? { ...t, condition: cond, damageDescription: desc, assetDetails: ad, evidenceFile: evid, hasEvidence: !!evid } : t)
+            terms: (u.terms || []).map(t => t.id === tid ? { ...t, condition: cond, damageDescription: desc, assetDetails: ad, evidenceFiles: evid, hasEvidence: evid && evid.length > 0 } : t)
         })));
     },
     deleteTermFile: (tid, uid, r, adm) => {

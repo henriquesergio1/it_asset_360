@@ -189,7 +189,7 @@ const UserManager = () => {
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
-  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, evidenceFile?: string }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '' });
+  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', evidenceFiles: [] });
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('user_manager_columns');
@@ -293,13 +293,15 @@ const UserManager = () => {
   };
 
   const handleEditTerm = async (term: Term) => {
-      let evidenceFile = term.evidenceFile;
-      if (term.hasEvidence && !evidenceFile) {
+      let evidenceFiles = term.evidenceFiles || [];
+      if (term.hasEvidence && evidenceFiles.length === 0) {
           try {
               const res = await fetch(`/api/terms/evidence/${term.id}`);
               const data = await res.json();
-              if (data.fileUrl) {
-                  evidenceFile = data.fileUrl;
+              if (data.fileUrls && data.fileUrls.length > 0) {
+                  evidenceFiles = data.fileUrls;
+              } else if (data.fileUrl) {
+                  evidenceFiles = [data.fileUrl];
               }
           } catch (e) {
               console.error('Erro ao carregar evidência', e);
@@ -309,7 +311,7 @@ const UserManager = () => {
           condition: term.condition || 'Perfeito',
           damageDescription: term.damageDescription || '',
           assetDetails: term.assetDetails || '',
-          evidenceFile: evidenceFile
+          evidenceFiles: evidenceFiles
       });
       setEditingTerm(term);
   };
@@ -317,18 +319,29 @@ const UserManager = () => {
   const handleSaveTermEdit = () => {
       if (!editingTerm) return;
       const adminName = currentUser?.name || 'Admin';
-      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.evidenceFile, adminName);
+      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.evidenceFiles, adminName);
       setEditingTerm(null);
   };
 
   const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      if (termEditData.evidenceFiles.length >= 3) {
+          alert("Máximo de 3 evidências permitidas.");
+          return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
-          setTermEditData(prev => ({ ...prev, evidenceFile: reader.result as string }));
+          setTermEditData(prev => ({ ...prev, evidenceFiles: [...prev.evidenceFiles, reader.result as string] }));
       };
       reader.readAsDataURL(file);
+  };
+
+  const handleRemoveEvidence = (index: number) => {
+      setTermEditData(prev => ({
+          ...prev,
+          evidenceFiles: prev.evidenceFiles.filter((_, i) => i !== index)
+      }));
   };
 
   const handleReprintTerm = async (term: Term) => {
@@ -714,9 +727,11 @@ const UserManager = () => {
       <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
     </label>
   ))}
-  <button onClick={() => handleEditTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Editar Termo">
-    <Edit2 size={18}/>
-  </button>
+  {!term.hasFile && !term.isManual && (
+    <button onClick={() => handleEditTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Editar Termo">
+      <Edit2 size={18}/>
+    </button>
+  )}
   <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo">
     <Printer size={18}/>
   </button>
@@ -795,29 +810,28 @@ const UserManager = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Evidência (Foto / B.O.)</label>
-                {termEditData.evidenceFile ? (
-                  <div className="relative rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 group">
-                    <img src={termEditData.evidenceFile} alt="Evidência" className="w-full h-48 object-cover" />
-                    <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                      <label className="cursor-pointer p-3 bg-white text-slate-800 rounded-full hover:scale-110 transition-transform shadow-lg" title="Trocar Imagem">
-                        <Upload size={20} />
-                        <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
-                      </label>
-                      <button onClick={() => setTermEditData({...termEditData, evidenceFile: undefined})} className="p-3 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-lg" title="Remover Imagem">
-                        <Trash2 size={20} />
-                      </button>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Evidências (Fotos / B.O.) - Máx 3</label>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  {termEditData.evidenceFiles.map((file, index) => (
+                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 group h-32">
+                      <img src={file} alt={`Evidência ${index + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button onClick={() => handleRemoveEvidence(index)} className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-lg" title="Remover Imagem">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="w-8 h-8 mb-3 text-slate-400" />
-                      <p className="mb-2 text-sm text-slate-500 dark:text-slate-400"><span className="font-semibold">Clique para anexar</span> ou arraste</p>
-                    </div>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
-                  </label>
-                )}
+                  ))}
+                  {termEditData.evidenceFiles.length < 3 && (
+                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="flex flex-col items-center justify-center p-4 text-center">
+                        <Upload className="w-6 h-6 mb-2 text-slate-400" />
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Adicionar</p>
+                      </div>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
 

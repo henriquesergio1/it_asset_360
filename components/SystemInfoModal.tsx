@@ -11,6 +11,17 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Edição de Termos de Responsabilidade - Melhorias',
+        changes: [
+            'Termos: Restrição de edição apenas para termos pendentes (sem arquivo digitalizado).',
+            'Termos: Suporte para até 3 evidências (imagens/PDF) por termo editado.',
+            'Versão: Atualizado para v2.18.28.',
+            'Sincronização global para v2.18.28.'
+        ] 
+    },
+    { 
+        version: '2.18.27', 
+        date: 'Hoje',
         title: 'Edição de Termos de Responsabilidade',
         changes: [
             'Termos: Adicionada a opção de editar os detalhes de um termo gerado (Condição, Avaria, Observações e Evidência) diretamente no perfil do colaborador.',

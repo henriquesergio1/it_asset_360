@@ -186,6 +186,11 @@ async function initializeDatabase() {
                         console.log('- Adicionando colunas de evidência em Terms...');
                         await pool.request().query('ALTER TABLE Terms ADD EvidenceBinary VARBINARY(MAX) NULL, Condition NVARCHAR(50) NULL, DamageDescription NVARCHAR(MAX) NULL');
                     }
+                    const checkEvidence2 = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'Evidence2Binary'`);
+                    if (checkEvidence2.recordset.length === 0) {
+                        console.log('- Adicionando colunas de evidência 2 e 3 em Terms...');
+                        await pool.request().query('ALTER TABLE Terms ADD Evidence2Binary VARBINARY(MAX) NULL, Evidence3Binary VARBINARY(MAX) NULL');
+                    }
                 }
             }
         }
@@ -320,7 +325,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -361,7 +366,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
         ]);
 
@@ -409,22 +414,30 @@ app.get('/api/terms/:id/file', async (req, res) => {
 app.get('/api/terms/evidence/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT EvidenceBinary FROM Terms WHERE Id=@Id");
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT EvidenceBinary, Evidence2Binary, Evidence3Binary FROM Terms WHERE Id=@Id");
         const row = result.recordset[0];
-        if (!row || !row.EvidenceBinary) return res.json({ fileUrl: '' });
-        res.json({ fileUrl: getBase64FromBuffer(row.EvidenceBinary) });
+        if (!row) return res.json({ fileUrls: [] });
+        
+        const fileUrls = [];
+        if (row.EvidenceBinary) fileUrls.push(getBase64FromBuffer(row.EvidenceBinary));
+        if (row.Evidence2Binary) fileUrls.push(getBase64FromBuffer(row.Evidence2Binary));
+        if (row.Evidence3Binary) fileUrls.push(getBase64FromBuffer(row.Evidence3Binary));
+        
+        // Mantém compatibilidade com o frontend antigo retornando fileUrl também
+        res.json({ fileUrl: fileUrls[0] || '', fileUrls });
     } catch (err) { res.status(500).send(err.message); }
 });
 
 app.put('/api/terms/:id', async (req, res) => {
     try {
-        const { condition, damageDescription, assetDetails, evidenceFile, _adminUser } = req.body;
+        const { condition, damageDescription, assetDetails, evidenceFiles, _adminUser } = req.body;
         const pool = await sql.connect(dbConfig);
         
-        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails FROM Terms WHERE Id=@Id");
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails, FileBinary FROM Terms WHERE Id=@Id");
         const term = oldRes.recordset[0];
         
         if (!term) return res.status(404).send("Termo não encontrado");
+        if (term.FileBinary) return res.status(400).send("Termos já digitalizados não podem ser editados");
 
         let query = "UPDATE Terms SET Condition=@Cond, DamageDescription=@Desc, AssetDetails=@Ad";
         
@@ -434,10 +447,16 @@ app.put('/api/terms/:id', async (req, res) => {
             .input('Desc', sql.NVarChar, damageDescription || null)
             .input('Ad', sql.NVarChar, assetDetails || term.AssetDetails);
 
-        if (evidenceFile !== undefined) {
-            query += ", EvidenceBinary=@Evid";
-            const evidenceBuffer = evidenceFile ? getBufferFromBase64(evidenceFile) : null;
-            request.input('Evid', sql.VarBinary, evidenceBuffer);
+        if (evidenceFiles !== undefined) {
+            query += ", EvidenceBinary=@Evid, Evidence2Binary=@Evid2, Evidence3Binary=@Evid3";
+            
+            const ev1 = evidenceFiles && evidenceFiles.length > 0 ? getBufferFromBase64(evidenceFiles[0]) : null;
+            const ev2 = evidenceFiles && evidenceFiles.length > 1 ? getBufferFromBase64(evidenceFiles[1]) : null;
+            const ev3 = evidenceFiles && evidenceFiles.length > 2 ? getBufferFromBase64(evidenceFiles[2]) : null;
+            
+            request.input('Evid', sql.VarBinary, ev1);
+            request.input('Evid2', sql.VarBinary, ev2);
+            request.input('Evid3', sql.VarBinary, ev3);
         }
 
         query += " WHERE Id=@Id";
