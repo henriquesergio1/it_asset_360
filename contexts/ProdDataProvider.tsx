@@ -162,8 +162,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try { await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName }); fetchData(true); } catch (err) { alert("Falha ao salvar arquivo do termo."); }
   };
 
-  const updateTermDetails = async (termId: string, condition: string, damageDescription: string, assetDetails: string, evidenceFiles: string[], adminName: string) => {
-      try { await putData(`terms/${termId}`, { condition, damageDescription, assetDetails, evidenceFiles, _adminUser: adminName }); fetchData(true); } catch (err) { alert("Falha ao atualizar detalhes do termo."); }
+  const updateTermDetails = async (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string) => {
+      try { await putData(`terms/${termId}`, { condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser: adminName }); fetchData(true); } catch (err) { alert("Falha ao atualizar detalhes do termo."); }
   };
 
   const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {

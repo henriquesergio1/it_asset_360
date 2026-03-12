@@ -15,7 +15,7 @@ interface GenerateTermProps {
   notes?: string;
   condition?: string;
   damageDescription?: string;
-  evidenceFile?: string;
+  evidenceFiles?: string[];
 }
 
 // Layout Fixo Profissional Otimizado para A4 (Versão 2.10.14 - Precision Localization)
@@ -87,7 +87,7 @@ const getFixedLayout = (
 };
 
 export const generateAndPrintTerm = ({ 
-  user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFile
+  user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFiles
 }: GenerateTermProps) => {
   
   let config = {
@@ -268,13 +268,17 @@ export const generateAndPrintTerm = ({
   });
 
   let evidenceHtml = '';
-  if (evidenceFile) {
+  if (evidenceFiles && evidenceFiles.length > 0) {
       evidenceHtml = `
       <div style="page-break-before: always; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; padding: 10px 30px;">
           <h2 style="font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">Anexo: Evidência de Dano / Ocorrência</h2>
           <p style="font-size: 11px; margin-bottom: 15px;"><strong>Colaborador:</strong> ${user.fullName} | <strong>Ativo:</strong> ${assetName}</p>
-          <div style="text-align: center; border: 1px solid #ccc; padding: 10px; background-color: #f9fafb;">
-              <img src="${evidenceFile}" style="max-width: 100%; max-height: 700px; object-fit: contain;" alt="Evidência" />
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+              ${evidenceFiles.map(file => `
+                  <div style="text-align: center; border: 1px solid #ccc; padding: 10px; background-color: #f9fafb;">
+                      <img src="${file}" style="max-width: 100%; max-height: 500px; object-fit: contain;" alt="Evidência" />
+                  </div>
+              `).join('')}
           </div>
       </div>
       `;

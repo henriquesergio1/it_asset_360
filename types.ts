@@ -147,6 +147,7 @@ export interface Term {
   damageDescription?: string;
   hasEvidence?: boolean;
   evidenceFiles?: string[];
+  notes?: string;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

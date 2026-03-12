@@ -302,10 +302,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: furl } : t)
         } : u));
     },
-    updateTermDetails: (tid, cond, desc, ad, evid, adm) => {
+    updateTermDetails: (tid, cond, desc, ad, notes, evid, adm) => {
         setUsers(prev => prev.map(u => ({
             ...u,
-            terms: (u.terms || []).map(t => t.id === tid ? { ...t, condition: cond, damageDescription: desc, assetDetails: ad, evidenceFiles: evid, hasEvidence: evid && evid.length > 0 } : t)
+            terms: (u.terms || []).map(t => t.id === tid ? { ...t, condition: cond, damageDescription: desc, assetDetails: ad, notes: notes, evidenceFiles: evid, hasEvidence: evid && evid.length > 0 } : t)
         })));
     },
     deleteTermFile: (tid, uid, r, adm) => {

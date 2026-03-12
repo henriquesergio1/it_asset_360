@@ -189,7 +189,7 @@ const UserManager = () => {
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
   
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
-  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', evidenceFiles: [] });
+  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', notes: '', evidenceFiles: [] });
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('user_manager_columns');
@@ -311,6 +311,7 @@ const UserManager = () => {
           condition: term.condition || 'Perfeito',
           damageDescription: term.damageDescription || '',
           assetDetails: term.assetDetails || '',
+          notes: term.notes || '',
           evidenceFiles: evidenceFiles
       });
       setEditingTerm(term);
@@ -319,7 +320,7 @@ const UserManager = () => {
   const handleSaveTermEdit = () => {
       if (!editingTerm) return;
       const adminName = currentUser?.name || 'Admin';
-      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.evidenceFiles, adminName);
+      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.notes, termEditData.evidenceFiles, adminName);
       setEditingTerm(null);
   };
 
@@ -409,13 +410,15 @@ const UserManager = () => {
           if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
       }
 
-      let evidenceFile = term.evidenceFile;
-      if (term.hasEvidence && !evidenceFile) {
+      let evidenceFiles = term.evidenceFiles || [];
+      if (term.hasEvidence && evidenceFiles.length === 0) {
           try {
               const res = await fetch(`/api/terms/evidence/${term.id}`);
               const data = await res.json();
-              if (data.fileUrl) {
-                  evidenceFile = data.fileUrl;
+              if (data.fileUrls && data.fileUrls.length > 0) {
+                  evidenceFiles = data.fileUrls;
+              } else if (data.fileUrl) {
+                  evidenceFiles = [data.fileUrl];
               }
           } catch (e) {
               console.error('Erro ao carregar evidência para reimpressão', e);
@@ -426,10 +429,10 @@ const UserManager = () => {
           user, asset, settings, model, brand, type, linkedSim,
           actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
           sectorName: sectors.find(s => s.id === user.sectorId)?.name,
-          notes: 'Re-impressão via painel do colaborador.',
+          notes: term.notes ? `${term.notes} (Re-impressão via painel do colaborador)` : 'Re-impressão via painel do colaborador.',
           condition: term.condition,
           damageDescription: term.damageDescription,
-          evidenceFile: evidenceFile
+          evidenceFiles: evidenceFiles
       });
   };
 
@@ -800,12 +803,24 @@ const UserManager = () => {
               )}
 
               <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Observações do Termo</label>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Dados do Dispositivo</label>
                 <textarea 
                   value={termEditData.assetDetails}
                   onChange={(e) => setTermEditData({...termEditData, assetDetails: e.target.value})}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
+                  rows={2}
+                  title="Atenção: Não apague os identificadores (TAG, S/N, IMEI) para não quebrar a reimpressão."
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Observações do Termo</label>
+                <textarea 
+                  value={termEditData.notes}
+                  onChange={(e) => setTermEditData({...termEditData, notes: e.target.value})}
                   className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
                   rows={4}
+                  placeholder="Detalhes adicionais sobre o equipamento..."
                 ></textarea>
               </div>
 
