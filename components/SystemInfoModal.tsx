@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Edição de Termos de Responsabilidade',
+        changes: [
+            'Termos: Adicionada a opção de editar os detalhes de um termo gerado (Condição, Avaria, Observações e Evidência) diretamente no perfil do colaborador.',
+            'Versão: Atualizado para v2.18.27.',
+            'Sincronização global para v2.18.27.'
+        ] 
+    },
+    { 
+        version: '2.18.26', 
+        date: 'Hoje',
         title: 'Reimpressão de Termos com Evidência',
         changes: [
             'Termos: A funcionalidade de reimprimir termo no painel do colaborador agora inclui a imagem de evidência de dano, caso exista.',

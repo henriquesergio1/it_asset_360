@@ -77,6 +77,7 @@ export interface DataContextType {
   // Term Management
   updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;
   deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => void;
+  updateTermDetails: (termId: string, condition: string, damageDescription: string, assetDetails: string, evidenceFile: string | undefined, adminName: string) => void;
 
   getHistory: (assetId: string) => AuditLog[];
   

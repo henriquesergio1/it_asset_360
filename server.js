@@ -416,6 +416,42 @@ app.get('/api/terms/evidence/:id', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+app.put('/api/terms/:id', async (req, res) => {
+    try {
+        const { condition, damageDescription, assetDetails, evidenceFile, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails FROM Terms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+        
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        let query = "UPDATE Terms SET Condition=@Cond, DamageDescription=@Desc, AssetDetails=@Ad";
+        
+        const request = pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Cond', sql.NVarChar, condition || 'Perfeito')
+            .input('Desc', sql.NVarChar, damageDescription || null)
+            .input('Ad', sql.NVarChar, assetDetails || term.AssetDetails);
+
+        if (evidenceFile !== undefined) {
+            query += ", EvidenceBinary=@Evid";
+            const evidenceBuffer = evidenceFile ? getBufferFromBase64(evidenceFile) : null;
+            request.input('Evid', sql.VarBinary, evidenceBuffer);
+        }
+
+        query += " WHERE Id=@Id";
+        
+        await request.query(query);
+
+        await logAction(req.params.id, 'Term', 'Edição', _adminUser, term.UserId, `Termo editado. Condição: ${condition}`);
+        
+        res.json({success: true});
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 // v2.12.38 - Endpoint crítico para upload de termos digitalizados
 app.put('/api/terms/file/:id', async (req, res) => {
     try {

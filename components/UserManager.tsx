@@ -172,7 +172,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -187,6 +187,9 @@ const UserManager = () => {
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
+  
+  const [editingTerm, setEditingTerm] = useState<Term | null>(null);
+  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, evidenceFile?: string }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '' });
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('user_manager_columns');
@@ -285,6 +288,45 @@ const UserManager = () => {
       reader.onloadend = () => {
           const fileUrl = reader.result as string;
           updateTermFile(termId, editingId, fileUrl, adminName);
+      };
+      reader.readAsDataURL(file);
+  };
+
+  const handleEditTerm = async (term: Term) => {
+      let evidenceFile = term.evidenceFile;
+      if (term.hasEvidence && !evidenceFile) {
+          try {
+              const res = await fetch(`/api/terms/evidence/${term.id}`);
+              const data = await res.json();
+              if (data.fileUrl) {
+                  evidenceFile = data.fileUrl;
+              }
+          } catch (e) {
+              console.error('Erro ao carregar evidência', e);
+          }
+      }
+      setTermEditData({
+          condition: term.condition || 'Perfeito',
+          damageDescription: term.damageDescription || '',
+          assetDetails: term.assetDetails || '',
+          evidenceFile: evidenceFile
+      });
+      setEditingTerm(term);
+  };
+
+  const handleSaveTermEdit = () => {
+      if (!editingTerm) return;
+      const adminName = currentUser?.name || 'Admin';
+      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.evidenceFile, adminName);
+      setEditingTerm(null);
+  };
+
+  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          setTermEditData(prev => ({ ...prev, evidenceFile: reader.result as string }));
       };
       reader.readAsDataURL(file);
   };
@@ -672,6 +714,9 @@ const UserManager = () => {
       <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
     </label>
   ))}
+  <button onClick={() => handleEditTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Editar Termo">
+    <Edit2 size={18}/>
+  </button>
   <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo">
     <Printer size={18}/>
   </button>
@@ -691,6 +736,102 @@ const UserManager = () => {
       )}
 
       {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40"><Save size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button></div></div></div></div>)}
+
+      {editingTerm && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <Edit2 size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Editar Termo</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Ajuste as informações do termo gerado</p>
+                </div>
+              </div>
+              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Condição do Equipamento</label>
+                <select 
+                  value={termEditData.condition}
+                  onChange={(e) => setTermEditData({...termEditData, condition: e.target.value})}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="Perfeito">Perfeito</option>
+                  <option value="Bom">Bom (Marcas de Uso)</option>
+                  <option value="Danificado">Danificado</option>
+                  <option value="Furtado/Roubado">Furtado / Roubado</option>
+                  <option value="Extraviado">Extraviado</option>
+                </select>
+              </div>
+
+              {termEditData.condition !== 'Perfeito' && termEditData.condition !== 'Bom' && (
+                <div className="animate-fade-in">
+                  <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Descrição da Avaria / Ocorrência</label>
+                  <textarea 
+                    value={termEditData.damageDescription}
+                    onChange={(e) => setTermEditData({...termEditData, damageDescription: e.target.value})}
+                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                    rows={3}
+                    placeholder="Descreva o que aconteceu com o equipamento..."
+                  ></textarea>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Observações do Termo</label>
+                <textarea 
+                  value={termEditData.assetDetails}
+                  onChange={(e) => setTermEditData({...termEditData, assetDetails: e.target.value})}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                  rows={4}
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Evidência (Foto / B.O.)</label>
+                {termEditData.evidenceFile ? (
+                  <div className="relative rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 group">
+                    <img src={termEditData.evidenceFile} alt="Evidência" className="w-full h-48 object-cover" />
+                    <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                      <label className="cursor-pointer p-3 bg-white text-slate-800 rounded-full hover:scale-110 transition-transform shadow-lg" title="Trocar Imagem">
+                        <Upload size={20} />
+                        <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
+                      </label>
+                      <button onClick={() => setTermEditData({...termEditData, evidenceFile: undefined})} className="p-3 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-lg" title="Remover Imagem">
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-3 text-slate-400" />
+                      <p className="mb-2 text-sm text-slate-500 dark:text-slate-400"><span className="font-semibold">Clique para anexar</span> ou arraste</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-3 justify-end">
+              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all">
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
