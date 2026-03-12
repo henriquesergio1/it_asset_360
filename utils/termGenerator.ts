@@ -269,17 +269,49 @@ export const generateAndPrintTerm = ({
 
   let evidenceHtml = '';
   if (evidenceFiles && evidenceFiles.length > 0) {
+      const count = evidenceFiles.length;
+      let imagesMarkup = '';
+
+      if (count === 1) {
+          imagesMarkup = `
+            <div style="text-align: center; border: 1px solid #ccc; padding: 10px; background-color: #f9fafb; width: 100%; margin-bottom: 10px;">
+                <img src="${evidenceFiles[0]}" style="width: 100%; max-height: 750px; object-fit: contain;" alt="Evidência 1" />
+            </div>
+          `;
+      } else if (count === 2) {
+          imagesMarkup = `
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                ${evidenceFiles.map((file, i) => `
+                    <div style="text-align: center; border: 1px solid #ccc; padding: 8px; background-color: #f9fafb; width: 48%;">
+                        <img src="${file}" style="width: 100%; max-height: 500px; object-fit: contain;" alt="Evidência ${i+1}" />
+                    </div>
+                `).join('')}
+            </div>
+          `;
+      } else {
+          // Layout: 1 Grande em cima, 2 menores embaixo
+          imagesMarkup = `
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="text-align: center; border: 1px solid #ccc; padding: 10px; background-color: #f9fafb; width: 100%;">
+                    <img src="${evidenceFiles[0]}" style="width: 100%; max-height: 450px; object-fit: contain;" alt="Evidência 1" />
+                </div>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <div style="text-align: center; border: 1px solid #ccc; padding: 8px; background-color: #f9fafb; width: 48%;">
+                        <img src="${evidenceFiles[1]}" style="width: 100%; max-height: 320px; object-fit: contain;" alt="Evidência 2" />
+                    </div>
+                    <div style="text-align: center; border: 1px solid #ccc; padding: 8px; background-color: #f9fafb; width: 48%;">
+                        <img src="${evidenceFiles[2]}" style="width: 100%; max-height: 320px; object-fit: contain;" alt="Evidência 3" />
+                    </div>
+                </div>
+            </div>
+          `;
+      }
+
       evidenceHtml = `
       <div style="page-break-before: always; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; padding: 10px 30px;">
           <h2 style="font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">Anexo: Evidência de Dano / Ocorrência</h2>
           <p style="font-size: 11px; margin-bottom: 15px;"><strong>Colaborador:</strong> ${user.fullName} | <strong>Ativo:</strong> ${assetName}</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-              ${evidenceFiles.map(file => `
-                  <div style="text-align: center; border: 1px solid #ccc; padding: 5px; background-color: #f9fafb; width: calc(33.33% - 14px); box-sizing: border-box;">
-                      <img src="${file}" style="width: 100%; height: 220px; object-fit: contain;" alt="Evidência" />
-                  </div>
-              `).join('')}
-          </div>
+          ${imagesMarkup}
       </div>
       `;
   }

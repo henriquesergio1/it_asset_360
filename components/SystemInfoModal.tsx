@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Layout de Evidências Dinâmico',
+        changes: [
+            'Impressão: Novo layout dinâmico que prioriza o tamanho das fotos (1 grande + 2 menores).',
+            'Versão: Atualizado para v2.18.33.',
+            'Sincronização global para v2.18.33.'
+        ] 
+    },
+    { 
+        version: '2.18.32', 
+        date: 'Hoje',
         title: 'Otimização de Impressão',
         changes: [
             'Impressão: Novo layout de evidências que permite até 3 fotos na mesma página.',
