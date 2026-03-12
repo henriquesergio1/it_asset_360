@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Otimização de Impressão',
+        changes: [
+            'Impressão: Novo layout de evidências que permite até 3 fotos na mesma página.',
+            'Versão: Atualizado para v2.18.32.',
+            'Sincronização global para v2.18.32.'
+        ] 
+    },
+    { 
+        version: '2.18.31', 
+        date: 'Hoje',
         title: 'Correção na Edição de Termos',
         changes: [
             'Termos: Corrigido erro 404 ao salvar edições de termos (URL malformada).',

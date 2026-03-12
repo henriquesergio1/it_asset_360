@@ -273,10 +273,10 @@ export const generateAndPrintTerm = ({
       <div style="page-break-before: always; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; padding: 10px 30px;">
           <h2 style="font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 15px;">Anexo: Evidência de Dano / Ocorrência</h2>
           <p style="font-size: 11px; margin-bottom: 15px;"><strong>Colaborador:</strong> ${user.fullName} | <strong>Ativo:</strong> ${assetName}</p>
-          <div style="display: flex; flex-direction: column; gap: 20px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
               ${evidenceFiles.map(file => `
-                  <div style="text-align: center; border: 1px solid #ccc; padding: 10px; background-color: #f9fafb;">
-                      <img src="${file}" style="max-width: 100%; max-height: 500px; object-fit: contain;" alt="Evidência" />
+                  <div style="text-align: center; border: 1px solid #ccc; padding: 5px; background-color: #f9fafb; width: calc(33.33% - 14px); box-sizing: border-box;">
+                      <img src="${file}" style="width: 100%; height: 220px; object-fit: contain;" alt="Evidência" />
                   </div>
               `).join('')}
           </div>
