@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Correção na Edição de Termos',
+        changes: [
+            'Termos: Corrigido erro 404 ao salvar edições de termos (URL malformada).',
+            'Versão: Atualizado para v2.18.31.',
+            'Sincronização global para v2.18.31.'
+        ] 
+    },
+    { 
+        version: '2.18.30', 
+        date: 'Hoje',
         title: 'Gestão de Termos e Devoluções - Melhorias',
         changes: [
             'Edição de Termos: Campo "Dados do Dispositivo" agora é apenas leitura para evitar quebras de integridade.',
