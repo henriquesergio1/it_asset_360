@@ -11,6 +11,16 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Correção na Visualização de Termos',
+        changes: [
+            'Usuários: Corrigido um erro que causava tela branca ao acessar a aba de Termos no perfil do colaborador.',
+            'Versão: Atualizado para v2.18.25.',
+            'Sincronização global para v2.18.25.'
+        ] 
+    },
+    { 
+        version: '2.18.24', 
+        date: 'Ontem',
         title: 'Evidência de Danos no Termo de Devolução',
         changes: [
             'Termos: Adicionado campo para registrar a condição do equipamento no momento da devolução.',
