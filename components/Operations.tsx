@@ -123,6 +123,10 @@ const Operations = () => {
   
   const [selectedAccessoryTypeIds, setSelectedAccessoryTypeIds] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<ReturnChecklist>({ 'Equipamento Principal': true });
+  
+  const [condition, setCondition] = useState('Perfeito');
+  const [damageDescription, setDamageDescription] = useState('');
+  const [evidenceFile, setEvidenceFile] = useState<string | undefined>(undefined);
 
   const [lastOperation, setLastOperation] = useState<{
       userId: string;
@@ -132,6 +136,9 @@ const Operations = () => {
       checklistSnapshot?: ReturnChecklist;
       accessoriesSnapshot?: DeviceAccessory[]; 
       notes: string;
+      condition?: string;
+      damageDescription?: string;
+      evidenceFile?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -230,7 +237,7 @@ const Operations = () => {
             await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
         } else {
             // Pass the inactivation flag to the return process
-            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn);
+            await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFile);
         }
 
         setLastOperation({ 
@@ -240,7 +247,10 @@ const Operations = () => {
             action: activeTab, 
             checklistSnapshot: activeTab === 'CHECKIN' && assetType === 'Device' ? { ...checklist } : undefined,
             accessoriesSnapshot: activeTab === 'CHECKOUT' && assetType === 'Device' ? deliveryAccessories : undefined,
-            notes: notes 
+            notes: notes,
+            condition: activeTab === 'CHECKIN' ? condition : undefined,
+            damageDescription: activeTab === 'CHECKIN' ? damageDescription : undefined,
+            evidenceFile: activeTab === 'CHECKIN' ? evidenceFile : undefined
         });
         
         setIsProcessed(true);
@@ -285,7 +295,10 @@ const Operations = () => {
           actionType: lastOperation.action === 'CHECKOUT' ? 'ENTREGA' : 'DEVOLUCAO', 
           sectorName: sectors.find(s => s.id === user.sectorId)?.name, 
           checklist: lastOperation.checklistSnapshot, 
-          notes: lastOperation.notes 
+          notes: lastOperation.notes,
+          condition: lastOperation.condition,
+          damageDescription: lastOperation.damageDescription,
+          evidenceFile: lastOperation.evidenceFile
       });
   };
 
@@ -298,6 +311,9 @@ const Operations = () => {
       setSelectedAssetId(''); 
       setSelectedUserId(''); 
       setNotes(''); 
+      setCondition('Perfeito');
+      setDamageDescription('');
+      setEvidenceFile(undefined);
       setLastOperation(null); 
       setSelectedAccessoryTypeIds([]);
       setInactivateAfterReturn(false);
@@ -496,6 +512,69 @@ const Operations = () => {
                     onChange={e => setNotes(e.target.value)}
                   />
               </div>
+
+              {activeTab === 'CHECKIN' && (
+                  <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-red-600">
+                              {assetType === 'Device' ? '5' : '4'}
+                          </div>
+                          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Condição e Avarias</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Condição do Ativo</label>
+                              <select 
+                                  value={condition} 
+                                  onChange={e => setCondition(e.target.value)}
+                                  className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-900/50 focus:border-slate-300 dark:focus:border-slate-700 outline-none transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                              >
+                                  <option value="Perfeito">Perfeito Estado</option>
+                                  <option value="Bom">Bom Estado (Marcas de Uso)</option>
+                                  <option value="Danificado">Danificado / Avariado</option>
+                                  <option value="Perdido/Furtado">Perdido / Furtado</option>
+                              </select>
+                          </div>
+                          
+                          {condition !== 'Perfeito' && condition !== 'Bom' && (
+                              <div className="space-y-2">
+                                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Evidência (Opcional)</label>
+                                  <input 
+                                      type="file" 
+                                      accept="image/*,application/pdf"
+                                      onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                              const reader = new FileReader();
+                                              reader.onloadend = () => {
+                                                  setEvidenceFile(reader.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                          } else {
+                                              setEvidenceFile(undefined);
+                                          }
+                                      }}
+                                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-3 text-sm focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-900/50 focus:border-slate-300 dark:focus:border-slate-700 outline-none transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-red-900/30 dark:file:text-red-400"
+                                  />
+                              </div>
+                          )}
+                      </div>
+
+                      {condition !== 'Perfeito' && condition !== 'Bom' && (
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Descrição Detalhada do Dano / Ocorrência</label>
+                              <textarea 
+                                  className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-900/50 focus:border-slate-300 dark:focus:border-slate-700 outline-none transition-all shadow-inner bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600" 
+                                  rows={3} 
+                                  placeholder="Descreva o dano físico (ex: tela trincada, carcaça amassada) ou detalhes do BO em caso de furto..."
+                                  value={damageDescription}
+                                  onChange={e => setDamageDescription(e.target.value)}
+                              />
+                          </div>
+                      )}
+                  </div>
+              )}
 
               <div className="pt-6 border-t dark:border-slate-800">
                   <button 

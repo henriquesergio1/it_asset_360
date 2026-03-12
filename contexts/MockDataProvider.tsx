@@ -221,7 +221,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
         }
     },
-    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser) => {
+    returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFile) => {
         if (assetType === 'Device') {
             const old = devices.find(d => d.id === assetId);
             const oldUserId = old?.currentUserId;

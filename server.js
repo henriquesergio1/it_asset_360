@@ -181,6 +181,11 @@ async function initializeDatabase() {
                         console.log('- Removendo coluna legada FileUrl de Terms...');
                         await pool.request().query('ALTER TABLE Terms DROP COLUMN FileUrl');
                     }
+                    const checkEvidence = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'EvidenceBinary'`);
+                    if (checkEvidence.recordset.length === 0) {
+                        console.log('- Adicionando colunas de evidência em Terms...');
+                        await pool.request().query('ALTER TABLE Terms ADD EvidenceBinary VARBINARY(MAX) NULL, Condition NVARCHAR(50) NULL, DamageDescription NVARCHAR(MAX) NULL');
+                    }
                 }
             }
         }
@@ -315,7 +320,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
@@ -356,7 +361,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, (CASE WHEN EvidenceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts")
         ]);
 
@@ -398,6 +403,16 @@ app.get('/api/terms/:id/file', async (req, res) => {
         const row = result.recordset[0];
         if (!row) return res.json({ fileUrl: '' });
         res.json({ fileUrl: getBase64FromBuffer(row.FileBinary) });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/terms/evidence/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT EvidenceBinary FROM Terms WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.EvidenceBinary) return res.json({ fileUrl: '' });
+        res.json({ fileUrl: getBase64FromBuffer(row.EvidenceBinary) });
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -735,7 +750,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
     app.post('/api/operations/checkin', async (req, res) => {
         try {
-            const { assetId, assetType, notes, _adminUser, inactivateUser } = req.body;
+            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFile } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
@@ -773,7 +788,17 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             if (userId) {
                 const termId = Math.random().toString(36).substr(2, 9);
-                await pool.request().input('I', termId).input('U', userId).input('T', 'DEVOLUCAO').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+                const evidenceBuffer = evidenceFile ? getBufferFromBase64(evidenceFile) : null;
+                
+                await pool.request()
+                    .input('I', termId)
+                    .input('U', userId)
+                    .input('T', 'DEVOLUCAO')
+                    .input('Ad', assetDetails)
+                    .input('Cond', condition || 'Perfeito')
+                    .input('Desc', damageDescription || null)
+                    .input('Evid', evidenceBuffer)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, EvidenceBinary) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Evid)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
@@ -781,7 +806,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 }
             }
             
-            const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}`;
+            const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}${condition && condition !== 'Perfeito' ? `\nCondição: ${condition}\nDescrição do Dano: ${damageDescription || 'N/A'}` : ''}`;
             await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }

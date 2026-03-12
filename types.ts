@@ -143,6 +143,9 @@ export interface Term {
   hasFile?: boolean;
   isManual?: boolean;
   resolutionReason?: string;
+  condition?: string;
+  damageDescription?: string;
+  hasEvidence?: boolean;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

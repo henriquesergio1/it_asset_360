@@ -11,6 +11,20 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Evidência de Danos no Termo de Devolução',
+        changes: [
+            'Termos: Adicionado campo para registrar a condição do equipamento no momento da devolução.',
+            'Termos: Adicionado campo para descrever avarias (se houver).',
+            'Termos: Adicionado upload de evidência (foto/B.O.) em caso de dano.',
+            'Termos: O termo gerado agora inclui a condição, descrição do dano e a imagem da evidência.',
+            'Usuários: A aba de Termos no perfil do usuário agora exibe a condição e a descrição do dano, além de um botão para visualizar a evidência.',
+            'Versão: Atualizado para v2.18.24.',
+            'Sincronização global para v2.18.24.'
+        ] 
+    },
+    { 
+        version: '2.18.23', 
+        date: 'Hoje',
         title: 'Filtro de Múltiplos Setores',
         changes: [
             'Relatórios: O filtro de Cargos/Setores agora permite a seleção múltipla.',
