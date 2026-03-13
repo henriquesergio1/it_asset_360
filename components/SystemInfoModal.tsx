@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.11', 
+        date: 'Hoje',
+        title: 'Correção Crítica de Persistência de Dados',
+        changes: [
+            'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
+            'Correção: Backend agora realiza atualizações parciais (patch) e ignora campos nulos.',
+            'Versão: Atualizado para v2.19.11.'
+        ] 
+    },
+    { 
         version: '2.19.10', 
         date: 'Hoje',
         title: 'Correção de Persistência de Dados e Histórico',

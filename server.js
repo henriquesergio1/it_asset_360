@@ -745,6 +745,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (key.endsWith('Binary')) continue;
 
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                
+                // Se o valor for nulo ou indefinido, pulamos a atualização deste campo
+                if (val === null || val === undefined) continue; 
+
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
                 // Map legacy URL columns to Binary columns
