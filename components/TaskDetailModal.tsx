@@ -5,7 +5,7 @@ import {
     History, MessageSquare, Paperclip, Send, AlertTriangle,
     ClipboardList, Printer, Trash2, ExternalLink, Plus
 } from 'lucide-react';
-import { Task, TaskLog, TaskStatus } from '../types';
+import { Task, TaskLog, TaskStatus, SystemUser } from '../types';
 
 interface TaskDetailModalProps {
     task: Task;
@@ -13,9 +13,10 @@ interface TaskDetailModalProps {
     onUpdate: (taskId: string, updates: Partial<Task> & { _actionNote?: string }) => Promise<void>;
     currentUser: string;
     isAdmin: boolean;
+    systemUsers: SystemUser[];
 }
 
-export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onUpdate, currentUser, isAdmin }) => {
+export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onUpdate, currentUser, isAdmin, systemUsers }) => {
     const [logs, setLogs] = useState<TaskLog[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
     const [newNote, setNewNote] = useState('');
@@ -404,7 +405,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                                     <User size={16} /> Atribuída a
                                 </h3>
                                 <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                                    <div className="text-lg font-bold">{task.assignedTo || 'Geral'}</div>
+                                    <div className="text-lg font-bold">
+                                        {task.assignedTo 
+                                            ? (systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo) 
+                                            : 'Geral'}
+                                    </div>
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Responsável pela execução</div>
                                 </div>
                             </section>

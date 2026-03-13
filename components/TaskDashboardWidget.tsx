@@ -1,18 +1,40 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ClipboardList, AlertCircle, Clock, ChevronRight } from 'lucide-react';
-import { Task, TaskStatus } from '../types';
+import { ClipboardList, AlertCircle, Clock, ChevronRight, User } from 'lucide-react';
+import { Task, TaskStatus, SystemUser } from '../types';
 
 interface TaskDashboardWidgetProps {
     tasks: Task[];
     onViewAll: () => void;
     onTaskClick: (task: Task) => void;
+    systemUsers: SystemUser[];
+    currentUserId: string;
 }
 
-export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks, onViewAll, onTaskClick }) => {
-    const pendingTasks = tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS);
+export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks, onViewAll, onTaskClick, systemUsers, currentUserId }) => {
+    const pendingTasks = tasks
+        .filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)
+        .sort((a, b) => {
+            // 1. Sort by assigned to current user
+            const aIsMine = a.assignedTo === currentUserId;
+            const bIsMine = b.assignedTo === currentUserId;
+            if (aIsMine && !bIsMine) return -1;
+            if (!aIsMine && bIsMine) return 1;
+
+            // 2. Sort by due date (closest first)
+            const dateA = new Date(a.dueDate).getTime();
+            const dateB = new Date(b.dueDate).getTime();
+            return dateA - dateB;
+        });
+
     const overdueCount = pendingTasks.filter(t => t.isOverdue).length;
     const nearDueCount = pendingTasks.filter(t => t.isNearDue).length;
+
+    const getAssignedUserName = (assignedTo?: string) => {
+        if (!assignedTo) return 'Geral';
+        const user = systemUsers.find(u => u.id === assignedTo);
+        return user ? user.name : assignedTo;
+    };
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col h-full transition-colors">
@@ -83,6 +105,10 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                                         }`}>
                                             <Clock size={10} />
                                             {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                                        </span>
+                                        <span className="text-[10px] flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
+                                            <User size={10} />
+                                            {getAssignedUserName(task.assignedTo)}
                                         </span>
                                     </div>
                                 </div>

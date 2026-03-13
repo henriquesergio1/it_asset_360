@@ -540,6 +540,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                     onUpdate={onUpdateTask}
                     currentUser={currentUser}
                     isAdmin={isAdmin}
+                    systemUsers={systemUsers}
                 />
             )}
         </div>

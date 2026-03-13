@@ -22,7 +22,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts, tasks, updateTask } = useData();
+  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts, tasks, updateTask, systemUsers } = useData();
   const { isAdmin } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
@@ -196,6 +196,8 @@ const Dashboard = () => {
                 tasks={tasks} 
                 onViewAll={() => navigate('/tasks')}
                 onTaskClick={(task) => setSelectedTask(task)}
+                systemUsers={systemUsers}
+                currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
             />
         </div>
       </div>
@@ -579,6 +581,7 @@ const Dashboard = () => {
           }}
           currentUser={localStorage.getItem('userName') || 'Admin'}
           isAdmin={isAdmin}
+          systemUsers={systemUsers}
         />
       )}
     </div>
