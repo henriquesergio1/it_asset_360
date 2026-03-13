@@ -256,16 +256,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             onSubmit={handleCreateTask}
-                            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+                            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
                         >
-                            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Nova Tarefa</h2>
                                 <button type="button" onClick={() => setIsAdding(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                                     <XCircle size={24} className="text-slate-400" />
                                 </button>
                             </div>
                             
-                            <div className="p-6 space-y-4">
+                            <div className="p-6 space-y-4 overflow-y-auto flex-1">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Título</label>
                                     <input 
@@ -295,8 +295,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none dark:text-slate-100 font-mono text-xs mb-3"
                                     />
                                     
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                        <div className="flex items-center justify-between mb-3">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <div className="flex items-center justify-between mb-2">
                                             <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Paperclip size={14} /> Anexos do Manual
                                             </h4>
@@ -307,18 +307,18 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                         </div>
                                         
                                         {(newTask.manualAttachments && newTask.manualAttachments.length > 0) ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                                 {newTask.manualAttachments.map((attachment, index) => (
-                                                    <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 aspect-video flex items-center justify-center">
+                                                    <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 aspect-square flex items-center justify-center">
                                                         {attachment.startsWith('data:image') ? (
                                                             <img src={attachment} alt={`Anexo ${index + 1}`} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="flex flex-col items-center text-slate-400">
-                                                                <FileText size={24} />
-                                                                <span className="text-[10px] mt-1 font-bold">PDF</span>
+                                                                <FileText size={20} />
+                                                                <span className="text-[9px] mt-1 font-bold">PDF</span>
                                                             </div>
                                                         )}
-                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => {
@@ -331,27 +331,27 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                                                         }
                                                                     }
                                                                 }}
-                                                                className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+                                                                className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
                                                                 title="Visualizar"
                                                             >
-                                                                <ExternalLink size={16} />
+                                                                <ExternalLink size={14} />
                                                             </button>
                                                             <button 
                                                                 type="button"
                                                                 onClick={() => handleRemoveManualAttachment(index)}
-                                                                className="p-2 bg-red-500/80 hover:bg-red-600 rounded-full text-white backdrop-blur-sm transition-colors"
+                                                                className="p-1.5 bg-red-500/80 hover:bg-red-600 rounded-full text-white backdrop-blur-sm transition-colors"
                                                                 title="Remover"
                                                             >
-                                                                <Trash2 size={16} />
+                                                                <Trash2 size={14} />
                                                             </button>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nenhum anexo adicionado</p>
-                                                <p className="text-[10px] text-slate-400 mt-1">PDFs ou Imagens (Máx 5MB)</p>
+                                            <div className="text-center py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nenhum anexo</p>
+                                                <p className="text-[9px] text-slate-400 mt-1">PDFs ou Imagens (Máx 5MB)</p>
                                             </div>
                                         )}
                                     </div>
@@ -512,7 +512,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex gap-3">
+                            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex gap-3 shrink-0">
                                 <button 
                                     type="button"
                                     onClick={() => setIsAdding(false)}
