@@ -64,7 +64,20 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLogs(logsData);
       setMaintenances(maintData);
       setAccounts(accountsData);
-      setTasks(tasksData || []);
+      const now = new Date();
+      const processedTasks = (tasksData || []).map((task: Task) => {
+          let isOverdue = false;
+          let isNearDue = false;
+          if (task.dueDate) {
+              const dueDate = new Date(task.dueDate);
+              isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
+              const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+              isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
+          }
+          return { ...task, isOverdue, isNearDue };
+      });
+
+      setTasks(processedTasks);
       setTaskLogs(taskLogsData || []);
 
       // Apenas atualiza catálogo no bootstrap inicial ou carregamento forçado

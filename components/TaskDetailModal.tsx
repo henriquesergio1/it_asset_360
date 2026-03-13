@@ -158,7 +158,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                 <h1>${task.title}</h1>
                 <div class="meta">
                     <p><strong>Atribuído a:</strong> ${task.assignedTo || 'Geral'}</p>
-                    <p><strong>Prazo:</strong> ${new Date(task.dueDate).toLocaleDateString('pt-BR')}</p>
+                    <p><strong>Prazo:</strong> ${task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</p>
                     <p><strong>Status:</strong> ${task.status}</p>
                 </div>
                 <h2>Manual / Passo a Passo</h2>
@@ -391,7 +391,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                                     'bg-slate-50 dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                                 }`}>
                                     <div className="text-lg font-bold">
-                                        {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
                                     </div>
                                     {task.isOverdue && (
                                         <div className="text-xs font-medium mt-1 flex items-center gap-1">

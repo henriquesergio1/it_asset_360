@@ -1295,10 +1295,15 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             // Lógica de Alertas de Prazo (Injetada na listagem)
             const now = new Date();
             const tasksWithAlerts = formattedTasks.map(task => {
-                const dueDate = new Date(task.dueDate);
-                const isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
-                const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
-                const isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
+                let isOverdue = false;
+                let isNearDue = false;
+
+                if (task.dueDate) {
+                    const dueDate = new Date(task.dueDate);
+                    isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
+                    const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+                    isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
+                }
                 
                 return { ...task, isOverdue, isNearDue };
             });

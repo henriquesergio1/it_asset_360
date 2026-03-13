@@ -15,15 +15,15 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
     const pendingTasks = tasks
         .filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)
         .sort((a, b) => {
-            // 1. Sort by assigned to current user
-            const aIsMine = a.assignedTo === currentUserId;
-            const bIsMine = b.assignedTo === currentUserId;
-            if (aIsMine && !bIsMine) return -1;
-            if (!aIsMine && bIsMine) return 1;
+            // 1. Sort by assigned to current user OR Geral
+            const aIsMineOrGeral = !a.assignedTo || a.assignedTo === currentUserId;
+            const bIsMineOrGeral = !b.assignedTo || b.assignedTo === currentUserId;
+            if (aIsMineOrGeral && !bIsMineOrGeral) return -1;
+            if (!aIsMineOrGeral && bIsMineOrGeral) return 1;
 
             // 2. Sort by due date (closest first)
-            const dateA = new Date(a.dueDate).getTime();
-            const dateB = new Date(b.dueDate).getTime();
+            const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+            const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
             return dateA - dateB;
         });
 
@@ -104,7 +104,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                                             'text-slate-500 dark:text-slate-400'
                                         }`}>
                                             <Clock size={10} />
-                                            {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
                                         </span>
                                         <span className="text-[10px] flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
                                             <User size={10} />

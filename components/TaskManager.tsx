@@ -82,7 +82,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
     const handleCreateTask = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await onAddTask(newTask);
+            const taskToSave = { ...newTask };
+            if (!taskToSave.hasDueDate) {
+                taskToSave.dueDate = undefined;
+            }
+            await onAddTask(taskToSave);
             setIsAdding(false);
             setNewTask({
                 title: '',
@@ -209,7 +213,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                         'text-slate-500 dark:text-slate-400'
                                     }`}>
                                         <Calendar size={14} />
-                                        <span>Prazo: {task.hasDueDate && task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
+                                        <span>Prazo: {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
                                     </div>
                                     {task.isRecurring && (
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">

@@ -212,7 +212,19 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateSettings,
     
     // --- Gestão de Tarefas ---
-    tasks, taskLogs,
+    tasks: tasks.map(task => {
+        let isOverdue = false;
+        let isNearDue = false;
+        if (task.dueDate) {
+            const now = new Date();
+            const dueDate = new Date(task.dueDate);
+            isOverdue = task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && dueDate < now;
+            const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+            isNearDue = task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && !isOverdue && diffDays <= 2;
+        }
+        return { ...task, isOverdue, isNearDue };
+    }), 
+    taskLogs,
     addTask: async (t, adm) => {
         const newTask: Task = {
             id: Math.random().toString(36).substr(2, 9),
