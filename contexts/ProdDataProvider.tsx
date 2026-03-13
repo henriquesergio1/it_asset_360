@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
 
 const API_URL = ''; 
 
@@ -20,6 +20,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
   
   // ERP Integration State
   const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
@@ -49,7 +51,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const {
           devices: devicesData, sims: simsData, users: usersData, logs: logsData, 
-          maintenances: maintData, terms: termsData, accounts: accountsData
+          maintenances: maintData, terms: termsData, accounts: accountsData,
+          tasks: tasksData, taskLogs: taskLogsData
       } = data;
 
       setDevices(devicesData);
@@ -60,8 +63,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       })));
       setLogs(logsData);
       setMaintenances(maintData);
-      // setTerms call removed as state is not defined and data is mapped to users
       setAccounts(accountsData);
+      setTasks(tasksData || []);
+      setTaskLogs(taskLogsData || []);
 
       // Apenas atualiza catálogo no bootstrap inicial ou carregamento forçado
       if (!silent) {
@@ -247,6 +251,27 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addSystemUser: async (u, adm) => { await postData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     updateSystemUser: async (u, adm) => { await putData('system-users', {...u, _adminUser: adm}); fetchData(true); },
     deleteSystemUser: async (id) => { await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); fetchData(true); },
+    
+    // --- Gestão de Tarefas ---
+    tasks, taskLogs,
+    addTask: async (t, adm) => { 
+        const id = Math.random().toString(36).substring(2, 11);
+        await postData('tasks', { ...t, id, _adminUser: adm }); 
+        fetchData(true); 
+    },
+    updateTask: async (tid, u, adm) => { 
+        await fetch(`${API_URL}/api/tasks/${tid}`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ ...u, _adminUser: adm }) 
+        }); 
+        fetchData(true); 
+    },
+    fetchTaskLogs: async (tid) => {
+        const res = await fetch(`${API_URL}/api/tasks/${tid}/logs`);
+        return safeJson(res, `/api/tasks/${tid}/logs`);
+    },
+
     updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

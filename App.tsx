@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import packageJson from './package.json';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, Moon, Sun, FileText } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, Moon, Sun, FileText, CheckSquare } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -18,6 +18,7 @@ import Operations from './components/Operations';
 import AdminPanel from './components/AdminPanel';
 import AccountManager from './components/AccountManager'; 
 import Reports from './components/Reports';
+import TaskManager from './components/TaskManager';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -116,6 +117,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />
+          <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />
           
@@ -201,7 +203,9 @@ const AdminRoute = ({ children }: { children?: React.ReactNode }) => {
 };
 
 const AppRoutes = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user, isAdmin } = useAuth();
+    const { tasks, addTask, updateTask, systemUsers } = useData();
+
     return (
         <Routes>
             <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
@@ -212,6 +216,18 @@ const AppRoutes = () => {
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManager /></ProtectedRoute>} />
             <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+            <Route path="/tasks" element={
+                <ProtectedRoute>
+                    <TaskManager 
+                        tasks={tasks} 
+                        systemUsers={systemUsers}
+                        onAddTask={(t) => addTask(t, user?.name || 'Sistema')} 
+                        onUpdateTask={(tid, u) => updateTask(tid, u, user?.name || 'Sistema')} 
+                        currentUser={user?.name || 'Sistema'} 
+                        isAdmin={isAdmin}
+                    />
+                </ProtectedRoute>
+            } />
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

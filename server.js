@@ -92,6 +92,28 @@ const DB_SCHEMAS = {
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`,
+    Tasks: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        Title NVARCHAR(255),
+        Description NVARCHAR(MAX),
+        Type NVARCHAR(100),
+        Status NVARCHAR(50),
+        CreatedAt DATETIME DEFAULT GETDATE(),
+        DueDate DATETIME,
+        AssignedTo NVARCHAR(255),
+        Comments NVARCHAR(MAX),
+        Instructions NVARCHAR(MAX),
+        EvidenceUrls NVARCHAR(MAX),
+        ManualAttachments NVARCHAR(MAX)
+    )`,
+    TaskLogs: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        TaskId NVARCHAR(255),
+        Action NVARCHAR(MAX),
+        AdminUser NVARCHAR(255),
+        Timestamp DATETIME DEFAULT GETDATE(),
+        Notes NVARCHAR(MAX)
+    )`,
     ExternalDbConfig: `(
         Id INT PRIMARY KEY IDENTITY(1,1),
         Technology NVARCHAR(50),
@@ -195,6 +217,20 @@ async function initializeDatabase() {
                     if (checkNotes.recordset.length === 0) {
                         console.log('- Adicionando coluna Notes em Terms...');
                         await pool.request().query('ALTER TABLE Terms ADD Notes NVARCHAR(MAX) NULL');
+                    }
+                }
+                if (table === 'Tasks') {
+                    const checkInstructions = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'Instructions'`);
+                    if (checkInstructions.recordset.length === 0) {
+                        console.log(`- Coluna Instructions não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD Instructions NVARCHAR(MAX) NULL');
+                        console.log('  ... Coluna Instructions adicionada.');
+                    }
+                    const checkManualAttachments = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'ManualAttachments'`);
+                    if (checkManualAttachments.recordset.length === 0) {
+                        console.log(`- Coluna ManualAttachments não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD ManualAttachments NVARCHAR(MAX) NULL');
+                        console.log('  ... Coluna ManualAttachments adicionada.');
                     }
                 }
             }
@@ -311,7 +347,7 @@ app.get('/api/bootstrap', async (req, res) => {
         const [
             devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
-            accTypesRes, customFieldsRes, accountsRes
+            accTypesRes, customFieldsRes, accountsRes, tasksRes, taskLogsRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
@@ -333,7 +369,9 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
-            pool.request().query("SELECT * FROM SoftwareAccounts")
+            pool.request().query("SELECT * FROM SoftwareAccounts"),
+            pool.request().query("SELECT * FROM Tasks"),
+            pool.request().query("SELECT * FROM TaskLogs")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -350,7 +388,8 @@ app.get('/api/bootstrap', async (req, res) => {
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
-            customFields: format(customFieldsRes), accounts: format(accountsRes)
+            customFields: format(customFieldsRes), accounts: format(accountsRes),
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments']), taskLogs: format(taskLogsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -359,7 +398,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes, tasksRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -372,7 +411,8 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
-            pool.request().query("SELECT * FROM SoftwareAccounts")
+            pool.request().query("SELECT * FROM SoftwareAccounts"),
+            pool.request().query("SELECT * FROM Tasks")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -386,7 +426,8 @@ app.get('/api/sync', async (req, res) => {
             devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
-            accounts: format(accountsRes)
+            accounts: format(accountsRes),
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments'])
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -1230,6 +1271,121 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             console.error('Erro ao buscar alertas externos:', err.message);
             res.status(500).send(err.message);
         }
+    });
+
+    // --- TAREFAS (TASKS) ---
+    app.get('/api/tasks', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { status, type, assignedTo, startDate, endDate } = req.query;
+            
+            let query = "SELECT * FROM Tasks WHERE 1=1";
+            const request = pool.request();
+
+            if (status) { query += " AND Status = @status"; request.input('status', sql.NVarChar, status); }
+            if (type) { query += " AND Type = @type"; request.input('type', sql.NVarChar, type); }
+            if (assignedTo) { query += " AND AssignedTo = @assignedTo"; request.input('assignedTo', sql.NVarChar, assignedTo); }
+            if (startDate) { query += " AND CreatedAt >= @startDate"; request.input('startDate', sql.DateTime, startDate); }
+            if (endDate) { query += " AND CreatedAt <= @endDate"; request.input('endDate', sql.DateTime, endDate); }
+
+            const result = await request.query(query);
+            
+            const formattedTasks = format(result, ['EvidenceUrls', 'ManualAttachments']);
+
+            // Lógica de Alertas de Prazo (Injetada na listagem)
+            const now = new Date();
+            const tasksWithAlerts = formattedTasks.map(task => {
+                const dueDate = new Date(task.dueDate);
+                const isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
+                const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+                const isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
+                
+                return { ...task, isOverdue, isNearDue };
+            });
+
+            res.json(tasksWithAlerts);
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/tasks', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, _adminUser } = req.body;
+            
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .input('title', sql.NVarChar, title)
+                .input('description', sql.NVarChar, description)
+                .input('type', sql.NVarChar, type)
+                .input('status', sql.NVarChar, status)
+                .input('dueDate', sql.DateTime, dueDate)
+                .input('assignedTo', sql.NVarChar, assignedTo)
+                .input('instructions', sql.NVarChar, instructions)
+                .input('manualAttachments', sql.NVarChar, manualAttachments ? JSON.stringify(manualAttachments) : null)
+                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments) 
+                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments)`);
+
+            // Log de Auditoria Imutável
+            await pool.request()
+                .input('logId', sql.NVarChar, Math.random().toString(36).substring(2, 11))
+                .input('taskId', sql.NVarChar, id)
+                .input('action', sql.NVarChar, 'Tarefa Criada')
+                .input('adminUser', sql.NVarChar, _adminUser)
+                .query("INSERT INTO TaskLogs (Id, TaskId, Action, AdminUser, Timestamp) VALUES (@logId, @taskId, @action, @adminUser, GETDATE())");
+
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.put('/api/tasks/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { id } = req.params;
+            const { title, description, type, status, dueDate, assignedTo, comments, instructions, evidenceUrls, manualAttachments, _adminUser, _actionNote } = req.body;
+            
+            // Buscar estado anterior para o log
+            const oldTask = await pool.request().input('id', sql.NVarChar, id).query("SELECT Status FROM Tasks WHERE Id = @id");
+            const prevStatus = oldTask.recordset[0]?.Status;
+
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .input('title', sql.NVarChar, title)
+                .input('description', sql.NVarChar, description)
+                .input('type', sql.NVarChar, type)
+                .input('status', sql.NVarChar, status)
+                .input('dueDate', sql.DateTime, dueDate)
+                .input('assignedTo', sql.NVarChar, assignedTo)
+                .input('comments', sql.NVarChar, comments)
+                .input('instructions', sql.NVarChar, instructions)
+                .input('evidenceUrls', sql.NVarChar, evidenceUrls ? JSON.stringify(evidenceUrls) : null)
+                .input('manualAttachments', sql.NVarChar, manualAttachments ? JSON.stringify(manualAttachments) : null)
+                .query(`UPDATE Tasks SET Title=@title, Description=@description, Type=@type, Status=@status, 
+                        DueDate=@dueDate, AssignedTo=@assignedTo, Comments=@comments, Instructions=@instructions, EvidenceUrls=@evidenceUrls, ManualAttachments=@manualAttachments 
+                        WHERE Id=@id`);
+
+            // Log de Auditoria se houver mudança de status ou nota
+            if (prevStatus !== status || _actionNote) {
+                await pool.request()
+                    .input('logId', sql.NVarChar, Math.random().toString(36).substring(2, 11))
+                    .input('taskId', sql.NVarChar, id)
+                    .input('action', sql.NVarChar, prevStatus !== status ? `Status alterado de ${prevStatus} para ${status}` : 'Tarefa Editada')
+                    .input('adminUser', sql.NVarChar, _adminUser)
+                    .input('notes', sql.NVarChar, _actionNote || '')
+                    .query("INSERT INTO TaskLogs (Id, TaskId, Action, AdminUser, Timestamp, Notes) VALUES (@logId, @taskId, @action, @adminUser, GETDATE(), @notes)");
+            }
+
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/tasks/:id/logs', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('id', sql.NVarChar, req.params.id)
+                .query("SELECT * FROM TaskLogs WHERE TaskId = @id ORDER BY Timestamp DESC");
+            res.json(result.recordset);
+        } catch (err) { res.status(500).send(err.message); }
     });
 
     app.listen(PORT, () => {

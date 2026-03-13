@@ -240,9 +240,74 @@ export interface AuditLog {
   newData?: string;      // NOVO: Snapshot depois da alteração
 }
 
+export enum TaskStatus {
+  PENDING = 'Pendente',
+  IN_PROGRESS = 'Em Andamento',
+  COMPLETED = 'Concluída',
+  CANCELED = 'Cancelada'
+}
+
+export enum TaskType {
+  MAINTENANCE = 'Manutenção',
+  FILE_SEND = 'Envio de Arquivo',
+  SYSTEM_ACTION = 'Ação no Sistema',
+  REMINDER = 'Lembrete',
+  OTHER = 'Outros'
+}
+
+export enum RecurrenceType {
+  NONE = 'Nenhuma',
+  MONTHLY_DAY = 'Mensal (Dia Fixo)',
+  MONTHLY_WEEKDAY = 'Mensal (Dia da Semana)',
+  INTERVAL_MONTHS = 'Intervalo de Meses'
+}
+
+export interface TaskRecurrenceConfig {
+  type: RecurrenceType;
+  dayOfMonth?: number; // 1-31
+  weekOfMonth?: number; // 1 (primeira), 2, 3, 4, 5 (última)
+  dayOfWeek?: number; // 0-6
+  intervalMonths?: number;
+}
+
+export interface TaskLog {
+  id: string;
+  taskId: string;
+  action: string;
+  adminUser: string;
+  timestamp: string;
+  notes?: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  type: TaskType;
+  status: TaskStatus;
+  createdAt: string;
+  dueDate?: string;
+  hasDueDate: boolean;
+  assignedTo?: string; // ID do SystemUser ou 'Geral'
+  comments?: string;
+  instructions?: string;
+  manualAttachments?: string[]; // URLs de arquivos anexados ao manual
+  evidenceUrls?: string[]; // URLs de arquivos anexados
+  
+  // Recorrência
+  isRecurring: boolean;
+  recurrenceConfig?: TaskRecurrenceConfig;
+  parentId?: string; // ID da tarefa original se for uma instância recorrente
+
+  // Lógica de Alerta (calculada no frontend/backend)
+  isOverdue?: boolean;
+  isNearDue?: boolean;
+}
+
 export interface DashboardStats {
   totalDevices: number;
   availableDevices: number;
   totalSims: number;
   activeUsers: number;
+  pendingTasks: number; // Adicionado para o novo módulo
 }

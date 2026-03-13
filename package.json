@@ -1,11 +1,12 @@
 {
   "name": "it-asset-360",
-  "version": "2.18.33",
+  "version": "2.19.05",
   "private": true,
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "framer-motion": "^12.36.0",
     "lucide-react": "^0.395.0",
     "mssql": "^10.0.2",
     "react": "^18.3.1",

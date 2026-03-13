@@ -183,6 +183,31 @@ CREATE TABLE ExternalDbConfig (
     LastSync DATETIME
 );
 
+-- Tabela de Gestão de Tarefas
+CREATE TABLE Tasks (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Title NVARCHAR(255),
+    Description NVARCHAR(MAX),
+    Type NVARCHAR(100),
+    Status NVARCHAR(50),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    DueDate DATETIME,
+    AssignedTo NVARCHAR(255),
+    Comments NVARCHAR(MAX),
+    Instructions NVARCHAR(MAX),
+    EvidenceUrls NVARCHAR(MAX)
+);
+
+-- Tabela de Histórico de Tarefas (Auditoria Imutável)
+CREATE TABLE TaskLogs (
+    Id NVARCHAR(255) PRIMARY KEY,
+    TaskId NVARCHAR(255),
+    Action NVARCHAR(MAX),
+    AdminUser NVARCHAR(255),
+    Timestamp DATETIME DEFAULT GETDATE(),
+    Notes NVARCHAR(MAX)
+);
+
 -- Populando dados iniciais essenciais
 INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
 INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server');

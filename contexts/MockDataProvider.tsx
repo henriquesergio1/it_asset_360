@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -24,6 +24,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>(mockAccessoryTypes || []);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
 
   const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
   const [expedienteAlerts, setExpedienteAlerts] = useState<ExpedienteAlert[]>([]);
@@ -144,6 +146,42 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     logAction(ActionType.UPDATE, 'System', 'settings', 'Configurações', adminName, '', undefined, old, newSettings); 
   };
 
+  const calculateNextDate = (config: TaskRecurrenceConfig, baseDateStr: string): string => {
+    const baseDate = new Date(baseDateStr);
+    let nextDate = new Date(baseDate);
+
+    if (config.type === RecurrenceType.MONTHLY_DAY) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        if (config.dayOfMonth) {
+            nextDate.setDate(config.dayOfMonth);
+        }
+    } else if (config.type === RecurrenceType.MONTHLY_WEEKDAY) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        nextDate.setDate(1);
+        
+        if (config.dayOfWeek !== undefined && config.weekOfMonth !== undefined) {
+            // Encontrar a primeira ocorrência do dia da semana
+            while (nextDate.getDay() !== config.dayOfWeek) {
+                nextDate.setDate(nextDate.getDate() + 1);
+            }
+            
+            if (config.weekOfMonth === 5) { // Última
+                const lastDate = new Date(nextDate);
+                while (lastDate.getMonth() === nextDate.getMonth()) {
+                    nextDate.setTime(lastDate.getTime());
+                    lastDate.setDate(lastDate.getDate() + 7);
+                }
+            } else {
+                nextDate.setDate(nextDate.getDate() + (config.weekOfMonth - 1) * 7);
+            }
+        }
+    } else if (config.type === RecurrenceType.INTERVAL_MONTHS) {
+        nextDate.setMonth(nextDate.getMonth() + (config.intervalMonths || 1));
+    }
+
+    return nextDate.toISOString().split('T')[0];
+  };
+
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
@@ -172,6 +210,106 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     deleteSystemUser: (id, adm) => { setSystemUsers(p => p.filter(x => x.id !== id)); },
     updateSettings,
+    
+    // --- Gestão de Tarefas ---
+    tasks, taskLogs,
+    addTask: async (t, adm) => {
+        const newTask: Task = {
+            id: Math.random().toString(36).substr(2, 9),
+            title: t.title || '',
+            description: t.description || '',
+            type: t.type || TaskType.OTHER,
+            status: TaskStatus.PENDING,
+            createdAt: new Date().toISOString(),
+            hasDueDate: t.hasDueDate || false,
+            dueDate: t.hasDueDate ? t.dueDate : undefined,
+            assignedTo: t.assignedTo,
+            instructions: t.instructions,
+            manualAttachments: t.manualAttachments || [],
+            evidenceUrls: [],
+            isRecurring: t.isRecurring || false,
+            recurrenceConfig: t.recurrenceConfig,
+            parentId: t.parentId
+        };
+        setTasks(prev => [...prev, newTask]);
+        const log: TaskLog = {
+            id: Math.random().toString(36).substr(2, 9),
+            taskId: newTask.id,
+            action: 'Tarefa Criada',
+            adminUser: adm,
+            timestamp: new Date().toISOString()
+        };
+        setTaskLogs(prev => [...prev, log]);
+    },
+    updateTask: async (tid, u, adm) => {
+        let taskToRepeat: Task | null = null;
+        
+        setTasks(prev => {
+            const updated = prev.map(t => {
+                if (t.id === tid) {
+                    const newTaskState = { ...t, ...u };
+                    // Se a tarefa foi concluída e é recorrente, preparamos a próxima
+                    if (u.status === TaskStatus.COMPLETED && t.isRecurring && !t.parentId) {
+                        taskToRepeat = newTaskState;
+                    }
+                    return newTaskState;
+                }
+                return t;
+            });
+            return updated;
+        });
+
+        // Se houver recorrência, geramos a próxima tarefa
+        if (taskToRepeat) {
+            const config = (taskToRepeat as Task).recurrenceConfig;
+            if (config && config.type !== RecurrenceType.NONE) {
+                const nextDueDate = calculateNextDate(config, (taskToRepeat as Task).dueDate || (taskToRepeat as Task).createdAt);
+                
+                const nextTask: Task = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    title: (taskToRepeat as Task).title,
+                    description: (taskToRepeat as Task).description,
+                    type: (taskToRepeat as Task).type,
+                    status: TaskStatus.PENDING,
+                    createdAt: new Date().toISOString(),
+                    hasDueDate: (taskToRepeat as Task).hasDueDate,
+                    dueDate: nextDueDate,
+                    assignedTo: (taskToRepeat as Task).assignedTo,
+                    evidenceUrls: [],
+                    isRecurring: true,
+                    recurrenceConfig: config
+                    // parentId: (taskToRepeat as Task).id // Opcional: manter rastro
+                };
+                
+                setTimeout(() => {
+                    setTasks(prev => [...prev, nextTask]);
+                    const log: TaskLog = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        taskId: nextTask.id,
+                        action: 'Tarefa Recorrente Gerada',
+                        adminUser: 'Sistema',
+                        timestamp: new Date().toISOString(),
+                        notes: `Gerada automaticamente a partir da tarefa concluída: ${tid}`
+                    };
+                    setTaskLogs(prev => [...prev, log]);
+                }, 500);
+            }
+        }
+
+        const log: TaskLog = {
+            id: Math.random().toString(36).substr(2, 9),
+            taskId: tid,
+            action: u.status ? `Status alterado para ${u.status}` : 'Tarefa Atualizada',
+            adminUser: adm,
+            timestamp: new Date().toISOString(),
+            notes: u._actionNote
+        };
+        setTaskLogs(prev => [...prev, log]);
+    },
+    fetchTaskLogs: async (tid) => {
+        return taskLogs.filter(l => l.taskId === tid);
+    },
+
     assignAsset: (assetType, assetId, userId, notes, adminName, accessories) => {
         const user = users.find(u => u.id === userId);
         if (assetType === 'Device') {

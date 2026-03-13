@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
 
 export interface DataContextType {
   devices: Device[];
@@ -22,6 +22,8 @@ export interface DataContextType {
   accessoryTypes: AccessoryType[];
   customFields: CustomField[]; 
   accounts: SoftwareAccount[]; 
+  tasks: Task[];
+  taskLogs: TaskLog[];
 
   loading?: boolean;
   error?: string | null;
@@ -116,6 +118,11 @@ export interface DataContextType {
   updateExternalDbConfig: (config: ExternalDbConfig, adminName: string) => Promise<void>;
   testExternalDbConnection: (config: ExternalDbConfig) => Promise<{ success: boolean; message: string }>;
   fetchExpedienteAlerts: () => Promise<void>;
+
+  // --- Gestão de Tarefas ---
+  addTask: (task: Partial<Task>, adminName: string) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<Task> & { _actionNote?: string }, adminName: string) => Promise<void>;
+  fetchTaskLogs: (taskId: string) => Promise<TaskLog[]>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

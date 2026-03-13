@@ -11,6 +11,19 @@ const versions = [
     { 
         version: packageJson.version, 
         date: 'Hoje',
+        title: 'Módulo de Gestão de Tarefas (Agenda/To-Do)',
+        changes: [
+            'Módulo: Lançamento do novo módulo de Gestão de Tarefas para controle de rotinas do setor.',
+            'Dashboard: Novo widget de tarefas pendentes com alertas de prazos (Atrasado/Próximo do Vencimento).',
+            'Gestão: Tela completa de gerenciamento com filtros por status, tipo, responsável e data.',
+            'Auditoria: Histórico imutável de ações (quem, o que e quando) para cada tarefa.',
+            'Evidências: Suporte a comentários e anexos de arquivos na conclusão de tarefas.',
+            'Versão: Atualizado para v2.19.00 (Major Update).'
+        ] 
+    },
+    { 
+        version: '2.18.33', 
+        date: 'Hoje',
         title: 'Layout de Evidências Dinâmico',
         changes: [
             'Impressão: Novo layout dinâmico que prioriza o tamanho das fotos (1 grande + 2 menores).',

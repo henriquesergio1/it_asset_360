@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock } from 'lucide-react';
-import { DeviceStatus, AccountType } from '../types';
-import { Link } from 'react-router-dom';
+import { DeviceStatus, AccountType, Task } from '../types';
+import { Link, useNavigate } from 'react-router-dom';
+import { TaskDashboardWidget } from './TaskDashboardWidget';
+import { TaskDetailModal } from './TaskDetailModal';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
   <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 flex items-start justify-between hover:shadow-md transition-all">
@@ -19,12 +22,15 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts } = useData();
+  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts, tasks, updateTask } = useData();
+  const { isAdmin } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
   const [isLccExpanded, setIsLccExpanded] = useState(false);
   const [resolvingTerm, setResolvingTerm] = useState<{termId: string, userName: string} | null>(null);
   const [resolveReason, setResolveReason] = useState('');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
       fetchExpedienteAlerts();
@@ -138,9 +144,9 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Gráficos de Status e Licenças - Reduzidos e Reordenados para 2ª posição */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[280px]">
+      {/* Gráficos e Tarefas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[320px]">
           <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-3">Status dos Dispositivos</h2>
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
@@ -159,7 +165,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[280px] flex flex-col">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 h-[320px] flex flex-col">
             <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2">
                     <Lock size={18} className="text-indigo-600 dark:text-indigo-400"/> Licenças / Contas
@@ -183,6 +189,14 @@ const Dashboard = () => {
                     );
                 })}
             </div>
+        </div>
+
+        <div className="h-[320px]">
+            <TaskDashboardWidget 
+                tasks={tasks} 
+                onViewAll={() => navigate('/tasks')}
+                onTaskClick={(task) => setSelectedTask(task)}
+            />
         </div>
       </div>
 
@@ -554,6 +568,19 @@ const Dashboard = () => {
               </div>
           )}
       </div>
+      {/* Modal de Detalhes da Tarefa */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={async (tid, updates) => {
+            await updateTask(tid, updates, localStorage.getItem('userName') || 'Admin');
+            setSelectedTask(null);
+          }}
+          currentUser={localStorage.getItem('userName') || 'Admin'}
+          isAdmin={isAdmin}
+        />
+      )}
     </div>
   );
 };
