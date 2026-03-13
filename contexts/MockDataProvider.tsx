@@ -261,11 +261,13 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTasks(prev => {
             const updated = prev.map(t => {
                 if (t.id === tid) {
-                    const newTaskState = { 
-                        ...t, 
-                        ...updates,
-                        dueDate: updates.dueDate !== undefined ? updates.dueDate : t.dueDate 
-                    };
+                    const newTaskState = Object.keys(updates).length > 0 
+                        ? { 
+                            ...t, 
+                            ...updates,
+                            dueDate: updates.dueDate !== undefined ? updates.dueDate : t.dueDate 
+                        }
+                        : t;
                     if (updates.status === TaskStatus.COMPLETED && t.isRecurring && !t.parentId) {
                         taskToRepeat = newTaskState;
                     }

@@ -486,7 +486,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                                             }`} />
                                             <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{log.action}</div>
                                             <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                                                <User size={10} /> {log.adminUser} • {new Date(log.timestamp).toLocaleString('pt-BR')}
+                                                <User size={10} /> {log.adminUser} • {log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data inválida'}
                                             </div>
                                             {log.notes && (
                                                 <div className="mt-2 p-2 bg-white dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 italic">

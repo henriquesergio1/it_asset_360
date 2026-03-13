@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.10', 
+        date: 'Hoje',
+        title: 'Correção de Persistência de Dados e Histórico',
+        changes: [
+            'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
+            'Correção: Corrigido erro "Invalid Date" no histórico de ações.',
+            'Versão: Atualizado para v2.19.10.'
+        ] 
+    },
+    { 
         version: '2.19.09', 
         date: 'Hoje',
         title: 'Correção de Atualização de Tarefas',
