@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.09', 
+        date: 'Hoje',
+        title: 'Correção de Atualização de Tarefas',
+        changes: [
+            'Correção: Corrigido erro "Invalid Date" ao atualizar tarefas.',
+            'Correção: Status da tarefa agora só é alterado via botão específico.',
+            'Versão: Atualizado para v2.19.09.'
+        ] 
+    },
+    { 
         version: '2.19.08', 
         date: 'Hoje',
         title: 'Correção de Erro na Tela de Tarefas',

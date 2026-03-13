@@ -256,12 +256,17 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateTask: async (tid, u, adm) => {
         let taskToRepeat: Task | null = null;
         
+        const { _actionNote, ...updates } = u;
+
         setTasks(prev => {
             const updated = prev.map(t => {
                 if (t.id === tid) {
-                    const newTaskState = { ...t, ...u };
-                    // Se a tarefa foi concluída e é recorrente, preparamos a próxima
-                    if (u.status === TaskStatus.COMPLETED && t.isRecurring && !t.parentId) {
+                    const newTaskState = { 
+                        ...t, 
+                        ...updates,
+                        dueDate: updates.dueDate !== undefined ? updates.dueDate : t.dueDate 
+                    };
+                    if (updates.status === TaskStatus.COMPLETED && t.isRecurring && !t.parentId) {
                         taskToRepeat = newTaskState;
                     }
                     return newTaskState;
