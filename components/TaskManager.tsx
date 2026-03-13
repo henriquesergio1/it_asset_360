@@ -41,8 +41,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => {
-            const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
-                                 t.description?.toLowerCase().includes(search.toLowerCase());
+            if (!t) return false;
+            const matchesSearch = (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
+                                 (t.description || '').toLowerCase().includes(search.toLowerCase());
             const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
             const matchesType = typeFilter === 'All' || t.type === typeFilter;
             return matchesSearch && matchesStatus && matchesType;

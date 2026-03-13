@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.08', 
+        date: 'Hoje',
+        title: 'Correção de Erro na Tela de Tarefas',
+        changes: [
+            'Correção: Corrigido erro que impedia o carregamento da tela de tarefas ao enviar informações.',
+            'Versão: Atualizado para v2.19.08.'
+        ] 
+    },
+    { 
         version: packageJson.version, 
         date: 'Hoje',
         title: 'Módulo de Gestão de Tarefas (Agenda/To-Do)',
