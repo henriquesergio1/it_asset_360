@@ -9,6 +9,28 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.14', 
+        date: '16/03/2026',
+        title: 'Validações, Auditoria e Notificações',
+        changes: [
+            'Segurança: Impedido cancelamento de tarefas já concluídas.',
+            'Auditoria: Agora é obrigatório informar o motivo ao cancelar uma tarefa.',
+            'UX: Adicionado sistema de notificações flutuantes (Toasts) para feedback de ações.',
+            'Validação: Impedida conclusão direta de tarefas canceladas.',
+            'Versão: Atualizado para v2.19.14.'
+        ] 
+    },
+    { 
+        version: '2.19.13', 
+        date: '16/03/2026',
+        title: 'Sincronização em Tempo Real do Modal',
+        changes: [
+            'Correção: Modal de detalhes agora reflete mudanças de status imediatamente sem recarregar a página.',
+            'Melhoria: Refatorada gestão de estado do modal para derivar dados da fonte única da verdade.',
+            'Versão: Atualizado para v2.19.13.'
+        ] 
+    },
+    { 
         version: '2.19.12', 
         date: '16/03/2026',
         title: 'Correção Definitiva de Persistência de Tarefas',

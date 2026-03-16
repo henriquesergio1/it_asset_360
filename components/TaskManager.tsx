@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
+import { useToast } from '../contexts/ToastContext';
 
 interface TaskManagerProps {
     tasks: Task[];
@@ -19,10 +20,11 @@ interface TaskManagerProps {
 }
 
 export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
+    const { showToast } = useToast();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
     const [typeFilter, setTypeFilter] = useState<TaskType | 'All'>('All');
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [newTask, setNewTask] = useState<Partial<Task>>({
         title: '',
@@ -38,6 +40,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
         },
         manualAttachments: []
     });
+
+    const selectedTask = useMemo(() => {
+        if (!selectedTaskId) return null;
+        return tasks.find(t => t.id === selectedTaskId) || null;
+    }, [tasks, selectedTaskId]);
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => {
@@ -89,6 +96,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
             }
             await onAddTask(taskToSave);
             setIsAdding(false);
+            showToast('Tarefa criada com sucesso!');
             setNewTask({
                 title: '',
                 description: '',
@@ -174,7 +182,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            onClick={() => setSelectedTask(task)}
+                            onClick={() => setSelectedTaskId(task.id)}
                             className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all cursor-pointer group flex flex-col h-full"
                         >
                             <div className="p-5 flex-1">
@@ -541,7 +549,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
             {selectedTask && (
                 <TaskDetailModal 
                     task={selectedTask}
-                    onClose={() => setSelectedTask(null)}
+                    onClose={() => setSelectedTaskId(null)}
                     onUpdate={onUpdateTask}
                     currentUser={currentUser}
                     isAdmin={isAdmin}

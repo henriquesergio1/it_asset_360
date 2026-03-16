@@ -7,6 +7,7 @@ import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, Shiel
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useData } from './contexts/DataContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 // Pages imports
 import Login from './components/Login';
@@ -238,7 +239,9 @@ const App = () => {
   return (
     <HashRouter>
         <AuthProvider>
-            <AppRoutes />
+            <ToastProvider>
+                <AppRoutes />
+            </ToastProvider>
         </AuthProvider>
     </HashRouter>
   );

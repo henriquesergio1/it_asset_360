@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Clock, User, FileText, CheckCircle2, AlertCircle, 
     History, MessageSquare, Paperclip, Send, AlertTriangle,
-    ClipboardList, Printer, Trash2, ExternalLink, Plus
+    ClipboardList, Printer, Trash2, ExternalLink, Plus, XCircle
 } from 'lucide-react';
 import { Task, TaskLog, TaskStatus, SystemUser } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 interface TaskDetailModalProps {
     task: Task;
@@ -17,6 +18,7 @@ interface TaskDetailModalProps {
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onUpdate, currentUser, isAdmin, systemUsers }) => {
+    const { showToast } = useToast();
     const [logs, setLogs] = useState<TaskLog[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
     const [newNote, setNewNote] = useState('');
@@ -24,6 +26,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
     const [isEditingInstructions, setIsEditingInstructions] = useState(false);
     const [tempInstructions, setTempInstructions] = useState(task.instructions || '');
     const [tempManualAttachments, setTempManualAttachments] = useState<string[]>(task.manualAttachments || []);
+    const [showCancelReason, setShowCancelReason] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+
+    useEffect(() => {
+        if (!isEditingInstructions) {
+            setTempInstructions(task.instructions || '');
+            setTempManualAttachments(task.manualAttachments || []);
+        }
+    }, [task.instructions, task.manualAttachments, isEditingInstructions]);
 
     useEffect(() => {
         const fetchLogs = async () => {
@@ -44,18 +55,53 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
 
     const handleStatusChange = async (newStatus: TaskStatus) => {
         if (newStatus === task.status) return;
+
+        // Validação: Tarefas concluídas não podem ser canceladas
+        if (task.status === TaskStatus.COMPLETED && newStatus === TaskStatus.CANCELED) {
+            showToast('Tarefas concluídas não podem ser canceladas.', 'error');
+            return;
+        }
+
+        // Validação: Tarefas canceladas não podem ser concluídas diretamente
+        if (task.status === TaskStatus.CANCELED && newStatus === TaskStatus.COMPLETED) {
+            showToast('Tarefas canceladas não podem ser concluídas diretamente. Reabra a tarefa primeiro.', 'error');
+            return;
+        }
+
+        // Validação: Tarefas canceladas não podem ir para "Em Andamento" diretamente
+        if (task.status === TaskStatus.CANCELED && newStatus === TaskStatus.IN_PROGRESS) {
+            showToast('Tarefas canceladas devem ser reabertas para "Pendente" antes de iniciar.', 'error');
+            return;
+        }
+
+        // Se for cancelamento, pedir motivo
+        if (newStatus === TaskStatus.CANCELED && !showCancelReason) {
+            setShowCancelReason(true);
+            return;
+        }
+
         setUpdating(true);
         try {
+            const actionNote = newStatus === TaskStatus.CANCELED 
+                ? `Tarefa Cancelada. Motivo: ${cancelReason || 'Não informado'}`
+                : (newNote || `Status alterado para ${newStatus}`);
+
             await onUpdate(task.id, { 
                 status: newStatus, 
-                _actionNote: newNote || `Status alterado para ${newStatus}` 
+                _actionNote: actionNote 
             });
+            
             setNewNote('');
+            setCancelReason('');
+            setShowCancelReason(false);
+            showToast(`Tarefa ${newStatus.toLowerCase()} com sucesso!`);
+
             // Recarregar logs após atualização
             const res = await fetch(`/api/tasks/${task.id}/logs`);
             if (res.ok) setLogs(await res.json());
         } catch (err) {
             console.error('Erro ao atualizar status:', err);
+            showToast('Erro ao atualizar status da tarefa.', 'error');
         } finally {
             setUpdating(false);
         }
@@ -67,10 +113,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
         try {
             await onUpdate(task.id, { _actionNote: newNote });
             setNewNote('');
+            showToast('Comentário adicionado com sucesso!');
             const res = await fetch(`/api/tasks/${task.id}/logs`);
             if (res.ok) setLogs(await res.json());
         } catch (err) {
             console.error('Erro ao adicionar nota:', err);
+            showToast('Erro ao adicionar comentário.', 'error');
         } finally {
             setUpdating(false);
         }
@@ -85,10 +133,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                 _actionNote: 'Manual de execução atualizado'
             });
             setIsEditingInstructions(false);
+            showToast('Manual de execução atualizado com sucesso!');
             const res = await fetch(`/api/tasks/${task.id}/logs`);
             if (res.ok) setLogs(await res.json());
         } catch (err) {
             console.error('Erro ao salvar instruções:', err);
+            showToast('Erro ao salvar manual.', 'error');
         } finally {
             setUpdating(false);
         }
@@ -419,6 +469,47 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <CheckCircle2 size={16} /> Ações Disponíveis
                             </h3>
+                            
+                            {showCancelReason && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl space-y-3 mb-4"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wider flex items-center gap-2">
+                                            <AlertTriangle size={14} /> Motivo do Cancelamento
+                                        </h4>
+                                        <button onClick={() => setShowCancelReason(false)} className="text-red-400 hover:text-red-600">
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                    <textarea 
+                                        value={cancelReason}
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                        placeholder="Descreva o motivo do cancelamento desta tarefa..."
+                                        className="w-full p-3 bg-white dark:bg-slate-800 border-2 border-red-100 dark:border-red-900/30 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500 transition-all dark:text-slate-200"
+                                        rows={2}
+                                        autoFocus
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <button 
+                                            onClick={() => setShowCancelReason(false)}
+                                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        >
+                                            Voltar
+                                        </button>
+                                        <button 
+                                            onClick={() => handleStatusChange(TaskStatus.CANCELED)}
+                                            disabled={!cancelReason.trim() || updating}
+                                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 transition-all"
+                                        >
+                                            Confirmar Cancelamento
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
                             <div className="flex flex-wrap gap-3">
                                 {task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && (
                                     <>
