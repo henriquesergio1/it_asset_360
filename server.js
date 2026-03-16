@@ -1350,41 +1350,55 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         try {
             const pool = await sql.connect(dbConfig);
             const { id } = req.params;
-            const { title, description, type, status, dueDate, assignedTo, comments, instructions, evidenceUrls, manualAttachments, _adminUser, _actionNote } = req.body;
             
-            // Buscar estado anterior para o log
-            const oldTask = await pool.request().input('id', sql.NVarChar, id).query("SELECT Status FROM Tasks WHERE Id = @id");
-            const prevStatus = oldTask.recordset[0]?.Status;
+            // Buscar estado anterior para o log e para garantir que temos os dados
+            const oldRes = await pool.request().input('id', sql.NVarChar, id).query("SELECT * FROM Tasks WHERE Id = @id");
+            const prev = oldRes.recordset[0];
+            if (!prev) return res.status(404).send('Tarefa não encontrada');
 
-            await pool.request()
-                .input('id', sql.NVarChar, id)
-                .input('title', sql.NVarChar, title)
-                .input('description', sql.NVarChar, description)
-                .input('type', sql.NVarChar, type)
-                .input('status', sql.NVarChar, status)
-                .input('dueDate', sql.DateTime, dueDate)
-                .input('assignedTo', sql.NVarChar, assignedTo)
-                .input('comments', sql.NVarChar, comments)
-                .input('instructions', sql.NVarChar, instructions)
-                .input('evidenceUrls', sql.NVarChar, evidenceUrls ? JSON.stringify(evidenceUrls) : null)
-                .input('manualAttachments', sql.NVarChar, manualAttachments ? JSON.stringify(manualAttachments) : null)
-                .query(`UPDATE Tasks SET Title=@title, Description=@description, Type=@type, Status=@status, 
-                        DueDate=@dueDate, AssignedTo=@assignedTo, Comments=@comments, Instructions=@instructions, EvidenceUrls=@evidenceUrls, ManualAttachments=@manualAttachments 
-                        WHERE Id=@id`);
+            const request = pool.request();
+            let sets = [];
+            const processedKeys = new Set();
+            
+            for (let key in req.body) {
+                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                
+                const val = (key === 'evidenceUrls' || key === 'manualAttachments') ? JSON.stringify(req.body[key]) : req.body[key];
+                if (val === null || val === undefined) continue;
+
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                if (processedKeys.has(dbKey)) continue;
+                processedKeys.add(dbKey);
+
+                request.input(dbKey, val);
+                sets.push(`${dbKey}=@${dbKey}`);
+            }
+
+            if (sets.length > 0) {
+                request.input('TargetId', id);
+                await request.query(`UPDATE Tasks SET ${sets.join(',')} WHERE Id=@TargetId`);
+            }
 
             // Log de Auditoria se houver mudança de status ou nota
-            if (prevStatus !== status || _actionNote) {
+            const newStatus = req.body.status || prev.Status;
+            const _actionNote = req.body._actionNote;
+            const _adminUser = req.body._adminUser;
+
+            if (prev.Status !== newStatus || _actionNote) {
                 await pool.request()
                     .input('logId', sql.NVarChar, Math.random().toString(36).substring(2, 11))
                     .input('taskId', sql.NVarChar, id)
-                    .input('action', sql.NVarChar, prevStatus !== status ? `Status alterado de ${prevStatus} para ${status}` : 'Tarefa Editada')
-                    .input('adminUser', sql.NVarChar, _adminUser)
+                    .input('action', sql.NVarChar, prev.Status !== newStatus ? `Status alterado de ${prev.Status} para ${newStatus}` : 'Tarefa Editada')
+                    .input('adminUser', sql.NVarChar, _adminUser || 'Sistema')
                     .input('notes', sql.NVarChar, _actionNote || '')
                     .query("INSERT INTO TaskLogs (Id, TaskId, Action, AdminUser, Timestamp, Notes) VALUES (@logId, @taskId, @action, @adminUser, GETDATE(), @notes)");
             }
 
             res.json({ success: true });
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error('Erro ao atualizar tarefa:', err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.get('/api/tasks/:id/logs', async (req, res) => {
@@ -1393,7 +1407,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const result = await pool.request()
                 .input('id', sql.NVarChar, req.params.id)
                 .query("SELECT * FROM TaskLogs WHERE TaskId = @id ORDER BY Timestamp DESC");
-            res.json(result.recordset);
+            res.json(format(result));
         } catch (err) { res.status(500).send(err.message); }
     });
 

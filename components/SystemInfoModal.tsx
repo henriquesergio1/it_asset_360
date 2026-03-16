@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.12', 
+        date: '16/03/2026',
+        title: 'Correção Definitiva de Persistência de Tarefas',
+        changes: [
+            'Correção: Implementada atualização parcial (PATCH) real no backend para tarefas.',
+            'Correção: Corrigido mapeamento de campos no histórico de ações (Timestamp -> timestamp).',
+            'Correção: Resolvido erro de "Data inválida" e perda de dados ao adicionar comentários.',
+            'Versão: Atualizado para v2.19.12.'
+        ] 
+    },
+    { 
         version: '2.19.11', 
         date: 'Hoje',
         title: 'Correção Crítica de Persistência de Dados',

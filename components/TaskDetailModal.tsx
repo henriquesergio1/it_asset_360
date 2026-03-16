@@ -65,7 +65,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
         if (!newNote.trim()) return;
         setUpdating(true);
         try {
-            await onUpdate(task.id, { comments: newNote });
+            await onUpdate(task.id, { _actionNote: newNote });
             setNewNote('');
             const res = await fetch(`/api/tasks/${task.id}/logs`);
             if (res.ok) setLogs(await res.json());
