@@ -174,7 +174,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -189,6 +189,7 @@ const UserManager = () => {
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({ active: true });
+  const [releaseAssetsOnLeave, setReleaseAssetsOnLeave] = useState(true);
   
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', notes: '', evidenceFiles: [] });
@@ -274,7 +275,16 @@ const UserManager = () => {
   const handleOpenModal = (user?: User, viewOnly: boolean = false) => {
     setActiveTab('DATA');
     setIsViewOnly(viewOnly);
-    if (user) { setEditingId(user.id); setFormData(user); }
+    setReleaseAssetsOnLeave(true);
+    if (user) { 
+        setEditingId(user.id); 
+        // Fix date format for input type="date" (v2.19.16)
+        const formattedUser = { ...user };
+        if (formattedUser.onLeaveUntil && typeof formattedUser.onLeaveUntil === 'string') {
+            formattedUser.onLeaveUntil = formattedUser.onLeaveUntil.split('T')[0];
+        }
+        setFormData(formattedUser); 
+    }
     else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', sectorId: '' }); }
     setIsModalOpen(true);
   };
@@ -490,8 +500,25 @@ const UserManager = () => {
     }
   };
 
-  const confirmEdit = () => {
+  const confirmEdit = async () => {
     if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
+    
+    // Liberação automática de ativos ao afastar (v2.19.16)
+    if (formData.status === 'Afastado' && releaseAssetsOnLeave && editingId) {
+        const { userDevices, allUserSims } = getUserAssets(editingId);
+        if (userDevices.length > 0 || allUserSims.length > 0) {
+            const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
+            if (confirmRelease) {
+                for (const device of userDevices) {
+                    await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName);
+                }
+                for (const sim of allUserSims) {
+                    await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName);
+                }
+            }
+        }
+    }
+
     const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
     updateUser(cleanedData as User, adminName, editReason);
     setIsReasonModalOpen(false);
@@ -705,7 +732,19 @@ const UserManager = () => {
                 {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value.trim())})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value.trim()})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
 <div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Status do Colaborador</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="Ativo">Ativo</option><option value="Afastado">Afastado (INSS/Licença)</option></select></div>
 {formData.status === 'Afastado' && (
-    <div className="animate-fade-in"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Data Prevista de Retorno</label><input disabled={isViewOnly} type="date" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/></div>
+    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+        <div>
+            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Data Prevista de Retorno</label>
+            <input disabled={isViewOnly} type="date" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/>
+        </div>
+        <div className="flex items-center gap-3 pt-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" disabled={isViewOnly} className="sr-only peer" checked={releaseAssetsOnLeave} onChange={(e) => setReleaseAssetsOnLeave(e.target.checked)} />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
+                <span className="ml-3 text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest">Liberar equipamentos vinculados?</span>
+            </label>
+        </div>
+    </div>
 )}
 <div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
                 {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}

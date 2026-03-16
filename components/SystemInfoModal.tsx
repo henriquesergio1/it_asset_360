@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.16', 
+        date: '16/03/2026',
+        title: 'Automação de Inventário e Correções',
+        changes: [
+            'Funcionalidade: Adicionada opção de liberação automática de equipamentos ao afastar colaborador.',
+            'Correção: Corrigido formato de data no campo de retorno de afastamento.',
+            'UX: Checkbox de liberação rápida integrado ao fluxo de alteração de status.',
+            'Versão: Atualizado para v2.19.16.'
+        ] 
+    },
+    { 
         version: '2.19.15', 
         date: '16/03/2026',
         title: 'Gestão de Afastamentos e Substituições',
