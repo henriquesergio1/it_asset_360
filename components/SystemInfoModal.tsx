@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.15', 
+        date: '16/03/2026',
+        title: 'Gestão de Afastamentos e Substituições',
+        changes: [
+            'Funcionalidade: Implementado status "Afastado" para colaboradores (INSS/Licença).',
+            'Funcionalidade: Adicionado campo "Data de Retorno" para controle de afastamento.',
+            'UX: Novos filtros na gestão de usuários (Ativos, Inativos, Afastados).',
+            'Integração: Sincronização automática de status global ao ativar/inativar usuários.',
+            'Versão: Atualizado para v2.19.15.'
+        ] 
+    },
+    { 
         version: '2.19.14', 
         date: '16/03/2026',
         title: 'Validações, Auditoria e Notificações',

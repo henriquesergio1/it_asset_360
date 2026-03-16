@@ -163,7 +163,12 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addUser = async (user: User, adminName: string) => { await postData('users', { ...user, _adminUser: adminName }); fetchData(true); };
   const updateUser = async (user: User, adminName: string, notes?: string) => { await putData('users', { ...user, _adminUser: adminName, _notes: notes }); fetchData(true); };
   const toggleUserActive = async (user: User, adminName: string, reason?: string) => {
-    const updated = { ...user, active: !user.active };
+    const newActive = !user.active;
+    const updated = { 
+        ...user, 
+        active: newActive,
+        status: newActive ? 'Ativo' : 'Inativo'
+    };
     await putData('users', { ...updated, _adminUser: adminName, _reason: reason });
     fetchData(true);
   };

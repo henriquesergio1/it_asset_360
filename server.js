@@ -64,6 +64,8 @@ const DB_SCHEMAS = {
         SectorId NVARCHAR(255),
         InternalCode NVARCHAR(255),
         Active BIT,
+        Status NVARCHAR(50) DEFAULT 'Ativo',
+        OnLeaveUntil DATETIME NULL,
         HasPendingIssues BIT,
         PendingIssuesNote NVARCHAR(MAX)
     )`,
@@ -161,6 +163,18 @@ async function initializeDatabase() {
                     if (checkLegacy.recordset.length > 0) {
                         console.log('- Removendo coluna legada PurchaseInvoiceUrl de Devices...');
                         await pool.request().query('ALTER TABLE Devices DROP COLUMN PurchaseInvoiceUrl');
+                    }
+                }
+                if (table === 'Users') {
+                    const checkStatus = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'Status'`);
+                    if (checkStatus.recordset.length === 0) {
+                        console.log(`- Coluna Status não encontrada em Users. Adicionando...`);
+                        await pool.request().query("ALTER TABLE Users ADD Status NVARCHAR(50) DEFAULT 'Ativo'");
+                    }
+                    const checkLeave = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'OnLeaveUntil'`);
+                    if (checkLeave.recordset.length === 0) {
+                        console.log(`- Coluna OnLeaveUntil não encontrada em Users. Adicionando...`);
+                        await pool.request().query("ALTER TABLE Users ADD OnLeaveUntil DATETIME NULL");
                     }
                 }
                 if (table === 'Models') {
@@ -913,7 +927,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                     .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3)");
                 
                 if (inactivateUser) {
-                    await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0 WHERE Id=@Uid");
+                    await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
                     await logAction(userId, 'User', 'Inativação', _adminUser, userName, 'Inativado automaticamente durante a devolução (Desligamento)');
                 }
             }

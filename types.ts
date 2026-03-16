@@ -152,6 +152,12 @@ export interface Term {
 
 export type ReturnChecklist = Record<string, boolean>;
 
+export enum UserStatus {
+  ACTIVE = 'Ativo',
+  INACTIVE = 'Inativo',
+  ON_LEAVE = 'Afastado'
+}
+
 export interface User {
   id: string;
   fullName: string;
@@ -163,9 +169,11 @@ export interface User {
   sectorId: string; 
   internalCode?: string; 
   active: boolean;
+  status?: UserStatus; // Adicionado para suportar status "Afastado"
   terms?: Term[];
   hasPendingIssues?: boolean; 
   pendingIssuesNote?: string;
+  onLeaveUntil?: string; // Opcional: data de retorno
 }
 
 export enum SystemRole {
