@@ -870,7 +870,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
     app.post('/api/operations/checkin', async (req, res) => {
         try {
-            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles } = req.body;
+            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
@@ -924,7 +924,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                     .input('Evid', sql.VarBinary, ev1)
                     .input('Evid2', sql.VarBinary, ev2)
                     .input('Evid3', sql.VarBinary, ev3)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3)");
+                    .input('IsM', isManual ? 1 : 0)
+                    .input('ResR', resolutionReason || null)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");

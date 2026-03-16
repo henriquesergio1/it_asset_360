@@ -510,10 +510,10 @@ const UserManager = () => {
             const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
             if (confirmRelease) {
                 for (const device of userDevices) {
-                    await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName);
+                    await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
                 }
                 for (const sim of allUserSims) {
-                    await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName);
+                    await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
                 }
             }
         }

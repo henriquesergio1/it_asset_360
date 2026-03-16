@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     { 
+        version: '2.19.17', 
+        date: '16/03/2026',
+        title: 'Conformidade Legal no Afastamento',
+        changes: [
+            'Segurança: Implementada geração automática de Termo de Devolução Administrativa ao afastar colaborador.',
+            'Conformidade: Termos gerados por afastamento são marcados como "Resolvido Manulmente" com justificativa legal.',
+            'Auditoria: Adicionada observação "Funcionário em afastamento" nos logs e termos de devolução.',
+            'Versão: Atualizado para v2.19.17.'
+        ] 
+    },
+    { 
         version: '2.19.16', 
         date: '16/03/2026',
         title: 'Automação de Inventário e Correções',
