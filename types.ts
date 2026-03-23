@@ -329,6 +329,7 @@ export interface MaintenanceItem {
   completedBy?: string;
   finalCost?: number;
   invoiceUrl?: string;
+  note?: string;
 }
 
 export interface DashboardStats {

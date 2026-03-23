@@ -37,6 +37,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     const [completingItemId, setCompletingItemId] = useState<string | null>(null);
     const [finalCost, setFinalCost] = useState(task.maintenanceCost || 0);
     const [invoiceFile, setInvoiceFile] = useState<string | null>(null);
+    const [itemNote, setItemNote] = useState('');
 
     useEffect(() => {
         if (!isEditingInstructions) {
@@ -83,7 +84,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                         completedAt: new Date().toISOString(),
                         completedBy: currentUser,
                         finalCost: finalCost,
-                        invoiceUrl: invoiceFile || undefined
+                        invoiceUrl: invoiceFile || undefined,
+                        note: itemNote || undefined
                     };
                 }
                 return item;
@@ -92,7 +94,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             const updates: any = {
                 maintenanceItems: updatedItems,
                 _adminUser: currentUser,
-                _actionNote: `Item de manutenção concluído: ${getDeviceName(completingItemId)}. Custo: R$ ${finalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                _actionNote: `Item de manutenção concluído: ${getDeviceName(completingItemId)}. Custo: R$ ${finalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${itemNote ? ` • Nota: ${itemNote}` : ''}`
             };
 
             await onUpdate(task.id, updates);
@@ -101,6 +103,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             setShowCostConfirmation(false);
             setFinalCost(0);
             setInvoiceFile(null);
+            setItemNote('');
             showToast('Item concluído com sucesso!');
             
             // Recarregar logs
@@ -402,109 +405,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* Main Info */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-8 border-r border-gray-100 dark:border-slate-800">
-                        {task.type === TaskType.MAINTENANCE && (
-                            <section className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                                        <Wrench size={18} />
-                                        <h3 className="text-sm font-bold uppercase tracking-wider">Dados da Manutenção</h3>
-                                    </div>
-                                    {task.maintenanceItems && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full uppercase tracking-widest">
-                                            Manutenção em Lote
-                                        </span>
-                                    )}
-                                </div>
-                                
-                                {!task.maintenanceItems ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
-                                            <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                                {getDeviceName(task.deviceId)}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
-                                            <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Tipo</label>
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                                                {task.maintenanceType === MaintenanceType.PREVENTIVE ? 'Preventiva' : 
-                                                 task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
-                                            <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Custo</label>
-                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                                                <DollarSign size={12} /> {task.maintenanceCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest px-1">
-                                            <span>Checklist de Dispositivos</span>
-                                            <span>{task.maintenanceItems.filter(i => i.status === 'Concluído').length} / {task.maintenanceItems.length} concluídos</span>
-                                        </div>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {task.maintenanceItems.map((item) => (
-                                                <div key={item.deviceId} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-2xl border border-amber-100 dark:border-amber-900/30 hover:shadow-md transition-all">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-1.5 rounded-lg ${
-                                                            item.status === 'Concluído' ? 'bg-emerald-100 text-emerald-600' : 
-                                                            item.status === 'Em Andamento' ? 'bg-blue-100 text-blue-600' : 
-                                                            'bg-amber-100 text-amber-600'
-                                                        }`}>
-                                                            {item.status === 'Concluído' ? <CheckCircle2 size={14} /> : 
-                                                             item.status === 'Em Andamento' ? <Clock size={14} className="animate-pulse" /> : 
-                                                             <Clock size={14} />}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{getDeviceName(item.deviceId)}</div>
-                                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Patrimônio: {item.assetTag}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        {item.status === 'Concluído' ? (
-                                                            <div className="text-right">
-                                                                <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Concluído</div>
-                                                                <div className="text-[10px] text-slate-400">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
-                                                            </div>
-                                                        ) : item.status === 'Em Andamento' ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="text-right mr-2">
-                                                                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Em Andamento</div>
-                                                                </div>
-                                                                <button 
-                                                                    onClick={() => {
-                                                                        setCompletingItemId(item.deviceId);
-                                                                        setFinalCost(task.maintenanceCost || 0);
-                                                                        setShowCostConfirmation(true);
-                                                                    }}
-                                                                    disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
-                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                                                                >
-                                                                    Finalizar
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button 
-                                                                onClick={() => handleStartItem(item.deviceId)}
-                                                                disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
-                                                                className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                                            >
-                                                                Iniciar
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </section>
-                        )}
-
                         <section>
                             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <FileText size={16} /> Descrição
@@ -749,72 +649,168 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 </motion.div>
                             )}
 
-                            {/* Maintenance Cost & Invoice Confirmation */}
-                            {showCostConfirmation && (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: -10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl space-y-4 mb-4"
-                                >
-                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2">
-                                        <CheckCircle2 size={18} />
-                                        <h4 className="text-sm font-bold uppercase tracking-wider">Finalizar Manutenção</h4>
+                            {/* Task Actions */}
+                            {task.type === TaskType.MAINTENANCE && (
+                                <section className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4 mt-8">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                            <Wrench size={18} />
+                                            <h3 className="text-sm font-bold uppercase tracking-wider">Dados da Manutenção</h3>
+                                        </div>
+                                        {task.maintenanceItems && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full uppercase tracking-widest">
+                                                Manutenção em Lote
+                                            </span>
+                                        )}
                                     </div>
                                     
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Custo Final (R$)</label>
-                                            <input 
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={finalCost}
-                                                onChange={(e) => setFinalCost(parseFloat(e.target.value))}
-                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-sm font-bold dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-                                            />
-                                        </div>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Nota Fiscal (Opcional)</label>
-                                            <div className="flex items-center gap-2">
-                                                <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all">
-                                                    <Paperclip size={14} />
-                                                    {invoiceFile ? 'Nota Anexada' : 'Anexar Nota'}
-                                                    <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleInvoiceUpload} />
-                                                </label>
-                                                {invoiceFile && (
-                                                    <button 
-                                                        onClick={() => setInvoiceFile(null)}
-                                                        className="p-2.5 bg-rose-100 text-rose-600 rounded-xl hover:bg-rose-200 transition-all"
-                                                    >
-                                                        <XCircle size={14} />
-                                                    </button>
-                                                )}
+                                    {!task.maintenanceItems ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                                <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
+                                                <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                                                    {getDeviceName(task.deviceId)}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                                <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Tipo</label>
+                                                <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                    {task.maintenanceType === MaintenanceType.PREVENTIVE ? 'Preventiva' : 
+                                                     task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                                <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Custo</label>
+                                                <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                                                    <DollarSign size={12} /> {task.maintenanceCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest px-1">
+                                                <span>Checklist de Dispositivos</span>
+                                                <span>{task.maintenanceItems.filter(i => i.status === 'Concluído').length} / {task.maintenanceItems.length} concluídos</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {task.maintenanceItems.map((item) => (
+                                                    <div key={item.deviceId} className="space-y-2">
+                                                        <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-2xl border border-amber-100 dark:border-amber-900/30 hover:shadow-md transition-all">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`p-1.5 rounded-lg ${
+                                                                    item.status === 'Concluído' ? 'bg-emerald-100 text-emerald-600' : 
+                                                                    item.status === 'Em Andamento' ? 'bg-blue-100 text-blue-600' : 
+                                                                    'bg-amber-100 text-amber-600'
+                                                                }`}>
+                                                                    {item.status === 'Concluído' ? <CheckCircle2 size={14} /> : 
+                                                                     item.status === 'Em Andamento' ? <Clock size={14} className="animate-pulse" /> : 
+                                                                     <Clock size={14} />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{getDeviceName(item.deviceId)}</div>
+                                                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Patrimônio: {item.assetTag}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-3">
+                                                                {item.status === 'Concluído' ? (
+                                                                    <div className="text-right">
+                                                                        <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Concluído</div>
+                                                                        <div className="text-[10px] text-slate-400">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
+                                                                    </div>
+                                                                ) : item.status === 'Em Andamento' ? (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="text-right mr-2">
+                                                                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Em Andamento</div>
+                                                                        </div>
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                setCompletingItemId(item.deviceId);
+                                                                                setFinalCost(task.maintenanceCost || 0);
+                                                                                setItemNote('');
+                                                                                setInvoiceFile(null);
+                                                                            }}
+                                                                            disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED || (completingItemId === item.deviceId)}
+                                                                            className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                                                                        >
+                                                                            Finalizar
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <button 
+                                                                        onClick={() => handleStartItem(item.deviceId)}
+                                                                        disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
+                                                                        className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                                    >
+                                                                        Iniciar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
 
-                                    <div className="flex justify-end gap-2 pt-2">
-                                        <button 
-                                            onClick={() => {
-                                                setShowCostConfirmation(false);
-                                                setCompletingItemId(null);
-                                            }}
-                                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                                        >
-                                            Voltar
-                                        </button>
-                                        <button 
-                                            disabled={updating}
-                                            onClick={() => completingItemId ? handleCompleteItem() : handleStatusChange(TaskStatus.COMPLETED)}
-                                            className="px-6 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 dark:shadow-none disabled:opacity-50 flex items-center gap-2"
-                                        >
-                                            {updating ? 'Finalizando...' : completingItemId ? 'Concluir Item' : 'Concluir Manutenção'}
-                                        </button>
-                                    </div>
-                                </motion.div>
+                                                        {/* Inline Completion Form */}
+                                                        {completingItemId === item.deviceId && (
+                                                            <motion.div 
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl p-4 space-y-4 overflow-hidden"
+                                                            >
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Custo Final (R$)</label>
+                                                                        <input 
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            value={finalCost}
+                                                                            onChange={(e) => setFinalCost(parseFloat(e.target.value))}
+                                                                            className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                                                        />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Nota Fiscal</label>
+                                                                        <label className="cursor-pointer flex items-center justify-center gap-2 p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-[10px] font-bold text-emerald-600 hover:bg-emerald-100 transition-all">
+                                                                            <Paperclip size={12} />
+                                                                            {invoiceFile ? 'Anexo Pronto' : 'Anexar PDF/IMG'}
+                                                                            <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleInvoiceUpload} />
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Observações / Nota</label>
+                                                                    <textarea 
+                                                                        value={itemNote}
+                                                                        onChange={(e) => setItemNote(e.target.value)}
+                                                                        placeholder="Descreva o que foi feito ou observações importantes..."
+                                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 min-h-[60px]"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex justify-end gap-2">
+                                                                    <button 
+                                                                        onClick={() => setCompletingItemId(null)}
+                                                                        className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-700"
+                                                                    >
+                                                                        Cancelar
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={handleCompleteItem}
+                                                                        disabled={updating}
+                                                                        className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-all disabled:opacity-50"
+                                                                    >
+                                                                        {updating ? 'Salvando...' : 'Confirmar Conclusão'}
+                                                                    </button>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </section>
                             )}
 
+                            {/* Task Actions */}
                             <div className="flex flex-wrap gap-3">
                                 {task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && (
                                     <>

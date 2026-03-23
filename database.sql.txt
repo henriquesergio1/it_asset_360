@@ -1,5 +1,5 @@
 -- IT Asset 360 - Script Completo de Banco de Dados (SQL Server)
--- Versão: 2.20.2
+-- Versão: 2.20.3
 -- Este script contém todas as tabelas necessárias para o funcionamento inicial do sistema.
 
 -- Tabela de Dispositivos

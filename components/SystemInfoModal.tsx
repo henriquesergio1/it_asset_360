@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.3',
+        date: '23/03/2026',
+        title: 'Refinamento do Modal de Tarefas (Checklist)',
+        changes: [
+            'UX: Checklist de dispositivos movido para o final do modal.',
+            'UX: Formulário de conclusão de item agora é exibido inline (abaixo do item).',
+            'Funcionalidade: Adicionado campo de observação/nota individual para cada item concluído.',
+            'Versão: Atualizado para v2.20.3.'
+        ]
+    },
+    {
         version: '2.20.2',
         date: '23/03/2026',
         title: 'Correção de Banco de Dados (Manutenção em Lote)',
