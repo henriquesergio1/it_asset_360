@@ -582,6 +582,8 @@ const Dashboard = () => {
           currentUser={localStorage.getItem('userName') || 'Admin'}
           isAdmin={isAdmin}
           systemUsers={systemUsers}
+          devices={devices}
+          models={models}
         />
       )}
     </div>

@@ -205,7 +205,7 @@ const AdminRoute = ({ children }: { children?: React.ReactNode }) => {
 
 const AppRoutes = () => {
     const { isAuthenticated, user, isAdmin } = useAuth();
-    const { tasks, addTask, updateTask, systemUsers } = useData();
+    const { tasks, addTask, updateTask, systemUsers, devices, models } = useData();
 
     return (
         <Routes>
@@ -222,6 +222,8 @@ const AppRoutes = () => {
                     <TaskManager 
                         tasks={tasks} 
                         systemUsers={systemUsers}
+                        devices={devices}
+                        models={models}
                         onAddTask={(t) => addTask(t, user?.name || 'Sistema')} 
                         onUpdateTask={(tid, u) => updateTask(tid, u, user?.name || 'Sistema')} 
                         currentUser={user?.name || 'Sistema'} 

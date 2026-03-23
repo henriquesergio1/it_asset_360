@@ -106,7 +106,10 @@ const DB_SCHEMAS = {
         Comments NVARCHAR(MAX),
         Instructions NVARCHAR(MAX),
         EvidenceUrls NVARCHAR(MAX),
-        ManualAttachments NVARCHAR(MAX)
+        ManualAttachments NVARCHAR(MAX),
+        DeviceId NVARCHAR(255),
+        MaintenanceType NVARCHAR(100),
+        MaintenanceCost FLOAT
     )`,
     TaskLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -246,6 +249,23 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Tasks ADD ManualAttachments NVARCHAR(MAX) NULL');
                         console.log('  ... Coluna ManualAttachments adicionada.');
                     }
+
+                    // v2.19.18 - Novas colunas para manutenção
+                    const checkDeviceId = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'DeviceId'`);
+                    if (checkDeviceId.recordset.length === 0) {
+                        console.log(`- Coluna DeviceId não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD DeviceId NVARCHAR(255) NULL');
+                    }
+                    const checkMaintenanceType = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'MaintenanceType'`);
+                    if (checkMaintenanceType.recordset.length === 0) {
+                        console.log(`- Coluna MaintenanceType não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD MaintenanceType NVARCHAR(100) NULL');
+                    }
+                    const checkMaintenanceCost = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'MaintenanceCost'`);
+                    if (checkMaintenanceCost.recordset.length === 0) {
+                        console.log(`- Coluna MaintenanceCost não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD MaintenanceCost FLOAT NULL');
+                    }
                 }
             }
         }
@@ -339,7 +359,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.18.15', 
+        version: '2.19.20', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -1335,7 +1355,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     app.post('/api/tasks', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, _adminUser } = req.body;
+            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, deviceId, maintenanceType, maintenanceCost, _adminUser } = req.body;
             
             await pool.request()
                 .input('id', sql.NVarChar, id)
@@ -1347,8 +1367,11 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 .input('assignedTo', sql.NVarChar, assignedTo)
                 .input('instructions', sql.NVarChar, instructions)
                 .input('manualAttachments', sql.NVarChar, manualAttachments ? JSON.stringify(manualAttachments) : null)
-                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments) 
-                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments)`);
+                .input('deviceId', sql.NVarChar, deviceId || null)
+                .input('maintenanceType', sql.NVarChar, maintenanceType || null)
+                .input('maintenanceCost', sql.Float, maintenanceCost || 0)
+                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments, DeviceId, MaintenanceType, MaintenanceCost) 
+                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments, @deviceId, @maintenanceType, @maintenanceCost)`);
 
             // Log de Auditoria Imutável
             await pool.request()
@@ -1408,6 +1431,27 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                     .input('adminUser', sql.NVarChar, _adminUser || 'Sistema')
                     .input('notes', sql.NVarChar, _actionNote || '')
                     .query("INSERT INTO TaskLogs (Id, TaskId, Action, AdminUser, Timestamp, Notes) VALUES (@logId, @taskId, @action, @adminUser, GETDATE(), @notes)");
+
+                // v2.19.18 - Lógica de Manutenção Automática
+                if (newStatus === 'Concluída' && prev.Status !== 'Concluída' && prev.Type === 'Manutenção' && prev.DeviceId) {
+                    const maintenanceId = 'MNT-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                    const finalCost = req.body.maintenanceCost !== undefined ? req.body.maintenanceCost : (prev.MaintenanceCost || 0);
+                    const finalType = req.body.maintenanceType || prev.MaintenanceType || 'Corretiva';
+                    const invoiceBuffer = req.body.maintenanceInvoice ? getBufferFromBase64(req.body.maintenanceInvoice) : null;
+
+                    await pool.request()
+                        .input('mId', sql.NVarChar, maintenanceId)
+                        .input('dId', sql.NVarChar, prev.DeviceId)
+                        .input('desc', sql.NVarChar, `[Tarefa #${id}] ${prev.Title}: ${prev.Description}`)
+                        .input('cost', sql.Float, finalCost)
+                        .input('type', sql.NVarChar, finalType)
+                        .input('admin', sql.NVarChar, _adminUser || 'Sistema')
+                        .input('invoice', sql.VarBinary, invoiceBuffer)
+                        .query(`
+                            INSERT INTO MaintenanceRecords (Id, DeviceId, Description, Cost, Date, Type, Provider, InvoiceBinary)
+                            VALUES (@mId, @dId, @desc, @cost, GETDATE(), @type, @admin, @invoice)
+                        `);
+                }
             }
 
             res.json({ success: true });

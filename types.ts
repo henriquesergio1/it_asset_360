@@ -260,6 +260,7 @@ export enum TaskType {
   FILE_SEND = 'Envio de Arquivo',
   SYSTEM_ACTION = 'Ação no Sistema',
   REMINDER = 'Lembrete',
+  AUDIT = 'Auditoria',
   OTHER = 'Outros'
 }
 
@@ -310,6 +311,11 @@ export interface Task {
   // Lógica de Alerta (calculada no frontend/backend)
   isOverdue?: boolean;
   isNearDue?: boolean;
+
+  // Integração com Manutenção (v2.19.18)
+  deviceId?: string;
+  maintenanceType?: MaintenanceType;
+  maintenanceCost?: number;
 }
 
 export interface DashboardStats {

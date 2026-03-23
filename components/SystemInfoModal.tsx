@@ -8,6 +8,37 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
+    {
+        version: '2.19.20',
+        date: '23/03/2026',
+        title: 'Gestão de Manutenção Avançada',
+        changes: [
+            'Funcionalidade: Ajuste de custo final na conclusão de tarefas de manutenção.',
+            'Funcionalidade: Upload de nota fiscal (PDF/Imagem) na conclusão de manutenção.',
+            'Integração: Registro automático no histórico do dispositivo com custo real e nota fiscal.',
+            'UX: Novo fluxo de confirmação de dados ao encerrar manutenções.',
+            'Versão: Atualizado para v2.19.20.'
+        ]
+    },
+    {
+        version: '2.19.19',
+        date: '23/03/2026',
+        title: 'Melhorias no Módulo de Tarefas',
+        changes: [
+            'Funcionalidade: Adicionado suporte a dispositivos em tarefas de manutenção.',
+            'Funcionalidade: Suporte a tipos de manutenção (Preventiva/Corretiva).',
+            'Versão: Atualizado para v2.19.19.'
+        ]
+    },
+    {
+        version: '2.19.18',
+        date: '23/03/2026',
+        title: 'Integração de Manutenção',
+        changes: [
+            'Funcionalidade: Criação automática de histórico de manutenção ao concluir tarefas.',
+            'Versão: Atualizado para v2.19.18.'
+        ]
+    },
     { 
         version: '2.19.17', 
         date: '16/03/2026',

@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     X, Clock, User, FileText, CheckCircle2, AlertCircle, 
     History, MessageSquare, Paperclip, Send, AlertTriangle,
-    ClipboardList, Printer, Trash2, ExternalLink, Plus, XCircle
+    ClipboardList, Printer, Trash2, ExternalLink, Plus, XCircle,
+    Wrench, DollarSign
 } from 'lucide-react';
-import { Task, TaskLog, TaskStatus, SystemUser } from '../types';
+import { Task, TaskLog, TaskStatus, SystemUser, TaskType, MaintenanceType, Device, DeviceModel } from '../types';
 import { useToast } from '../contexts/ToastContext';
 
 interface TaskDetailModalProps {
@@ -15,9 +16,13 @@ interface TaskDetailModalProps {
     currentUser: string;
     isAdmin: boolean;
     systemUsers: SystemUser[];
+    devices: Device[];
+    models: DeviceModel[];
 }
 
-export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose, onUpdate, currentUser, isAdmin, systemUsers }) => {
+export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ 
+    task, onClose, onUpdate, currentUser, isAdmin, systemUsers, devices, models 
+}) => {
     const { showToast } = useToast();
     const [logs, setLogs] = useState<TaskLog[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(true);
@@ -28,6 +33,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
     const [tempManualAttachments, setTempManualAttachments] = useState<string[]>(task.manualAttachments || []);
     const [showCancelReason, setShowCancelReason] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
+    const [showCostConfirmation, setShowCostConfirmation] = useState(false);
+    const [finalCost, setFinalCost] = useState(task.maintenanceCost || 0);
+    const [invoiceFile, setInvoiceFile] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isEditingInstructions) {
@@ -52,6 +60,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
         };
         fetchLogs();
     }, [task.id]);
+
+    const getDeviceName = (deviceId?: string) => {
+        if (!deviceId) return 'Nenhum dispositivo';
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return 'Dispositivo não encontrado';
+        const model = models.find(m => m.id === device.modelId);
+        return `${model?.name || 'Modelo Desconhecido'} (${device.assetTag || device.serialNumber})`;
+    };
 
     const handleStatusChange = async (newStatus: TaskStatus) => {
         if (newStatus === task.status) return;
@@ -80,31 +96,73 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
             return;
         }
 
+        // Se for conclusão de manutenção, pedir confirmação de custo e nota fiscal
+        if (newStatus === TaskStatus.COMPLETED && task.type === TaskType.MAINTENANCE && !showCostConfirmation) {
+            setShowCostConfirmation(true);
+            return;
+        }
+
         setUpdating(true);
         try {
-            const actionNote = newStatus === TaskStatus.CANCELED 
-                ? `Tarefa Cancelada. Motivo: ${cancelReason || 'Não informado'}`
-                : (newNote || `Status alterado para ${newStatus}`);
-
-            await onUpdate(task.id, { 
+            const updates: any = { 
                 status: newStatus, 
-                _actionNote: actionNote 
-            });
+                _adminUser: currentUser 
+            };
+
+            if (newStatus === TaskStatus.CANCELED) {
+                updates._actionNote = `Tarefa Cancelada. Motivo: ${cancelReason || 'Não informado'}`;
+            } else if (newStatus === TaskStatus.COMPLETED && task.type === TaskType.MAINTENANCE) {
+                updates.maintenanceCost = finalCost;
+                if (invoiceFile) {
+                    updates.maintenanceInvoice = invoiceFile;
+                }
+                updates._actionNote = `Manutenção concluída. Custo final: R$ ${finalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            } else {
+                updates._actionNote = newNote || `Status alterado para ${newStatus}`;
+            }
+
+            await onUpdate(task.id, updates);
+
+            // Se for conclusão de manutenção, avisar sobre notas fiscais (se não anexada agora)
+            if (newStatus === TaskStatus.COMPLETED && task.type === TaskType.MAINTENANCE && !invoiceFile) {
+                showToast('Manutenção concluída! Lembre-se de anexar notas fiscais se houver.', 'info');
+            }
             
             setNewNote('');
             setCancelReason('');
             setShowCancelReason(false);
+            setShowCostConfirmation(false);
             showToast(`Tarefa ${newStatus.toLowerCase()} com sucesso!`);
 
             // Recarregar logs após atualização
             const res = await fetch(`/api/tasks/${task.id}/logs`);
             if (res.ok) setLogs(await res.json());
+            
+            if (newStatus === TaskStatus.COMPLETED || newStatus === TaskStatus.CANCELED) {
+                onClose();
+            }
         } catch (err) {
             console.error('Erro ao atualizar status:', err);
             showToast('Erro ao atualizar status da tarefa.', 'error');
         } finally {
             setUpdating(false);
         }
+    };
+
+    const handleInvoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showToast("O arquivo é muito grande. Máximo 5MB.", "error");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setInvoiceFile(reader.result as string);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleAddNote = async () => {
@@ -266,6 +324,39 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                     {/* Main Info */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-8 border-r border-gray-100 dark:border-slate-800">
+                        {task.type === TaskType.MAINTENANCE && (
+                            <section className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4">
+                                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                    <Wrench size={18} />
+                                    <h3 className="text-sm font-bold uppercase tracking-wider">Dados da Manutenção</h3>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                        <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
+                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                                            {getDeviceName(task.deviceId)}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                        <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Tipo</label>
+                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                            {task.maintenanceType === MaintenanceType.PREVENTIVE ? 'Preventiva' : 
+                                             task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                                        <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Custo</label>
+                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                                            <DollarSign size={12} /> {task.maintenanceCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
                         <section>
                             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <FileText size={16} /> Descrição
@@ -505,6 +596,69 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ task, onClose,
                                             className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 transition-all"
                                         >
                                             Confirmar Cancelamento
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Maintenance Cost & Invoice Confirmation */}
+                            {showCostConfirmation && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl space-y-4 mb-4"
+                                >
+                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2">
+                                        <CheckCircle2 size={18} />
+                                        <h4 className="text-sm font-bold uppercase tracking-wider">Finalizar Manutenção</h4>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Custo Final (R$)</label>
+                                            <input 
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={finalCost}
+                                                onChange={(e) => setFinalCost(parseFloat(e.target.value))}
+                                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-sm font-bold dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                                            />
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Nota Fiscal (Opcional)</label>
+                                            <div className="flex items-center gap-2">
+                                                <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 p-2.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/60 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all">
+                                                    <Paperclip size={14} />
+                                                    {invoiceFile ? 'Nota Anexada' : 'Anexar Nota'}
+                                                    <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleInvoiceUpload} />
+                                                </label>
+                                                {invoiceFile && (
+                                                    <button 
+                                                        onClick={() => setInvoiceFile(null)}
+                                                        className="p-2.5 bg-rose-100 text-rose-600 rounded-xl hover:bg-rose-200 transition-all"
+                                                    >
+                                                        <XCircle size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <button 
+                                            onClick={() => setShowCostConfirmation(false)}
+                                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                        >
+                                            Voltar
+                                        </button>
+                                        <button 
+                                            disabled={updating}
+                                            onClick={() => handleStatusChange(TaskStatus.COMPLETED)}
+                                            className="px-6 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 dark:shadow-none disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {updating ? 'Finalizando...' : 'Concluir Manutenção'}
                                         </button>
                                     </div>
                                 </motion.div>

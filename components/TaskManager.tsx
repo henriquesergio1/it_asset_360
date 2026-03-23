@@ -4,25 +4,28 @@ import {
     Plus, Search, Filter, ClipboardList, Clock, 
     AlertCircle, CheckCircle2, XCircle, MoreVertical,
     Calendar, User, Tag, ChevronDown, ArrowUpDown,
-    Repeat, Paperclip, Trash2, ExternalLink, FileText
+    Repeat, Paperclip, Trash2, ExternalLink, FileText,
+    Smartphone, Bell, Wrench, ShieldCheck, CheckSquare
 } from 'lucide-react';
-import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig } from '../types';
+import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
 
 interface TaskManagerProps {
     tasks: Task[];
     systemUsers: SystemUser[];
+    devices: Device[];
+    models: DeviceModel[];
     onAddTask: (task: Partial<Task>) => Promise<void>;
     onUpdateTask: (taskId: string, updates: Partial<Task> & { _actionNote?: string }) => Promise<void>;
     currentUser: string;
     isAdmin: boolean;
 }
 
-export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
+export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, devices, models, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
     const { showToast } = useToast();
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
+    const [activeTab, setActiveTab] = useState<'Ativas' | 'Concluídas' | 'Canceladas'>('Ativas');
     const [typeFilter, setTypeFilter] = useState<TaskType | 'All'>('All');
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
@@ -38,7 +41,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
         recurrenceConfig: {
             type: RecurrenceType.NONE
         },
-        manualAttachments: []
+        manualAttachments: [],
+        maintenanceType: MaintenanceType.PREVENTIVE,
+        maintenanceCost: 0
     });
 
     const selectedTask = useMemo(() => {
@@ -51,15 +56,32 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
             if (!t) return false;
             const matchesSearch = (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
                                  (t.description || '').toLowerCase().includes(search.toLowerCase());
-            const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+            
+            let matchesTab = false;
+            if (activeTab === 'Ativas') {
+                matchesTab = t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS;
+            } else if (activeTab === 'Concluídas') {
+                matchesTab = t.status === TaskStatus.COMPLETED;
+            } else if (activeTab === 'Canceladas') {
+                matchesTab = t.status === TaskStatus.CANCELED;
+            }
+
             const matchesType = typeFilter === 'All' || t.type === typeFilter;
-            return matchesSearch && matchesStatus && matchesType;
+            return matchesSearch && matchesTab && matchesType;
         }).sort((a, b) => {
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;
             return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         });
-    }, [tasks, search, statusFilter, typeFilter]);
+    }, [tasks, search, activeTab, typeFilter]);
+
+    const getDeviceName = (deviceId?: string) => {
+        if (!deviceId) return 'N/A';
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return 'Desconhecido';
+        const model = models.find(m => m.id === device.modelId);
+        return `${model?.name || 'Dispositivo'} (${device.assetTag || device.serialNumber})`;
+    };
 
     const handleManualAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -94,6 +116,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
             if (!taskToSave.hasDueDate) {
                 taskToSave.dueDate = undefined;
             }
+            
+            // Validação para Manutenção
+            if (taskToSave.type === TaskType.MAINTENANCE && !taskToSave.deviceId) {
+                showToast('Selecione um dispositivo para a manutenção.', 'error');
+                return;
+            }
+
             await onAddTask(taskToSave);
             setIsAdding(false);
             showToast('Tarefa criada com sucesso!');
@@ -109,7 +138,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                 recurrenceConfig: {
                     type: RecurrenceType.NONE
                 },
-                manualAttachments: []
+                manualAttachments: [],
+                maintenanceType: MaintenanceType.PREVENTIVE,
+                maintenanceCost: 0
             });
         } catch (err) {
             console.error('Erro ao criar tarefa:', err);
@@ -132,133 +163,169 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                 </button>
             </div>
 
-            {/* Filters Bar */}
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-wrap items-center gap-4 transition-colors">
-                <div className="flex-1 min-w-[240px] relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                        type="text"
-                        placeholder="Buscar por título ou descrição..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all dark:text-slate-100"
-                    />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                    <Filter size={18} className="text-slate-400" />
-                    <select 
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
-                        className="bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
-                    >
-                        <option value="All">Todos Status</option>
-                        <option value={TaskStatus.PENDING}>Pendente</option>
-                        <option value={TaskStatus.IN_PROGRESS}>Em Andamento</option>
-                        <option value={TaskStatus.COMPLETED}>Concluída</option>
-                        <option value={TaskStatus.CANCELED}>Cancelada</option>
-                    </select>
-                    <select 
-                        value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value as any)}
-                        className="bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none dark:text-slate-100"
-                    >
-                        <option value="All">Todos Tipos</option>
-                        <option value={TaskType.MAINTENANCE}>Manutenção</option>
-                        <option value={TaskType.FILE_SEND}>Envio de Arquivo</option>
-                        <option value={TaskType.SYSTEM_ACTION}>Ação no Sistema</option>
-                        <option value={TaskType.REMINDER}>Lembrete</option>
-                    </select>
-                </div>
-            </div>
+            {/* Filtros e Busca */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 mb-6 transition-all">
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar tarefas por título ou descrição..."
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700">
+                            {(['Ativas', 'Concluídas', 'Canceladas'] as const).map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                        activeTab === tab 
+                                            ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    {tab}
+                                </button>
+                            ))}
+                        </div>
 
-            {/* Tasks Grid/List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <AnimatePresence mode="popLayout">
-                    {filteredTasks.map(task => (
-                        <motion.div
-                            key={task.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            onClick={() => setSelectedTaskId(task.id)}
-                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-900 transition-all cursor-pointer group flex flex-col h-full"
+                        <select
+                            className="px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white text-sm"
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value as any)}
                         >
-                            <div className="p-5 flex-1">
-                                <div className="flex items-start justify-between mb-4">
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
-                                        task.type === TaskType.MAINTENANCE ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                                        task.type === TaskType.FILE_SEND ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
-                                        task.type === TaskType.SYSTEM_ACTION ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' :
-                                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                    }`}>
-                                        {task.type}
-                                    </span>
-                                    <div className={`w-2 h-2 rounded-full ${
-                                        task.status === TaskStatus.COMPLETED ? 'bg-emerald-500' :
-                                        task.status === TaskStatus.CANCELED ? 'bg-slate-400' :
-                                        task.isOverdue ? 'bg-red-500 animate-pulse' :
-                                        task.isNearDue ? 'bg-amber-500' :
-                                        'bg-blue-500'
-                                    }`} />
-                                </div>
-
-                                <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
-                                    {task.title}
-                                </h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-4">
-                                    {task.description || 'Sem descrição.'}
-                                </p>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                        <User size={14} className="text-slate-400" />
-                                        <span className="font-medium">{task.assignedTo ? systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo : 'Geral'}</span>
-                                    </div>
-                                    <div className={`flex items-center gap-2 text-xs font-bold ${
-                                        task.isOverdue ? 'text-red-600 dark:text-red-400' : 
-                                        task.isNearDue ? 'text-amber-600 dark:text-amber-400' : 
-                                        'text-slate-500 dark:text-slate-400'
-                                    }`}>
-                                        <Calendar size={14} />
-                                        <span>Prazo: {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</span>
-                                    </div>
-                                    {task.isRecurring && (
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                                            <Repeat size={12} />
-                                            <span>Recorrente: {task.recurrenceConfig?.type}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between rounded-b-2xl">
-                                <span className={`text-[11px] font-bold ${
-                                    task.status === TaskStatus.COMPLETED ? 'text-emerald-600 dark:text-emerald-400' :
-                                    task.status === TaskStatus.IN_PROGRESS ? 'text-blue-600 dark:text-blue-400' :
-                                    task.status === TaskStatus.PENDING ? 'text-amber-600 dark:text-amber-400' :
-                                    'text-slate-500 dark:text-slate-400'
-                                }`}>
-                                    {task.status}
-                                </span>
-                                <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                                    ID: {task.id.slice(0, 8)}
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                            <option value="All">Todos os Tipos</option>
+                            <option value={TaskType.REMINDER}>Lembretes</option>
+                            <option value={TaskType.MAINTENANCE}>Manutenções</option>
+                            <option value={TaskType.AUDIT}>Auditorias</option>
+                            <option value={TaskType.OTHER}>Outros</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            {/* Empty State */}
-            {filteredTasks.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
-                    <ClipboardList size={64} strokeWidth={1} className="mb-4 opacity-20" />
-                    <h3 className="text-lg font-medium">Nenhuma tarefa encontrada</h3>
-                    <p className="text-sm">Tente ajustar seus filtros ou busca.</p>
+            {/* Lista de Tarefas */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tarefa</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Responsável</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Prazo</th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                            {filteredTasks.length > 0 ? (
+                                filteredTasks.map((task) => (
+                                    <tr 
+                                        key={task.id} 
+                                        className="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                                        onClick={() => setSelectedTaskId(task.id)}
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                    {task.title}
+                                                </span>
+                                                <span className="text-xs text-gray-500 dark:text-slate-400 line-clamp-1">
+                                                    {task.description}
+                                                </span>
+                                                {task.type === TaskType.MAINTENANCE && task.deviceId && (
+                                                    <span className="text-[10px] font-medium text-blue-500 mt-1 flex items-center gap-1">
+                                                        <Smartphone size={10} /> {getDeviceName(task.deviceId)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                {task.type === TaskType.REMINDER && <Bell size={14} className="text-blue-500" />}
+                                                {task.type === TaskType.MAINTENANCE && <Wrench size={14} className="text-amber-500" />}
+                                                {task.type === TaskType.AUDIT && <ShieldCheck size={14} className="text-emerald-500" />}
+                                                {task.type === TaskType.OTHER && <Tag size={14} className="text-slate-500" />}
+                                                <span className="text-xs font-medium text-gray-700 dark:text-slate-300">
+                                                    {task.type === TaskType.REMINDER ? 'Lembrete' :
+                                                     task.type === TaskType.MAINTENANCE ? 'Manutenção' :
+                                                     task.type === TaskType.AUDIT ? 'Auditoria' : 'Outro'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                task.status === TaskStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                task.status === TaskStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                                'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                                            }`}>
+                                                {task.status === TaskStatus.PENDING ? 'Pendente' :
+                                                 task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
+                                                 task.status === TaskStatus.COMPLETED ? 'Concluída' : 'Cancelada'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-slate-400">
+                                                    {task.assignedTo?.charAt(0) || '?'}
+                                                </div>
+                                                <span className="text-xs text-gray-700 dark:text-slate-300">
+                                                    {task.assignedTo ? systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo : 'Geral'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {task.hasDueDate ? (
+                                                <div className={`flex items-center gap-1.5 text-xs font-medium ${
+                                                    task.isOverdue && task.status !== TaskStatus.COMPLETED ? 'text-rose-600 dark:text-rose-400' :
+                                                    task.isNearDue && task.status !== TaskStatus.COMPLETED ? 'text-amber-600 dark:text-amber-400' :
+                                                    'text-gray-600 dark:text-slate-400'
+                                                }`}>
+                                                    <Calendar size={14} />
+                                                    {new Date(task.dueDate!).toLocaleDateString('pt-BR')}
+                                                    {task.isOverdue && task.status !== TaskStatus.COMPLETED && (
+                                                        <AlertCircle size={12} className="animate-pulse" />
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 italic">Sem prazo</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <button 
+                                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedTaskId(task.id);
+                                                }}
+                                            >
+                                                <ExternalLink size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400 dark:text-slate-500">
+                                            <CheckSquare size={48} className="mb-4 opacity-20" />
+                                            <p className="text-lg font-medium">Nenhuma tarefa encontrada</p>
+                                            <p className="text-sm">Tente ajustar seus filtros ou busca.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+            </div>
 
             {/* Add Task Modal */}
             <AnimatePresence>
@@ -392,19 +459,74 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Tipo</label>
+                                        <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Tipo de Tarefa</label>
                                         <select 
                                             value={newTask.type}
                                             onChange={(e) => setNewTask({...newTask, type: e.target.value as any})}
-                                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-slate-100"
+                                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-slate-100 font-bold"
                                         >
-                                            <option value={TaskType.MAINTENANCE}>Manutenção</option>
+                                            <option value={TaskType.REMINDER}>Lembrete</option>
+                                            <option value={TaskType.MAINTENANCE}>Manutenção de Dispositivo</option>
+                                            <option value={TaskType.AUDIT}>Auditoria / Inventário</option>
                                             <option value={TaskType.FILE_SEND}>Envio de Arquivo</option>
                                             <option value={TaskType.SYSTEM_ACTION}>Ação no Sistema</option>
-                                            <option value={TaskType.REMINDER}>Lembrete</option>
                                             <option value={TaskType.OTHER}>Outro</option>
                                         </select>
                                     </div>
+
+                                    {newTask.type === TaskType.MAINTENANCE && (
+                                        <div className="col-span-2 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-900/40 space-y-4 animate-fade-in">
+                                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                                                <Wrench size={16} />
+                                                <h4 className="text-xs font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
+                                                    <select 
+                                                        required={newTask.type === TaskType.MAINTENANCE}
+                                                        value={newTask.deviceId || ''}
+                                                        onChange={(e) => setNewTask({...newTask, deviceId: e.target.value})}
+                                                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
+                                                    >
+                                                        <option value="">Selecione o dispositivo...</option>
+                                                        {devices.filter(d => d.status !== DeviceStatus.RETIRED).map(device => (
+                                                            <option key={device.id} value={device.id}>
+                                                                {getDeviceName(device.id)}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Tipo de Manutenção</label>
+                                                    <select 
+                                                        value={newTask.maintenanceType}
+                                                        onChange={(e) => setNewTask({...newTask, maintenanceType: e.target.value as any})}
+                                                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
+                                                    >
+                                                        <option value={MaintenanceType.PREVENTIVE}>Preventiva</option>
+                                                        <option value={MaintenanceType.CORRECTIVE}>Corretiva</option>
+                                                        <option value={MaintenanceType.AUDIT}>Auditoria</option>
+                                                    </select>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Custo Estimado (R$)</label>
+                                                    <input 
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={newTask.maintenanceCost || 0}
+                                                        onChange={(e) => setNewTask({...newTask, maintenanceCost: parseFloat(e.target.value)})}
+                                                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
+                                                        placeholder="0,00"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Prazo</label>
                                         <input 
@@ -554,6 +676,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, on
                     currentUser={currentUser}
                     isAdmin={isAdmin}
                     systemUsers={systemUsers}
+                    devices={devices}
+                    models={models}
                 />
             )}
         </div>
