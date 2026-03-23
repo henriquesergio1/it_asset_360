@@ -9,6 +9,25 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.6',
+        date: '23/03/2026',
+        title: 'Ajuste de Layout da Tela de Tarefas',
+        changes: [
+            'UX: Ajuste do layout da tela de tarefas para utilizar a largura total da tela, padronizando com o restante do sistema.',
+            'Versão: Atualizado para v2.20.6.'
+        ]
+    },
+    {
+        version: '2.20.5',
+        date: '23/03/2026',
+        title: 'Múltiplos Vínculos em Contas e Licenças',
+        changes: [
+            'Funcionalidade: Suporte a múltiplos vínculos de colaboradores e dispositivos em uma única conta/licença.',
+            'UX: Nova interface de gerenciamento de vínculos no modal de edição de contas.',
+            'Versão: Atualizado para v2.20.5.'
+        ]
+    },
+    {
         version: '2.20.4',
         date: '23/03/2026',
         title: 'Edição Geral de Tarefas e Correção de Recorrência',
