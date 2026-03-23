@@ -622,7 +622,7 @@ const UserManager = () => {
   const { userDevices: userAssets, allUserSims: userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], allUserSims: [] };
   const userHistory = editingId ? getHistory(editingId || '') : [];
   const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
-  const userAccounts = editingId ? accounts.filter(a => a.userId === editingId) : [];
+  const userAccounts = editingId ? accounts.filter(a => a.userIds?.includes(editingId)) : [];
 
   return (
     <div className="space-y-6">

@@ -25,8 +25,8 @@ export interface SoftwareAccount {
   status: 'Ativo' | 'Inativo';
   
   // Vínculos
-  userId?: string | null;
-  deviceId?: string | null;
+  userIds?: string[] | null;
+  deviceIds?: string[] | null;
   sectorId?: string | null;
   
   notes?: string;

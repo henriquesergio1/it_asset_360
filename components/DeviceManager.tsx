@@ -678,7 +678,7 @@ const DeviceManager = () => {
   const deviceAgeYears = formData.purchaseDate ? 
     (new Date().getTime() - new Date(formData.purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25) : 0;
 
-  const deviceAccounts = editingId ? accounts.filter(a => a.deviceId === editingId) : [];
+  const deviceAccounts = editingId ? accounts.filter(a => a.deviceIds?.includes(editingId)) : [];
 
   // v2.12.39 - Lógica para o indicador visual financeiro
   const isFinancialOk = formData.invoiceNumber && (formData.purchaseInvoiceUrl || formData.hasInvoice);

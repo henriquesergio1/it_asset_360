@@ -194,8 +194,8 @@ const AccountManager = () => {
                 type: AccountType.EMAIL, 
                 login: '', 
                 status: 'Ativo',
-                userId: null,
-                deviceId: null,
+                userIds: [],
+                deviceIds: [],
                 accessUrl: '',
                 notes: ''
             });
@@ -241,12 +241,14 @@ const AccountManager = () => {
                 let bValue: any = b[sortConfig.key as keyof SoftwareAccount];
 
                 // Resolução de nomes para chaves de ID
-                if (sortConfig.key === 'userId') {
-                    aValue = users.find(u => u.id === a.userId)?.fullName || '';
-                    bValue = users.find(u => u.id === b.userId)?.fullName || '';
-                } else if (sortConfig.key === 'deviceId') {
-                    aValue = devices.find(d => d.id === a.deviceId)?.assetTag || '';
-                    bValue = devices.find(d => d.id === b.deviceId)?.assetTag || '';
+                if (sortConfig.key === 'link') {
+                    const aUsers = (a.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
+                    const aDevices = (a.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+                    aValue = `${aUsers} ${aDevices}`.trim();
+
+                    const bUsers = (b.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
+                    const bDevices = (b.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+                    bValue = `${bUsers} ${bDevices}`.trim();
                 }
 
                 if (aValue === null || aValue === undefined) return 1;
@@ -394,8 +396,8 @@ const AccountManager = () => {
                                     </th>
                                 )}
                                 {visibleColumns.includes('link') && (
-                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['link'] || '200px' }} onClick={() => handleSort('userId')}>
-                                        <div className="flex items-center gap-1">Vínculo {sortConfig?.key === 'userId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
+                                    <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['link'] || '200px' }} onClick={() => handleSort('link')}>
+                                        <div className="flex items-center gap-1">Vínculos {sortConfig?.key === 'link' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
                                         <Resizer onMouseDown={(e) => handleResize('link', e.clientX, columnWidths['link'] || 200)} />
                                     </th>
                                 )}
@@ -410,9 +412,6 @@ const AccountManager = () => {
                         </thead>
                         <tbody className="divide-y dark:divide-slate-800">
                             {paginatedAccounts.map(acc => {
-                                const linkedUser = users.find(u => u.id === acc.userId);
-                                const linkedDevice = devices.find(d => d.id === acc.deviceId);
-
                                 return (
                                     <tr key={acc.id} onClick={() => handleOpenModal(acc)} className="hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-colors cursor-pointer bg-white dark:bg-slate-900">
                                         {visibleColumns.includes('name') && (
@@ -454,17 +453,27 @@ const AccountManager = () => {
                                         )}
                                         {visibleColumns.includes('link') && (
                                             <td className="px-6 py-4 truncate">
-                                                {linkedUser ? (
-                                                    <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold">
-                                                        <UserIcon size={12}/> {linkedUser.fullName}
-                                                    </div>
-                                                ) : linkedDevice ? (
-                                                    <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-bold">
-                                                        <Smartphone size={12}/> {linkedDevice.assetTag}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-slate-300 dark:text-slate-700 italic text-xs">Sem vínculo</span>
-                                                )}
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(acc.userIds || []).map(uid => {
+                                                        const u = users.find(user => user.id === uid);
+                                                        return u ? (
+                                                            <span key={uid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-medium border border-indigo-100 dark:border-indigo-800">
+                                                                <UserIcon size={10} /> {u.fullName}
+                                                            </span>
+                                                        ) : null;
+                                                    })}
+                                                    {(acc.deviceIds || []).map(did => {
+                                                        const d = devices.find(dev => dev.id === did);
+                                                        return d ? (
+                                                            <span key={did} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium border border-emerald-100 dark:border-emerald-800">
+                                                                <Smartphone size={10} /> {d.assetTag}
+                                                            </span>
+                                                        ) : null;
+                                                    })}
+                                                    {(!acc.userIds?.length && !acc.deviceIds?.length) && (
+                                                        <span className="text-xs text-gray-400 italic">Sem vínculos</span>
+                                                    )}
+                                                </div>
                                             </td>
                                         )}
                                         {visibleColumns.includes('status') && (
@@ -572,16 +581,48 @@ const AccountManager = () => {
                                 </div>
                                 <div className="md:col-span-2">
                                     <h4 className="text-[10px] font-black uppercase text-indigo-500 mb-3 border-b dark:border-slate-800 pb-1 flex items-center gap-2">
-                                        <Info size={14}/> Vínculo de Responsabilidade
+                                        <Info size={14}/> Vínculos de Responsabilidade
                                     </h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Colaborador (Busca por Nome/CPF)</label>
-                                            <SearchableDropdown options={userOptions} value={editingAccount.userId || ''} onChange={val => setEditingAccount({...editingAccount, userId: val || null, deviceId: null})} placeholder="Vincular a Pessoa..." icon={<UserIcon size={16}/>}/>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Colaboradores (Busca por Nome/CPF)</label>
+                                            <SearchableDropdown options={userOptions.filter(o => !(editingAccount.userIds || []).includes(o.value))} value="" onChange={val => {
+                                                if (val) setEditingAccount({...editingAccount, userIds: [...(editingAccount.userIds || []), val]});
+                                            }} placeholder="Adicionar Pessoa..." icon={<UserIcon size={16}/>}/>
+                                            
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {(editingAccount.userIds || []).map(uid => {
+                                                    const u = users.find(user => user.id === uid);
+                                                    return u ? (
+                                                        <div key={uid} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 animate-scale-up">
+                                                            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{u.fullName}</span>
+                                                            <button type="button" onClick={() => setEditingAccount({...editingAccount, userIds: (editingAccount.userIds || []).filter(id => id !== uid)})} className="text-indigo-400 hover:text-red-500 transition-colors">
+                                                                <X size={14}/>
+                                                            </button>
+                                                        </div>
+                                                    ) : null;
+                                                })}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Dispositivo (Busca por IMEI/Modelo)</label>
-                                            <SearchableDropdown options={deviceOptions} value={editingAccount.deviceId || ''} onChange={val => setEditingAccount({...editingAccount, deviceId: val || null, userId: null})} placeholder="Vincular a Ativo..." icon={<Smartphone size={16}/>}/>
+                                        <div className="space-y-3">
+                                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Dispositivos (Busca por IMEI/Modelo)</label>
+                                            <SearchableDropdown options={deviceOptions.filter(o => !(editingAccount.deviceIds || []).includes(o.value))} value="" onChange={val => {
+                                                if (val) setEditingAccount({...editingAccount, deviceIds: [...(editingAccount.deviceIds || []), val]});
+                                            }} placeholder="Adicionar Ativo..." icon={<Smartphone size={16}/>}/>
+
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {(editingAccount.deviceIds || []).map(did => {
+                                                    const d = devices.find(dev => dev.id === did);
+                                                    return d ? (
+                                                        <div key={did} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800 animate-scale-up">
+                                                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{d.assetTag}</span>
+                                                            <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-400 hover:text-red-500 transition-colors">
+                                                                <X size={14}/>
+                                                            </button>
+                                                        </div>
+                                                    ) : null;
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -93,7 +93,7 @@ const DB_SCHEMAS = {
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserId NVARCHAR(255), DeviceId NVARCHAR(255), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`,
+    SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserIds NVARCHAR(MAX), DeviceIds NVARCHAR(MAX), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`,
     Tasks: `(
         Id NVARCHAR(255) PRIMARY KEY,
         Title NVARCHAR(255),
@@ -167,6 +167,22 @@ async function initializeDatabase() {
                     if (checkLegacy.recordset.length > 0) {
                         console.log('- Removendo coluna legada PurchaseInvoiceUrl de Devices...');
                         await pool.request().query('ALTER TABLE Devices DROP COLUMN PurchaseInvoiceUrl');
+                    }
+                }
+                if (table === 'SoftwareAccounts') {
+                    const checkUserId = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SoftwareAccounts' AND COLUMN_NAME = 'UserId'`);
+                    if (checkUserId.recordset.length > 0) {
+                        console.log(`- Migrando SoftwareAccounts.UserId para UserIds...`);
+                        await pool.request().query(`ALTER TABLE SoftwareAccounts ADD UserIds NVARCHAR(MAX)`);
+                        await pool.request().query(`UPDATE SoftwareAccounts SET UserIds = '["' + UserId + '"]' WHERE UserId IS NOT NULL AND UserId <> ''`);
+                        await pool.request().query(`ALTER TABLE SoftwareAccounts DROP COLUMN UserId`);
+                    }
+                    const checkDeviceId = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SoftwareAccounts' AND COLUMN_NAME = 'DeviceId'`);
+                    if (checkDeviceId.recordset.length > 0) {
+                        console.log(`- Migrando SoftwareAccounts.DeviceId para DeviceIds...`);
+                        await pool.request().query(`ALTER TABLE SoftwareAccounts ADD DeviceIds NVARCHAR(MAX)`);
+                        await pool.request().query(`UPDATE SoftwareAccounts SET DeviceIds = '["' + DeviceId + '"]' WHERE DeviceId IS NOT NULL AND DeviceId <> ''`);
+                        await pool.request().query(`ALTER TABLE SoftwareAccounts DROP COLUMN DeviceId`);
                     }
                 }
                 if (table === 'Users') {
@@ -429,7 +445,7 @@ app.get('/api/bootstrap', async (req, res) => {
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
-            customFields: format(customFieldsRes), accounts: format(accountsRes),
+            customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -467,7 +483,7 @@ app.get('/api/sync', async (req, res) => {
             devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
-            accounts: format(accountsRes),
+            accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems'])
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -733,7 +749,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
                 if (key.endsWith('Binary')) continue;
                 
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
                 // Map legacy URL columns to Binary columns
@@ -785,7 +801,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
                 if (key.endsWith('Binary')) continue;
 
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 
                 // Se o valor for nulo ou indefinido, pulamos a atualização deste campo
                 if (val === null || val === undefined) continue; 
@@ -819,7 +835,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (prev) {
                     let oldVal = prev[dbKey];
                     let newVal = req.body[key];
-                    if (key === 'customData' || key === 'customFieldIds') newVal = JSON.stringify(newVal);
+                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds'].includes(key)) newVal = JSON.stringify(newVal);
                     
                     if (String(oldVal || '') !== String(newVal || '')) {
                         diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);
@@ -989,7 +1005,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 if (key.endsWith('Binary')) continue;
                 
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
                 if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
@@ -1079,7 +1095,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (prev) {
                     let oldVal = prev[dbKey];
                     let newVal = req.body[key];
-                    if (key === 'customData' || key === 'customFieldIds') newVal = JSON.stringify(newVal);
+                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds'].includes(key)) newVal = JSON.stringify(newVal);
                     
                     if (String(oldVal || '') !== String(newVal || '')) {
                         diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);
