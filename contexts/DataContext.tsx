@@ -118,6 +118,7 @@ export interface DataContextType {
   updateExternalDbConfig: (config: ExternalDbConfig, adminName: string) => Promise<void>;
   testExternalDbConnection: (config: ExternalDbConfig) => Promise<{ success: boolean; message: string }>;
   fetchExpedienteAlerts: () => Promise<void>;
+  saveExpedienteOverride: (codigo: string, observation: string, reactivationDate: string | null) => Promise<void>;
 
   // --- Gestão de Tarefas ---
   addTask: (task: Partial<Task>, adminName: string) => Promise<void>;

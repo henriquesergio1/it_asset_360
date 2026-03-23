@@ -217,6 +217,8 @@ export interface ExpedienteAlert {
   rg: string;
   pis: string;
   validaExpediente: boolean;
+  observation?: string | null;
+  reactivationDate?: string | null;
 }
 
 export enum ActionType {

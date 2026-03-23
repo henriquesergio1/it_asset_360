@@ -94,6 +94,12 @@ const DB_SCHEMAS = {
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     SoftwareAccounts: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Type NVARCHAR(100), Login NVARCHAR(255), Password NVARCHAR(255), AccessUrl NVARCHAR(MAX), Status NVARCHAR(50), UserIds NVARCHAR(MAX), DeviceIds NVARCHAR(MAX), SectorId NVARCHAR(255), Notes NVARCHAR(MAX))`,
+    ExpedienteOverrides: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        Codigo NVARCHAR(255) UNIQUE,
+        Observation NVARCHAR(MAX),
+        ReactivationDate DATETIME
+    )`,
     Tasks: `(
         Id NVARCHAR(255) PRIMARY KEY,
         Title NVARCHAR(255),
@@ -1314,24 +1320,70 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const result = await externalPool.request().query(config.SelectionQuery);
             await externalPool.close();
 
+            // Buscar overrides locais
+            const overridesRes = await pool.request().query("SELECT * FROM ExpedienteOverrides");
+            const overridesMap = new Map();
+            overridesRes.recordset.forEach(row => {
+                overridesMap.set(row.Codigo, {
+                    observation: row.Observation,
+                    reactivationDate: row.ReactivationDate
+                });
+            });
+
             // Filtra apenas os que estão com ValidaExpediente = 0 (FALSO)
             // A query do usuário traz BOLVLAEXDEPG AS ValidaExpediente
             const alerts = result.recordset.filter(row => {
                 // Aceita 0, '0', false, 'F', 'N' como falso
                 const val = row.ValidaExpediente;
                 return val === 0 || val === '0' || val === false || val === 'F' || val === 'N';
-            }).map(row => ({
-                codigo: row.Codigo,
-                nome: row.Nome,
-                cpf: row.CPF,
-                rg: row.RG,
-                pis: row.PIS,
-                validaExpediente: false
-            }));
+            }).map(row => {
+                const override = overridesMap.get(row.Codigo);
+                return {
+                    codigo: row.Codigo,
+                    nome: row.Nome,
+                    cpf: row.CPF,
+                    rg: row.RG,
+                    pis: row.PIS,
+                    validaExpediente: false,
+                    observation: override?.observation || null,
+                    reactivationDate: override?.reactivationDate || null
+                };
+            });
 
             res.json(alerts);
         } catch (err) {
             console.error('Erro ao buscar alertas externos:', err.message);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/dashboard/expediente-alerts/override', async (req, res) => {
+        try {
+            const { codigo, observation, reactivationDate } = req.body;
+            const pool = await sql.connect(dbConfig);
+            
+            // Verifica se já existe
+            const check = await pool.request()
+                .input('Codigo', sql.NVarChar, codigo)
+                .query("SELECT Id FROM ExpedienteOverrides WHERE Codigo = @Codigo");
+                
+            if (check.recordset.length > 0) {
+                await pool.request()
+                    .input('Codigo', sql.NVarChar, codigo)
+                    .input('Observation', sql.NVarChar, observation)
+                    .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
+                    .query("UPDATE ExpedienteOverrides SET Observation = @Observation, ReactivationDate = @ReactivationDate WHERE Codigo = @Codigo");
+            } else {
+                await pool.request()
+                    .input('Id', sql.NVarChar, require('crypto').randomUUID())
+                    .input('Codigo', sql.NVarChar, codigo)
+                    .input('Observation', sql.NVarChar, observation)
+                    .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
+                    .query("INSERT INTO ExpedienteOverrides (Id, Codigo, Observation, ReactivationDate) VALUES (@Id, @Codigo, @Observation, @ReactivationDate)");
+            }
+            res.json({ success: true });
+        } catch (err) {
+            console.error('Erro ao salvar override de expediente:', err.message);
             res.status(500).send(err.message);
         }
     });

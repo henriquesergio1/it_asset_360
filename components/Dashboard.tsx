@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock } from 'lucide-react';
+import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock, X } from 'lucide-react';
 import { DeviceStatus, AccountType, Task } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { TaskDashboardWidget } from './TaskDashboardWidget';
@@ -22,7 +22,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 );
 
 const Dashboard = () => {
-  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts, tasks, updateTask, systemUsers } = useData();
+  const { devices, users, accounts, sectors, maintenances, models, brands, refreshData, expedienteAlerts, fetchExpedienteAlerts, saveExpedienteOverride, tasks, updateTask, systemUsers } = useData();
   const { isAdmin } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
@@ -30,6 +30,7 @@ const Dashboard = () => {
   const [resolvingTerm, setResolvingTerm] = useState<{termId: string, userName: string} | null>(null);
   const [resolveReason, setResolveReason] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [editingExpediente, setEditingExpediente] = useState<{codigo: string, nome: string, observation: string, reactivationDate: string} | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -102,6 +103,14 @@ const Dashboard = () => {
   const filteredExpedienteAlerts = expedienteAlerts.filter(alert => {
       const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
       return localUser && localUser.active;
+  }).sort((a, b) => {
+      const now = new Date();
+      const aHasActiveOverride = a.reactivationDate && new Date(a.reactivationDate) > now;
+      const bHasActiveOverride = b.reactivationDate && new Date(b.reactivationDate) > now;
+      
+      if (aHasActiveOverride && !bHasActiveOverride) return 1;
+      if (!aHasActiveOverride && bHasActiveOverride) return -1;
+      return a.nome.localeCompare(b.nome);
   });
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -363,21 +372,38 @@ const Dashboard = () => {
                       <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
                           {filteredExpedienteAlerts.map((alert) => {
                               const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
+                              const now = new Date();
+                              const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
+                              
                               return (
-                                  <div key={alert.codigo} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-red-100 dark:border-red-900/30 flex items-center justify-between group hover:border-red-300 transition-all">
-                                      <div className="flex flex-1 items-center gap-3">
-                                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center text-red-600 font-bold text-xs shrink-0">
-                                              {alert.nome.charAt(0)}
+                                  <div key={alert.codigo} className={`bg-white dark:bg-slate-900/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300' : 'border-red-100 dark:border-red-900/30 hover:border-red-300'}`}>
+                                      <div className="flex items-center justify-between">
+                                          <div className="flex flex-1 items-center gap-3">
+                                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
+                                                  {alert.nome.charAt(0)}
+                                              </div>
+                                              <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
+                                                  <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{alert.nome}</p>
+                                                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">Cód ERP: {alert.codigo}</p>
+                                                  <p className="text-[10px] text-slate-500 italic md:mt-0">CPF: {alert.cpf}</p>
+                                                  <p className={`text-[10px] font-bold uppercase tracking-widest md:mt-0 ml-auto md:ml-0 ${hasActiveOverride ? 'text-amber-500' : 'text-red-500'}`}>
+                                                      {hasActiveOverride ? 'Desativado Temporariamente' : 'Expediente Falso'}
+                                                  </p>
+                                              </div>
                                           </div>
-                                          <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
-                                              <p className="text-sm font-bold text-gray-800 dark:text-slate-200">{alert.nome}</p>
-                                              <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">Cód ERP: {alert.codigo}</p>
-                                              <p className="text-[10px] text-slate-500 italic md:mt-0">CPF: {alert.cpf}</p>
-                                              <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest md:mt-0 ml-auto md:ml-0">Expediente Falso</p>
-                                          </div>
-                                      </div>
-                                      <div className="flex items-center gap-x-4 shrink-0">
-                                          <div className="flex items-center gap-1">
+                                          <div className="flex items-center gap-x-2 shrink-0">
+                                              <button
+                                                  onClick={() => setEditingExpediente({
+                                                      codigo: alert.codigo,
+                                                      nome: alert.nome,
+                                                      observation: alert.observation || '',
+                                                      reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
+                                                  })}
+                                                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+                                                  title="Adicionar Observação/Reativação"
+                                              >
+                                                  <FileText size={18} />
+                                              </button>
                                               {localUser && (
                                                   <Link 
                                                       to={`/users?userId=${localUser.id}`}
@@ -389,6 +415,12 @@ const Dashboard = () => {
                                               )}
                                           </div>
                                       </div>
+                                      {hasActiveOverride && (
+                                          <div className="ml-11 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-900/30">
+                                              <span className="font-bold">Motivo:</span> {alert.observation} <br/>
+                                              <span className="font-bold">Reativação Prevista:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
+                                          </div>
+                                      )}
                                   </div>
                               );
                           })}
@@ -585,6 +617,65 @@ const Dashboard = () => {
           devices={devices}
           models={models}
         />
+      )}
+
+      {/* Modal de Edição de Expediente */}
+      {editingExpediente && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
+                  <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                      <div>
+                          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Desativar Alerta Temporariamente</h2>
+                          <p className="text-xs text-slate-500 mt-1">{editingExpediente.nome}</p>
+                      </div>
+                      <button onClick={() => setEditingExpediente(null)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+                          <X size={20} />
+                      </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Motivo / Observação</label>
+                          <textarea 
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-200"
+                              rows={3}
+                              placeholder="Ex: Férias, Licença Médica, etc."
+                              value={editingExpediente.observation}
+                              onChange={e => setEditingExpediente({...editingExpediente, observation: e.target.value})}
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Data Prevista para Reativação</label>
+                          <input 
+                              type="date"
+                              className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-slate-200"
+                              value={editingExpediente.reactivationDate}
+                              onChange={e => setEditingExpediente({...editingExpediente, reactivationDate: e.target.value})}
+                          />
+                      </div>
+                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                      <button 
+                          onClick={() => setEditingExpediente(null)}
+                          className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                      >
+                          Cancelar
+                      </button>
+                      <button 
+                          onClick={async () => {
+                              try {
+                                  await saveExpedienteOverride(editingExpediente.codigo, editingExpediente.observation, editingExpediente.reactivationDate || null);
+                                  setEditingExpediente(null);
+                              } catch (err) {
+                                  alert('Erro ao salvar.');
+                              }
+                          }}
+                          className="px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+                      >
+                          Salvar
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );

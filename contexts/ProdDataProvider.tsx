@@ -219,6 +219,20 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const saveExpedienteOverride = async (codigo: string, observation: string, reactivationDate: string | null) => {
+    try {
+      await fetch(`${API_URL}/api/dashboard/expediente-alerts/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo, observation, reactivationDate })
+      });
+      await fetchExpedienteAlerts(); // Recarrega a lista para aplicar as mudanças
+    } catch (err) {
+      console.error("Erro ao salvar override de expediente:", err);
+      throw err;
+    }
+  };
+
   const updateExternalDbConfig = async (config: ExternalDbConfig, adminName: string) => {
     await postData('admin/external-db/config', { ...config, _adminUser: adminName });
     setExternalDbConfig(config);
@@ -290,7 +304,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return safeJson(res, `/api/tasks/${tid}/logs`);
     },
 
-    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts
+    updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

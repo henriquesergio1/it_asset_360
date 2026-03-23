@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.7',
+        date: '23/03/2026',
+        title: 'Desativação Temporária de Alertas de Expediente',
+        changes: [
+            'Funcionalidade: Adicionada opção para desativar temporariamente alertas de expediente (ERP).',
+            'UX: Alertas desativados vão para o final da lista com cor diferenciada (âmbar).',
+            'Versão: Atualizado para v2.20.7.'
+        ]
+    },
+    {
         version: '2.20.6',
         date: '23/03/2026',
         title: 'Ajuste de Layout da Tela de Tarefas',
