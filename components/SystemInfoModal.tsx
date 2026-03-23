@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.10',
+        date: '23/03/2026',
+        title: 'Correção no Alerta de Expediente',
+        changes: [
+            'Correção: Resolvido erro 500 (Validation failed for parameter Codigo) ao salvar o motivo/observação no alerta de expediente.',
+            'Versão: Atualizado para v2.20.10.'
+        ]
+    },
+    {
         version: '2.20.9',
         date: '23/03/2026',
         title: 'Correção na Edição de Tarefas e Prazos',

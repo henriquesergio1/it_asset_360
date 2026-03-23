@@ -388,7 +388,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.20.9', 
+        version: '2.20.10', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -1324,7 +1324,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const overridesRes = await pool.request().query("SELECT * FROM ExpedienteOverrides");
             const overridesMap = new Map();
             overridesRes.recordset.forEach(row => {
-                overridesMap.set(row.Codigo, {
+                overridesMap.set(String(row.Codigo), {
                     observation: row.Observation,
                     reactivationDate: row.ReactivationDate
                 });
@@ -1337,9 +1337,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 const val = row.ValidaExpediente;
                 return val === 0 || val === '0' || val === false || val === 'F' || val === 'N';
             }).map(row => {
-                const override = overridesMap.get(row.Codigo);
+                const codigoStr = String(row.Codigo);
+                const override = overridesMap.get(codigoStr);
                 return {
-                    codigo: row.Codigo,
+                    codigo: codigoStr,
                     nome: row.Nome,
                     cpf: row.CPF,
                     rg: row.RG,
@@ -1360,23 +1361,24 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     app.post('/api/dashboard/expediente-alerts/override', async (req, res) => {
         try {
             const { codigo, observation, reactivationDate } = req.body;
+            const codigoStr = String(codigo);
             const pool = await sql.connect(dbConfig);
             
             // Verifica se já existe
             const check = await pool.request()
-                .input('Codigo', sql.NVarChar, codigo)
+                .input('Codigo', sql.NVarChar, codigoStr)
                 .query("SELECT Id FROM ExpedienteOverrides WHERE Codigo = @Codigo");
                 
             if (check.recordset.length > 0) {
                 await pool.request()
-                    .input('Codigo', sql.NVarChar, codigo)
+                    .input('Codigo', sql.NVarChar, codigoStr)
                     .input('Observation', sql.NVarChar, observation || null)
                     .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
                     .query("UPDATE ExpedienteOverrides SET Observation = @Observation, ReactivationDate = @ReactivationDate WHERE Codigo = @Codigo");
             } else {
                 await pool.request()
                     .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
-                    .input('Codigo', sql.NVarChar, codigo)
+                    .input('Codigo', sql.NVarChar, codigoStr)
                     .input('Observation', sql.NVarChar, observation || null)
                     .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
                     .query("INSERT INTO ExpedienteOverrides (Id, Codigo, Observation, ReactivationDate) VALUES (@Id, @Codigo, @Observation, @ReactivationDate)");
