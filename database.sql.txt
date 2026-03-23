@@ -1,5 +1,5 @@
 -- IT Asset 360 - Script Completo de Banco de Dados (SQL Server)
--- Versão: 2.13.0
+-- Versão: 2.20.2
 -- Este script contém todas as tabelas necessárias para o funcionamento inicial do sistema.
 
 -- Tabela de Dispositivos
@@ -195,7 +195,12 @@ CREATE TABLE Tasks (
     AssignedTo NVARCHAR(255),
     Comments NVARCHAR(MAX),
     Instructions NVARCHAR(MAX),
-    EvidenceUrls NVARCHAR(MAX)
+    EvidenceUrls NVARCHAR(MAX),
+    ManualAttachments NVARCHAR(MAX),
+    DeviceId NVARCHAR(255),
+    MaintenanceType NVARCHAR(100),
+    MaintenanceCost FLOAT,
+    MaintenanceItems NVARCHAR(MAX)
 );
 
 -- Tabela de Histórico de Tarefas (Auditoria Imutável)

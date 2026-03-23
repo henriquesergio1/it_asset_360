@@ -267,6 +267,12 @@ async function initializeDatabase() {
                         console.log(`- Coluna MaintenanceCost não encontrada em Tasks. Adicionando...`);
                         await pool.request().query('ALTER TABLE Tasks ADD MaintenanceCost FLOAT NULL');
                     }
+
+                    const checkMaintenanceItems = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'MaintenanceItems'`);
+                    if (checkMaintenanceItems.recordset.length === 0) {
+                        console.log(`- Coluna MaintenanceItems não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD MaintenanceItems NVARCHAR(MAX) NULL');
+                    }
                 }
             }
         }
@@ -360,7 +366,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.20.1', 
+        version: '2.20.2', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.2',
+        date: '23/03/2026',
+        title: 'Correção de Banco de Dados (Manutenção em Lote)',
+        changes: [
+            'Fix: Adicionada migração automática para a coluna MaintenanceItems na tabela Tasks.',
+            'Fix: Atualizado script database.sql.txt com as novas colunas da tabela Tasks.',
+            'Versão: Atualizado para v2.20.2.'
+        ]
+    },
+    {
         version: '2.20.1',
         date: '23/03/2026',
         title: 'Refinamento de Manutenção em Lote',
