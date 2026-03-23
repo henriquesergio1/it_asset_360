@@ -74,7 +74,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
               isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
           }
-          return { ...task, isOverdue, isNearDue };
+          return { ...task, isOverdue, isNearDue, hasDueDate: !!task.dueDate };
       });
 
       setTasks(processedTasks);
@@ -221,11 +221,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const saveExpedienteOverride = async (codigo: string, observation: string, reactivationDate: string | null) => {
     try {
-      await fetch(`${API_URL}/api/dashboard/expediente-alerts/override`, {
+      const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codigo, observation, reactivationDate })
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Erro do servidor: ${text}`);
+      }
       await fetchExpedienteAlerts(); // Recarrega a lista para aplicar as mudanças
     } catch (err) {
       console.error("Erro ao salvar override de expediente:", err);

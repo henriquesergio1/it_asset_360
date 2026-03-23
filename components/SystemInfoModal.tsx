@@ -9,6 +9,27 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.9',
+        date: '23/03/2026',
+        title: 'Correção na Edição de Tarefas e Prazos',
+        changes: [
+            'Correção: Resolvido erro 500 ao salvar a edição de uma tarefa (campos auxiliares ignorados no backend).',
+            'Correção: A lista de tarefas agora exibe corretamente os prazos definidos (corrigido mapeamento do "Sem prazo").',
+            'Correção: Ajustado o formato da data no formulário de edição para evitar avisos no console.',
+            'Versão: Atualizado para v2.20.9.'
+        ]
+    },
+    {
+        version: '2.20.8',
+        date: '23/03/2026',
+        title: 'Correção de Erro no Alerta de Expediente',
+        changes: [
+            'Correção: Resolvido erro 500 ao salvar a desativação temporária do alerta de expediente.',
+            'Melhoria: Adicionado tratamento de erro no frontend para exibir mensagens reais do servidor.',
+            'Versão: Atualizado para v2.20.8.'
+        ]
+    },
+    {
         version: '2.20.7',
         date: '23/03/2026',
         title: 'Desativação Temporária de Alertas de Expediente',

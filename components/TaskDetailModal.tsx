@@ -42,7 +42,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     const [editTitle, setEditTitle] = useState(task.title);
     const [editDescription, setEditDescription] = useState(task.description || '');
     const [editAssignedTo, setEditAssignedTo] = useState(task.assignedTo || '');
-    const [editDueDate, setEditDueDate] = useState(task.dueDate || '');
+    const [editDueDate, setEditDueDate] = useState(task.dueDate ? task.dueDate.split('T')[0] : '');
     const [editHasDueDate, setEditHasDueDate] = useState(task.hasDueDate || false);
     const [editIsRecurring, setEditIsRecurring] = useState(task.isRecurring || false);
     const [editRecurrenceConfig, setEditRecurrenceConfig] = useState<any>(task.recurrenceConfig || { type: 'Nenhuma' as any });
@@ -472,7 +472,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                     setEditTitle(task.title);
                                     setEditDescription(task.description || '');
                                     setEditAssignedTo(task.assignedTo || '');
-                                    setEditDueDate(task.dueDate || '');
+                                    setEditDueDate(task.dueDate ? task.dueDate.split('T')[0] : '');
                                     setEditHasDueDate(task.hasDueDate || false);
                                     setEditIsRecurring(task.isRecurring || false);
                                     setEditRecurrenceConfig(task.recurrenceConfig || { type: 'Nenhuma' as any });

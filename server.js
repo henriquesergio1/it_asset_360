@@ -388,7 +388,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.20.4', 
+        version: '2.20.9', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -740,7 +740,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
 // ... (código das rotas movido para dentro de startServer)
 
-    const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr'];
+    const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId'];
 
     const crud = (table, route, assetType) => {
     app.post(`/api/${route}`, async (req, res) => {
@@ -1370,14 +1370,14 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             if (check.recordset.length > 0) {
                 await pool.request()
                     .input('Codigo', sql.NVarChar, codigo)
-                    .input('Observation', sql.NVarChar, observation)
+                    .input('Observation', sql.NVarChar, observation || null)
                     .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
                     .query("UPDATE ExpedienteOverrides SET Observation = @Observation, ReactivationDate = @ReactivationDate WHERE Codigo = @Codigo");
             } else {
                 await pool.request()
-                    .input('Id', sql.NVarChar, require('crypto').randomUUID())
+                    .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
                     .input('Codigo', sql.NVarChar, codigo)
-                    .input('Observation', sql.NVarChar, observation)
+                    .input('Observation', sql.NVarChar, observation || null)
                     .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
                     .query("INSERT INTO ExpedienteOverrides (Id, Codigo, Observation, ReactivationDate) VALUES (@Id, @Codigo, @Observation, @ReactivationDate)");
             }
@@ -1479,13 +1479,17 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 
                 const val = (key === 'evidenceUrls' || key === 'manualAttachments' || key === 'maintenanceItems') ? JSON.stringify(req.body[key]) : req.body[key];
-                if (val === null || val === undefined) continue;
+                if (val === undefined) continue;
 
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                 if (processedKeys.has(dbKey)) continue;
                 processedKeys.add(dbKey);
 
-                request.input(dbKey, val);
+                if (val === null) {
+                    request.input(dbKey, sql.NVarChar, null); // Usando NVarChar como fallback genérico para null
+                } else {
+                    request.input(dbKey, val);
+                }
                 sets.push(`${dbKey}=@${dbKey}`);
             }
 
