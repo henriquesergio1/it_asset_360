@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.4',
+        date: '23/03/2026',
+        title: 'Edição Geral de Tarefas e Correção de Recorrência',
+        changes: [
+            'Funcionalidade: Implementada edição geral de tarefas (título, descrição, prazo, responsável, recorrência).',
+            'Funcionalidade: Adição e remoção de dispositivos em tarefas de manutenção em lote.',
+            'Fix: Corrigido bug onde o campo "Dia Fixo" não aparecia na criação de tarefas recorrentes.',
+            'Versão: Atualizado para v2.20.4.'
+        ]
+    },
+    {
         version: '2.20.3',
         date: '23/03/2026',
         title: 'Refinamento do Modal de Tarefas (Checklist)',

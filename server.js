@@ -366,7 +366,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.20.2', 
+        version: '2.20.4', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });

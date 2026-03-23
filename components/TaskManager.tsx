@@ -474,7 +474,17 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                             <input 
                                                 type="checkbox" 
                                                 checked={newTask.isRecurring}
-                                                onChange={(e) => setNewTask({...newTask, isRecurring: e.target.checked})}
+                                                onChange={(e) => {
+                                                    const isRecurring = e.target.checked;
+                                                    setNewTask({
+                                                        ...newTask, 
+                                                        isRecurring,
+                                                        recurrenceConfig: isRecurring ? {
+                                                            type: RecurrenceType.MONTHLY_DAY,
+                                                            dayOfMonth: new Date().getDate()
+                                                        } : undefined
+                                                    });
+                                                }}
                                                 className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                             />
                                             <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Recorrente</span>

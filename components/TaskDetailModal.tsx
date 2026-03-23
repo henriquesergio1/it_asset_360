@@ -38,6 +38,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     const [finalCost, setFinalCost] = useState(task.maintenanceCost || 0);
     const [invoiceFile, setInvoiceFile] = useState<string | null>(null);
     const [itemNote, setItemNote] = useState('');
+    const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+    const [editTitle, setEditTitle] = useState(task.title);
+    const [editDescription, setEditDescription] = useState(task.description || '');
+    const [editAssignedTo, setEditAssignedTo] = useState(task.assignedTo || '');
+    const [editDueDate, setEditDueDate] = useState(task.dueDate || '');
+    const [editHasDueDate, setEditHasDueDate] = useState(task.hasDueDate || false);
+    const [editIsRecurring, setEditIsRecurring] = useState(task.isRecurring || false);
+    const [editRecurrenceConfig, setEditRecurrenceConfig] = useState<any>(task.recurrenceConfig || { type: 'Nenhuma' as any });
+    const [editMaintenanceItems, setEditMaintenanceItems] = useState(task.maintenanceItems || []);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (!isEditingInstructions) {
@@ -283,6 +293,56 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         }
     };
 
+    const handleSaveGeneral = async () => {
+        setUpdating(true);
+        try {
+            const updates: any = {
+                title: editTitle,
+                description: editDescription,
+                assignedTo: editAssignedTo || null,
+                dueDate: editHasDueDate ? editDueDate : null,
+                hasDueDate: editHasDueDate,
+                isRecurring: editIsRecurring,
+                recurrenceConfig: editIsRecurring ? editRecurrenceConfig : null,
+                maintenanceItems: editMaintenanceItems,
+                _adminUser: currentUser,
+                _actionNote: 'Informações gerais da tarefa atualizadas'
+            };
+
+            await onUpdate(task.id, updates);
+            setIsEditingGeneral(false);
+            showToast('Tarefa atualizada com sucesso!');
+            const res = await fetch(`/api/tasks/${task.id}/logs`);
+            if (res.ok) setLogs(await res.json());
+        } catch (err) {
+            console.error('Erro ao salvar alterações:', err);
+            showToast('Erro ao salvar alterações.', 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleAddDeviceToMaintenance = (device: Device) => {
+        if (editMaintenanceItems.some(i => i.deviceId === device.id)) {
+            showToast('Este dispositivo já está na lista.', 'info');
+            return;
+        }
+
+        const model = models.find(m => m.id === device.modelId);
+        const newItem: any = {
+            deviceId: device.id,
+            assetTag: device.assetTag || device.serialNumber,
+            status: 'Pendente'
+        };
+
+        setEditMaintenanceItems([...editMaintenanceItems, newItem]);
+        setSearchTerm('');
+    };
+
+    const handleRemoveDeviceFromMaintenance = (deviceId: string) => {
+        setEditMaintenanceItems(editMaintenanceItems.filter(i => i.deviceId !== deviceId));
+    };
+
     const handleManualAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -380,7 +440,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             <ClipboardList size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{task.title}</h2>
+                            {isEditingGeneral ? (
+                                <input 
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    className="text-xl font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border-b-2 border-indigo-500 outline-none w-full"
+                                />
+                            ) : (
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{task.title}</h2>
+                            )}
                             <div className="flex items-center gap-3 mt-1">
                                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                     <Clock size={14} /> Criada em {new Date(task.createdAt).toLocaleDateString('pt-BR')}
@@ -397,9 +465,30 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                        <X size={24} className="text-slate-400" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {isAdmin && !isEditingGeneral && (
+                            <button 
+                                onClick={() => {
+                                    setEditTitle(task.title);
+                                    setEditDescription(task.description || '');
+                                    setEditAssignedTo(task.assignedTo || '');
+                                    setEditDueDate(task.dueDate || '');
+                                    setEditHasDueDate(task.hasDueDate || false);
+                                    setEditIsRecurring(task.isRecurring || false);
+                                    setEditRecurrenceConfig(task.recurrenceConfig || { type: 'Nenhuma' as any });
+                                    setEditMaintenanceItems(task.maintenanceItems || []);
+                                    setIsEditingGeneral(true);
+                                }}
+                                className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full transition-colors"
+                                title="Editar Tarefa"
+                            >
+                                <Wrench size={20} />
+                            </button>
+                        )}
+                        <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                            <X size={24} className="text-slate-400" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
@@ -409,9 +498,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                 <FileText size={16} /> Descrição
                             </h3>
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                {task.description || 'Sem descrição detalhada.'}
-                            </div>
+                            {isEditingGeneral ? (
+                                <textarea 
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    className="w-full p-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[100px] focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            ) : (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                    {task.description || 'Sem descrição detalhada.'}
+                                </div>
+                            )}
                         </section>
 
                         <section>
@@ -574,35 +671,143 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                     <Clock size={16} /> Prazo de Conclusão
                                 </h3>
-                                <div className={`p-4 rounded-2xl border ${
-                                    task.isOverdue ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400' :
-                                    task.isNearDue ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400' :
-                                    'bg-slate-50 dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                                }`}>
-                                    <div className="text-lg font-bold">
-                                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
+                                {isEditingGeneral ? (
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={editHasDueDate}
+                                                onChange={(e) => setEditHasDueDate(e.target.checked)}
+                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            />
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Definir Prazo</span>
+                                        </label>
+                                        <input 
+                                            type="date"
+                                            disabled={!editHasDueDate}
+                                            value={editDueDate}
+                                            onChange={(e) => setEditDueDate(e.target.value)}
+                                            className="w-full p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-slate-100 disabled:opacity-50"
+                                        />
                                     </div>
-                                    {task.isOverdue && (
-                                        <div className="text-xs font-medium mt-1 flex items-center gap-1">
-                                            <AlertCircle size={12} /> Atrasada
+                                ) : (
+                                    <div className={`p-4 rounded-2xl border ${
+                                        task.isOverdue ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400' :
+                                        task.isNearDue ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400' :
+                                        'bg-slate-50 dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                    }`}>
+                                        <div className="text-lg font-bold">
+                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
                                         </div>
-                                    )}
-                                </div>
+                                        {task.isOverdue && (
+                                            <div className="text-xs font-medium mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} /> Atrasada
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </section>
                             <section>
                                 <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                                     <User size={16} /> Atribuída a
                                 </h3>
-                                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                                    <div className="text-lg font-bold">
-                                        {task.assignedTo 
-                                            ? (systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo) 
-                                            : 'Geral'}
+                                {isEditingGeneral ? (
+                                    <select 
+                                        value={editAssignedTo}
+                                        onChange={(e) => setEditAssignedTo(e.target.value)}
+                                        className="w-full p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all dark:text-slate-100"
+                                    >
+                                        <option value="">Geral</option>
+                                        {systemUsers.map(user => (
+                                            <option key={user.id} value={user.id}>{user.name}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                        <div className="text-lg font-bold">
+                                            {task.assignedTo 
+                                                ? (systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo) 
+                                                : 'Geral'}
+                                        </div>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Responsável pela execução</div>
                                     </div>
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Responsável pela execução</div>
-                                </div>
+                                )}
                             </section>
                         </div>
+
+                        {/* Recurrence Edit */}
+                        <section>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <History size={16} /> Recorrência
+                                </h3>
+                            </div>
+                            {isEditingGeneral ? (
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20 space-y-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={editIsRecurring}
+                                            onChange={(e) => setEditIsRecurring(e.target.checked)}
+                                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                        />
+                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Tarefa Recorrente</span>
+                                    </label>
+
+                                    {editIsRecurring && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Padrão</label>
+                                                <select 
+                                                    value={editRecurrenceConfig.type}
+                                                    onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, type: e.target.value as any })}
+                                                    className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                >
+                                                    <option value="Mensal (Dia Fixo)">Mensal (Dia Fixo)</option>
+                                                    <option value="Mensal (Dia da Semana)">Mensal (Dia da Semana)</option>
+                                                    <option value="Intervalo de Meses">Intervalo de Meses</option>
+                                                </select>
+                                            </div>
+                                            {editRecurrenceConfig.type === 'Mensal (Dia Fixo)' && (
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Dia do Mês</label>
+                                                    <input 
+                                                        type="number" min="1" max="31"
+                                                        value={editRecurrenceConfig.dayOfMonth || ''}
+                                                        onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, dayOfMonth: parseInt(e.target.value) })}
+                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                    />
+                                                </div>
+                                            )}
+                                            {editRecurrenceConfig.type === 'Intervalo de Meses' && (
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">A cada X meses</label>
+                                                    <input 
+                                                        type="number" min="1"
+                                                        value={editRecurrenceConfig.intervalMonths || ''}
+                                                        onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, intervalMonths: parseInt(e.target.value) })}
+                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                    <div className="text-sm font-medium">
+                                        {task.isRecurring ? (
+                                            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold">
+                                                <History size={16} />
+                                                {task.recurrenceConfig?.type} 
+                                                {task.recurrenceConfig?.dayOfMonth && ` (Dia ${task.recurrenceConfig.dayOfMonth})`}
+                                                {task.recurrenceConfig?.intervalMonths && ` (A cada ${task.recurrenceConfig.intervalMonths} meses)`}
+                                            </div>
+                                        ) : 'Não recorrente'}
+                                    </div>
+                                </div>
+                            )}
+                        </section>
 
                         <section>
                             <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -650,6 +855,67 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             )}
 
                             {/* Task Actions */}
+                            <div className="flex flex-wrap gap-3">
+                                {isEditingGeneral ? (
+                                    <>
+                                        <button 
+                                            onClick={handleSaveGeneral}
+                                            disabled={updating}
+                                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
+                                        >
+                                            <CheckCircle2 size={18} /> Salvar Alterações
+                                        </button>
+                                        <button 
+                                            onClick={() => setIsEditingGeneral(false)}
+                                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-slate-200 hover:bg-slate-300 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                                        >
+                                            <X size={18} /> Cancelar Edição
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        {task.status === TaskStatus.PENDING && (
+                                            <button 
+                                                onClick={() => handleStatusChange(TaskStatus.IN_PROGRESS)}
+                                                disabled={updating}
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-200 dark:shadow-none transition-all disabled:opacity-50"
+                                            >
+                                                <Clock size={18} /> Iniciar Tarefa
+                                            </button>
+                                        )}
+                                        
+                                        {task.status === TaskStatus.IN_PROGRESS && (
+                                            <button 
+                                                onClick={() => {
+                                                    if (task.type === TaskType.MAINTENANCE && task.maintenanceItems) {
+                                                        const allDone = task.maintenanceItems.every(i => i.status === 'Concluído');
+                                                        if (!allDone) {
+                                                            alert('Todos os dispositivos devem ser concluídos antes de finalizar a tarefa.');
+                                                            return;
+                                                        }
+                                                    }
+                                                    handleStatusChange(TaskStatus.COMPLETED);
+                                                }}
+                                                disabled={updating}
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
+                                            >
+                                                <CheckCircle2 size={18} /> Finalizar Tarefa
+                                            </button>
+                                        )}
+
+                                        {task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && (
+                                            <button 
+                                                onClick={() => setShowCancelReason(true)}
+                                                disabled={updating}
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 border-2 border-red-100 dark:border-red-900/30 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                                            >
+                                                <AlertTriangle size={18} /> Cancelar Tarefa
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
                             {task.type === TaskType.MAINTENANCE && (
                                 <section className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4 mt-8">
                                     <div className="flex items-center justify-between">
@@ -657,14 +923,48 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             <Wrench size={18} />
                                             <h3 className="text-sm font-bold uppercase tracking-wider">Dados da Manutenção</h3>
                                         </div>
-                                        {task.maintenanceItems && (
+                                        {isEditingGeneral && (
+                                            <div className="relative">
+                                                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+                                                    <Plus size={14} className="text-slate-400" />
+                                                    <input 
+                                                        type="text"
+                                                        placeholder="Adicionar dispositivo..."
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        className="bg-transparent text-[10px] font-bold outline-none w-32"
+                                                    />
+                                                </div>
+                                                {searchTerm && (
+                                                    <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-10 max-h-48 overflow-y-auto">
+                                                        {devices
+                                                            .filter(d => 
+                                                                (d.assetTag?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                                                 d.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                                                                !editMaintenanceItems.some(i => i.deviceId === d.id)
+                                                            )
+                                                            .map(device => (
+                                                                <button 
+                                                                    key={device.id}
+                                                                    onClick={() => handleAddDeviceToMaintenance(device)}
+                                                                    className="w-full text-left p-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-[10px] font-bold border-b border-slate-100 dark:border-slate-700 last:border-0"
+                                                                >
+                                                                    {getDeviceName(device.id)}
+                                                                </button>
+                                                            ))
+                                                        }
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {task.maintenanceItems && !isEditingGeneral && (
                                             <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full uppercase tracking-widest">
                                                 Manutenção em Lote
                                             </span>
                                         )}
                                     </div>
                                     
-                                    {!task.maintenanceItems ? (
+                                    {!task.maintenanceItems && !isEditingGeneral ? (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
                                                 <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
@@ -680,7 +980,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                      task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
                                                 </div>
                                             </div>
-
+ 
                                             <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-amber-100 dark:border-amber-900/30">
                                                 <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Custo</label>
                                                 <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
@@ -692,10 +992,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest px-1">
                                                 <span>Checklist de Dispositivos</span>
-                                                <span>{task.maintenanceItems.filter(i => i.status === 'Concluído').length} / {task.maintenanceItems.length} concluídos</span>
+                                                <span>{(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).filter(i => i.status === 'Concluído').length} / {(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).length} concluídos</span>
                                             </div>
                                             <div className="grid grid-cols-1 gap-2">
-                                                {task.maintenanceItems.map((item) => (
+                                                {(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).map((item) => (
                                                     <div key={item.deviceId} className="space-y-2">
                                                         <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-2xl border border-amber-100 dark:border-amber-900/30 hover:shadow-md transition-all">
                                                             <div className="flex items-center gap-3">
@@ -714,37 +1014,48 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-3">
-                                                                {item.status === 'Concluído' ? (
-                                                                    <div className="text-right">
-                                                                        <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Concluído</div>
-                                                                        <div className="text-[10px] text-slate-400">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
-                                                                    </div>
-                                                                ) : item.status === 'Em Andamento' ? (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="text-right mr-2">
-                                                                            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Em Andamento</div>
-                                                                        </div>
-                                                                        <button 
-                                                                            onClick={() => {
-                                                                                setCompletingItemId(item.deviceId);
-                                                                                setFinalCost(task.maintenanceCost || 0);
-                                                                                setItemNote('');
-                                                                                setInvoiceFile(null);
-                                                                            }}
-                                                                            disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED || (completingItemId === item.deviceId)}
-                                                                            className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                                                                        >
-                                                                            Finalizar
-                                                                        </button>
-                                                                    </div>
-                                                                ) : (
+                                                                {isEditingGeneral ? (
                                                                     <button 
-                                                                        onClick={() => handleStartItem(item.deviceId)}
-                                                                        disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
-                                                                        className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                                        onClick={() => handleRemoveDeviceFromMaintenance(item.deviceId)}
+                                                                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                                     >
-                                                                        Iniciar
+                                                                        <Trash2 size={14} />
                                                                     </button>
+                                                                ) : (
+                                                                    <>
+                                                                        {item.status === 'Concluído' ? (
+                                                                            <div className="text-right">
+                                                                                <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Concluído</div>
+                                                                                <div className="text-[10px] text-slate-400">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
+                                                                            </div>
+                                                                        ) : item.status === 'Em Andamento' ? (
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="text-right mr-2">
+                                                                                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Em Andamento</div>
+                                                                                </div>
+                                                                                <button 
+                                                                                    onClick={() => {
+                                                                                        setCompletingItemId(item.deviceId);
+                                                                                        setFinalCost(task.maintenanceCost || 0);
+                                                                                        setItemNote('');
+                                                                                        setInvoiceFile(null);
+                                                                                    }}
+                                                                                    disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED || (completingItemId === item.deviceId)}
+                                                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                                                                                >
+                                                                                    Finalizar
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <button 
+                                                                                onClick={() => handleStartItem(item.deviceId)}
+                                                                                disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
+                                                                                className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                                            >
+                                                                                Iniciar
+                                                                            </button>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -809,46 +1120,6 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                     )}
                                 </section>
                             )}
-
-                            {/* Task Actions */}
-                            <div className="flex flex-wrap gap-3">
-                                {task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && (
-                                    <>
-                                        {task.status === TaskStatus.PENDING && (
-                                            <button 
-                                                onClick={() => handleStatusChange(TaskStatus.IN_PROGRESS)}
-                                                disabled={updating}
-                                                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-50"
-                                            >
-                                                Iniciar Tarefa
-                                            </button>
-                                        )}
-                                        <button 
-                                            onClick={() => handleStatusChange(TaskStatus.COMPLETED)}
-                                            disabled={updating || (task.maintenanceItems && task.maintenanceItems.some(i => i.status !== 'Concluído'))}
-                                            className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 dark:shadow-none disabled:opacity-50"
-                                        >
-                                            Marcar como Concluída
-                                        </button>
-                                        <button 
-                                            onClick={() => handleStatusChange(TaskStatus.CANCELED)}
-                                            disabled={updating}
-                                            className="px-6 py-3 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50"
-                                        >
-                                            Cancelar Tarefa
-                                        </button>
-                                    </>
-                                )}
-                                {(task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELED) && (
-                                    <button 
-                                        onClick={() => handleStatusChange(TaskStatus.PENDING)}
-                                        disabled={updating}
-                                        className="px-6 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-900 dark:hover:bg-slate-600 transition-all disabled:opacity-50"
-                                    >
-                                        Reabrir Tarefa
-                                    </button>
-                                )}
-                            </div>
                         </section>
                     </div>
 
