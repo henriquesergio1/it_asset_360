@@ -316,6 +316,19 @@ export interface Task {
   deviceId?: string;
   maintenanceType?: MaintenanceType;
   maintenanceCost?: number;
+
+  // Manutenção em Lote (v2.20.0)
+  maintenanceItems?: MaintenanceItem[];
+}
+
+export interface MaintenanceItem {
+  deviceId: string;
+  assetTag: string;
+  status: 'Pendente' | 'Em Andamento' | 'Concluído';
+  completedAt?: string;
+  completedBy?: string;
+  finalCost?: number;
+  invoiceUrl?: string;
 }
 
 export interface DashboardStats {

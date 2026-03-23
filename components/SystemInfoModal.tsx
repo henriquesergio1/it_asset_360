@@ -9,6 +9,31 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.1',
+        date: '23/03/2026',
+        title: 'Refinamento de Manutenção em Lote',
+        changes: [
+            'Funcionalidade: Adicionado botão "Iniciar" individual para itens de manutenção em lote.',
+            'UX: Status "Em Andamento" individual para cada dispositivo no checklist.',
+            'UX: Feedback visual (ícone pulsante) para itens em execução.',
+            'Integração: Iniciar um item altera automaticamente o status da tarefa principal para "Em Andamento".',
+            'Versão: Atualizado para v2.20.1.'
+        ]
+    },
+    {
+        version: '2.20.0',
+        date: '23/03/2026',
+        title: 'Manutenção em Lote (Checklist)',
+        changes: [
+            'Funcionalidade: Implementação de Manutenção em Lote (Checklist).',
+            'Funcionalidade: Criação de tarefa única para múltiplos dispositivos.',
+            'Funcionalidade: Conclusão individual de itens com custo e NF por dispositivo.',
+            'Filtro: Seleção de dispositivos por tipo na criação de tarefas.',
+            'Integração: Geração automática de registros de manutenção individuais ao concluir cada item.',
+            'Versão: Atualizado para v2.20.0.'
+        ]
+    },
+    {
         version: '2.19.20',
         date: '23/03/2026',
         title: 'Gestão de Manutenção Avançada',

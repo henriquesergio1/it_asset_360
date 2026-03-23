@@ -109,7 +109,8 @@ const DB_SCHEMAS = {
         ManualAttachments NVARCHAR(MAX),
         DeviceId NVARCHAR(255),
         MaintenanceType NVARCHAR(100),
-        MaintenanceCost FLOAT
+        MaintenanceCost FLOAT,
+        MaintenanceItems NVARCHAR(MAX)
     )`,
     TaskLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -359,7 +360,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '2.19.20', 
+        version: '2.20.1', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -423,7 +424,7 @@ app.get('/api/bootstrap', async (req, res) => {
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments']), taskLogs: format(taskLogsRes)
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -461,7 +462,7 @@ app.get('/api/sync', async (req, res) => {
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accounts: format(accountsRes),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments'])
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems'])
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -1355,7 +1356,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     app.post('/api/tasks', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, deviceId, maintenanceType, maintenanceCost, _adminUser } = req.body;
+            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, deviceId, maintenanceType, maintenanceCost, maintenanceItems, _adminUser } = req.body;
             
             await pool.request()
                 .input('id', sql.NVarChar, id)
@@ -1370,8 +1371,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 .input('deviceId', sql.NVarChar, deviceId || null)
                 .input('maintenanceType', sql.NVarChar, maintenanceType || null)
                 .input('maintenanceCost', sql.Float, maintenanceCost || 0)
-                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments, DeviceId, MaintenanceType, MaintenanceCost) 
-                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments, @deviceId, @maintenanceType, @maintenanceCost)`);
+                .input('maintenanceItems', sql.NVarChar, maintenanceItems ? JSON.stringify(maintenanceItems) : null)
+                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems) 
+                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments, @deviceId, @maintenanceType, @maintenanceCost, @maintenanceItems)`);
 
             // Log de Auditoria Imutável
             await pool.request()
@@ -1402,7 +1404,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
                 
-                const val = (key === 'evidenceUrls' || key === 'manualAttachments') ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (key === 'evidenceUrls' || key === 'manualAttachments' || key === 'maintenanceItems') ? JSON.stringify(req.body[key]) : req.body[key];
                 if (val === null || val === undefined) continue;
 
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
@@ -1451,6 +1453,34 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                             INSERT INTO MaintenanceRecords (Id, DeviceId, Description, Cost, Date, Type, Provider, InvoiceBinary)
                             VALUES (@mId, @dId, @desc, @cost, GETDATE(), @type, @admin, @invoice)
                         `);
+                }
+
+                // v2.20.0 - Lógica de Manutenção em Lote (Checklist)
+                if (req.body.maintenanceItems && prev.Type === 'Manutenção') {
+                    const oldItems = prev.MaintenanceItems ? JSON.parse(prev.MaintenanceItems) : [];
+                    const newItems = req.body.maintenanceItems;
+                    
+                    for (const newItem of newItems) {
+                        const oldItem = oldItems.find(i => i.deviceId === newItem.deviceId);
+                        // Se mudou para Concluído
+                        if (newItem.status === 'Concluído' && (!oldItem || oldItem.status !== 'Concluído')) {
+                            const maintenanceId = 'MNT-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                            const invoiceBuffer = newItem.maintenanceInvoice ? getBufferFromBase64(newItem.maintenanceInvoice) : null;
+                            
+                            await pool.request()
+                                .input('mId', sql.NVarChar, maintenanceId)
+                                .input('dId', sql.NVarChar, newItem.deviceId)
+                                .input('desc', sql.NVarChar, `[Tarefa #${id}] ${prev.Title} (Item: ${newItem.assetTag}): ${prev.Description}`)
+                                .input('cost', sql.Float, newItem.finalCost || 0)
+                                .input('type', sql.NVarChar, prev.MaintenanceType || 'Preventiva')
+                                .input('admin', sql.NVarChar, _adminUser || 'Sistema')
+                                .input('invoice', sql.VarBinary, invoiceBuffer)
+                                .query(`
+                                    INSERT INTO MaintenanceRecords (Id, DeviceId, Description, Cost, Date, Type, Provider, InvoiceBinary)
+                                    VALUES (@mId, @dId, @desc, @cost, GETDATE(), @type, @admin, @invoice)
+                                `);
+                        }
+                    }
                 }
             }
 

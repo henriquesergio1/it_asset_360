@@ -7,7 +7,7 @@ import {
     Repeat, Paperclip, Trash2, ExternalLink, FileText,
     Smartphone, Bell, Wrench, ShieldCheck, CheckSquare
 } from 'lucide-react';
-import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus } from '../types';
+import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
 
@@ -16,19 +16,23 @@ interface TaskManagerProps {
     systemUsers: SystemUser[];
     devices: Device[];
     models: DeviceModel[];
+    assetTypes: AssetType[];
     onAddTask: (task: Partial<Task>) => Promise<void>;
     onUpdateTask: (taskId: string, updates: Partial<Task> & { _actionNote?: string }) => Promise<void>;
     currentUser: string;
     isAdmin: boolean;
 }
 
-export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, devices, models, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
+export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, devices, models, assetTypes, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
     const { showToast } = useToast();
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'Ativas' | 'Concluídas' | 'Canceladas'>('Ativas');
     const [typeFilter, setTypeFilter] = useState<TaskType | 'All'>('All');
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
+    const [isBatchMaintenance, setIsBatchMaintenance] = useState(false);
+    const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
+    const [assetTypeFilter, setAssetTypeFilter] = useState<string>('All');
     const [newTask, setNewTask] = useState<Partial<Task>>({
         title: '',
         description: '',
@@ -118,13 +122,32 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             }
             
             // Validação para Manutenção
-            if (taskToSave.type === TaskType.MAINTENANCE && !taskToSave.deviceId) {
-                showToast('Selecione um dispositivo para a manutenção.', 'error');
-                return;
+            if (taskToSave.type === TaskType.MAINTENANCE) {
+                if (isBatchMaintenance) {
+                    if (selectedDeviceIds.length === 0) {
+                        showToast('Selecione ao menos um dispositivo para a manutenção em lote.', 'error');
+                        return;
+                    }
+                    taskToSave.maintenanceItems = selectedDeviceIds.map(id => {
+                        const device = devices.find(d => d.id === id);
+                        return {
+                            deviceId: id,
+                            assetTag: device?.assetTag || 'N/A',
+                            status: 'Pendente'
+                        } as MaintenanceItem;
+                    });
+                    taskToSave.deviceId = undefined;
+                } else if (!taskToSave.deviceId) {
+                    showToast('Selecione um dispositivo para a manutenção.', 'error');
+                    return;
+                }
             }
 
             await onAddTask(taskToSave);
             setIsAdding(false);
+            setIsBatchMaintenance(false);
+            setSelectedDeviceIds([]);
+            setAssetTypeFilter('All');
             showToast('Tarefa criada com sucesso!');
             setNewTask({
                 title: '',
@@ -476,28 +499,112 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
                                     {newTask.type === TaskType.MAINTENANCE && (
                                         <div className="col-span-2 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-900/40 space-y-4 animate-fade-in">
-                                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
-                                                <Wrench size={16} />
-                                                <h4 className="text-xs font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                                    <Wrench size={16} />
+                                                    <h4 className="text-xs font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                                        <input 
+                                                            type="checkbox"
+                                                            checked={isBatchMaintenance}
+                                                            onChange={(e) => {
+                                                                setIsBatchMaintenance(e.target.checked);
+                                                                if (!e.target.checked) setSelectedDeviceIds([]);
+                                                            }}
+                                                            className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300"
+                                                        />
+                                                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Manutenção em Lote</span>
+                                                    </label>
+                                                </div>
                                             </div>
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo</label>
-                                                    <select 
-                                                        required={newTask.type === TaskType.MAINTENANCE}
-                                                        value={newTask.deviceId || ''}
-                                                        onChange={(e) => setNewTask({...newTask, deviceId: e.target.value})}
-                                                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
-                                                    >
-                                                        <option value="">Selecione o dispositivo...</option>
-                                                        {devices.filter(d => d.status !== DeviceStatus.RETIRED).map(device => (
-                                                            <option key={device.id} value={device.id}>
-                                                                {getDeviceName(device.id)}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                                {!isBatchMaintenance ? (
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Dispositivo Único</label>
+                                                        <select 
+                                                            required={newTask.type === TaskType.MAINTENANCE && !isBatchMaintenance}
+                                                            value={newTask.deviceId || ''}
+                                                            onChange={(e) => setNewTask({...newTask, deviceId: e.target.value})}
+                                                            className="w-full p-2.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
+                                                        >
+                                                            <option value="">Selecione o dispositivo...</option>
+                                                            {devices.filter(d => d.status !== DeviceStatus.RETIRED).map(device => (
+                                                                <option key={device.id} value={device.id}>
+                                                                    {getDeviceName(device.id)}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                ) : (
+                                                    <div className="md:col-span-2 space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex-1">
+                                                                <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Filtrar por Tipo</label>
+                                                                <select 
+                                                                    value={assetTypeFilter}
+                                                                    onChange={(e) => {
+                                                                        const typeId = e.target.value;
+                                                                        setAssetTypeFilter(typeId);
+                                                                        if (typeId !== 'All') {
+                                                                            const filtered = devices.filter(d => {
+                                                                                const model = models.find(m => m.id === d.modelId);
+                                                                                return model?.typeId === typeId && d.status !== DeviceStatus.RETIRED;
+                                                                            });
+                                                                            setSelectedDeviceIds(filtered.map(d => d.id));
+                                                                        }
+                                                                    }}
+                                                                    className="w-full p-2 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 rounded-xl text-xs font-bold dark:text-slate-100 outline-none"
+                                                                >
+                                                                    <option value="All">Todos os Tipos</option>
+                                                                    {assetTypes.map(type => (
+                                                                        <option key={type.id} value={type.id}>{type.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div className="flex items-end h-full pb-1">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => setSelectedDeviceIds([])}
+                                                                    className="text-[10px] font-bold text-amber-600 hover:underline uppercase tracking-wider"
+                                                                >
+                                                                    Limpar Seleção
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="max-h-40 overflow-y-auto p-3 bg-white dark:bg-slate-800/50 border border-amber-200 dark:border-amber-900/40 rounded-xl space-y-2">
+                                                            {devices
+                                                                .filter(d => d.status !== DeviceStatus.RETIRED)
+                                                                .filter(d => assetTypeFilter === 'All' || models.find(m => m.id === d.modelId)?.typeId === assetTypeFilter)
+                                                                .map(device => (
+                                                                    <label key={device.id} className="flex items-center gap-2 p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg cursor-pointer transition-colors">
+                                                                        <input 
+                                                                            type="checkbox"
+                                                                            checked={selectedDeviceIds.includes(device.id)}
+                                                                            onChange={(e) => {
+                                                                                if (e.target.checked) {
+                                                                                    setSelectedDeviceIds(prev => [...prev, device.id]);
+                                                                                } else {
+                                                                                    setSelectedDeviceIds(prev => prev.filter(id => id !== device.id));
+                                                                                }
+                                                                            }}
+                                                                            className="w-3.5 h-3.5 rounded text-amber-600 focus:ring-amber-500 border-amber-300"
+                                                                        />
+                                                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                                                            {getDeviceName(device.id)}
+                                                                        </span>
+                                                                    </label>
+                                                                ))
+                                                            }
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">
+                                                            {selectedDeviceIds.length} dispositivo(s) selecionado(s)
+                                                        </p>
+                                                    </div>
+                                                )}
                                                 
                                                 <div>
                                                     <label className="block text-[10px] font-black uppercase text-amber-500 dark:text-amber-600 mb-1 tracking-widest">Tipo de Manutenção</label>
