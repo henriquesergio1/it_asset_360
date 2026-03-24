@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.0.0',
+        date: '24/03/2026',
+        title: 'Major Release: Estabilidade e Fundação',
+        changes: [
+            'Marco: O sistema atinge sua primeira versão Major (3.0.0), marcando estabilidade e maturidade.',
+            'Performance: Criação de índices no banco de dados para otimização de consultas e velocidade.',
+            'Arquitetura: Modularização do backend para facilitar a manutenção e escalabilidade futura.'
+        ]
+    },
+    {
         version: '2.20.11',
         date: '24/03/2026',
         title: 'Correção de Quebra de Linha',
