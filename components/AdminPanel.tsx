@@ -154,7 +154,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
                         <div className="text-center py-10 bg-slate-50 dark:bg-slate-950 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
                             <Info size={32} className="mx-auto text-slate-300 dark:text-slate-700 mb-2"/>
                             <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest italic">Nenhuma mudança de valor detectada nos campos principais.</p>
-                            {log.notes && <p className="mt-4 text-xs font-medium text-slate-600 dark:text-slate-400">Observação: {log.notes}</p>}
+                            {log.notes && <p className="mt-4 text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-pre-wrap">Observação: {log.notes}</p>}
                         </div>
                     )}
                 </div>

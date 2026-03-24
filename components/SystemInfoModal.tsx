@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '2.20.11',
+        date: '24/03/2026',
+        title: 'Correção de Quebra de Linha',
+        changes: [
+            'Correção: O campo de histórico de ações das tarefas agora respeita as quebras de linha (enter) digitadas pelo usuário.',
+            'Versão: Atualizado para v2.20.11.'
+        ]
+    },
+    {
         version: '2.20.10',
         date: '23/03/2026',
         title: 'Correção no Alerta de Expediente',
