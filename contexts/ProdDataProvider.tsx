@@ -2,33 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = ''; 
 
 export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [sims, setSims] = useState<SimCard[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
-  const [settings, setSettings] = useState<SystemSettings>({ appName: 'IT Asset', logoUrl: '' });
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [models, setModels] = useState<DeviceModel[]>([]);
-  const [brands, setBrands] = useState<DeviceBrand[]>([]);
-  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
-  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>([]);
-  const [sectors, setSectors] = useState<UserSector[]>([]);
-  const [accessoryTypes, setAccessoryTypes] = useState<AccessoryType[]>([]);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
-  
-  // ERP Integration State
-  const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
-  const [expedienteAlerts, setExpedienteAlerts] = useState<ExpedienteAlert[]>([]);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const safeJson = async (res: Response, endpoint: string) => {
       if (!res.ok) {
@@ -38,73 +17,93 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return res.json();
   };
 
-  const fetchData = async (silent: boolean = false) => {
-    try {
-      if (!silent) setLoading(true);
-      
-      // Se for atualização silenciosa (navegação), usa o endpoint /api/sync que economiza 99% de banda (sem fotos)
-      const endpoint = silent ? '/api/sync' : '/api/bootstrap';
-      console.log(`[ITAsset360] Sincronizando dados via ${endpoint}...`);
+  const { data: bootstrapData, isLoading: isBootstrapLoading, error: bootstrapError } = useQuery({
+    queryKey: ['bootstrap'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/bootstrap`);
+      return safeJson(res, '/api/bootstrap');
+    },
+    staleTime: Infinity,
+  });
 
-      const res = await fetch(`${API_URL}${endpoint}`);
-      const data = await safeJson(res, endpoint);
+  const { data: syncData, isLoading: isSyncLoading, error: syncError } = useQuery({
+    queryKey: ['sync'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/sync`);
+      return safeJson(res, '/api/sync');
+    },
+    refetchInterval: 30000,
+    enabled: !!bootstrapData,
+  });
 
-      const {
-          devices: devicesData, sims: simsData, users: usersData, logs: logsData, 
-          maintenances: maintData, terms: termsData, accounts: accountsData,
-          tasks: tasksData, taskLogs: taskLogsData
-      } = data;
-
-      setDevices(devicesData);
-      setSims(simsData);
-      setUsers(usersData.map((u: User) => ({ 
-          ...u, 
-          terms: termsData.filter((t: Term) => t.userId === u.id) 
-      })));
-      setLogs(logsData);
-      setMaintenances(maintData);
-      setAccounts(accountsData);
-      const now = new Date();
-      const processedTasks = (tasksData || []).map((task: Task) => {
-          let isOverdue = false;
-          let isNearDue = false;
-          if (task.dueDate) {
-              const dueDate = new Date(task.dueDate);
-              isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
-              const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
-              isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
-          }
-          return { ...task, isOverdue, isNearDue, hasDueDate: !!task.dueDate };
-      });
-
-      setTasks(processedTasks);
-      setTaskLogs(taskLogsData || []);
-
-      // Apenas atualiza catálogo no bootstrap inicial ou carregamento forçado
-      if (!silent) {
-          setSystemUsers(data.systemUsers || []);
-          setSettings(data.settings || { appName: 'IT Asset', logoUrl: '' });
-          setModels(data.models || []);
-          setBrands(data.brands || []);
-          setAssetTypes(data.assetTypes || []);
-          setSectors(data.sectors || []);
-          setAccessoryTypes(data.accessoryTypes || []);
-          setCustomFields(data.customFields || []);
-          
-          // Busca configuração do ERP no bootstrap
-          fetchExternalDbConfig();
-      }
-      
-      setError(null);
-    } catch (err: any) { 
-        if (!silent) setError(err.message); 
-        console.error("Sync Error:", err.message);
-    } finally { 
-        if (!silent) setLoading(false); 
+  const { data: externalDbConfigData } = useQuery({
+    queryKey: ['externalDbConfig'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/admin/external-db/config`);
+      return safeJson(res, '/api/admin/external-db/config');
     }
-  };
+  });
 
-  useEffect(() => { fetchData(); }, []);
+  const { data: expedienteAlertsData } = useQuery({
+    queryKey: ['expedienteAlerts'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts`);
+      return safeJson(res, '/api/dashboard/expediente-alerts');
+    }
+  });
+
+  const loading = isBootstrapLoading || (isSyncLoading && !syncData);
+  const error = (bootstrapError as Error)?.message || (syncError as Error)?.message || null;
+
+  const devices = syncData?.devices || bootstrapData?.devices || [];
+  const sims = syncData?.sims || bootstrapData?.sims || [];
+  const usersData = syncData?.users || bootstrapData?.users || [];
+  const termsData = syncData?.terms || bootstrapData?.terms || [];
+  const users = usersData.map((u: User) => ({ 
+      ...u, 
+      terms: termsData.filter((t: Term) => t.userId === u.id) 
+  }));
+  const logs = syncData?.logs || bootstrapData?.logs || [];
+  const maintenances = syncData?.maintenances || bootstrapData?.maintenances || [];
+  const accounts = syncData?.accounts || bootstrapData?.accounts || [];
+  
+  const tasksData = syncData?.tasks || bootstrapData?.tasks || [];
+  const taskLogs = syncData?.taskLogs || bootstrapData?.taskLogs || [];
+  const now = new Date();
+  const tasks = tasksData.map((task: Task) => {
+      let isOverdue = false;
+      let isNearDue = false;
+      if (task.dueDate) {
+          const dueDate = new Date(task.dueDate);
+          isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
+          const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
+          isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;
+      }
+      return { ...task, isOverdue, isNearDue, hasDueDate: !!task.dueDate };
+  });
+
+  const systemUsers = bootstrapData?.systemUsers || [];
+  const settings = bootstrapData?.settings || { appName: 'IT Asset', logoUrl: '' };
+  const models = bootstrapData?.models || [];
+  const brands = bootstrapData?.brands || [];
+  const assetTypes = bootstrapData?.assetTypes || [];
+  const sectors = bootstrapData?.sectors || [];
+  const accessoryTypes = bootstrapData?.accessoryTypes || [];
+  const customFields = bootstrapData?.customFields || [];
+
+  const externalDbConfig = externalDbConfigData || null;
+  const expedienteAlerts = expedienteAlertsData || [];
+
+  const fetchData = async (silent: boolean = false) => {
+      if (silent) {
+          await queryClient.invalidateQueries({ queryKey: ['sync'] });
+      } else {
+          await queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
+          await queryClient.invalidateQueries({ queryKey: ['sync'] });
+          await queryClient.invalidateQueries({ queryKey: ['externalDbConfig'] });
+          await queryClient.invalidateQueries({ queryKey: ['expedienteAlerts'] });
+      }
+  };
 
   const getLogDetail = async (id: string): Promise<AuditLog> => {
       const res = await fetch(`${API_URL}/api/logs/${id}`);
@@ -199,24 +198,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       fetchData(true);
   };
 
-  const fetchExternalDbConfig = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/admin/external-db/config`);
-      const data = await safeJson(res, '/api/admin/external-db/config');
-      setExternalDbConfig(data);
-    } catch (err) {
-      console.error("Erro ao buscar config ERP:", err);
-    }
-  };
-
   const fetchExpedienteAlerts = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts`);
-      const data = await safeJson(res, '/api/dashboard/expediente-alerts');
-      setExpedienteAlerts(data);
-    } catch (err) {
-      console.error("Erro ao buscar alertas de expediente:", err);
-    }
+    await queryClient.invalidateQueries({ queryKey: ['expedienteAlerts'] });
   };
 
   const saveExpedienteOverride = async (codigo: string, observation: string, reactivationDate: string | null) => {
@@ -239,7 +222,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateExternalDbConfig = async (config: ExternalDbConfig, adminName: string) => {
     await postData('admin/external-db/config', { ...config, _adminUser: adminName });
-    setExternalDbConfig(config);
+    await queryClient.invalidateQueries({ queryKey: ['externalDbConfig'] });
   };
 
   const testExternalDbConnection = async (config: ExternalDbConfig) => {
@@ -256,7 +239,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     accounts, externalDbConfig, expedienteAlerts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
     addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
-    updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); setSettings(s); },
+    updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); await queryClient.invalidateQueries({ queryKey: ['bootstrap'] }); },
     assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
     returnAsset: async (at, aid, n, adm, list, inactivate, cond, desc, evids, isManual, resolutionReason) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate, condition: cond, damageDescription: desc, evidenceFiles: evids, isManual, resolutionReason }); fetchData(true); },
     updateTermFile, deleteTermFile, updateTermDetails, getHistory: (id) => logs.filter(l => l.assetId === id),

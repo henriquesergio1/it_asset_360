@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.1.0',
+        date: '24/03/2026',
+        title: 'Performance do Frontend com React Query',
+        changes: [
+            'Performance: Implementação do React Query para cache inteligente e redução de tráfego de rede.',
+            'UX: Telas carregam mais rápido e dados são atualizados automaticamente em background.'
+        ]
+    },
+    {
         version: '3.0.0',
         date: '24/03/2026',
         title: 'Major Release: Estabilidade e Fundação',
