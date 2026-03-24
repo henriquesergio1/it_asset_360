@@ -183,7 +183,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const value: DataContextType = {
-    devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
+    devices, sims, users, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     externalDbConfig, expedienteAlerts,
     fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
@@ -478,7 +478,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: '' } : t)
         } : u));
     },
-    getHistory: (id) => logs.filter(l => l.assetId === id),
     clearLogs,
     restoreItem,
     addAssetType: (t, adm) => { setAssetTypes(p => [...p, t]); logAction(ActionType.create, 'Type', t.id, t.name, adm); },

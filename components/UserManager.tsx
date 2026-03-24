@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -174,7 +175,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, getHistory, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
+  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -620,7 +621,17 @@ const UserManager = () => {
   };
 
   const { userDevices: userAssets, allUserSims: userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], allUserSims: [] };
-  const userHistory = editingId ? getHistory(editingId || '') : [];
+  
+  const { data: userHistory = [], isLoading: historyLoading } = useQuery({
+      queryKey: ['user-history', editingId],
+      queryFn: async () => {
+          const res = await fetch(`/api/logs/asset/${editingId}`);
+          if (!res.ok) throw new Error('Failed to fetch history');
+          return res.json();
+      },
+      enabled: activeTab === 'LOGS' && !!editingId
+  });
+
   const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
   const userAccounts = editingId ? accounts.filter(a => a.userIds?.includes(editingId)) : [];
 
@@ -802,7 +813,23 @@ const UserManager = () => {
     <Printer size={18}/>
   </button>
 </div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
-                {activeTab === 'LOGS' && (<div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">{userHistory.map(log => (<div key={log.id} className="relative pl-8"><div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div><div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div><div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div><div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div><div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div></div>))}</div>)}
+                {activeTab === 'LOGS' && (
+                    <div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">
+                        {historyLoading ? (
+                            <div className="text-center py-8 text-slate-500"><Loader2 className="animate-spin inline-block mr-2" size={20}/> Carregando histórico...</div>
+                        ) : userHistory.length === 0 ? (
+                            <div className="text-center py-8 text-slate-500">Nenhum histórico encontrado.</div>
+                        ) : userHistory.map((log: AuditLog) => (
+                            <div key={log.id} className="relative pl-8">
+                                <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
+                                <div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div>
+                                <div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
             <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
               <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all tracking-widest shadow-sm">Fechar</button>

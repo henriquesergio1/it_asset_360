@@ -425,7 +425,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.1.0', 
+        version: '3.2.0', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -445,7 +445,7 @@ app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [
-            devicesRes, simsRes, usersRes, logsRes, sysUsersRes, settingsRes,
+            devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, tasksRes, taskLogsRes
         ] = await Promise.all([
@@ -458,7 +458,6 @@ app.get('/api/bootstrap', async (req, res) => {
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
             pool.request().query("SELECT * FROM Models"), 
@@ -482,7 +481,7 @@ app.get('/api/bootstrap', async (req, res) => {
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes), systemUsers: sysUsersRes.recordset,
+            devices, sims: format(simsRes), users: format(usersRes), systemUsers: sysUsersRes.recordset,
             settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' }, 
             models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.imageBinary) })), 
             brands: format(brandsRes),
@@ -498,7 +497,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, logsRes, maintRes, termsRes, accountsRes, tasksRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -508,7 +507,6 @@ app.get('/api/sync', async (req, res) => {
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT TOP 200 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -523,12 +521,62 @@ app.get('/api/sync', async (req, res) => {
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes), logs: format(logsRes),
+            devices, sims: format(simsRes), users: format(usersRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems'])
         });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/logs/paginated', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const search = req.query.search || '';
+        const offset = (page - 1) * limit;
+
+        const pool = await sql.connect(dbConfig);
+        
+        let query = "SELECT Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs";
+        let countQuery = "SELECT COUNT(*) as total FROM AuditLogs";
+        
+        if (search) {
+            const searchCondition = " WHERE AdminUser LIKE @search OR TargetName LIKE @search OR Action LIKE @search OR Notes LIKE @search";
+            query += searchCondition;
+            countQuery += searchCondition;
+        }
+        
+        query += " ORDER BY Timestamp DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+
+        const request = pool.request();
+        if (search) request.input('search', sql.NVarChar, `%${search}%`);
+        
+        const countRequest = pool.request();
+        if (search) countRequest.input('search', sql.NVarChar, `%${search}%`);
+
+        const [logsRes, countRes] = await Promise.all([
+            request.input('offset', sql.Int, offset).input('limit', sql.Int, limit).query(query),
+            countRequest.query(countQuery)
+        ]);
+
+        res.json({
+            logs: format(logsRes),
+            total: countRes.recordset[0].total,
+            page,
+            totalPages: Math.ceil(countRes.recordset[0].total / limit)
+        });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/logs/asset/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request()
+            .input('AssetId', sql.NVarChar, req.params.id)
+            .query("SELECT Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs WHERE AssetId=@AssetId ORDER BY Timestamp DESC");
+        res.json(format(result));
     } catch (err) { res.status(500).send(err.message); }
 });
 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
@@ -182,7 +183,7 @@ const AdminPanel = () => {
   });
 
   const { 
-      systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, logs,
+      systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings,
       clearLogs, restoreItem, 
       externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData 
   } = useData();
@@ -256,7 +257,30 @@ const AdminPanel = () => {
     alert("Templates de Termos salvos!");
   };
 
-  const filteredLogs = logs.filter(l => normalizeString(`${l.adminUser} ${l.targetName} ${l.action} ${l.notes || ''}`).includes(normalizeString(logSearch)));
+  const [logPage, setLogPage] = useState(1);
+  const [debouncedLogSearch, setDebouncedLogSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLogSearch(logSearch);
+      setLogPage(1); // Reset page on search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [logSearch]);
+
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ['logs', logPage, debouncedLogSearch],
+    queryFn: async () => {
+      const res = await fetch(`/api/logs/paginated?page=${logPage}&limit=100&search=${encodeURIComponent(debouncedLogSearch)}`);
+      if (!res.ok) throw new Error('Failed to fetch logs');
+      return res.json();
+    },
+    enabled: activeTab === 'LOGS',
+  });
+
+  const filteredLogs = logsData?.logs || [];
+  const totalLogs = logsData?.total || 0;
+  const totalPages = logsData?.totalPages || 1;
 
   return (
     <div className="space-y-6">
@@ -471,7 +495,10 @@ const AdminPanel = () => {
                     <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-600" size={18}/>
                     <input type="text" placeholder="Filtrar por Admin, Item, Ação..." className="w-full pl-12 pr-6 py-3.5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:border-blue-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-medium text-sm transition-colors" value={logSearch} onChange={e => setLogSearch(e.target.value)}/>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-2xl px-6 py-3 flex items-center gap-3"><Activity size={20} className="text-blue-600"/><div className="text-[10px] font-black uppercase text-blue-400">Auditoria: {filteredLogs.length} eventos</div></div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-2xl px-6 py-3 flex items-center gap-3">
+                    <Activity size={20} className="text-blue-600"/>
+                    <div className="text-[10px] font-black uppercase text-blue-400">Auditoria: {totalLogs} eventos</div>
+                </div>
              </div>
              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border dark:border-slate-800 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -480,7 +507,11 @@ const AdminPanel = () => {
                             <tr><th className="px-6 py-4">Data/Hora</th><th className="px-6 py-4">Operador</th><th className="px-6 py-4">Ação</th><th className="px-6 py-4">Item Afetado</th><th className="px-6 py-4 text-right">Ações</th></tr>
                         </thead>
                         <tbody className="divide-y dark:divide-slate-800">
-                            {filteredLogs.slice(0, 100).map(log => (
+                            {logsLoading ? (
+                                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500"><Loader2 className="animate-spin inline-block mr-2" size={20}/> Carregando auditoria...</td></tr>
+                            ) : filteredLogs.length === 0 ? (
+                                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Nenhum log encontrado.</td></tr>
+                            ) : filteredLogs.map((log: AuditLog) => (
                                 <tr key={log.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/20 transition-colors bg-white dark:bg-slate-900">
                                     <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">{log.adminUser}</td>
@@ -494,6 +525,25 @@ const AdminPanel = () => {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
+                        <button 
+                            disabled={logPage === 1 || logsLoading} 
+                            onClick={() => setLogPage(p => Math.max(1, p - 1))}
+                            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border dark:border-slate-600 rounded-lg disabled:opacity-50"
+                        >
+                            Anterior
+                        </button>
+                        <span className="text-xs font-bold text-slate-500">Página {logPage} de {totalPages}</span>
+                        <button 
+                            disabled={logPage === totalPages || logsLoading} 
+                            onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
+                            className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border dark:border-slate-600 rounded-lg disabled:opacity-50"
+                        >
+                            Próxima
+                        </button>
+                    </div>
+                )}
              </div>
           </div>
         )}

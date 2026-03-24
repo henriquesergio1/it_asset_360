@@ -6,7 +6,6 @@ export interface DataContextType {
   sims: SimCard[];
   users: User[];
   systemUsers: SystemUser[];
-  logs: AuditLog[];
   settings: SystemSettings;
   
   // ERP Integration
@@ -81,8 +80,6 @@ export interface DataContextType {
   deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => void;
   updateTermDetails: (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string) => void;
 
-  getHistory: (assetId: string) => AuditLog[];
-  
   // Admin Tools
   clearLogs: () => void;
   restoreItem: (logId: string, adminName: string) => void;

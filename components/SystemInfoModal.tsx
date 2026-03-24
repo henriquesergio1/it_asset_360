@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.2.0',
+        date: '24/03/2026',
+        description: 'Implementação de paginação server-side para logs de auditoria e histórico de ativos/usuários.',
+        changes: [
+            'Performance: Paginação real no backend para a aba de Auditoria, reduzindo o tempo de carregamento inicial.',
+            'Performance: Otimização da busca de histórico de ativos e usuários usando rotas específicas.',
+            'UX: Adição de indicadores de carregamento e controles de paginação na tabela de logs.',
+            'Correção: O histórico de ativos e usuários agora exibe todos os eventos, sem limite de 200 registros.'
+        ]
+    },
+    {
         version: '3.1.0',
         date: '24/03/2026',
         title: 'Performance do Frontend com React Query',

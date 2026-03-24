@@ -63,7 +63,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       ...u, 
       terms: termsData.filter((t: Term) => t.userId === u.id) 
   }));
-  const logs = syncData?.logs || bootstrapData?.logs || [];
   const maintenances = syncData?.maintenances || bootstrapData?.maintenances || [];
   const accounts = syncData?.accounts || bootstrapData?.accounts || [];
   
@@ -235,14 +234,14 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const value: DataContextType = {
-    devices, sims, users, logs, loading, error, systemUsers, settings,
+    devices, sims, users, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     accounts, externalDbConfig, expedienteAlerts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
     addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
     updateSettings: async (s: SystemSettings, a: string) => { await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); await queryClient.invalidateQueries({ queryKey: ['bootstrap'] }); },
     assignAsset: async (at, aid, uid, n, adm, acc) => { await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); fetchData(true); },
     returnAsset: async (at, aid, n, adm, list, inactivate, cond, desc, evids, isManual, resolutionReason) => { await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate, condition: cond, damageDescription: desc, evidenceFiles: evids, isManual, resolutionReason }); fetchData(true); },
-    updateTermFile, deleteTermFile, updateTermDetails, getHistory: (id) => logs.filter(l => l.assetId === id),
+    updateTermFile, deleteTermFile, updateTermDetails,
     clearLogs: async () => { await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); fetchData(true); },
     restoreItem: async (lid, adm) => { await postData('restore', { logId: lid, _adminUser: adm }); fetchData(true); },
     // Fix: replaced 'a' with 'adm' to match function parameters
