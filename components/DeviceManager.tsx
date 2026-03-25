@@ -4,9 +4,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, ChevronUp, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, Download, FileSpreadsheet, FileJson } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface Option {
     value: string;
@@ -420,8 +424,13 @@ const DeviceManager = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
   const [filterNoInvoice, setFilterNoInvoice] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkActionOpen, setIsBulkActionOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<DeviceStatus | ''>('');
+  const [bulkSector, setBulkSector] = useState<string>('');
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -607,6 +616,16 @@ const DeviceManager = () => {
       enabled: activeTab === 'HISTORY' && !!editingId
   });
 
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        if (prev.direction === 'asc') return { key, direction: 'desc' };
+        return null;
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
   const filteredDevices = devices.filter(d => {
     if (viewStatus !== 'ALL' && d.status !== viewStatus) return false;
 
@@ -621,9 +640,34 @@ const DeviceManager = () => {
     const searchString = normalizeString(`${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`);
     return searchString.includes(normalizeString(searchTerm));
   }).sort((a, b) => {
+    if (!sortConfig) {
       const modelA = models.find(m => m.id === a.modelId)?.name || '';
       const modelB = models.find(m => m.id === b.modelId)?.name || '';
       return modelA.localeCompare(modelB);
+    }
+
+    const { key, direction } = sortConfig;
+    let valA: any = (a as any)[key];
+    let valB: any = (b as any)[key];
+
+    // Casos especiais para dados relacionados
+    if (key === 'model') {
+      valA = models.find(m => m.id === a.modelId)?.name || '';
+      valB = models.find(m => m.id === b.modelId)?.name || '';
+    } else if (key === 'sectorName') {
+      valA = sectors.find(s => s.id === a.sectorId)?.name || '';
+      valB = sectors.find(s => s.id === b.sectorId)?.name || '';
+    } else if (key === 'user') {
+      valA = users.find(u => u.id === a.currentUserId)?.fullName || '';
+      valB = users.find(u => u.id === b.currentUserId)?.fullName || '';
+    } else if (key === 'linkedSim') {
+      valA = sims.find(s => s.id === a.linkedSimId)?.phoneNumber || '';
+      valB = sims.find(s => s.id === b.linkedSimId)?.phoneNumber || '';
+    }
+
+    if (valA < valB) return direction === 'asc' ? -1 : 1;
+    if (valA > valB) return direction === 'asc' ? 1 : -1;
+    return 0;
   });
 
   const totalItems = filteredDevices.length;
@@ -631,6 +675,85 @@ const DeviceManager = () => {
   const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
   const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
   const paginatedDevices = itemsPerPage === 'ALL' ? filteredDevices : filteredDevices.slice(startIndex, startIndex + (itemsPerPage as number));
+
+  const exportToCSV = () => {
+    const data = filteredDevices.map(d => {
+      const { model, brand } = getModelDetails(d.modelId);
+      const sector = sectors.find(s => s.id === d.sectorId);
+      const user = users.find(u => u.id === d.currentUserId);
+      const sim = sims.find(s => s.id === d.linkedSimId);
+      return {
+        'Modelo': model?.name || '---',
+        'Marca': brand?.name || '---',
+        'Patrimônio': d.assetTag || '---',
+        'IMEI': d.imei || '---',
+        'S/N': d.serialNumber || '---',
+        'Cód. Setor': d.internalCode || '---',
+        'Setor': sector?.name || '---',
+        'Pulsus ID': d.pulsusId || '---',
+        'Chip': sim?.phoneNumber || '---',
+        'Custo': d.purchaseCost || 0,
+        'Data Compra': d.purchaseDate || '---',
+        'Status': d.status,
+        'Responsável': user?.fullName || 'Estoque'
+      };
+    });
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Ativos");
+    XLSX.writeFile(workbook, `Relatorio_Ativos_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.text("Relatório de Ativos de TI", 14, 15);
+    const tableData = filteredDevices.map(d => {
+      const { model } = getModelDetails(d.modelId);
+      const user = users.find(u => u.id === d.currentUserId);
+      return [
+        model?.name || '---',
+        d.assetTag || '---',
+        d.serialNumber || '---',
+        d.status,
+        user?.fullName || 'Estoque'
+      ];
+    });
+    (doc as any).autoTable({
+      head: [['Modelo', 'Patrimônio', 'S/N', 'Status', 'Responsável']],
+      body: tableData,
+      startY: 20,
+    });
+    doc.save(`Relatorio_Ativos_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(paginatedDevices.map(d => d.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleBulkUpdate = async () => {
+    if (selectedIds.length === 0) return;
+    const updates: Partial<Device> = {};
+    if (bulkStatus) updates.status = bulkStatus as DeviceStatus;
+    if (bulkSector) updates.sectorId = bulkSector;
+    
+    for (const id of selectedIds) {
+        const device = devices.find(d => d.id === id);
+        if (device) {
+            await updateDevice({ ...device, ...updates }, adminName);
+        }
+    }
+    
+    setSelectedIds([]);
+    setIsBulkActionOpen(false);
+  };
 
   const handleOpenModal = (device?: Device, viewOnly: boolean = false) => {
     setActiveTab('GENERAL');
@@ -717,6 +840,8 @@ const DeviceManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div><h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Inventário de Dispositivos</h1><p className="text-gray-500 dark:text-slate-400 text-sm">Gestão centralizada de ativos.</p></div>
         <div className="flex gap-2">
+            <button onClick={exportToCSV} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 font-bold transition-all active:scale-95"><FileSpreadsheet size={18} /> Excel</button>
+            <button onClick={exportToPDF} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 font-bold transition-all active:scale-95"><FileText size={18} /> PDF</button>
             <div className="relative" ref={columnRef}>
                 <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
                 {isColumnSelectorOpen && (
@@ -767,17 +892,86 @@ const DeviceManager = () => {
             <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
-                  <th className="px-6 py-4 relative" style={{ width: columnWidths['model'] || '200px' }}>Foto/Modelo<Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} /></th>
-                  {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['assetTag'] || '120px' }}>Patrimônio<Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} /></th>)}
-                  {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['imei'] || '150px' }}>IMEI<Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} /></th>)}
-                  {visibleColumns.includes('serial') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['serial'] || '120px' }}>S/N<Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} /></th>)}
-                  {visibleColumns.includes('sectorCode') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['sectorCode'] || '100px' }}>Cód. Setor<Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} /></th>)}
-                  {visibleColumns.includes('sectorName') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['sectorName'] || '150px' }}>Cargo / Função<Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} /></th>)}
-                  {visibleColumns.includes('pulsusId') && (<th className="px-6 py-4 relative text-center" style={{ width: columnWidths['pulsusId'] || '100px' }}>Pulsus ID<Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} /></th>)}
-                  {visibleColumns.includes('linkedSim') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['linkedSim'] || '150px' }}>Chip<Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} /></th>)}
-                  {visibleColumns.includes('purchaseInfo') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['purchaseInfo'] || '120px' }}>Aquisição<Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} /></th>)}
-                  <th className="px-6 py-4 relative" style={{ width: columnWidths['status'] || '120px' }}>Status<Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
-                  <th className="px-6 py-4 relative" style={{ width: columnWidths['user'] || '180px' }}>Responsável Atual<Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} /></th>
+                  <th className="px-4 py-4 w-12 text-center">
+                      <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === paginatedDevices.length && paginatedDevices.length > 0} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                  </th>
+                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['model'] || '200px' }} onClick={() => handleSort('model')}>
+                      <div className="flex items-center gap-1">
+                          Foto/Modelo
+                          {sortConfig?.key === 'model' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} />
+                  </th>
+                  {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['assetTag'] || '120px' }} onClick={() => handleSort('assetTag')}>
+                      <div className="flex items-center gap-1">
+                          Patrimônio
+                          {sortConfig?.key === 'assetTag' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} />
+                  </th>)}
+                  {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['imei'] || '150px' }} onClick={() => handleSort('imei')}>
+                      <div className="flex items-center gap-1">
+                          IMEI
+                          {sortConfig?.key === 'imei' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} />
+                  </th>)}
+                  {visibleColumns.includes('serial') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['serial'] || '120px' }} onClick={() => handleSort('serialNumber')}>
+                      <div className="flex items-center gap-1">
+                          S/N
+                          {sortConfig?.key === 'serialNumber' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} />
+                  </th>)}
+                  {visibleColumns.includes('sectorCode') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['sectorCode'] || '100px' }} onClick={() => handleSort('internalCode')}>
+                      <div className="flex items-center gap-1">
+                          Cód. Setor
+                          {sortConfig?.key === 'internalCode' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} />
+                  </th>)}
+                  {visibleColumns.includes('sectorName') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['sectorName'] || '150px' }} onClick={() => handleSort('sectorName')}>
+                      <div className="flex items-center gap-1">
+                          Cargo / Função
+                          {sortConfig?.key === 'sectorName' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} />
+                  </th>)}
+                  {visibleColumns.includes('pulsusId') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['pulsusId'] || '100px' }} onClick={() => handleSort('pulsusId')}>
+                      <div className="flex items-center justify-center gap-1">
+                          Pulsus ID
+                          {sortConfig?.key === 'pulsusId' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} />
+                  </th>)}
+                  {visibleColumns.includes('linkedSim') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['linkedSim'] || '150px' }} onClick={() => handleSort('linkedSim')}>
+                      <div className="flex items-center gap-1">
+                          Chip
+                          {sortConfig?.key === 'linkedSim' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} />
+                  </th>)}
+                  {visibleColumns.includes('purchaseInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['purchaseInfo'] || '120px' }} onClick={() => handleSort('purchaseCost')}>
+                      <div className="flex items-center gap-1">
+                          Aquisição
+                          {sortConfig?.key === 'purchaseCost' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} />
+                  </th>)}
+                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['status'] || '120px' }} onClick={() => handleSort('status')}>
+                      <div className="flex items-center gap-1">
+                          Status
+                          {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} />
+                  </th>
+                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" style={{ width: columnWidths['user'] || '180px' }} onClick={() => handleSort('user')}>
+                      <div className="flex items-center gap-1">
+                          Responsável Atual
+                          {sortConfig?.key === 'user' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                      </div>
+                      <Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} />
+                  </th>
                   <th className="px-6 py-4 text-right" style={{ width: '150px' }}>Ações</th>
                 </tr>
               </thead>
@@ -790,6 +984,9 @@ const DeviceManager = () => {
                   const sector = sectors.find(s => s.id === d.sectorId);
                   return (
                     <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'}`}>
+                      <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedIds.includes(d.id)} onChange={() => handleSelectOne(d.id)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      </td>
                       <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700 shadow-inner shrink-0">{model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300 dark:text-slate-600" size={16}/>}</div><div className="min-w-0"><div className="font-bold text-gray-900 dark:text-slate-100 truncate text-xs">{model?.name}</div><div className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tighter">{brand?.name}</div></div></div></td>
                       {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div></td>)}
                       {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] text-slate-500 dark:text-slate-400 truncate">{d.imei || '---'}</td>)}
@@ -813,6 +1010,71 @@ const DeviceManager = () => {
             {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span><span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'}`}><ChevronRight size={18}/></button></div>)}
         </div>
       </div>
+
+      {/* Floating Bulk Action Toolbar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[90] bg-slate-900 dark:bg-black text-white px-6 py-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-6 backdrop-blur-lg"
+          >
+            <div className="flex items-center gap-3 pr-6 border-r border-white/10">
+              <div className="bg-blue-600 text-white h-8 w-8 rounded-full flex items-center justify-center font-black text-xs shadow-lg shadow-blue-600/40">
+                {selectedIds.length}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selecionados</span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] ml-1">Alterar Status</span>
+                <select 
+                  value={bulkStatus} 
+                  onChange={(e) => setBulkStatus(e.target.value as DeviceStatus)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all min-w-[140px]"
+                >
+                  <option value="" className="bg-slate-900">Manter Atual</option>
+                  {Object.values(DeviceStatus).map(s => (
+                    <option key={s} value={s} className="bg-slate-900">{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] ml-1">Alterar Setor</span>
+                <select 
+                  value={bulkSector} 
+                  onChange={(e) => setBulkSector(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all min-w-[140px]"
+                >
+                  <option value="" className="bg-slate-900">Manter Atual</option>
+                  {sectors.map(s => (
+                    <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                onClick={handleBulkUpdate}
+                disabled={!bulkStatus && !bulkSector}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:grayscale text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2 h-[38px] self-end"
+              >
+                <Save size={14} /> Aplicar em Lote
+              </button>
+
+              <button 
+                onClick={() => setSelectedIds([])}
+                className="text-slate-400 hover:text-white p-2 transition-colors h-[38px] self-end"
+                title="Cancelar seleção"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">

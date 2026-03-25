@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.3.0',
+        date: '24/03/2026',
+        description: 'Refatoração e Modularização do Backend para melhor escalabilidade e manutenção.',
+        changes: [
+            'Arquitetura: Modularização das rotas do servidor em arquivos separados (crud, devices, tasks, logs, terms, etc.).',
+            'Arquitetura: Centralização da lógica de banco de dados e funções utilitárias em server/utils/db.js.',
+            'Manutenibilidade: Código do servidor mais limpo, organizado e fácil de expandir.',
+            'Performance: Redução do tamanho do arquivo principal do servidor (server.js).'
+        ]
+    },
+    {
         version: '3.2.0',
         date: '24/03/2026',
         description: 'Implementação de paginação server-side para logs de auditoria e histórico de ativos/usuários.',

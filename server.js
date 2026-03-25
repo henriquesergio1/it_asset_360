@@ -83,7 +83,7 @@ const DB_SCHEMAS = {
         NewData NVARCHAR(MAX)
     )`,
     SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
-    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX))`,
+    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50))`,
     Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
@@ -338,7 +338,14 @@ async function initializeDatabase() {
         const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
         if (settingsCheck.recordset[0].count === 0) {
             console.log('- Populando SystemSettings com valores padrão...');
-            await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '')");
+            await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl, AccentColor) VALUES ('IT Asset 360', '', '#2563eb')");
+        } else {
+            // Verifica se a coluna AccentColor existe
+            const checkAccent = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'AccentColor'`);
+            if (checkAccent.recordset.length === 0) {
+                console.log('- Adicionando coluna AccentColor em SystemSettings...');
+                await pool.request().query("ALTER TABLE SystemSettings ADD AccentColor NVARCHAR(50) DEFAULT '#2563eb'");
+            }
         }
 
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
@@ -425,7 +432,7 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.2.0', 
+        version: '3.3.1', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -459,7 +466,7 @@ app.get('/api/bootstrap', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
-            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate FROM SystemSettings"),
+            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor FROM SystemSettings"),
             pool.request().query("SELECT * FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
@@ -1138,6 +1145,56 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             await logAction(req.body.id, 'Device', 'Criação', req.body._adminUser, tName, 'Dispositivo criado manualmente');
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/devices/bulk-update', async (req, res) => {
+        try {
+            const { deviceIds, updates, adminUser, reason } = req.body;
+            if (!deviceIds || !Array.isArray(deviceIds) || deviceIds.length === 0) {
+                return res.status(400).send('Nenhum dispositivo selecionado.');
+            }
+
+            const pool = await sql.connect(dbConfig);
+            const results = [];
+
+            for (const id of deviceIds) {
+                // Get current state for logging
+                const oldRes = await pool.request().input('Id', sql.NVarChar, id).query("SELECT * FROM Devices WHERE Id=@Id");
+                const prev = oldRes.recordset[0];
+                if (!prev) continue;
+
+                let diffNotes = [];
+                let sets = [];
+                const request = pool.request();
+                request.input('TargetId', sql.NVarChar, id);
+
+                for (let key in updates) {
+                    const val = updates[key];
+                    const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                    
+                    request.input(dbKey, val);
+                    sets.push(`${dbKey}=@${dbKey}`);
+
+                    const oldVal = prev[dbKey];
+                    if (String(oldVal || '') !== String(val || '')) {
+                        diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${val || '---'}'`);
+                    }
+                }
+
+                if (sets.length > 0) {
+                    await request.query(`UPDATE Devices SET ${sets.join(',')} WHERE Id=@TargetId`);
+                    
+                    const richNotes = (reason ? `Motivo (Bulk): ${reason}\n\n` : '') + diffNotes.join('\n');
+                    const tName = prev.AssetTag || prev.SerialNumber || 'Dispositivo';
+                    await logAction(id, 'Device', 'Atualização em Massa', adminUser, tName, richNotes, null, prev, updates);
+                }
+                results.push(id);
+            }
+
+            res.json({ success: true, updatedCount: results.length });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
     });
 
     app.put('/api/devices/:id', async (req, res) => {

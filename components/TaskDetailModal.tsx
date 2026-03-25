@@ -344,19 +344,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     };
 
     const handleManualAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
         
-        if (file.size > 5 * 1024 * 1024) {
-            alert("O arquivo é muito grande. O tamanho máximo permitido é 5MB.");
-            return;
-        }
+        Array.from(files).forEach(file => {
+            if (file.size > 5 * 1024 * 1024) {
+                showToast(`O arquivo ${file.name} é muito grande. Máximo 5MB.`, 'error');
+                return;
+            }
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setTempManualAttachments(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setTempManualAttachments(prev => [...prev, reader.result as string]);
+            };
+            reader.readAsDataURL(file);
+        });
     };
 
     const handleRemoveManualAttachment = (index: number) => {
@@ -556,7 +558,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             </h4>
                                             <label className="cursor-pointer text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
                                                 <Plus size={12} /> Adicionar
-                                                <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleManualAttachmentUpload} />
+                                                <input type="file" className="hidden" accept="application/pdf,image/*" multiple onChange={handleManualAttachmentUpload} />
                                             </label>
                                         </div>
                                         

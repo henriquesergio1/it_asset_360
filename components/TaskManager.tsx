@@ -3,10 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Plus, Search, Filter, ClipboardList, Clock, 
     AlertCircle, CheckCircle2, XCircle, MoreVertical,
-    Calendar, User, Tag, ChevronDown, ArrowUpDown,
+    Calendar, User, Tag, ChevronDown, ChevronUp, ArrowUpDown,
     Repeat, Paperclip, Trash2, ExternalLink, FileText,
-    Smartphone, Bell, Wrench, ShieldCheck, CheckSquare
+    Smartphone, Bell, Wrench, ShieldCheck, CheckSquare,
+    FileSpreadsheet, Save, X
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
@@ -28,6 +32,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'Ativas' | 'Concluídas' | 'Canceladas'>('Ativas');
     const [typeFilter, setTypeFilter] = useState<TaskType | 'All'>('All');
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [isBatchMaintenance, setIsBatchMaintenance] = useState(false);
@@ -50,13 +55,111 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
         maintenanceCost: 0
     });
 
+    const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+    const [bulkTaskStatus, setBulkTaskStatus] = useState<TaskStatus | ''>('');
+    const [bulkTaskUser, setBulkTaskUser] = useState<string | ''>('');
+
+    const handleSelectAllTasks = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedTaskIds(filteredTasks.map(t => t.id));
+        } else {
+            setSelectedTaskIds([]);
+        }
+    };
+
+    const handleSelectOneTask = (taskId: string) => {
+        setSelectedTaskIds(prev => 
+            prev.includes(taskId) 
+                ? prev.filter(id => id !== taskId) 
+                : [...prev, taskId]
+        );
+    };
+
+    const handleBulkTaskUpdate = async () => {
+        if (selectedTaskIds.length === 0) return;
+        if (!bulkTaskStatus && !bulkTaskUser) return;
+
+        const confirmMessage = `Deseja atualizar ${selectedTaskIds.length} tarefa(s)?`;
+        if (!window.confirm(confirmMessage)) return;
+
+        try {
+            for (const taskId of selectedTaskIds) {
+                const updates: any = {};
+                if (bulkTaskStatus) updates.status = bulkTaskStatus;
+                if (bulkTaskUser) updates.assignedTo = bulkTaskUser;
+                
+                await onUpdateTask(taskId, {
+                    ...updates,
+                    _actionNote: `Atualização em lote por ${currentUser}`
+                });
+            }
+            showToast(`${selectedTaskIds.length} tarefas atualizadas com sucesso!`, 'success');
+            setSelectedTaskIds([]);
+            setBulkTaskStatus('');
+            setBulkTaskUser('');
+        } catch (error) {
+            console.error('Erro ao atualizar tarefas em lote:', error);
+            showToast('Erro ao realizar atualização em lote.', 'error');
+        }
+    };
+
+    const exportTasksToCSV = () => {
+        const data = filteredTasks.map(t => ({
+            'Título': t.title,
+            'Descrição': t.description,
+            'Tipo': t.type,
+            'Status': t.status,
+            'Responsável': t.assignedTo ? systemUsers.find(u => u.id === t.assignedTo)?.name : 'Geral',
+            'Prazo': t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
+            'Criado em': new Date(t.createdAt).toLocaleDateString('pt-BR')
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tarefas");
+        XLSX.writeFile(wb, `Relatorio_Tarefas_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    const exportTasksToPDF = () => {
+        const doc = new jsPDF();
+        doc.text("Relatório de Tarefas", 14, 15);
+        
+        const tableData = filteredTasks.map(t => [
+            t.title,
+            t.type,
+            t.status,
+            t.assignedTo ? systemUsers.find(u => u.id === t.assignedTo)?.name : 'Geral',
+            t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A'
+        ]);
+
+        (doc as any).autoTable({
+            head: [['Tarefa', 'Tipo', 'Status', 'Responsável', 'Prazo']],
+            body: tableData,
+            startY: 20,
+            theme: 'grid',
+            styles: { fontSize: 8 }
+        });
+
+        doc.save(`Relatorio_Tarefas_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     const selectedTask = useMemo(() => {
         if (!selectedTaskId) return null;
         return tasks.find(t => t.id === selectedTaskId) || null;
     }, [tasks, selectedTaskId]);
 
+    const handleSort = (key: string) => {
+        setSortConfig(prev => {
+            if (prev?.key === key) {
+                if (prev.direction === 'asc') return { key, direction: 'desc' };
+                return null;
+            }
+            return { key, direction: 'asc' };
+        });
+    };
+
     const filteredTasks = useMemo(() => {
-        return tasks.filter(t => {
+        let result = tasks.filter(t => {
             if (!t) return false;
             const matchesSearch = (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
                                  (t.description || '').toLowerCase().includes(search.toLowerCase());
@@ -72,12 +175,33 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
             const matchesType = typeFilter === 'All' || t.type === typeFilter;
             return matchesSearch && matchesTab && matchesType;
-        }).sort((a, b) => {
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         });
-    }, [tasks, search, activeTab, typeFilter]);
+
+        if (sortConfig) {
+            const { key, direction } = sortConfig;
+            result = [...result].sort((a, b) => {
+                let valA: any = (a as any)[key];
+                let valB: any = (b as any)[key];
+
+                if (key === 'assignedTo') {
+                    valA = a.assignedTo ? systemUsers.find(u => u.id === a.assignedTo)?.name || '' : '';
+                    valB = b.assignedTo ? systemUsers.find(u => u.id === b.assignedTo)?.name || '' : '';
+                }
+
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            result = [...result].sort((a, b) => {
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            });
+        }
+
+        return result;
+    }, [tasks, search, activeTab, typeFilter, sortConfig, systemUsers]);
 
     const getDeviceName = (deviceId?: string) => {
         if (!deviceId) return 'N/A';
@@ -88,22 +212,24 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
     };
 
     const handleManualAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
         
-        if (file.size > 5 * 1024 * 1024) {
-            alert("O arquivo é muito grande. O tamanho máximo permitido é 5MB.");
-            return;
-        }
+        Array.from(files).forEach(file => {
+            if (file.size > 5 * 1024 * 1024) {
+                showToast(`O arquivo ${file.name} é muito grande. Máximo 5MB.`, 'error');
+                return;
+            }
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setNewTask(prev => ({
-                ...prev,
-                manualAttachments: [...(prev.manualAttachments || []), reader.result as string]
-            }));
-        };
-        reader.readAsDataURL(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewTask(prev => ({
+                    ...prev,
+                    manualAttachments: [...(prev.manualAttachments || []), reader.result as string]
+                }));
+            };
+            reader.readAsDataURL(file);
+        });
     };
 
     const handleRemoveManualAttachment = (index: number) => {
@@ -178,12 +304,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Gestão de Tarefas</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Acompanhe e gerencie as rotinas do setor IT.</p>
                 </div>
-                <button 
-                    onClick={() => setIsAdding(true)}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-                >
-                    <Plus size={20} /> Nova Tarefa
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={exportTasksToCSV} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 font-bold transition-all active:scale-95"><FileSpreadsheet size={18} /> Excel</button>
+                    <button onClick={exportTasksToPDF} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 font-bold transition-all active:scale-95"><FileText size={18} /> PDF</button>
+                    <button 
+                        onClick={() => setIsAdding(true)}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                    >
+                        <Plus size={20} /> Nova Tarefa
+                    </button>
+                </div>
             </div>
 
             {/* Filtros e Busca */}
@@ -238,11 +368,39 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tarefa</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Responsável</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Prazo</th>
+                                <th className="px-4 py-4 w-12 text-center">
+                                    <input type="checkbox" onChange={handleSelectAllTasks} checked={selectedTaskIds.length === filteredTasks.length && filteredTasks.length > 0} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                </th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('title')}>
+                                    <div className="flex items-center gap-1">
+                                        Tarefa
+                                        {sortConfig?.key === 'title' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('type')}>
+                                    <div className="flex items-center gap-1">
+                                        Tipo
+                                        {sortConfig?.key === 'type' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('status')}>
+                                    <div className="flex items-center gap-1">
+                                        Status
+                                        {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('assignedTo')}>
+                                    <div className="flex items-center gap-1">
+                                        Responsável
+                                        {sortConfig?.key === 'assignedTo' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors" onClick={() => handleSort('dueDate')}>
+                                    <div className="flex items-center gap-1">
+                                        Prazo
+                                        {sortConfig?.key === 'dueDate' && (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+                                    </div>
+                                </th>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ações</th>
                             </tr>
                         </thead>
@@ -254,6 +412,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                         className="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group"
                                         onClick={() => setSelectedTaskId(task.id)}
                                     >
+                                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <input type="checkbox" checked={selectedTaskIds.includes(task.id)} onChange={() => handleSelectOneTask(task.id)} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -350,6 +511,72 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 </div>
             </div>
 
+            {/* Floating Bulk Action Toolbar */}
+            <AnimatePresence>
+                {selectedTaskIds.length > 0 && (
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[90] bg-slate-900 dark:bg-black text-white px-6 py-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-6 backdrop-blur-lg"
+                    >
+                        <div className="flex items-center gap-3 pr-6 border-r border-white/10">
+                            <div className="bg-indigo-600 text-white h-8 w-8 rounded-full flex items-center justify-center font-black text-xs shadow-lg shadow-indigo-600/40">
+                                {selectedTaskIds.length}
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selecionados</span>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] ml-1">Alterar Status</span>
+                                <select 
+                                    value={bulkTaskStatus} 
+                                    onChange={(e) => setBulkTaskStatus(e.target.value as TaskStatus)}
+                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-w-[140px]"
+                                >
+                                    <option value="" className="bg-slate-900">Manter Atual</option>
+                                    {Object.values(TaskStatus).map(s => (
+                                        <option key={s} value={s} className="bg-slate-900">{s}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] ml-1">Atribuir a</span>
+                                <select 
+                                    value={bulkTaskUser} 
+                                    onChange={(e) => setBulkTaskUser(e.target.value)}
+                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all min-w-[140px]"
+                                >
+                                    <option value="" className="bg-slate-900">Manter Atual</option>
+                                    <option value="Geral" className="bg-slate-900">Geral (Todos)</option>
+                                    {systemUsers.map(u => (
+                                        <option key={u.id} value={u.id} className="bg-slate-900">{u.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button 
+                                onClick={handleBulkTaskUpdate}
+                                disabled={!bulkTaskStatus && !bulkTaskUser}
+                                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:grayscale text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2 h-[38px] self-end"
+                            >
+                                <Save size={14} /> Aplicar em Lote
+                            </button>
+
+                            <button 
+                                onClick={() => setSelectedTaskIds([])}
+                                className="text-slate-400 hover:text-white p-2 transition-colors h-[38px] self-end"
+                                title="Cancelar seleção"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Add Task Modal */}
             <AnimatePresence>
                 {isAdding && (
@@ -405,7 +632,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                             </h4>
                                             <label className="cursor-pointer text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
                                                 <Plus size={12} /> Adicionar
-                                                <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleManualAttachmentUpload} />
+                                                <input type="file" className="hidden" accept="application/pdf,image/*" multiple onChange={handleManualAttachmentUpload} />
                                             </label>
                                         </div>
                                         
