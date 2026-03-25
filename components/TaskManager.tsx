@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
@@ -132,7 +132,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
             head: [['Tarefa', 'Tipo', 'Status', 'Responsável', 'Prazo']],
             body: tableData,
             startY: 20,

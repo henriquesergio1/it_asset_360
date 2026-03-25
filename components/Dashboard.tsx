@@ -154,7 +154,7 @@ const Dashboard = () => {
       </div>
 
       {/* Gráficos e Tarefas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[320px]">
           <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-3">Status dos Dispositivos</h2>
           <div className="flex-1">
@@ -199,16 +199,17 @@ const Dashboard = () => {
                 })}
             </div>
         </div>
+      </div>
 
-        <div className="h-[320px]">
-            <TaskDashboardWidget 
-                tasks={tasks} 
-                onViewAll={() => navigate('/tasks')}
-                onTaskClick={(task) => setSelectedTask(task)}
-                systemUsers={systemUsers}
-                currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
-            />
-        </div>
+      {/* Gestão de Tarefas - Full Width */}
+      <div className="w-full">
+          <TaskDashboardWidget 
+              tasks={tasks} 
+              onViewAll={() => navigate('/tasks')}
+              onTaskClick={(task) => setSelectedTask(task)}
+              systemUsers={systemUsers}
+              currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
+          />
       </div>
 
       {/* Alerta de Termos Pendentes - 3ª posição */}

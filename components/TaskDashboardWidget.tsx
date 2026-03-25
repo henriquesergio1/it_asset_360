@@ -72,14 +72,14 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-[300px]">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-[400px]">
                 {pendingTasks.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-8">
                         <ClipboardList size={32} strokeWidth={1.5} className="mb-2 opacity-20" />
                         <p className="text-sm">Nenhuma tarefa pendente</p>
                     </div>
                 ) : (
-                    pendingTasks.slice(0, 5).map(task => (
+                    pendingTasks.slice(0, 10).map(task => (
                         <button
                             key={task.id}
                             onClick={() => onTaskClick(task)}
@@ -121,12 +121,12 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                         </button>
                     ))
                 )}
-                {pendingTasks.length > 5 && (
+                {pendingTasks.length > 10 && (
                     <button 
                         onClick={onViewAll}
                         className="w-full py-2 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors"
                     >
-                        + {pendingTasks.length - 5} outras tarefas
+                        + {pendingTasks.length - 10} outras tarefas
                     </button>
                 )}
             </div>

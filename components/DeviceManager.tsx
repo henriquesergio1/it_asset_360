@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 interface Option {
@@ -718,7 +718,7 @@ const DeviceManager = () => {
         user?.fullName || 'Estoque'
       ];
     });
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Modelo', 'Patrimônio', 'S/N', 'Status', 'Responsável']],
       body: tableData,
       startY: 20,
