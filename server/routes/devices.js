@@ -267,32 +267,4 @@ module.exports = (app) => {
             res.json({success: true});
         } catch (err) { res.status(500).send(err.message); }
     });
-
-    app.post('/api/devices/bulk', async (req, res) => {
-        try {
-            const { ids, updates, _adminUser } = req.body;
-            const pool = await sql.connect(dbConfig);
-            
-            for (const id of ids) {
-                const request = pool.request();
-                const oldRes = await pool.request().input('Id', sql.NVarChar, id).query("SELECT * FROM Devices WHERE Id=@Id");
-                const prev = oldRes.recordset[0];
-                
-                let sets = [];
-                for (let key in updates) {
-                    if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
-                    let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
-                    request.input(dbKey, updates[key]);
-                    sets.push(`${dbKey}=@${dbKey}`);
-                }
-                
-                if (sets.length > 0) {
-                    request.input('TargetId', id);
-                    await request.query(`UPDATE Devices SET ${sets.join(',')} WHERE Id=@TargetId`);
-                    await logAction(id, 'Device', 'Atualização em Massa', _adminUser, prev?.AssetTag || 'Ativo', JSON.stringify(updates), null, prev, updates);
-                }
-            }
-            res.json({ success: true });
-        } catch (err) { res.status(500).send(err.message); }
-    });
 };

@@ -62,7 +62,7 @@ const Login = () => {
           
           {/* Alerta de Erro de Conexão com API */}
           {error && (
-              <div className="mb-6 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-900/50 rounded-lg p-3 flex flex-col gap-2">
+              <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg p-3 flex flex-col gap-2">
                   <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-bold text-sm">
                       <AlertTriangle size={16} /> Falha de Sincronização
                   </div>
@@ -111,7 +111,7 @@ const Login = () => {
             </div>
 
             {localError && (
-              <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800/50 p-3 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-medium animate-shake">
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 p-3 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 text-sm font-medium animate-shake">
                 <AlertTriangle size={18} /> {localError}
               </div>
             )}
@@ -119,7 +119,7 @@ const Login = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
             >
               {loading ? <Loader2 size={20} className="animate-spin" /> : <Database size={20} />}
               {loading ? 'Sincronizando...' : 'Entrar no Sistema'}

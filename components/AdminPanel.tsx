@@ -144,8 +144,8 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
                                     {diffs.map((d, i) => (
                                         <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
                                             <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{d.field}</td>
-                                            <td className="px-4 py-3 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-900 line-through decoration-red-300 dark:decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
-                                            <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
+                                            <td className="px-4 py-3 text-red-600 dark:text-red-400 bg-red-50/30 dark:bg-red-900/10 line-through decoration-red-300 dark:decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
+                                            <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -292,12 +292,12 @@ const AdminPanel = () => {
       </div>
 
       <div className="flex border-b border-gray-200 dark:border-slate-800 overflow-x-auto bg-white dark:bg-slate-900 px-2 pt-2 rounded-t-xl shadow-sm transition-colors">
-        <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
-        <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
-        <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
-        <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
-        <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
-        <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
+        <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
+        <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
+        <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
+        <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
+        <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
+        <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
       </div>
 
       <div className="p-1 animate-fade-in">
@@ -305,7 +305,7 @@ const AdminPanel = () => {
             <div className="bg-white dark:bg-slate-900 rounded-2xl border dark:border-slate-800 overflow-hidden shadow-sm">
                 <div className="p-6 border-b dark:border-slate-800 flex justify-between items-center">
                     <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2"><UserCheck size={18} className="text-blue-600"/> Usuários com Acesso ao Sistema</h3>
-                    <button onClick={() => handleOpenModal()} className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"><Plus size={14}/> Novo Operador</button>
+                    <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"><Plus size={14}/> Novo Operador</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -317,11 +317,11 @@ const AdminPanel = () => {
                                 <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
                                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">{u.name}</td>
                                     <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-medium">{u.email}</td>
-                                    <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${u.role === SystemRole.ADMIN ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>{u.role}</span></td>
+                                    <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${u.role === SystemRole.ADMIN ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200'}`}>{u.role}</span></td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleOpenModal(u)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
-                                            <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
+                                            <button onClick={() => handleOpenModal(u)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
+                                            <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -338,23 +338,23 @@ const AdminPanel = () => {
                     <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2 mb-4"><Layout size={20} className="text-blue-600"/> Personalização do App</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Nome da Aplicação</label>
-                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nome da Aplicação</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">CNPJ da Empresa</label>
-                            <input className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-mono" value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">CNPJ da Empresa</label>
+                            <input className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-mono" value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">URL do Logotipo</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">URL do Logotipo</label>
                             <div className="flex gap-4 items-center">
-                                <input className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 text-sm" value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
-                                {settingsForm.logoUrl && <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain bg-white dark:bg-slate-800 rounded border dark:border-slate-700 p-1" alt="Logo Preview" />}
+                                <input className="flex-1 border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
+                                {settingsForm.logoUrl && <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain bg-white rounded border p-1" alt="Logo Preview" />}
                             </div>
                         </div>
                     </div>
                     <div className="pt-4 border-t dark:border-slate-800 flex justify-end">
-                        <button type="submit" className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all flex items-center gap-2"><Save size={18}/> Salvar Configurações</button>
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all flex items-center gap-2"><Save size={18}/> Salvar Configurações</button>
                     </div>
                 </form>
             </div>
@@ -367,12 +367,12 @@ const AdminPanel = () => {
                         <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2 mb-2"><Globe size={20} className="text-blue-600"/> Termo de Entrega</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Declaração (Topo)</label>
-                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={termConfig.delivery.declaration} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, declaration: e.target.value}})}/>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Declaração (Topo)</label>
+                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={termConfig.delivery.declaration} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, declaration: e.target.value}})}/>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Cláusulas e Condições</label>
-                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={termConfig.delivery.clauses} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, clauses: e.target.value}})}/>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Cláusulas e Condições</label>
+                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={termConfig.delivery.clauses} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, clauses: e.target.value}})}/>
                             </div>
                         </div>
                     </div>
@@ -380,20 +380,20 @@ const AdminPanel = () => {
                         <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2 mb-2"><RotateCcw size={20} className="text-orange-600"/> Termo de Devolução</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Declaração (Topo)</label>
-                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={termConfig.return.declaration} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, declaration: e.target.value}})}/>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Declaração (Topo)</label>
+                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={termConfig.return.declaration} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, declaration: e.target.value}})}/>
                             </div>
                             <div>
-                                <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Cláusulas e Condições</label>
-                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={termConfig.return.clauses} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, clauses: e.target.value}})}/>
+                                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Cláusulas e Condições</label>
+                                <textarea rows={4} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={termConfig.return.clauses} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, clauses: e.target.value}})}/>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-xl border border-blue-100 dark:border-blue-900/40 text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase tracking-widest">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase tracking-widest">
                         Variáveis Disponíveis: {'{NOME_EMPRESA}, {CNPJ}, {NOME_COLABORADOR}, {CPF}, {RG}'}
                     </div>
                     <div className="flex justify-end pt-4 border-t dark:border-slate-800">
-                        <button type="submit" className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all flex items-center gap-2"><Save size={18}/> Salvar Templates</button>
+                        <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all flex items-center gap-2"><Save size={18}/> Salvar Templates</button>
                     </div>
                 </form>
             </div>
@@ -423,35 +423,35 @@ const AdminPanel = () => {
                                 {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
                                 Testar Conexão
                             </button>
-                            <button type="submit" className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition-all"><Save size={14}/> Salvar Configuração</button>
+                            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition-all"><Save size={14}/> Salvar Configuração</button>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Tecnologia</label>
-                            <select className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Tecnologia</label>
+                            <select className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
                                 <option value="SQL Server">SQL Server</option>
                             </select>
                         </div>
                         <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Host / Servidor</label>
-                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Host / Servidor</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Porta</label>
-                            <input required type="number" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Porta</label>
+                            <input required type="number" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Usuário</label>
-                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Usuário</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Senha</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Senha</label>
                             <input 
                                 type="password" 
                                 required 
-                                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" 
+                                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" 
                                 value={isPasswordModified ? erpForm.password : (erpForm.password ? '********' : '')} 
                                 onChange={e => {
                                     setErpForm({...erpForm, password: e.target.value});
@@ -466,16 +466,16 @@ const AdminPanel = () => {
                             />
                         </div>
                         <div className="md:col-span-3">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Nome do Banco de Dados</label>
-                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nome do Banco de Dados</label>
+                            <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
                         </div>
                         <div className="md:col-span-3">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Query SQL de Seleção</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Query SQL de Seleção</label>
                             <div className="relative">
                                 <FileCode className="absolute left-3 top-3 text-slate-300" size={18}/>
                                 <textarea 
                                     rows={8} 
-                                    className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" 
+                                    className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" 
                                     value={erpForm.selectionQuery} 
                                     onChange={e => setErpForm({...erpForm, selectionQuery: e.target.value})}
                                     placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
@@ -495,7 +495,7 @@ const AdminPanel = () => {
                     <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-600" size={18}/>
                     <input type="text" placeholder="Filtrar por Admin, Item, Ação..." className="w-full pl-12 pr-6 py-3.5 border-2 border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:border-blue-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm font-medium text-sm transition-colors" value={logSearch} onChange={e => setLogSearch(e.target.value)}/>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900 border border-blue-100 dark:border-blue-900/40 rounded-2xl px-6 py-3 flex items-center gap-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 rounded-2xl px-6 py-3 flex items-center gap-3">
                     <Activity size={20} className="text-blue-600"/>
                     <div className="text-[10px] font-black uppercase text-blue-400">Auditoria: {totalLogs} eventos</div>
                 </div>
@@ -515,10 +515,10 @@ const AdminPanel = () => {
                                 <tr key={log.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/20 transition-colors bg-white dark:bg-slate-900">
                                     <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">{log.adminUser}</td>
-                                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">{log.action}</span></td>
+                                    <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">{log.action}</span></td>
                                     <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
                                     <td className="px-6 py-4 text-right">
-                                        <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Detalhes</button>
+                                        <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-800 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Detalhes</button>
                                     </td>
                                 </tr>
                             ))}
@@ -526,7 +526,7 @@ const AdminPanel = () => {
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-gray-900">
+                    <div className="flex items-center justify-between px-6 py-4 border-t dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
                         <button 
                             disabled={logPage === 1 || logsLoading} 
                             onClick={() => setLogPage(p => Math.max(1, p - 1))}
@@ -559,26 +559,26 @@ const AdminPanel = () => {
                   <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
                       <div className="space-y-4">
                           <div>
-                              <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Nome Completo</label>
-                              <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})}/>
+                              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nome Completo</label>
+                              <input required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})}/>
                           </div>
                           <div>
-                              <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">E-mail de Acesso</label>
+                              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">E-mail de Acesso</label>
                               <div className="relative">
                                   <Mail className="absolute left-3 top-3 text-slate-300" size={18}/>
-                                  <input required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})}/>
+                                  <input required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})}/>
                               </div>
                           </div>
                           <div>
-                              <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Senha</label>
+                              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Senha</label>
                               <div className="relative">
                                   <Lock className="absolute left-3 top-3 text-slate-300" size={18}/>
-                                  <input required={!editingId} type="password" placeholder={editingId ? '••••••••' : ''} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={userForm.password || ''} onChange={e => setUserForm({...userForm, password: e.target.value})}/>
+                                  <input required={!editingId} type="password" placeholder={editingId ? '••••••••' : ''} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={userForm.password || ''} onChange={e => setUserForm({...userForm, password: e.target.value})}/>
                               </div>
                           </div>
                           <div>
-                              <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1">Nível de Acesso</label>
-                              <select className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
+                              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Nível de Acesso</label>
+                              <select className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 font-bold" value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
                                   <option value={SystemRole.OPERATOR}>Operador (Leitura/Escrita)</option>
                                   <option value={SystemRole.ADMIN}>Administrador (Total)</option>
                               </select>
@@ -586,7 +586,7 @@ const AdminPanel = () => {
                       </div>
                       <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800">
                           <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 text-xs font-black uppercase text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
-                          <button type="submit" className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">Salvar Operador</button>
+                          <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">Salvar Operador</button>
                       </div>
                   </form>
               </div>

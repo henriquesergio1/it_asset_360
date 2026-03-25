@@ -38,9 +38,9 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col h-full transition-colors">
-            <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800">
+            <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
                         <ClipboardList size={20} />
                     </div>
                     <h3 className="font-semibold text-slate-900 dark:text-slate-100">Gestão de Tarefas</h3>
@@ -54,13 +54,13 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
             </div>
 
             <div className="p-4 flex gap-4 border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                <div className="flex-1 p-3 rounded-xl bg-red-50 dark:bg-red-900 border border-red-100 dark:border-red-900/30 flex flex-col items-center justify-center text-center">
+                <div className="flex-1 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex flex-col items-center justify-center text-center">
                     <span className="text-2xl font-bold text-red-600 dark:text-red-400">{overdueCount}</span>
                     <span className="text-[10px] uppercase tracking-wider font-bold text-red-500 dark:text-red-400 flex items-center gap-1">
                         <AlertCircle size={10} /> Atrasadas
                     </span>
                 </div>
-                <div className="flex-1 p-3 rounded-xl bg-amber-50 dark:bg-amber-900 border border-amber-100 dark:border-amber-900/30 flex flex-col items-center justify-center text-center">
+                <div className="flex-1 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 flex flex-col items-center justify-center text-center">
                     <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{nearDueCount}</span>
                     <span className="text-[10px] uppercase tracking-wider font-bold text-amber-500 dark:text-amber-400 flex items-center gap-1">
                         <Clock size={10} /> No Prazo
@@ -72,14 +72,14 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-[400px]">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1 max-h-[300px]">
                 {pendingTasks.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-8">
                         <ClipboardList size={32} strokeWidth={1.5} className="mb-2 opacity-20" />
                         <p className="text-sm">Nenhuma tarefa pendente</p>
                     </div>
                 ) : (
-                    pendingTasks.slice(0, 10).map(task => (
+                    pendingTasks.slice(0, 5).map(task => (
                         <button
                             key={task.id}
                             onClick={() => onTaskClick(task)}
@@ -92,8 +92,8 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                                     </h4>
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${
-                                            task.type === 'Manutenção' ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' :
-                                            task.type === 'Envio de Arquivo' ? 'bg-purple-50 dark:bg-purple-900 text-purple-600 dark:text-purple-400' :
+                                            task.type === 'Manutenção' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                                            task.type === 'Envio de Arquivo' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
                                             'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                                         }`}>
                                             {task.type}
@@ -121,12 +121,12 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                         </button>
                     ))
                 )}
-                {pendingTasks.length > 10 && (
+                {pendingTasks.length > 5 && (
                     <button 
                         onClick={onViewAll}
                         className="w-full py-2 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors"
                     >
-                        + {pendingTasks.length - 10} outras tarefas
+                        + {pendingTasks.length - 5} outras tarefas
                     </button>
                 )}
             </div>

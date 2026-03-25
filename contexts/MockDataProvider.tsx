@@ -1,12 +1,10 @@
 
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
-import { useToast } from './ToastContext';
 import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { showToast } = useToast();
   const [devices, setDevices] = useState<Device[]>(mockDevices);
   const [sims, setSims] = useState<SimCard[]>(mockSims);
   const [users, setUsers] = useState<User[]>(mockUsers);
@@ -64,18 +62,18 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const restoreItem = (logId: string, adminName: string) => {
       const log = logs.find(l => l.id === logId);
       if (!log || !log.backupData) {
-          showToast('Dados de backup não encontrados para este item.', 'error');
+          alert('Dados de backup não encontrados para este item.');
           return;
       }
       try {
           const data = JSON.parse(log.backupData);
           if (log.assetType === 'Device') { setDevices(prev => [...prev, data]); } 
           else if (log.assetType === 'Sim') { setSims(prev => [...prev, data]); } 
-          else { showToast('Restauração disponível apenas para Dispositivos e Chips no momento.', 'error'); return; }
+          else { alert('Restauração disponível apenas para Dispositivos e Chips no momento.'); return; }
           logAction(ActionType.RESTORE, log.assetType, log.assetId, log.targetName || 'Item Restaurado', adminName, `Restaurado a partir do log.`);
-          showToast('Item restaurado com sucesso!');
+          alert('Item restaurado com sucesso!');
       } catch (e) {
-          showToast('Erro ao processar dados de backup.', 'error');
+          alert('Erro ao processar dados de backup.');
       }
   };
 
@@ -83,7 +81,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDevices(prev => [...prev, device]);
     const model = models.find(m => m.id === device.modelId);
     logAction(ActionType.create, 'Device', device.id, model?.name || 'Unknown', adminName, `Tag: ${device.assetTag}`);
-    showToast('Dispositivo cadastrado com sucesso!');
   };
 
   const updateDevice = (device: Device, adminName: string) => {
@@ -91,101 +88,62 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDevices(prev => prev.map(d => d.id === device.id ? device : d));
     const model = models.find(m => m.id === device.modelId);
     logAction(ActionType.UPDATE, 'Device', device.id, model?.name || 'Unknown', adminName, '', undefined, old, device);
-    showToast('Dispositivo atualizado com sucesso!');
   };
 
   const deleteDevice = (id: string, adminName: string, reason: string) => {
     const dev = devices.find(d => d.id === id);
     setDevices(prev => prev.map(d => d.id === id ? { ...d, status: DeviceStatus.RETIRED, currentUserId: null } : d));
     if (dev) logAction(ActionType.DELETE, 'Device', id, dev.assetTag, adminName, `Motivo: ${reason}`, JSON.stringify(dev));
-    showToast('Dispositivo baixado com sucesso!');
   };
 
   const restoreDevice = (id: string, adminName: string, reason: string) => {
     const dev = devices.find(d => d.id === id);
     setDevices(prev => prev.map(d => d.id === id ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
     if (dev) logAction(ActionType.RESTORE, 'Device', id, dev.assetTag, adminName, `Motivo: ${reason}`);
-    showToast('Dispositivo restaurado com sucesso!');
   };
 
-  const addSim = (sim: SimCard, adminName: string) => { 
-    setSims(prev => [...prev, sim]); 
-    logAction(ActionType.create, 'Sim', sim.id, sim.phoneNumber, adminName); 
-    showToast('Chip cadastrado com sucesso!');
-  };
+  const addSim = (sim: SimCard, adminName: string) => { setSims(prev => [...prev, sim]); logAction(ActionType.create, 'Sim', sim.id, sim.phoneNumber, adminName); };
   const updateSim = (sim: SimCard, adminName: string) => { 
     const old = sims.find(s => s.id === sim.id);
     setSims(prev => prev.map(s => s.id === sim.id ? sim : s)); 
     logAction(ActionType.UPDATE, 'Sim', sim.id, sim.phoneNumber, adminName, '', undefined, old, sim); 
-    showToast('Chip atualizado com sucesso!');
   };
-  const deleteSim = (id: string, adminName: string, reason: string) => { 
-    setSims(prev => prev.filter(s => s.id !== id)); 
-    const sim = sims.find(s => s.id === id); 
-    if (sim) logAction(ActionType.DELETE, 'Sim', id, sim.phoneNumber, adminName, `Motivo: ${reason}`); 
-    showToast('Chip excluído com sucesso!');
-  };
+  const deleteSim = (id: string, adminName: string, reason: string) => { setSims(prev => prev.filter(s => s.id !== id)); const sim = sims.find(s => s.id === id); if (sim) logAction(ActionType.DELETE, 'Sim', id, sim.phoneNumber, adminName, `Motivo: ${reason}`); };
 
-  const addUser = (user: User, adminName: string) => { 
-    setUsers(prev => [...prev, user]); 
-    logAction(ActionType.create, 'User', user.id, user.fullName, adminName); 
-    showToast('Colaborador cadastrado com sucesso!');
-  };
+  const addUser = (user: User, adminName: string) => { setUsers(prev => [...prev, user]); logAction(ActionType.create, 'User', user.id, user.fullName, adminName); };
   const updateUser = (user: User, adminName: string, notes?: string) => { 
     const old = users.find(u => u.id === user.id);
     setUsers(prev => prev.map(u => u.id === user.id ? user : u)); 
     logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName, notes, undefined, old, user); 
-    showToast('Colaborador atualizado com sucesso!');
   };
   const toggleUserActive = (user: User, adminName: string, reason?: string) => {
     const old = { ...user };
     const updatedUser = { ...user, active: !user.active };
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
     logAction(updatedUser.active ? ActionType.ACTIVATE : ActionType.INACTIVATE, 'User', user.id, user.fullName, adminName, reason, undefined, old, updatedUser);
-    showToast(`Colaborador ${updatedUser.active ? 'ativado' : 'inativado'} com sucesso!`);
   };
 
-  const addAccount = (acc: SoftwareAccount, adminName: string) => { 
-    setAccounts(prev => [...prev, acc]); 
-    logAction(ActionType.create, 'Account', acc.id, acc.login, adminName, acc.name); 
-    showToast('Licença/Conta cadastrada com sucesso!');
-  };
+  const addAccount = (acc: SoftwareAccount, adminName: string) => { setAccounts(prev => [...prev, acc]); logAction(ActionType.create, 'Account', acc.id, acc.login, adminName, acc.name); };
   const updateAccount = (acc: SoftwareAccount, adminName: string) => { 
     const old = accounts.find(a => a.id === acc.id);
     setAccounts(prev => prev.map(a => a.id === acc.id ? acc : a)); 
     logAction(ActionType.UPDATE, 'Account', acc.id, acc.login, adminName, acc.name, undefined, old, acc); 
-    showToast('Licença/Conta atualizada com sucesso!');
   };
-  const deleteAccount = (id: string, adminName: string) => { 
-    const acc = accounts.find(a => a.id === id); 
-    setAccounts(prev => prev.filter(a => a.id !== id)); 
-    if (acc) logAction(ActionType.DELETE, 'Account', id, acc.login, adminName); 
-    showToast('Licença/Conta excluída com sucesso!');
-  };
+  const deleteAccount = (id: string, adminName: string) => { const acc = accounts.find(a => a.id === id); setAccounts(prev => prev.filter(a => a.id !== id)); if (acc) logAction(ActionType.DELETE, 'Account', id, acc.login, adminName); };
 
-  const addSector = (sector: UserSector, adminName: string) => { 
-    setSectors(prev => [...prev, sector]); 
-    logAction(ActionType.create, 'Sector', sector.id, sector.name, adminName); 
-    showToast('Setor cadastrado com sucesso!');
-  };
+  const addSector = (sector: UserSector, adminName: string) => { setSectors(prev => [...prev, sector]); logAction(ActionType.create, 'Sector', sector.id, sector.name, adminName); };
   const updateSector = (sector: UserSector, adminName: string) => { 
     const old = sectors.find(s => s.id === sector.id);
     setSectors(prev => prev.map(s => s.id === sector.id ? sector : s)); 
     logAction(ActionType.UPDATE, 'Sector', sector.id, sector.name, adminName, '', undefined, old, sector); 
-    showToast('Setor atualizado com sucesso!');
   };
-  const deleteSector = (id: string, adminName: string) => { 
-    setSectors(prev => prev.filter(s => s.id !== id)); 
-    logAction(ActionType.DELETE, 'Sector', id, 'Setor', adminName); 
-    showToast('Setor excluído com sucesso!');
-  };
+  const deleteSector = (id: string, adminName: string) => { setSectors(prev => prev.filter(s => s.id !== id)); logAction(ActionType.DELETE, 'Sector', id, 'Setor', adminName); };
 
   const updateSettings = (newSettings: SystemSettings, adminName: string) => { 
     const old = { ...settings };
     setSettings(newSettings); 
     localStorage.setItem('mock_settings', JSON.stringify(newSettings)); 
     logAction(ActionType.UPDATE, 'System', 'settings', 'Configurações', adminName, '', undefined, old, newSettings); 
-    showToast('Configurações do sistema atualizadas com sucesso!');
   };
 
   const calculateNextDate = (config: TaskRecurrenceConfig, baseDateStr: string): string => {
@@ -244,20 +202,13 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addUser, updateUser, toggleUserActive,
     addSector, updateSector, deleteSector,
     addAccount, updateAccount, deleteAccount,
-    addSystemUser: (u, adm) => { 
-        setSystemUsers(p => [...p, u]); 
-        showToast('Usuário do sistema cadastrado com sucesso!');
-    },
+    addSystemUser: (u, adm) => { setSystemUsers(p => [...p, u]); },
     updateSystemUser: (u, adm) => { 
         const old = systemUsers.find(x => x.id === u.id);
         setSystemUsers(p => p.map(x => x.id === u.id ? u : x)); 
         logAction(ActionType.UPDATE, 'System', u.id, u.name, adm, '', undefined, old, u);
-        showToast('Usuário do sistema atualizado com sucesso!');
     },
-    deleteSystemUser: (id, adm) => { 
-        setSystemUsers(p => p.filter(x => x.id !== id)); 
-        showToast('Usuário do sistema excluído com sucesso!');
-    },
+    deleteSystemUser: (id, adm) => { setSystemUsers(p => p.filter(x => x.id !== id)); },
     updateSettings,
     
     // --- Gestão de Tarefas ---
@@ -301,7 +252,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             timestamp: new Date().toISOString()
         };
         setTaskLogs(prev => [...prev, log]);
-        showToast('Tarefa criada com sucesso!');
     },
     updateTask: async (tid, u, adm) => {
         let taskToRepeat: Task | null = null;
@@ -374,30 +324,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             notes: u._actionNote
         };
         setTaskLogs(prev => [...prev, log]);
-        showToast('Tarefa atualizada com sucesso!');
-    },
-    bulkUpdateTasks: async (taskIds, updates, adm) => {
-        setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates } : t));
-        taskIds.forEach(tid => {
-            const log: TaskLog = {
-                id: Math.random().toString(36).substr(2, 9),
-                taskId: tid,
-                action: 'Atualização em Massa',
-                adminUser: adm,
-                timestamp: new Date().toISOString(),
-                notes: JSON.stringify(updates)
-            };
-            setTaskLogs(prev => [...prev, log]);
-        });
-        showToast('Tarefas atualizadas em massa com sucesso!');
-    },
-    bulkUpdateDevices: async (deviceIds, updates, adm) => {
-        setDevices(prev => prev.map(d => deviceIds.includes(d.id) ? { ...d, ...updates } : d));
-        deviceIds.forEach(id => {
-            const dev = devices.find(x => x.id === id);
-            logAction(ActionType.UPDATE, 'Device', id, dev?.assetTag || 'Ativo', adm, 'Atualização em Massa', undefined, dev, updates);
-        });
-        showToast('Dispositivos atualizados em massa com sucesso!');
     },
     fetchTaskLogs: async (tid) => {
         return taskLogs.filter(l => l.taskId === tid);
@@ -430,7 +356,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 currentUserId: userId,
                 userName: user?.fullName || 'Desconhecido'
             });
-            showToast('Ativo atribuído com sucesso!');
         } else {
             const old = sims.find(s => s.id === assetId);
             setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
@@ -451,7 +376,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 currentUserId: userId,
                 userName: user?.fullName || 'Desconhecido'
             });
-            showToast('Ativo atribuído com sucesso!');
         }
     },
     returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFiles) => {
@@ -497,7 +421,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 currentUserId: oldUserId,
                 userName: oldUser?.fullName || 'Desconhecido'
             }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
-            showToast('Ativo devolvido com sucesso!');
         } else {
             const old = sims.find(s => s.id === assetId);
             const oldUserId = old?.currentUserId;
@@ -535,7 +458,6 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 currentUserId: oldUserId,
                 userName: oldUser?.fullName || 'Desconhecido'
             }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
-            showToast('Ativo devolvido com sucesso!');
         }
     },
     updateTermFile: (tid, uid, furl, adm) => { 
@@ -543,108 +465,58 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ...u,
             terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: furl } : t)
         } : u));
-        showToast('Arquivo do termo salvo com sucesso!');
     },
     updateTermDetails: (tid, cond, desc, ad, notes, evid, adm) => {
         setUsers(prev => prev.map(u => ({
             ...u,
             terms: (u.terms || []).map(t => t.id === tid ? { ...t, condition: cond, damageDescription: desc, assetDetails: ad, notes: notes, evidenceFiles: evid, hasEvidence: evid && evid.length > 0 } : t)
         })));
-        showToast('Detalhes do termo atualizados com sucesso!');
     },
     deleteTermFile: (tid, uid, r, adm) => {
         setUsers(prev => prev.map(u => u.id === uid ? {
             ...u,
             terms: (u.terms || []).map(t => t.id === tid ? { ...t, fileUrl: '' } : t)
         } : u));
-        showToast('Arquivo do termo excluído com sucesso!');
     },
     clearLogs,
     restoreItem,
-    addAssetType: (t, adm) => { 
-        setAssetTypes(p => [...p, t]); 
-        logAction(ActionType.create, 'Type', t.id, t.name, adm); 
-        showToast('Tipo de ativo cadastrado com sucesso!');
-    },
+    addAssetType: (t, adm) => { setAssetTypes(p => [...p, t]); logAction(ActionType.create, 'Type', t.id, t.name, adm); },
     updateAssetType: (t, adm) => { 
         const old = assetTypes.find(x => x.id === t.id);
         setAssetTypes(p => p.map(x => x.id === t.id ? t : x)); 
         logAction(ActionType.UPDATE, 'Type', t.id, t.name, adm, '', undefined, old, t);
-        showToast('Tipo de ativo atualizado com sucesso!');
     },
-    deleteAssetType: (id, adm) => { 
-        setAssetTypes(p => p.filter(x => x.id !== id)); 
-        showToast('Tipo de ativo excluído com sucesso!');
-    },
-    addBrand: (b, adm) => { 
-        setBrands(p => [...p, b]); 
-        logAction(ActionType.create, 'Brand', b.id, b.name, adm); 
-        showToast('Marca cadastrada com sucesso!');
-    },
+    deleteAssetType: (id, adm) => setAssetTypes(p => p.filter(x => x.id !== id)),
+    addBrand: (b, adm) => { setBrands(p => [...p, b]); logAction(ActionType.create, 'Brand', b.id, b.name, adm); },
     updateBrand: (b, adm) => { 
         const old = brands.find(x => x.id === b.id);
         setBrands(p => p.map(x => x.id === b.id ? b : x)); 
         logAction(ActionType.UPDATE, 'Brand', b.id, b.name, adm, '', undefined, old, b);
-        showToast('Marca atualizada com sucesso!');
     },
-    deleteBrand: (id, adm) => { 
-        setBrands(p => p.filter(x => x.id !== id)); 
-        showToast('Marca excluída com sucesso!');
-    },
-    addModel: (m, adm) => { 
-        setModels(p => [...p, m]); 
-        logAction(ActionType.create, 'Model', m.id, m.name, adm); 
-        showToast('Modelo cadastrado com sucesso!');
-    },
+    deleteBrand: (id, adm) => setBrands(p => p.filter(x => x.id !== id)),
+    addModel: (m, adm) => { setModels(p => [...p, m]); logAction(ActionType.create, 'Model', m.id, m.name, adm); },
     updateModel: (m, adm) => { 
         const old = models.find(x => x.id === m.id);
         setModels(p => p.map(x => x.id === m.id ? m : x)); 
         logAction(ActionType.UPDATE, 'Model', m.id, m.name, adm, '', undefined, old, m);
-        showToast('Modelo atualizado com sucesso!');
     },
-    deleteModel: (id, adm) => { 
-        setModels(p => p.filter(x => x.id !== id)); 
-        showToast('Modelo excluído com sucesso!');
-    },
-    addAccessoryType: (t, adm) => { 
-        setAccessoryTypes(p => [...p, t]); 
-        logAction(ActionType.create, 'Accessory', t.id, t.name, adm); 
-        showToast('Tipo de acessório cadastrado com sucesso!');
-    },
+    deleteModel: (id, adm) => setModels(p => p.filter(x => x.id !== id)),
+    addAccessoryType: (t, adm) => { setAccessoryTypes(p => [...p, t]); logAction(ActionType.create, 'Accessory', t.id, t.name, adm); },
     updateAccessoryType: (t, adm) => { 
         const old = accessoryTypes.find(x => x.id === t.id);
         setAccessoryTypes(p => p.map(x => x.id === t.id ? t : x)); 
         logAction(ActionType.UPDATE, 'Accessory', t.id, t.name, adm, '', undefined, old, t);
-        showToast('Tipo de acessório atualizado com sucesso!');
     },
-    deleteAccessoryType: (id, adm) => { 
-        setAccessoryTypes(p => p.filter(x => x.id !== id)); 
-        showToast('Tipo de acessório excluído com sucesso!');
-    },
-    addCustomField: (f, adm) => { 
-        setCustomFields(p => [...p, f]); 
-        logAction(ActionType.create, 'CustomField', f.id, f.name, adm); 
-        showToast('Campo personalizado cadastrado com sucesso!');
-    },
+    deleteAccessoryType: (id, adm) => setAccessoryTypes(p => p.filter(x => x.id !== id)),
+    addCustomField: (f, adm) => { setCustomFields(p => [...p, f]); logAction(ActionType.create, 'CustomField', f.id, f.name, adm); },
     updateCustomField: (f, adm) => { 
         const old = customFields.find(x => x.id === f.id);
         setCustomFields(p => p.map(x => x.id === f.id ? f : x)); 
         logAction(ActionType.UPDATE, 'CustomField', f.id, f.name, adm, '', undefined, old, f);
-        showToast('Campo personalizado atualizado com sucesso!');
     },
-    deleteCustomField: (id, adm) => { 
-        setCustomFields(p => p.filter(x => x.id !== id)); 
-        showToast('Campo personalizado excluído com sucesso!');
-    },
-    addMaintenance: (r, adm) => { 
-        setMaintenances(p => [...p, r]); 
-        logAction(ActionType.create, 'Device', r.deviceId, 'Manutenção', adm, r.description); 
-        showToast('Manutenção registrada com sucesso!');
-    },
-    deleteMaintenance: (id, adm) => { 
-        setMaintenances(p => p.filter(x => x.id !== id)); 
-        showToast('Manutenção excluída com sucesso!');
-    },
+    deleteCustomField: (id, adm) => setCustomFields(p => p.filter(x => x.id !== id)),
+    addMaintenance: (r, adm) => { setMaintenances(p => [...p, r]); logAction(ActionType.create, 'Device', r.deviceId, 'Manutenção', adm, r.description); },
+    deleteMaintenance: (id, adm) => setMaintenances(p => p.filter(x => x.id !== id)),
     finishMaintenance: (deviceId, record, adminName) => {
       const device = devices.find(d => d.id === deviceId);
       if (!device) return;
@@ -655,20 +527,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setDevices(prev => prev.map(d => d.id === deviceId ? updatedDevice : d));
 
       logAction(ActionType.UPDATE, 'Device', deviceId, device.assetTag, adminName, `Manutenção Concluída: ${record.description}`);
-      showToast('Manutenção finalizada com sucesso!');
     },
-    updateExternalDbConfig: async (c, adm) => { 
-        setExternalDbConfig(c); 
-        showToast('Configuração de banco externo atualizada com sucesso!');
-    },
-    testExternalDbConnection: async (c) => {
-        showToast('Conexão simulada com sucesso!');
-        return { success: true, message: "[Mock] Conexão simulada com sucesso!" };
-    },
+    updateExternalDbConfig: async (c, adm) => { setExternalDbConfig(c); },
+    testExternalDbConnection: async (c) => ({ success: true, message: "[Mock] Conexão simulada com sucesso!" }),
     fetchExpedienteAlerts: async () => { setExpedienteAlerts([]); },
-    saveExpedienteOverride: async () => { 
-        showToast('Ajuste de expediente salvo com sucesso!');
-    },
+    saveExpedienteOverride: async () => { },
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

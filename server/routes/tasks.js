@@ -183,39 +183,4 @@ module.exports = (app) => {
             res.json(format(result));
         } catch (err) { res.status(500).send(err.message); }
     });
-
-    app.post('/api/tasks/bulk', async (req, res) => {
-        try {
-            const { ids, updates, _adminUser } = req.body;
-            const pool = await sql.connect(dbConfig);
-            
-            for (const id of ids) {
-                const request = pool.request();
-                const oldRes = await pool.request().input('id', sql.NVarChar, id).query("SELECT * FROM Tasks WHERE Id = @id");
-                const prev = oldRes.recordset[0];
-                
-                let sets = [];
-                for (let key in updates) {
-                    if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
-                    let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
-                    request.input(dbKey, updates[key]);
-                    sets.push(`${dbKey}=@${dbKey}`);
-                }
-                
-                if (sets.length > 0) {
-                    request.input('TargetId', id);
-                    await request.query(`UPDATE Tasks SET ${sets.join(',')} WHERE Id=@TargetId`);
-                    
-                    await pool.request()
-                        .input('logId', sql.NVarChar, Math.random().toString(36).substring(2, 11))
-                        .input('taskId', sql.NVarChar, id)
-                        .input('action', sql.NVarChar, 'Atualização em Massa')
-                        .input('adminUser', sql.NVarChar, _adminUser || 'Sistema')
-                        .input('notes', sql.NVarChar, JSON.stringify(updates))
-                        .query("INSERT INTO TaskLogs (Id, TaskId, Action, AdminUser, Timestamp, Notes) VALUES (@logId, @taskId, @action, @adminUser, GETDATE(), @notes)");
-                }
-            }
-            res.json({ success: true });
-        } catch (err) { res.status(500).send(err.message); }
-    });
 };
