@@ -88,7 +88,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
                             <div 
                                 key={opt.value}
                                 onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
-                                className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-b border-slate-50 dark:border-slate-700 last:border-0 ${value === opt.value ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}
+                                className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border-b border-slate-50 dark:border-slate-700 last:border-0 ${value === opt.value ? 'bg-indigo-50 dark:bg-indigo-900' : ''}`}
                             >
                                 <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">{opt.label}</div>
                                 {opt.subLabel && <div className="text-[10px] text-gray-500 dark:text-slate-400 font-mono uppercase">{opt.subLabel}</div>}
@@ -107,7 +107,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-800"
     />
 );
 
@@ -319,7 +319,7 @@ const AccountManager = () => {
                                 </div>
                                 <div className="p-2 space-y-1">
                                     {COLUMN_OPTIONS.map(col => (
-                                        <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                        <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                                             {col.label}
                                             {visibleColumns.includes(col.id) && <Check size={14}/>}
                                         </button>
@@ -328,7 +328,7 @@ const AccountManager = () => {
                             </div>
                         )}
                     </div>
-                    <button onClick={() => handleOpenModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95 font-bold">
+                    <button onClick={() => handleOpenModal()} className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95 font-bold">
                         <Plus size={18} /> Nova Conta
                     </button>
                 </div>
@@ -369,7 +369,7 @@ const AccountManager = () => {
             <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left table-fixed min-w-[1100px]">
-                        <thead className="text-[10px] text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-800/50 font-black tracking-widest border-b dark:border-slate-800">
+                        <thead className="text-[10px] text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-gray-900 font-black tracking-widest border-b dark:border-slate-800">
                             <tr>
                                 {visibleColumns.includes('name') && (
                                     <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '180px' }} onClick={() => handleSort('name')}>
@@ -457,7 +457,7 @@ const AccountManager = () => {
                                                     {(acc.userIds || []).map(uid => {
                                                         const u = users.find(user => user.id === uid);
                                                         return u ? (
-                                                            <span key={uid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-medium border border-indigo-100 dark:border-indigo-800">
+                                                            <span key={uid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 text-[10px] font-medium border border-indigo-100 dark:border-indigo-800">
                                                                 <UserIcon size={10} /> {u.fullName}
                                                             </span>
                                                         ) : null;
@@ -465,7 +465,7 @@ const AccountManager = () => {
                                                     {(acc.deviceIds || []).map(did => {
                                                         const d = devices.find(dev => dev.id === did);
                                                         return d ? (
-                                                            <span key={did} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium border border-emerald-100 dark:border-emerald-800">
+                                                            <span key={did} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium border border-emerald-100 dark:border-emerald-800">
                                                                 <Smartphone size={10} /> {d.assetTag}
                                                             </span>
                                                         ) : null;
@@ -526,7 +526,7 @@ const AccountManager = () => {
                                 <ChevronLeft size={18}/>
                             </button>
                             <div className="flex items-center gap-1">
-                                <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
+                                <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span>
                                 <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span>
                                 <span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span>
                             </div>
@@ -594,7 +594,7 @@ const AccountManager = () => {
                                                 {(editingAccount.userIds || []).map(uid => {
                                                     const u = users.find(user => user.id === uid);
                                                     return u ? (
-                                                        <div key={uid} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 animate-scale-up">
+                                                        <div key={uid} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-900 border border-indigo-100 dark:border-indigo-800 animate-scale-up">
                                                             <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">{u.fullName}</span>
                                                             <button type="button" onClick={() => setEditingAccount({...editingAccount, userIds: (editingAccount.userIds || []).filter(id => id !== uid)})} className="text-indigo-400 hover:text-red-500 transition-colors">
                                                                 <X size={14}/>
@@ -614,7 +614,7 @@ const AccountManager = () => {
                                                 {(editingAccount.deviceIds || []).map(did => {
                                                     const d = devices.find(dev => dev.id === did);
                                                     return d ? (
-                                                        <div key={did} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800 animate-scale-up">
+                                                        <div key={did} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900 border border-emerald-100 dark:border-emerald-800 animate-scale-up">
                                                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{d.assetTag}</span>
                                                             <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-400 hover:text-red-500 transition-colors">
                                                                 <X size={14}/>

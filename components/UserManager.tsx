@@ -119,11 +119,11 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
                     return (
                         <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
                             <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
-                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
+                            <span className="bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
                                 {resolveValue(rawKey, cleanOld)}
                             </span>
                             <ArrowRight size={10} className="text-slate-300"/>
-                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
+                            <span className="bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
                                 {resolveValue(rawKey, cleanNew)}
                             </span>
                         </div>
@@ -140,7 +140,7 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
                         <div key={i} className="font-bold text-[11px] flex items-center gap-2">
                              <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
                              {foundUser ? (
-                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
+                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900 px-2 py-0.5 rounded flex items-center gap-1">
                                     <UserIcon size={10}/> {trimmedName}
                                  </span>
                              ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
@@ -170,7 +170,7 @@ const COLUMN_OPTIONS = [
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
     <div 
         onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
+        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-800"
     />
 );
 
@@ -194,6 +194,11 @@ const UserManager = () => {
   
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', notes: '', evidenceFiles: [] });
+  
+  const [isReturningAssets, setIsReturningAssets] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnAssetData, setReturnAssetData] = useState<{ type: 'Device' | 'Sim', id: string } | null>(null);
+  const [returnFormData, setReturnFormData] = useState({ condition: 'Perfeito', damageDescription: '', notes: '', evidenceFiles: [] as string[] });
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
       const saved = localStorage.getItem('user_manager_columns');
@@ -504,26 +509,60 @@ const UserManager = () => {
   const confirmEdit = async () => {
     if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
     
-    // Liberação automática de ativos ao afastar (v2.19.16)
-    if (formData.status === 'Afastado' && releaseAssetsOnLeave && editingId) {
-        const { userDevices, allUserSims } = getUserAssets(editingId);
-        if (userDevices.length > 0 || allUserSims.length > 0) {
-            const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
-            if (confirmRelease) {
-                for (const device of userDevices) {
-                    await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
-                }
-                for (const sim of allUserSims) {
-                    await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
+    setIsReturningAssets(true);
+    try {
+        // Liberação automática de ativos ao afastar (v2.19.16)
+        if (formData.status === 'Afastado' && releaseAssetsOnLeave && editingId) {
+            const { userDevices, allUserSims } = getUserAssets(editingId);
+            if (userDevices.length > 0 || allUserSims.length > 0) {
+                const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
+                if (confirmRelease) {
+                    for (const device of userDevices) {
+                        await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
+                    }
+                    for (const sim of allUserSims) {
+                        await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
+                    }
                 }
             }
         }
-    }
 
-    const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
-    updateUser(cleanedData as User, adminName, editReason);
-    setIsReasonModalOpen(false);
-    setIsModalOpen(false);
+        const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
+        updateUser(cleanedData as User, adminName, editReason);
+        setIsReasonModalOpen(false);
+        setIsModalOpen(false);
+    } finally {
+        setIsReturningAssets(false);
+    }
+  };
+
+  const handleOpenReturnModal = (type: 'Device' | 'Sim', id: string) => {
+      setReturnAssetData({ type, id });
+      setReturnFormData({ condition: 'Perfeito', damageDescription: '', notes: '', evidenceFiles: [] });
+      setIsReturnModalOpen(true);
+  };
+
+  const confirmReturnAsset = async () => {
+      if (!returnAssetData) return;
+      setIsReturningAssets(true);
+      try {
+          await returnAsset(
+              returnAssetData.type, 
+              returnAssetData.id, 
+              returnFormData.notes || 'Devolução manual via perfil do colaborador', 
+              adminName, 
+              undefined, 
+              false, 
+              returnFormData.condition, 
+              returnFormData.damageDescription, 
+              returnFormData.evidenceFiles, 
+              false
+          );
+          setIsReturnModalOpen(false);
+          setReturnAssetData(null);
+      } finally {
+          setIsReturningAssets(false);
+      }
   };
 
   const handleToggleClick = (user: User) => {
@@ -645,11 +684,11 @@ const UserManager = () => {
                 {isColumnSelectorOpen && (
                     <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center"><span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button></div>
-                        <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
+                        <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
                     </div>
                 )}
             </div>
-            <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold transition-all active:scale-95"><Plus size={18} /> Novo Colaborador</button>
+            <button onClick={() => handleOpenModal()} className="bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold transition-all active:scale-95"><Plus size={18} /> Novo Colaborador</button>
         </div>
       </div>
 
@@ -667,7 +706,7 @@ const UserManager = () => {
                   </span>
               </button>
           ))}
-          <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
+          <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
       </div>
 
       <div className="relative">
@@ -678,7 +717,7 @@ const UserManager = () => {
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left min-w-[1000px] table-fixed">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
+              <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
                   <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
                   {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
@@ -712,7 +751,7 @@ const UserManager = () => {
                       {visibleColumns.includes('cpf') && (<td className="px-6 py-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">{u.cpf}</td>)}
                       {visibleColumns.includes('rg') && (<td className="px-6 py-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">{u.rg || '---'}</td>)}
                       {visibleColumns.includes('sector') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-700">{sector?.name || 'Não Informado'}</span></td>)}
-                      {visibleColumns.includes('assetsCount') && (<td className="px-6 py-4 text-center truncate"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${assets > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-100 dark:border-slate-700'}`}>{assets}</span></td>)}
+                      {visibleColumns.includes('assetsCount') && (<td className="px-6 py-4 text-center truncate"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${assets > 0 ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-100 dark:border-slate-700'}`}>{assets}</span></td>)}
                       {visibleColumns.includes('activeSims') && (<td className="px-6 py-4 truncate text-[10px] font-mono text-slate-500 dark:text-slate-400">{chipsString}</td>)}
                       {visibleColumns.includes('devicesInfo') && (<td className="px-6 py-4 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">{devicesString}</td>)}
                       <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}><button onClick={() => handleOpenModal(u, false)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Editar"><Edit2 size={16}/></button><button onClick={() => handleToggleClick(u)} className={`p-1.5 rounded-lg transition-all ${u.active ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`} title={u.active ? 'Inativar' : 'Reativar'}>{u.active ? <Power size={16}/> : <RefreshCw size={16}/>}</button></div></td>
@@ -724,7 +763,7 @@ const UserManager = () => {
         </div>
         <div className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Exibir:</span><select className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all" value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total: {totalItems} colaboradores</p></div>
-            {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span><span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronRight size={18}/></button></div>)}
+            {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span><span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronRight size={18}/></button></div>)}
         </div>
       </div>
 
@@ -740,13 +779,13 @@ const UserManager = () => {
                 <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Histórico</button>
             </div>
             <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900 transition-colors">
-                {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value.trim())})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value.trim()})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-<div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Status do Colaborador</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="Ativo">Ativo</option><option value="Afastado">Afastado (INSS/Licença)</option></select></div>
+                {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value.trim())})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value.trim()})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+<div><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Status do Colaborador</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="Ativo">Ativo</option><option value="Afastado">Afastado (INSS/Licença)</option></select></div>
 {formData.status === 'Afastado' && (
     <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
         <div>
             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Data Prevista de Retorno</label>
-            <input disabled={isViewOnly} type="date" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100" value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/>
+            <input disabled={isViewOnly} type="date" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800 dark:text-slate-100" value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/>
         </div>
         <div className="flex items-center gap-3 pt-4">
             <label className="relative inline-flex items-center cursor-pointer">
@@ -757,10 +796,10 @@ const UserManager = () => {
         </div>
     </div>
 )}
-<div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
-                {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
-                {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
-                {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p>{term.condition && term.condition !== 'Perfeito' && <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg"><p className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase">Condição: {term.condition}</p><p className="text-[10px] text-red-600 dark:text-red-300 mt-1">{term.damageDescription}</p></div>}</div></div><div className="flex items-center gap-2">
+<div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
+                {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><div className="flex items-center gap-3"><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button>{!isViewOnly && <button type="button" onClick={() => handleOpenReturnModal('Device', d.id)} className="text-[10px] font-black uppercase text-orange-600 hover:underline">Devolver</button>}</div></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{s.operator}</span></div><div className="flex items-center gap-3"><button type="button" onClick={() => navigate(`/sims?simId=${s.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button>{!isViewOnly && <button type="button" onClick={() => handleOpenReturnModal('Sim', s.id)} className="text-[10px] font-black uppercase text-orange-600 hover:underline">Devolver</button>}</div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
+                {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
+                {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p>{term.condition && term.condition !== 'Perfeito' && <div className="mt-2 p-2 bg-red-50 dark:bg-red-900 border border-red-100 dark:border-red-900/30 rounded-lg"><p className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase">Condição: {term.condition}</p><p className="text-[10px] text-red-600 dark:text-red-300 mt-1">{term.damageDescription}</p></div>}</div></div><div className="flex items-center gap-2">
   {term.hasEvidence && (
       <button onClick={async () => {
           try {
@@ -775,17 +814,17 @@ const UserManager = () => {
           } catch (e) {
               alert('Erro ao carregar evidência.');
           }
-      }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all flex items-center justify-center" title="Ver Evidência de Dano">
+      }} className="p-2.5 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all flex items-center justify-center" title="Ver Evidência de Dano">
           <AlertCircle size={18}/>
       </button>
   )}
   {term.isManual ? (
     <div className="flex items-center gap-2">
-      <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 flex items-center gap-2" title={term.resolutionReason}>
+      <div className="bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 flex items-center gap-2" title={term.resolutionReason}>
         <Info size={14}/> Resolvido Manualmente
       </div>
       {!isViewOnly && (
-        <label className="cursor-pointer bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-800 transition-all flex items-center justify-center" title="Substituir por arquivo digitalizado">
+        <label className="cursor-pointer bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-800 transition-all flex items-center justify-center" title="Substituir por arquivo digitalizado">
           <Upload size={14}/>
           <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
         </label>
@@ -793,13 +832,13 @@ const UserManager = () => {
     </div>
   ) : (term.fileUrl || term.hasFile) ? (
     <>
-      <button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">
+      <button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">
         {loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}
       </button>
-      {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}
+      {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}
     </>
   ) : (!isViewOnly && (
-    <label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2">
+    <label className="cursor-pointer bg-orange-50 dark:bg-orange-900 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2">
       <Upload size={14}/> Digitalizar
       <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
     </label>
@@ -824,7 +863,7 @@ const UserManager = () => {
                                 <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
                                 <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
                                 <div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div>
                                 <div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
                             </div>
                         ))}
@@ -843,14 +882,82 @@ const UserManager = () => {
         </div>
       )}
 
-      {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40"><Save size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button></div></div></div></div>)}
+      {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40"><Save size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim() || isReturningAssets} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all flex items-center justify-center gap-2">{isReturningAssets ? <Loader2 size={16} className="animate-spin"/> : null}Salvar Alterações</button></div></div></div></div>)}
+
+      {isReturnModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-orange-100 dark:border-orange-900/40 flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-orange-100 dark:bg-orange-900 rounded-xl flex items-center justify-center text-orange-600 dark:text-orange-400">
+                            <Archive size={20} />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Devolver Ativo</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Registrar devolução e gerar termo</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setIsReturnModalOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto space-y-6">
+                    <div>
+                        <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Condição do Equipamento</label>
+                        <select 
+                            value={returnFormData.condition}
+                            onChange={(e) => setReturnFormData({...returnFormData, condition: e.target.value})}
+                            className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-orange-100 dark:focus:ring-orange-900/20 focus:border-orange-400 dark:focus:border-orange-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                        >
+                            <option value="Perfeito">Perfeito</option>
+                            <option value="Bom">Bom (Marcas de Uso)</option>
+                            <option value="Danificado">Danificado</option>
+                            <option value="Furtado/Roubado">Furtado / Roubado</option>
+                            <option value="Extraviado">Extraviado</option>
+                        </select>
+                    </div>
+                    {returnFormData.condition !== 'Perfeito' && returnFormData.condition !== 'Bom' && (
+                        <div className="animate-fade-in">
+                            <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Descrição da Avaria / Ocorrência</label>
+                            <textarea 
+                                value={returnFormData.damageDescription}
+                                onChange={(e) => setReturnFormData({...returnFormData, damageDescription: e.target.value})}
+                                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-orange-100 dark:focus:ring-orange-900/20 focus:border-orange-400 dark:focus:border-orange-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                                rows={3}
+                                placeholder="Descreva o que aconteceu com o equipamento..."
+                            ></textarea>
+                        </div>
+                    )}
+                    <div>
+                        <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Observações da Devolução</label>
+                        <textarea 
+                            value={returnFormData.notes}
+                            onChange={(e) => setReturnFormData({...returnFormData, notes: e.target.value})}
+                            className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-orange-100 dark:focus:ring-orange-900/20 focus:border-orange-400 dark:focus:border-orange-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
+                            rows={3}
+                            placeholder="Detalhes adicionais sobre a devolução..."
+                        ></textarea>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex gap-3 justify-end">
+                    <button onClick={() => setIsReturnModalOpen(false)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                        Cancelar
+                    </button>
+                    <button onClick={confirmReturnAsset} disabled={isReturningAssets} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 shadow-md transition-all disabled:opacity-50 flex items-center gap-2">
+                        {isReturningAssets ? <Loader2 size={14} className="animate-spin"/> : <Archive size={14}/>}
+                        Confirmar Devolução
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
 
       {editingTerm && (
         <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
                   <Edit2 size={20} />
                 </div>
                 <div>
@@ -894,7 +1001,7 @@ const UserManager = () => {
 
               <div>
                 <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Dados do Dispositivo (Apenas Leitura)</label>
-                <div className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-mono">
+                <div className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                   {termEditData.assetDetails}
                 </div>
               </div>
@@ -936,7 +1043,7 @@ const UserManager = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-3 justify-end">
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex gap-3 justify-end">
               <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                 Cancelar
               </button>

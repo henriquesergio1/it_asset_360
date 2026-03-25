@@ -431,13 +431,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-colors"
             >
                 {/* Header */}
-                <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800">
                     <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-2xl ${
-                            task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                            task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400' :
                             task.status === TaskStatus.CANCELED ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' :
-                            task.isOverdue ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
-                            'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
+                            task.isOverdue ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' :
+                            'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400'
                         }`}>
                             <ClipboardList size={24} />
                         </div>
@@ -457,9 +457,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 </span>
                                 <span className="text-slate-300 dark:text-slate-700">•</span>
                                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                    task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
-                                    task.status === TaskStatus.IN_PROGRESS ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
-                                    task.status === TaskStatus.PENDING ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                                    task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400' :
+                                    task.status === TaskStatus.IN_PROGRESS ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400' :
+                                    task.status === TaskStatus.PENDING ? 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400' :
                                     'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                                 }`}>
                                     {task.status}
@@ -507,7 +507,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                     className="w-full p-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[100px] focus:ring-2 focus:ring-indigo-500 outline-none"
                                 />
                             ) : (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                                     {task.description || 'Sem descrição detalhada.'}
                                 </div>
                             )}
@@ -551,7 +551,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                         className="w-full p-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[200px] focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                                     />
                                     
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
                                         <div className="flex items-center justify-between mb-3">
                                             <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Paperclip size={14} /> Anexos do Manual
@@ -627,7 +627,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-indigo-100/50 dark:border-indigo-900/20">
+                                    <div className="bg-indigo-50/50 dark:bg-indigo-900 p-4 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-indigo-100/50 dark:border-indigo-900/20">
                                         {task.instructions || 'Nenhum manual ou passo a passo anexado a esta tarefa.'}
                                     </div>
                                     
@@ -694,8 +694,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                     </div>
                                 ) : (
                                     <div className={`p-4 rounded-2xl border ${
-                                        task.isOverdue ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400' :
-                                        task.isNearDue ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400' :
+                                        task.isOverdue ? 'bg-red-50 dark:bg-red-900 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400' :
+                                        task.isNearDue ? 'bg-amber-50 dark:bg-amber-900 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-400' :
                                         'bg-slate-50 dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                                     }`}>
                                         <div className="text-lg font-bold">
@@ -745,7 +745,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 </h3>
                             </div>
                             {isEditingGeneral ? (
-                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20 space-y-4">
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/20 space-y-4">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input 
                                             type="checkbox" 
@@ -820,7 +820,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 <motion.div 
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="w-full p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl space-y-3 mb-4"
+                                    className="w-full p-4 bg-red-50 dark:bg-red-900 border border-red-100 dark:border-red-900/30 rounded-2xl space-y-3 mb-4"
                                 >
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-xs font-bold text-red-700 dark:text-red-400 uppercase tracking-wider flex items-center gap-2">
@@ -863,7 +863,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                         <button 
                                             onClick={handleSaveGeneral}
                                             disabled={updating}
-                                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
+                                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
                                         >
                                             <CheckCircle2 size={18} /> Salvar Alterações
                                         </button>
@@ -880,7 +880,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             <button 
                                                 onClick={() => handleStatusChange(TaskStatus.IN_PROGRESS)}
                                                 disabled={updating}
-                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-200 dark:shadow-none transition-all disabled:opacity-50"
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-200 dark:shadow-none transition-all disabled:opacity-50"
                                             >
                                                 <Clock size={18} /> Iniciar Tarefa
                                             </button>
@@ -899,7 +899,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                     handleStatusChange(TaskStatus.COMPLETED);
                                                 }}
                                                 disabled={updating}
-                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none transition-all disabled:opacity-50"
                                             >
                                                 <CheckCircle2 size={18} /> Finalizar Tarefa
                                             </button>
@@ -919,7 +919,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             </div>
 
                             {task.type === TaskType.MAINTENANCE && (
-                                <section className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4 mt-8">
+                                <section className="bg-amber-50 dark:bg-amber-900 p-5 rounded-3xl border border-amber-100 dark:border-amber-900/20 space-y-4 mt-8">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                                             <Wrench size={18} />
@@ -960,7 +960,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             </div>
                                         )}
                                         {task.maintenanceItems && !isEditingGeneral && (
-                                            <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full uppercase tracking-widest">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-400 rounded-full uppercase tracking-widest">
                                                 Manutenção em Lote
                                             </span>
                                         )}
@@ -1067,7 +1067,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                             <motion.div 
                                                                 initial={{ opacity: 0, height: 0 }}
                                                                 animate={{ opacity: 1, height: 'auto' }}
-                                                                className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl p-4 space-y-4 overflow-hidden"
+                                                                className="bg-emerald-50 dark:bg-emerald-900 border border-emerald-100 dark:border-emerald-900/20 rounded-2xl p-4 space-y-4 overflow-hidden"
                                                             >
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                                     <div>
@@ -1126,7 +1126,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                     </div>
 
                     {/* Timeline / Audit Logs */}
-                    <div className="w-full md:w-80 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col">
+                    <div className="w-full md:w-80 bg-slate-50/50 dark:bg-slate-800 flex flex-col">
                         <div className="p-4 border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                                 <History size={16} className="text-indigo-600 dark:text-indigo-400" /> Histórico de Ações

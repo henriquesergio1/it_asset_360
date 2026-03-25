@@ -8,6 +8,28 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.5.4',
+    date: 'Hoje',
+    title: 'Refatoração de Layout & Tema Escuro Completo',
+    changes: [
+      'Dashboard: Reorganização da Gestão de Tarefas para melhor visibilidade junto aos alertas.',
+      'Tema Escuro: Refatoração completa em Gestão de Chips, Entrega/Devolução e Área Administrativa.',
+      'UI: Correção de botões, tabelas e modais que não respeitavam o tema escuro.',
+      'Sincronização global para v3.5.4.'
+    ]
+  },
+    {
+    version: '3.5.3',
+    date: 'Hoje',
+    title: 'Correções de Exportação PDF & Ajustes de Tema Escuro',
+    changes: [
+      'PDF: Correção do erro na exportação de dispositivos (jspdf-autotable).',
+      'Tema Escuro: Ajustes de cores em Gestão de Chips, Entrega/Devolução e Painel Administrativo.',
+      'Dashboard: Otimização da visualização de tarefas e alertas.',
+      'Sincronização global para v3.5.3.'
+    ]
+  },
+    {
     version: '2.12.54',
     date: 'Hoje',
     title: 'Flexibilização da Manutenção & Correção de Atalho',

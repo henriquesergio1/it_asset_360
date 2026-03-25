@@ -367,7 +367,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                            <tr className="bg-gray-50 dark:bg-gray-900 border-b dark:border-slate-800">
                                 <th className="px-4 py-4 w-12 text-center">
                                     <input type="checkbox" onChange={handleSelectAllTasks} checked={selectedTaskIds.length === filteredTasks.length && filteredTasks.length > 0} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                                 </th>
@@ -445,10 +445,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                task.status === TaskStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                task.status === TaskStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                                'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                                                task.status === TaskStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-slate-800 dark:text-amber-400' :
+                                                task.status === TaskStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-700 dark:bg-slate-800 dark:text-blue-400' :
+                                                task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-slate-800 dark:text-emerald-400' :
+                                                'bg-rose-100 text-rose-700 dark:bg-slate-800 dark:text-rose-400'
                                             }`}>
                                                 {task.status === TaskStatus.PENDING ? 'Pendente' :
                                                  task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
@@ -560,7 +560,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                             <button 
                                 onClick={handleBulkTaskUpdate}
                                 disabled={!bulkTaskStatus && !bulkTaskUser}
-                                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:grayscale text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2 h-[38px] self-end"
+                                className="bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 disabled:grayscale text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center gap-2 h-[38px] self-end"
                             >
                                 <Save size={14} /> Aplicar em Lote
                             </button>
@@ -588,7 +588,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                             onSubmit={handleCreateTask}
                             className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
                         >
-                            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800 shrink-0">
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Nova Tarefa</h2>
                                 <button type="button" onClick={() => setIsAdding(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                                     <XCircle size={24} className="text-slate-400" />
@@ -625,7 +625,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none dark:text-slate-100 font-mono text-xs mb-3"
                                     />
                                     
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
                                         <div className="flex items-center justify-between mb-2">
                                             <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Paperclip size={14} /> Anexos do Manual
@@ -735,7 +735,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                     </div>
 
                                     {newTask.type === TaskType.MAINTENANCE && (
-                                        <div className="col-span-2 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-900/40 space-y-4 animate-fade-in">
+                                        <div className="col-span-2 p-4 bg-amber-50 dark:bg-amber-900 rounded-2xl border border-amber-100 dark:border-amber-900/40 space-y-4 animate-fade-in">
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                                                     <Wrench size={16} />
@@ -812,7 +812,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                                             </div>
                                                         </div>
 
-                                                        <div className="max-h-40 overflow-y-auto p-3 bg-white dark:bg-slate-800/50 border border-amber-200 dark:border-amber-900/40 rounded-xl space-y-2">
+                                                        <div className="max-h-40 overflow-y-auto p-3 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/40 rounded-xl space-y-2">
                                                             {devices
                                                                 .filter(d => d.status !== DeviceStatus.RETIRED)
                                                                 .filter(d => assetTypeFilter === 'All' || models.find(m => m.id === d.modelId)?.typeId === assetTypeFilter)
@@ -884,7 +884,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                     </div>
 
                                     {newTask.isRecurring && (
-                                        <div className="col-span-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 space-y-4">
+                                        <div className="col-span-2 p-4 bg-indigo-50 dark:bg-indigo-900 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 space-y-4">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-[10px] font-black uppercase text-indigo-400 dark:text-indigo-500 mb-1 tracking-widest">Padrão de Recorrência</label>
@@ -991,7 +991,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex gap-3 shrink-0">
+                            <div className="p-6 bg-slate-50 dark:bg-slate-800 border-t border-gray-100 dark:border-slate-800 flex gap-3 shrink-0">
                                 <button 
                                     type="button"
                                     onClick={() => setIsAdding(false)}

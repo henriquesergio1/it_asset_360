@@ -201,22 +201,24 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Gestão de Tarefas - Full Width */}
-      <div className="w-full">
-          <TaskDashboardWidget 
-              tasks={tasks} 
-              onViewAll={() => navigate('/tasks')}
-              onTaskClick={(task) => setSelectedTask(task)}
-              systemUsers={systemUsers}
-              currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
-          />
-      </div>
+      {/* Alertas e Gestão de Tarefas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gestão de Tarefas - Priorizada */}
+        <div className="lg:col-span-2">
+            <TaskDashboardWidget 
+                tasks={tasks} 
+                onViewAll={() => navigate('/tasks')}
+                onTaskClick={(task) => setSelectedTask(task)}
+                systemUsers={systemUsers}
+                currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
+            />
+        </div>
 
-      {/* Alerta de Termos Pendentes - 3ª posição */}
-      {pendingTerms.length > 0 && (
-          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
+        {/* Alerta de Termos Pendentes */}
+        {pendingTerms.length > 0 && (
+          <div className="bg-orange-50 dark:bg-orange-900 border border-orange-200 dark:border-orange-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
               <div className="flex items-start gap-4">
-                  <div className="p-3 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 rounded-lg shrink-0">
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-400 rounded-lg shrink-0">
                       <FileWarning size={24} />
                   </div>
                   <div className="flex-1 overflow-hidden">
@@ -255,9 +257,9 @@ const Dashboard = () => {
                               const sectorCode = foundDevice?.internalCode;
 
                               return (
-                              <div key={term.id} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 transition-all">
+                              <div key={term.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 transition-all">
                                   <div className="flex flex-1 items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
                                           {user.fullName.charAt(0)}
                                       </div>
                                       <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
@@ -349,9 +351,9 @@ const Dashboard = () => {
 
       {/* Alerta de Validação de Expediente (ERP) - 4ª posição, Formato Lista */}
       {filteredExpedienteAlerts.length > 0 && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
+          <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
               <div className="flex items-start gap-4">
-                  <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg shrink-0">
+                  <div className="p-3 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-lg shrink-0">
                       <Clock size={24} />
                   </div>
                   <div className="flex-1 overflow-hidden">
@@ -377,10 +379,10 @@ const Dashboard = () => {
                               const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
                               
                               return (
-                                  <div key={alert.codigo} className={`bg-white dark:bg-slate-900/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300' : 'border-red-100 dark:border-red-900/30 hover:border-red-300'}`}>
+                                  <div key={alert.codigo} className={`bg-white dark:bg-slate-800 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300' : 'border-red-100 dark:border-red-900/30 hover:border-red-300'}`}>
                                       <div className="flex items-center justify-between">
                                           <div className="flex flex-1 items-center gap-3">
-                                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
+                                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? 'bg-amber-100 dark:bg-amber-900 text-amber-600' : 'bg-red-100 dark:bg-red-900 text-red-600'}`}>
                                                   {alert.nome.charAt(0)}
                                               </div>
                                               <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
@@ -417,7 +419,7 @@ const Dashboard = () => {
                                           </div>
                                       </div>
                                       {hasActiveOverride && (
-                                          <div className="ml-11 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-900/30">
+                                          <div className="ml-11 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900 p-2 rounded border border-amber-100 dark:border-amber-900/30">
                                               <span className="font-bold">Motivo:</span> {alert.observation} <br/>
                                               <span className="font-bold">Reativação Prevista:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
                                           </div>
@@ -430,6 +432,7 @@ const Dashboard = () => {
               </div>
           </div>
       )}
+      </div>
 
       {/* Seção LCC e Saúde dos Ativos - 5ª posição */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden">
@@ -438,7 +441,7 @@ const Dashboard = () => {
               className="w-full p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
           >
               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg">
                       <DollarSign size={22}/>
                   </div>
                   <div className="text-left">
@@ -464,9 +467,9 @@ const Dashboard = () => {
           {isLccExpanded && (
               <div className="p-6 pt-0 space-y-6 animate-fade-in">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                      <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
                           <div className="flex items-center gap-3 mb-3">
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg">
+                              <div className="p-2 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 rounded-lg">
                                   <Smartphone size={18}/>
                               </div>
                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Aquisição</span>
@@ -475,9 +478,9 @@ const Dashboard = () => {
                           <p className="text-[10px] text-slate-400 mt-1 font-medium italic">Investimento inicial em hardware.</p>
                       </div>
 
-                      <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                      <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
                           <div className="flex items-center gap-3 mb-3">
-                              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                              <div className="p-2 bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 rounded-lg">
                                   <Wrench size={18}/>
                               </div>
                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Manutenção</span>
@@ -500,11 +503,11 @@ const Dashboard = () => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
-                          <div className="p-5 border-b border-gray-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
+                          <div className="p-5 border-b border-gray-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800">
                               <h3 className="text-sm font-black text-gray-800 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
                                   <AlertTriangle size={16} className="text-red-500"/> Ativos com Alerta de Saúde
                               </h3>
-                              <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[9px] font-black uppercase">
+                              <span className="bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[9px] font-black uppercase">
                                   {lccAlerts.length} Críticos
                               </span>
                           </div>
@@ -590,7 +593,7 @@ const Dashboard = () => {
                               </div>
                           </div>
 
-                          <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
                               <div className="flex items-start gap-3">
                                   <Info size={16} className="text-blue-500 shrink-0 mt-0.5"/>
                                   <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed italic">
@@ -624,7 +627,7 @@ const Dashboard = () => {
       {editingExpediente && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800">
-                  <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                  <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
                       <div>
                           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Desativar Alerta Temporariamente</h2>
                           <p className="text-xs text-slate-500 mt-1">{editingExpediente.nome}</p>
@@ -654,7 +657,7 @@ const Dashboard = () => {
                           />
                       </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
                       <button 
                           onClick={() => setEditingExpediente(null)}
                           className="px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors"
@@ -670,7 +673,7 @@ const Dashboard = () => {
                                   alert('Erro ao salvar.');
                               }
                           }}
-                          className="px-6 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+                          className="px-6 py-2 text-sm font-bold text-white bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
                       >
                           Salvar
                       </button>
