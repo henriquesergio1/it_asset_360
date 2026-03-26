@@ -554,7 +554,7 @@ const AdminPanel = () => {
                         >
                             Anterior
                         </button>
-                        <span className="text-xs font-bold text-slate-500">Página {logPage} de {totalPages}</span>
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Página {logPage} de {totalPages}</span>
                         <button 
                             disabled={logPage === totalPages || logsLoading} 
                             onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
@@ -605,7 +605,7 @@ const AdminPanel = () => {
                           </div>
                       </div>
                       <div className="flex justify-end gap-3 pt-4 border-t dark:border-slate-800">
-                          <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 text-xs font-black uppercase text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
+                          <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 text-xs font-black uppercase text-slate-400 hover:text-slate-600 dark:hover:bg-slate-800 rounded-xl transition-colors">Cancelar</button>
                           <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl transition-all">Salvar Operador</button>
                       </div>
                   </form>

@@ -761,7 +761,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                 <select 
                                                     value={editRecurrenceConfig.type}
                                                     onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, type: e.target.value as any })}
-                                                    className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                    className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none dark:text-slate-100"
                                                 >
                                                     <option value="Mensal (Dia Fixo)">Mensal (Dia Fixo)</option>
                                                     <option value="Mensal (Dia da Semana)">Mensal (Dia da Semana)</option>
@@ -775,7 +775,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                         type="number" min="1" max="31"
                                                         value={editRecurrenceConfig.dayOfMonth || ''}
                                                         onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, dayOfMonth: parseInt(e.target.value) })}
-                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none dark:text-slate-100"
                                                     />
                                                 </div>
                                             )}
@@ -786,7 +786,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                         type="number" min="1"
                                                         value={editRecurrenceConfig.intervalMonths || ''}
                                                         onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, intervalMonths: parseInt(e.target.value) })}
-                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none"
+                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900/30 rounded-xl text-xs font-bold outline-none dark:text-slate-100"
                                                     />
                                                 </div>
                                             )}
@@ -907,7 +907,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             <button 
                                                 onClick={() => setShowCancelReason(true)}
                                                 disabled={updating}
-                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 border-2 border-red-100 dark:border-red-900/30 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                                                className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-white dark:bg-slate-800 border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
                                             >
                                                 <AlertTriangle size={18} /> Cancelar Tarefa
                                             </button>
@@ -932,7 +932,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                         placeholder="Adicionar dispositivo..."
                                                         value={searchTerm}
                                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                                        className="bg-transparent text-[10px] font-bold outline-none w-32"
+                                                        className="bg-transparent text-[10px] font-bold outline-none w-32 dark:text-slate-100"
                                                     />
                                                 </div>
                                                 {searchTerm && (
@@ -1025,13 +1025,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                                     <>
                                                                         {item.status === 'Concluído' ? (
                                                                             <div className="text-right">
-                                                                                <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Concluído</div>
+                                                                                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Concluído</div>
                                                                                 <div className="text-[10px] text-slate-400">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
                                                                             </div>
                                                                         ) : item.status === 'Em Andamento' ? (
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="text-right mr-2">
-                                                                                    <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Em Andamento</div>
+                                                                                    <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Em Andamento</div>
                                                                                 </div>
                                                                                 <button 
                                                                                     onClick={() => {
@@ -1075,7 +1075,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                                             step="0.01"
                                                                             value={finalCost}
                                                                             onChange={(e) => setFinalCost(parseFloat(e.target.value))}
-                                                                            className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                                                                            className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-100"
                                                                         />
                                                                     </div>
                                                                     <div>
@@ -1093,13 +1093,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                                         value={itemNote}
                                                                         onChange={(e) => setItemNote(e.target.value)}
                                                                         placeholder="Descreva o que foi feito ou observações importantes..."
-                                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 min-h-[60px]"
+                                                                        className="w-full p-2 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/30 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 min-h-[60px] dark:text-slate-100"
                                                                     />
                                                                 </div>
                                                                 <div className="flex justify-end gap-2">
                                                                     <button 
                                                                         onClick={() => setCompletingItemId(null)}
-                                                                        className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-700"
+                                                                        className="px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                                                     >
                                                                         Cancelar
                                                                     </button>

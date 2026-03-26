@@ -659,7 +659,7 @@ const AccountManager = () => {
                             </div>
                             
                             <div className="flex justify-end gap-3 pt-6 border-t dark:border-slate-800 shrink-0">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all tracking-widest">Cancelar</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all tracking-widest">Cancelar</button>
                                 <button type="submit" className="px-10 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95">Salvar Conta</button>
                             </div>
                         </form>

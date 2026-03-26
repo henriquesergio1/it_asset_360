@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.5.5',
+        date: '26/03/2026',
+        title: 'Polimento Final do Tema Escuro',
+        changes: [
+            'UX: Correção de cores de texto em campos de input e selects no modo escuro.',
+            'UX: Ajustes finais de contraste em botões de ação e paginação.',
+            'Versão: Atualizado para v3.5.5.'
+        ]
+    },
+    {
         version: '3.5.4',
         date: '26/03/2026',
         title: 'Polimento Final do Tema Escuro',
