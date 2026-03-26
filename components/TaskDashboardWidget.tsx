@@ -48,7 +48,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                     <div 
                         key={task.id} 
                         onClick={() => onTaskClick(task)}
-                        className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between group hover:border-indigo-300 transition-all cursor-pointer"
+                        className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer"
                     >
                         <div className="flex flex-1 items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -59,21 +59,26 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                                 {getAssignedUserName(task.assignedTo).charAt(0)}
                             </div>
                             <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
-                                <p className="text-sm font-bold text-gray-800 dark:text-slate-200 group-hover:text-indigo-600 transition-colors">
+                                <p className="text-sm font-bold text-gray-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                     {task.title}
                                 </p>
-                                <div className="flex items-center gap-2">
-                                    <p className={`text-[10px] px-1 py-0.5 rounded font-bold uppercase tracking-tighter ${
-                                        task.type === 'Manutenção' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                                        task.type === 'Envio de Arquivo' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
-                                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                                    }`}>
-                                        {task.type}
-                                    </p>
-                                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter">
-                                        Resp: {getAssignedUserName(task.assignedTo)}
-                                    </p>
-                                </div>
+                                <p className={`text-[10px] px-1 py-0.5 rounded font-bold uppercase tracking-tighter w-fit md:mt-0 ${
+                                    task.type === 'Manutenção' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                                    task.type === 'Envio de Arquivo' ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+                                    'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                    {task.type}
+                                </p>
+                                <p className="text-[10px] text-slate-400 uppercase font-black tracking-tighter md:mt-0">
+                                    Resp: {getAssignedUserName(task.assignedTo)}
+                                </p>
+                                <p className={`text-[10px] font-bold uppercase tracking-widest md:mt-0 ml-auto md:ml-0 ${
+                                    task.isOverdue ? 'text-red-500' : 
+                                    task.isNearDue ? 'text-amber-500' : 
+                                    'text-indigo-500'
+                                }`}>
+                                    {task.isOverdue ? 'Atrasada' : task.isNearDue ? 'Próxima do Vencimento' : 'Pendente'}
+                                </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-x-4 shrink-0">

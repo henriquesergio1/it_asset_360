@@ -9,6 +9,26 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.5.4',
+        date: '26/03/2026',
+        title: 'Polimento Final do Tema Escuro',
+        changes: [
+            'UX: Revisão final e correção de cores em botões de ação e modais para garantir contraste e consistência no tema escuro.',
+            'UX: Ajuste de contrastes em estados de hover em todos os componentes.',
+            'Versão: Atualizado para v3.5.4.'
+        ]
+    },
+    {
+        version: '3.5.3',
+        date: '26/03/2026',
+        title: 'Correções do Tema Escuro',
+        changes: [
+            'UX: Revisão e correção de cores de ícones (como a lixeira) e elementos em diversos componentes para garantir contraste e consistência no tema escuro.',
+            'UX: Ajuste visual na seção de tarefas pendentes do dashboard para alinhar com o padrão das demais seções.',
+            'Versão: Atualizado para v3.5.3.'
+        ]
+    },
+    {
         version: '3.4.0',
         date: '26/03/2026',
         title: 'Sistema Global de Notificações (Toasts)',

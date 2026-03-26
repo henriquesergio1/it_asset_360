@@ -285,7 +285,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                                 </div>
                                 <div className="flex gap-1">
                                     <button onClick={() => setModelForm(m)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={18}/></button>
-                                    <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-2 text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
+                                    <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
                                 </div>
                             </div>
                         );
@@ -314,7 +314,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              </div>
                              <div className="flex gap-1">
                                 <button onClick={() => setEditingSector(s)} className="p-2 text-blue-400 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"><Edit2 size={18}/></button>
-                                <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"><Trash2 size={18}/></button>
+                                <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"><Trash2 size={18}/></button>
                              </div>
                           </div>
                        ))}
@@ -369,7 +369,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                              <span className="font-bold text-slate-700 dark:text-slate-200">{t.name}</span>
                              <div className="flex gap-1">
                                  <button onClick={() => setEditingType(t)} className="p-2 text-blue-400 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                                 <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="p-2 text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                                 <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16}/></button>
                              </div>
                           </div>
                        ))}
@@ -389,7 +389,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                         {sortedCustomFields.map(f => (
                             <div key={f.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl border dark:border-slate-700 shadow-sm transition-colors">
                                 <span className="font-bold text-slate-700 dark:text-slate-200">{f.name}</span>
-                                <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors"><Trash2 size={18}/></button>
+                                <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><Trash2 size={18}/></button>
                             </div>
                         ))}
                     </div>
@@ -406,7 +406,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                        {sortedBrands.map(b => (
                           <div key={b.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl border dark:border-slate-700 shadow-sm transition-colors">
                              <span className="font-bold text-slate-700 dark:text-slate-200">{b.name}</span>
-                             <button onClick={() => confirmDelete('Marca', b.id, b.name, deleteBrand)} className="text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors"><Trash2 size={16}/></button>
+                             <button onClick={() => confirmDelete('Marca', b.id, b.name, deleteBrand)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><Trash2 size={16}/></button>
                           </div>
                        ))}
                     </div>
@@ -423,7 +423,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
                        {sortedAccessories.map(acc => (
                           <div key={acc.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl border dark:border-slate-700 shadow-sm transition-colors">
                              <span className="font-bold text-slate-700 dark:text-slate-200">{acc.name}</span>
-                             <button onClick={() => confirmDelete('Acessório', acc.id, acc.name, deleteAccessoryType)} className="text-red-300 dark:text-red-800 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors"><Trash2 size={16}/></button>
+                             <button onClick={() => confirmDelete('Acessório', acc.id, acc.name, deleteAccessoryType)} className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"><Trash2 size={16}/></button>
                           </div>
                        ))}
                     </div>

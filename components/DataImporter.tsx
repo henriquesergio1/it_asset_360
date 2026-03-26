@@ -472,7 +472,7 @@ const DataImporter = () => {
             <div className="space-y-6">
                 <div className="flex gap-4">
                     {(['USERS', 'DEVICES', 'SIMS'] as ImportType[]).map(t => (
-                        <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 shadow-md scale-[1.02]' : 'hover:bg-gray-50 dark:hover:bg-slate-800 dark:border-slate-700 text-gray-500 dark:text-slate-500'}`}>
+                        <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 shadow-md scale-[1.02]' : 'hover:bg-gray-50 dark:hover:bg-slate-800 dark:border-slate-700 text-gray-500 dark:text-slate-500'}`}>
                             <span className="font-black text-lg uppercase tracking-tighter">{t === 'USERS' ? 'Colaboradores' : t === 'DEVICES' ? 'Dispositivos' : 'Chips'}</span>
                         </button>
                     ))}
@@ -499,10 +499,10 @@ const DataImporter = () => {
         {step === 'ANALYSIS' && (
             <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
                 <div className="flex gap-4 mb-4">
-                    <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-green-800">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
-                    <div className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-orange-800">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
+                    <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-green-800">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
+                    <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-orange-800">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
                     {analyzedData.some(i => i.status === 'ERROR') && (
-                        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-red-800">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
+                        <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-4 py-1.5 rounded-full text-xs font-black uppercase shadow-sm border dark:border-red-800">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
                     )}
                 </div>
                 <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-white dark:bg-slate-950 dark:border-slate-800">
@@ -516,14 +516,14 @@ const DataImporter = () => {
                         </thead>
                         <tbody>
                             {analyzedData.map((item, idx) => (
-                                <tr key={idx} className={`border-b dark:border-slate-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/50 dark:bg-red-900' : ''}`}>
+                                <tr key={idx} className={`border-b dark:border-slate-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20 dark:bg-red-900/5' : ''}`}>
                                     <td className="px-6 py-3 font-mono font-bold text-blue-900 dark:text-blue-300">
                                         {importType === 'USERS' ? item.row['CPF'] : 
                                          importType === 'DEVICES' ? (item.row['Patrimonio'] || item.row['IMEI']) : 
                                          item.row['Numero']}
                                     </td>
                                     <td className="px-6 py-3">
-                                        <span className={`px-2.5 py-1 rounded font-black text-[10px] tracking-widest border ${item.status === 'NEW' ? 'bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : item.status === 'CONFLICT' ? 'bg-orange-50 dark:bg-orange-900 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : 'bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40'}`}>
+                                        <span className={`px-2.5 py-1 rounded font-black text-[10px] tracking-widest border ${item.status === 'NEW' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : item.status === 'CONFLICT' ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-900/40' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40'}`}>
                                             {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
                                         </span>
                                     </td>
@@ -570,7 +570,7 @@ const DataImporter = () => {
                 </div>
                 <button onClick={handleStartNew} className="bg-slate-900 dark:bg-blue-600 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black dark:hover:bg-blue-700 transition-all shadow-xl active:scale-95">Nova Importação</button>
                 {logs.length > 0 && (
-                    <div className="w-full max-w-xl bg-red-50 dark:bg-red-900 p-4 rounded-xl text-left text-xs text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40 overflow-y-auto max-h-40 shadow-sm font-mono transition-colors">
+                    <div className="w-full max-w-xl bg-red-50 dark:bg-red-900/20 p-4 rounded-xl text-left text-xs text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/40 overflow-y-auto max-h-40 shadow-sm font-mono transition-colors">
                         <p className="font-bold mb-2 uppercase text-[10px] tracking-widest">Logs de Erro Detalhados:</p>
                         <ul className="list-decimal pl-6 space-y-1">{logs.map((l, i) => <li key={i}>{l}</li>)}</ul>
                     </div>

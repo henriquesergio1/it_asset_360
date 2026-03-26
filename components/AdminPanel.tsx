@@ -162,7 +162,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
                     )}
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 border-t dark:border-slate-800 flex justify-end shrink-0 transition-colors">
-                    <button onClick={onClose} className="px-8 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-black transition-all">Fechar</button>
+                    <button onClick={onClose} className="px-8 py-3 bg-slate-800 dark:bg-slate-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-black dark:hover:bg-slate-600 transition-all">Fechar</button>
                 </div>
             </div>
         </div>
@@ -340,8 +340,8 @@ const AdminPanel = () => {
                                     <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${u.role === SystemRole.ADMIN ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200'}`}>{u.role}</span></td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => handleOpenModal(u)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
-                                            <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                            <button onClick={() => handleOpenModal(u)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
+                                            <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -409,7 +409,7 @@ const AdminPanel = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase tracking-widest">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 text-[10px] text-blue-700 dark:text-blue-300 font-bold uppercase tracking-widest">
                         Variáveis Disponíveis: {'{NOME_EMPRESA}, {CNPJ}, {NOME_COLABORADOR}, {CPF}, {RG}'}
                     </div>
                     <div className="flex justify-end pt-4 border-t dark:border-slate-800">
@@ -438,7 +438,7 @@ const AdminPanel = () => {
                                     finally { setIsTestingConnection(false); }
                                 }}
                                 disabled={isTestingConnection}
-                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 transition-all disabled:opacity-50"
+                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
                             >
                                 {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
                                 Testar Conexão
@@ -538,7 +538,7 @@ const AdminPanel = () => {
                                     <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">{log.action}</span></td>
                                     <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
                                     <td className="px-6 py-4 text-right">
-                                        <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-800 border border-blue-100 text-blue-600 px-3 py-1.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Detalhes</button>
+                                        <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-white dark:bg-slate-800 border border-blue-100 dark:border-blue-900/50 text-blue-600 dark:text-blue-400 px-3 py-1.5 rounded-xl hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all">Detalhes</button>
                                     </td>
                                 </tr>
                             ))}

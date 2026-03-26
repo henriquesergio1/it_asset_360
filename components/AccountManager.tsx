@@ -511,8 +511,8 @@ const AccountManager = () => {
                                         )}
                                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
-                                                <button onClick={() => handleOpenModal(acc)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
-                                                <button onClick={() => handleDelete(acc.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                                <button onClick={() => handleOpenModal(acc)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
+                                                <button onClick={() => handleDelete(acc.id)} className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
                                             </div>
                                         </td>
                                     </tr>

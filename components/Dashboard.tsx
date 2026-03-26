@@ -291,7 +291,7 @@ const Dashboard = () => {
                               const sectorCode = foundDevice?.internalCode;
 
                               return (
-                              <div key={term.id} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 transition-all">
+                              <div key={term.id} className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 flex items-center justify-between group hover:border-orange-300 dark:hover:border-orange-700 transition-all">
                                   <div className="flex flex-1 items-center gap-3">
                                       <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 font-bold text-xs shrink-0">
                                           {user.fullName.charAt(0)}
@@ -413,7 +413,7 @@ const Dashboard = () => {
                               const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
                               
                               return (
-                                  <div key={alert.codigo} className={`bg-white dark:bg-slate-900/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300' : 'border-red-100 dark:border-red-900/30 hover:border-red-300'}`}>
+                                  <div key={alert.codigo} className={`bg-white dark:bg-slate-900/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300 dark:hover:border-amber-700' : 'border-red-100 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700'}`}>
                                       <div className="flex items-center justify-between">
                                           <div className="flex flex-1 items-center gap-3">
                                               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
@@ -583,7 +583,7 @@ const Dashboard = () => {
                                                           </span>
                                                       </td>
                                                       <td className="px-6 py-4 text-right">
-                                                          <Link to={`/devices?deviceId=${item.device.id}`} className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all">
+                                                          <Link to={`/devices?deviceId=${item.device.id}`} className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white transition-all">
                                                               <ArrowRight size={14}/> Analisar
                                                           </Link>
                                                       </td>
