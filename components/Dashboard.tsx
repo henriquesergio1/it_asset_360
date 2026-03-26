@@ -26,6 +26,7 @@ const Dashboard = () => {
   const { isAdmin } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
+  const [isTasksExpanded, setIsTasksExpanded] = useState(true);
   const [isLccExpanded, setIsLccExpanded] = useState(false);
   const [resolvingTerm, setResolvingTerm] = useState<{termId: string, userName: string} | null>(null);
   const [resolveReason, setResolveReason] = useState('');
@@ -201,45 +202,49 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Gestão de Tarefas em Destaque */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden animate-fade-in">
-          <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                      <ClipboardList size={24} />
+      {/* Gestão de Tarefas em Destaque - Formato Alerta */}
+      <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-900/50 rounded-xl p-6 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0">
+                  <ClipboardList size={24} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                      <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                          Gestão de Tarefas Pendentes
+                          <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+                              {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
+                          </span>
+                      </h3>
+                      <div className="flex items-center gap-2">
+                          <button 
+                              onClick={() => navigate('/tasks')}
+                              className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors mr-2"
+                          >
+                              Ver Todas
+                          </button>
+                          <button 
+                              onClick={() => setIsTasksExpanded(!isTasksExpanded)}
+                              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors"
+                          >
+                              {isTasksExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                          </button>
+                      </div>
                   </div>
-                  <div>
-                      <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100">Gestão de Tarefas</h2>
-                      <p className="text-xs text-slate-400 font-medium">Acompanhamento de manutenções e pendências</p>
+                  <p className="text-sm text-indigo-800/70 dark:text-indigo-300/60 mb-4">
+                      Acompanhamento de manutenções, envios de arquivos e outras pendências operacionais da equipe de TI.
+                  </p>
+                  
+                  <div className={`transition-all duration-300 ${isTasksExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
+                      <TaskDashboardWidget 
+                          tasks={tasks} 
+                          onViewAll={() => navigate('/tasks')}
+                          onTaskClick={(task) => setSelectedTask(task)}
+                          systemUsers={systemUsers}
+                          currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
+                      />
                   </div>
               </div>
-              <div className="flex items-center gap-4">
-                  <div className="hidden md:flex items-center gap-6 mr-4">
-                      <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atrasadas</p>
-                          <p className="text-sm font-black text-red-500">{tasks.filter(t => t.isOverdue && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
-                      </div>
-                      <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Prazo</p>
-                          <p className="text-sm font-black text-amber-500">{tasks.filter(t => t.isNearDue && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
-                      </div>
-                  </div>
-                  <button 
-                      onClick={() => navigate('/tasks')}
-                      className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
-                  >
-                      Ver Todas <ChevronRight size={14} />
-                  </button>
-              </div>
-          </div>
-          <div className="p-6">
-              <TaskDashboardWidget 
-                  tasks={tasks} 
-                  onViewAll={() => navigate('/tasks')}
-                  onTaskClick={(task) => setSelectedTask(task)}
-                  systemUsers={systemUsers}
-                  currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
-              />
           </div>
       </div>
 
