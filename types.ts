@@ -196,6 +196,7 @@ export interface SystemSettings {
   logoUrl: string;
   termTemplate?: string; 
   returnTermTemplate?: string; 
+  accentColor?: string; // NOVO: Cor de destaque do sistema
 }
 
 export interface ExternalDbConfig {

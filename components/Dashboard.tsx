@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock, X } from 'lucide-react';
-import { DeviceStatus, AccountType, Task } from '../types';
+import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock, X, ClipboardList, ChevronRight } from 'lucide-react';
+import { DeviceStatus, AccountType, Task, TaskStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { TaskDashboardWidget } from './TaskDashboardWidget';
 import { TaskDetailModal } from './TaskDetailModal';
@@ -153,8 +153,50 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Gráficos e Tarefas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Gestão de Tarefas em Destaque - Movido para maior prioridade */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden animate-fade-in">
+          <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="flex items-center gap-3">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                      <ClipboardList size={24} />
+                  </div>
+                  <div>
+                      <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100">Gestão de Tarefas</h2>
+                      <p className="text-xs text-slate-400 font-medium">Acompanhamento de manutenções e pendências</p>
+                  </div>
+              </div>
+              <div className="flex items-center gap-4">
+                  <div className="hidden md:flex items-center gap-6 mr-4">
+                      <div className="text-right">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atrasadas</p>
+                          <p className="text-sm font-black text-red-500">{tasks.filter(t => t.isOverdue && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No Prazo</p>
+                          <p className="text-sm font-black text-amber-500">{tasks.filter(t => t.isNearDue && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+                      </div>
+                  </div>
+                  <button 
+                      onClick={() => navigate('/tasks')}
+                      className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+                  >
+                      Ver Todas <ChevronRight size={14} />
+                  </button>
+              </div>
+          </div>
+          <div className="p-6">
+              <TaskDashboardWidget 
+                  tasks={tasks} 
+                  onViewAll={() => navigate('/tasks')}
+                  onTaskClick={(task) => setSelectedTask(task)}
+                  systemUsers={systemUsers}
+                  currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
+              />
+          </div>
+      </div>
+
+      {/* Gráficos Principais */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col h-[320px]">
           <h2 className="text-lg font-bold text-gray-800 dark:text-slate-100 mb-3">Status dos Dispositivos</h2>
           <div className="flex-1">
@@ -198,16 +240,6 @@ const Dashboard = () => {
                     );
                 })}
             </div>
-        </div>
-
-        <div className="h-[320px]">
-            <TaskDashboardWidget 
-                tasks={tasks} 
-                onViewAll={() => navigate('/tasks')}
-                onTaskClick={(task) => setSelectedTask(task)}
-                systemUsers={systemUsers}
-                currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
-            />
         </div>
       </div>
 

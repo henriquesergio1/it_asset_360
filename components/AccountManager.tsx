@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown } from 'lucide-react';
 import { normalizeString } from '../utils/stringUtils';
@@ -123,12 +124,14 @@ const COLUMN_OPTIONS = [
 const AccountManager = () => {
     const { accounts, addAccount, updateAccount, deleteAccount, users, devices, models, brands } = useData();
     const { user: currentUser } = useAuth();
+    const { showToast } = useToast();
     
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<AccountType | 'ALL'>('ALL');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAccount, setEditingAccount] = useState<Partial<SoftwareAccount> | null>(null);
     const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     // UI States
     const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
@@ -203,17 +206,23 @@ const AccountManager = () => {
         setIsModalOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingAccount) return;
 
-        const adminName = currentUser?.name || 'Sistema';
-        if (editingAccount.id) {
-            updateAccount(editingAccount as SoftwareAccount, adminName);
-        } else {
-            addAccount({ ...editingAccount, id: Math.random().toString(36).substr(2, 9) } as SoftwareAccount, adminName);
+        try {
+            const adminName = currentUser?.name || 'Sistema';
+            if (editingAccount.id) {
+                await updateAccount(editingAccount as SoftwareAccount, adminName);
+                showToast('Licença atualizada com sucesso!', 'success');
+            } else {
+                await addAccount({ ...editingAccount, id: Math.random().toString(36).substr(2, 9) } as SoftwareAccount, adminName);
+                showToast('Licença criada com sucesso!', 'success');
+            }
+            setIsModalOpen(false);
+        } catch (error) {
+            showToast('Erro ao salvar licença: ' + (error as Error).message, 'error');
         }
-        setIsModalOpen(false);
     };
 
     const handleOpenUrl = (url?: string) => {
@@ -223,6 +232,23 @@ const AccountManager = () => {
             finalUrl = 'https://' + finalUrl;
         }
         window.open(finalUrl, '_blank');
+    };
+
+    const handleDelete = async (id: string) => {
+        setIsDeleting(id);
+    };
+
+    const confirmDelete = async () => {
+        if (!isDeleting) return;
+        
+        try {
+            const adminName = currentUser?.name || 'Sistema';
+            await deleteAccount(isDeleting, adminName);
+            showToast('Licença excluída com sucesso!', 'success');
+            setIsDeleting(null);
+        } catch (error) {
+            showToast('Erro ao excluir licença: ' + (error as Error).message, 'error');
+        }
     };
 
         const handleSort = (key: string) => {
@@ -486,7 +512,7 @@ const AccountManager = () => {
                                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex justify-end gap-2">
                                                 <button onClick={() => handleOpenModal(acc)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
-                                                <button onClick={() => deleteAccount(acc.id, currentUser?.name || 'Sistema')} className="p-2 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                                                <button onClick={() => handleDelete(acc.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -637,6 +663,37 @@ const AccountManager = () => {
                                 <button type="submit" className="px-10 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95">Salvar Conta</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmação de Exclusão */}
+            {isDeleting && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 dark:border-slate-800 animate-scale-up">
+                        <div className="p-8 text-center">
+                            <div className="h-20 w-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                <Trash2 size={40} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-2">Confirmar Exclusão</h3>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">
+                                Tem certeza que deseja excluir esta licença? Esta ação não poderá ser desfeita.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setIsDeleting(null)}
+                                    className="flex-1 py-4 px-6 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase text-xs tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="flex-1 py-4 px-6 rounded-2xl bg-red-600 text-white font-black uppercase text-xs tracking-widest hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none transition-all hover:scale-105 active:scale-95"
+                                >
+                                    Excluir
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { AssetType, DeviceBrand, DeviceModel, AccessoryType, CustomField, UserSector } from '../types';
 import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown, Search, Briefcase } from 'lucide-react';
 import { normalizeString } from '../utils/stringUtils';
@@ -20,6 +21,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     users, devices
   } = useData();
   const { user } = useAuth();
+  const { showToast } = useToast();
   
   const [activeTab, setActiveTab] = useState<'TYPES' | 'BRANDS' | 'ACCESSORIES' | 'MODELS' | 'FIELDS' | 'SECTORS'>('TYPES');
   const [modelSearchTerm, setModelSearchTerm] = useState('');
@@ -51,56 +53,107 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   const handleTypeSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if(!editingType.name?.trim()) return;
-      if(editingType.id) updateAssetType(editingType as AssetType, adminName);
-      else addAssetType({ id: Math.random().toString(36).substr(2, 9), name: editingType.name.trim(), customFieldIds: editingType.customFieldIds || [] }, adminName);
-      setEditingType({ name: '', customFieldIds: [] });
+      try {
+        if(editingType.id) {
+          updateAssetType(editingType as AssetType, adminName);
+          showToast("Tipo de ativo atualizado!", "success");
+        } else {
+          addAssetType({ id: Math.random().toString(36).substr(2, 9), name: editingType.name.trim(), customFieldIds: editingType.customFieldIds || [] }, adminName);
+          showToast("Tipo de ativo criado!", "success");
+        }
+        setEditingType({ name: '', customFieldIds: [] });
+      } catch (error) {
+        showToast("Erro ao salvar tipo de ativo.", "error");
+      }
   };
 
   const handleBrandSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if(!editingBrand.name?.trim()) return;
-      if(editingBrand.id) updateBrand(editingBrand as DeviceBrand, adminName);
-      else addBrand({ id: Math.random().toString(36).substr(2, 9), name: editingBrand.name.trim() }, adminName);
-      setEditingBrand({ name: '' });
+      try {
+        if(editingBrand.id) {
+          updateBrand(editingBrand as DeviceBrand, adminName);
+          showToast("Marca atualizada!", "success");
+        } else {
+          addBrand({ id: Math.random().toString(36).substr(2, 9), name: editingBrand.name.trim() }, adminName);
+          showToast("Marca criada!", "success");
+        }
+        setEditingBrand({ name: '' });
+      } catch (error) {
+        showToast("Erro ao salvar marca.", "error");
+      }
   };
 
   const handleAccessorySubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if(!editingAccessory.name?.trim()) return;
-      if(editingAccessory.id) updateAccessoryType(editingAccessory as AccessoryType, adminName);
-      else addAccessoryType({ id: Math.random().toString(36).substr(2, 9), name: editingAccessory.name.trim() }, adminName);
-      setEditingAccessory({ name: '' });
+      try {
+        if(editingAccessory.id) {
+          updateAccessoryType(editingAccessory as AccessoryType, adminName);
+          showToast("Tipo de acessório atualizado!", "success");
+        } else {
+          addAccessoryType({ id: Math.random().toString(36).substr(2, 9), name: editingAccessory.name.trim() }, adminName);
+          showToast("Tipo de acessório criado!", "success");
+        }
+        setEditingAccessory({ name: '' });
+      } catch (error) {
+        showToast("Erro ao salvar tipo de acessório.", "error");
+      }
   };
 
   const handleModelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!modelForm.name?.trim() || !modelForm.brandId || !modelForm.typeId) return;
     
-    // Ensure we send the image data correctly
-    const modelData = { ...modelForm };
-    
-    if (modelForm.id) updateModel(modelData as DeviceModel, adminName);
-    else addModel({ ...modelData, id: Math.random().toString(36).substr(2, 9) } as DeviceModel, adminName);
-    setModelForm({ imageUrl: '' });
+    try {
+      // Ensure we send the image data correctly
+      const modelData = { ...modelForm };
+      
+      if (modelForm.id) {
+        updateModel(modelData as DeviceModel, adminName);
+        showToast("Modelo atualizado!", "success");
+      } else {
+        addModel({ ...modelData, id: Math.random().toString(36).substr(2, 9) } as DeviceModel, adminName);
+        showToast("Modelo criado!", "success");
+      }
+      setModelForm({ imageUrl: '' });
+    } catch (error) {
+      showToast("Erro ao salvar modelo.", "error");
+    }
   };
 
   const handleFieldSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingField.name?.trim()) return;
-    if (editingField.id) updateCustomField(editingField as CustomField, adminName);
-    else addCustomField({ id: Math.random().toString(36).substr(2, 9), name: editingField.name.trim() }, adminName);
-    setEditingField({ name: '' });
+    try {
+      if (editingField.id) {
+        updateCustomField(editingField as CustomField, adminName);
+        showToast("Campo personalizado atualizado!", "success");
+      } else {
+        addCustomField({ id: Math.random().toString(36).substr(2, 9), name: editingField.name.trim() }, adminName);
+        showToast("Campo personalizado criado!", "success");
+      }
+      setEditingField({ name: '' });
+    } catch (error) {
+      showToast("Erro ao salvar campo personalizado.", "error");
+    }
   };
 
   const handleSectorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSector.name?.trim()) return;
-    if (editingSector.id) {
-        updateSector(editingSector as UserSector, adminName);
-    } else {
-        addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name.trim() }, adminName);
+    try {
+      if (editingSector.id) {
+          updateSector(editingSector as UserSector, adminName);
+          showToast("Setor/Cargo atualizado!", "success");
+      } else {
+          addSector({ id: Math.random().toString(36).substr(2, 9), name: editingSector.name.trim() }, adminName);
+          showToast("Setor/Cargo criado!", "success");
+      }
+      setEditingSector({ name: '' });
+    } catch (error) {
+      showToast("Erro ao salvar setor/cargo.", "error");
     }
-    setEditingSector({ name: '' });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {

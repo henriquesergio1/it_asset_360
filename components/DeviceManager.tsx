@@ -3,10 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, Download, FileSpreadsheet, FileJson } from 'lucide-react';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 interface Option {
     value: string;
@@ -374,6 +376,7 @@ const DeviceManager = () => {
     getDeviceInvoice, getMaintenanceInvoice
   } = useData();
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -422,6 +425,75 @@ const DeviceManager = () => {
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
   const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
   const [filterNoInvoice, setFilterNoInvoice] = useState(false);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'RESPONSIBLE' | 'SECTOR' | null>(null);
+  const [bulkValue, setBulkValue] = useState<string>('');
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(paginatedDevices.map(d => d.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleBulkUpdate = () => {
+    if (!bulkActionType || !bulkValue) return;
+    
+    try {
+        selectedIds.forEach(id => {
+            const device = devices.find(d => d.id === id);
+            if (device) {
+                const updatedDevice = { ...device };
+                if (bulkActionType === 'STATUS') updatedDevice.status = bulkValue as DeviceStatus;
+                if (bulkActionType === 'RESPONSIBLE') updatedDevice.currentUserId = bulkValue || null;
+                if (bulkActionType === 'SECTOR') updatedDevice.sectorId = bulkValue || null;
+                updateDevice(updatedDevice, adminName);
+            }
+        });
+        showToast(`${selectedIds.length} ativos atualizados com sucesso!`, 'success');
+        setSelectedIds([]);
+        setIsBulkModalOpen(false);
+    } catch (error) {
+        showToast('Erro ao realizar ação em massa.', 'error');
+    }
+  };
+
+  const handleExport = (type: 'CSV' | 'EXCEL' | 'PDF') => {
+    const exportData = filteredDevices.map(d => {
+        const { model, brand } = getModelDetails(d.modelId);
+        const user = users.find(u => u.id === d.currentUserId);
+        const sector = sectors.find(s => s.id === d.sectorId);
+        return {
+            'Patrimônio': d.assetTag || '---',
+            'Modelo': model?.name || '---',
+            'Marca': brand?.name || '---',
+            'IMEI': d.imei || '---',
+            'S/N': d.serialNumber || '---',
+            'Status': d.status,
+            'Responsável': user?.fullName || 'Livre',
+            'Setor': sector?.name || '---',
+            'Custo': d.purchaseCost || 0,
+            'Data Compra': d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'
+        };
+    });
+
+    const fileName = `inventario_ativos_${new Date().toISOString().split('T')[0]}`;
+
+    if (type === 'CSV') exportToCSV(exportData, fileName);
+    if (type === 'EXCEL') exportToExcel(exportData, fileName);
+    if (type === 'PDF') {
+        const headers = ['Patrimônio', 'Modelo', 'Status', 'Responsável', 'Setor'];
+        const rows = exportData.map(d => [d.Patrimônio, d.Modelo, d.Status, d.Responsável, d.Setor]);
+        exportToPDF(headers, rows, fileName, 'Relatório de Inventário de Ativos');
+    }
+  };
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -475,6 +547,11 @@ const DeviceManager = () => {
       reader.onloadend = () => {
         setFormData({ ...formData, purchaseInvoiceUrl: reader.result as string });
         setIsUploadingNF(false);
+        showToast('Nota Fiscal carregada com sucesso!', 'success');
+      };
+      reader.onerror = () => {
+        setIsUploadingNF(false);
+        showToast('Erro ao carregar Nota Fiscal.', 'error');
       };
       reader.readAsDataURL(file);
     }
@@ -488,6 +565,11 @@ const DeviceManager = () => {
       reader.onloadend = () => {
         setNewMaint({ ...newMaint, invoiceUrl: reader.result as string });
         setIsUploadingMaint(false);
+        showToast('Comprovante de manutenção carregado!', 'success');
+      };
+      reader.onerror = () => {
+        setIsUploadingMaint(false);
+        showToast('Erro ao carregar comprovante.', 'error');
       };
       reader.readAsDataURL(file);
     }
@@ -524,28 +606,34 @@ const DeviceManager = () => {
 
   const saveMaintenance = () => {
     if (!editingId || !newMaint.description) return;
-    const isoDate = newMaint.date ? `${newMaint.date}T12:00:00.000Z` : new Date().toISOString();
-    const record: MaintenanceRecord = {
-      id: Math.random().toString(36).substr(2, 9),
-      deviceId: editingId,
-      type: newMaint.type || MaintenanceType.CORRECTIVE,
-      date: isoDate,
-      description: newMaint.description,
-      cost: newMaint.cost || 0,
-      provider: 'Interno',
-      invoiceUrl: newMaint.invoiceUrl
-    };
-    addMaintenance(record, adminName);
-    setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE, date: new Date().toISOString().split('T')[0] });
+    try {
+        const isoDate = newMaint.date ? `${newMaint.date}T12:00:00.000Z` : new Date().toISOString();
+        const record: MaintenanceRecord = {
+          id: Math.random().toString(36).substr(2, 9),
+          deviceId: editingId,
+          type: newMaint.type || MaintenanceType.CORRECTIVE,
+          date: isoDate,
+          description: newMaint.description,
+          cost: newMaint.cost || 0,
+          provider: 'Interno',
+          invoiceUrl: newMaint.invoiceUrl
+        };
+        addMaintenance(record, adminName);
+        setNewMaint({ description: '', cost: 0, invoiceUrl: '', type: MaintenanceType.CORRECTIVE, date: new Date().toISOString().split('T')[0] });
+        showToast('Registro de manutenção salvo!', 'success');
 
-    // Após salvar, pergunta se deseja concluir a manutenção
-    if (window.confirm('Registro salvo. Deseja concluir a manutenção e retornar o ativo ao status anterior?')) {
-        const device = devices.find(d => d.id === editingId);
-        if (device) {
-            const statusToRestore = device.previousStatus || DeviceStatus.AVAILABLE;
-            updateDevice({ ...device, status: statusToRestore, previousStatus: undefined }, adminName);
-            setIsModalOpen(false); // Fecha o modal após a ação
+        // Após salvar, pergunta se deseja concluir a manutenção
+        if (window.confirm('Registro salvo. Deseja concluir a manutenção e retornar o ativo ao status anterior?')) {
+            const device = devices.find(d => d.id === editingId);
+            if (device) {
+                const statusToRestore = device.previousStatus || DeviceStatus.AVAILABLE;
+                updateDevice({ ...device, status: statusToRestore, previousStatus: undefined }, adminName);
+                setIsModalOpen(false); // Fecha o modal após a ação
+                showToast('Manutenção concluída e ativo liberado!', 'success');
+            }
         }
+    } catch (error) {
+        showToast('Erro ao salvar manutenção.', 'error');
     }
   };
 
@@ -654,14 +742,27 @@ const DeviceManager = () => {
         if (dupImei) { alert(`O IMEI ${formData.imei} já está cadastrado.`); return; }
     }
     if (editingId) { setEditReason(''); setIsReasonModalOpen(true); } 
-    else { addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName); setIsModalOpen(false); }
+    else { 
+        try {
+            addDevice({ ...formData, id: Math.random().toString(36).substr(2, 9), currentUserId: null } as Device, adminName); 
+            setIsModalOpen(false); 
+            showToast('Ativo cadastrado com sucesso!', 'success');
+        } catch (error) {
+            showToast('Erro ao cadastrar ativo.', 'error');
+        }
+    }
   };
 
   const confirmEdit = () => {
     if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
-    updateDevice(formData as Device, adminName);
-    setIsReasonModalOpen(false);
-    setIsModalOpen(false);
+    try {
+        updateDevice(formData as Device, adminName);
+        setIsReasonModalOpen(false);
+        setIsModalOpen(false);
+        showToast('Dados do ativo atualizados!', 'success');
+    } catch (error) {
+        showToast('Erro ao atualizar ativo.', 'error');
+    }
   };
 
   const handleSectorChange = (val: string) => { setFormData({ ...formData, sectorId: val || null }); };
@@ -717,6 +818,11 @@ const DeviceManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div><h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Inventário de Dispositivos</h1><p className="text-gray-500 dark:text-slate-400 text-sm">Gestão centralizada de ativos.</p></div>
         <div className="flex gap-2">
+            <div className="flex bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm">
+                <button onClick={() => handleExport('EXCEL')} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-r border-gray-200 dark:border-slate-800 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+                <button onClick={() => handleExport('CSV')} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-r border-gray-200 dark:border-slate-800 transition-all" title="Exportar CSV"><FileJson size={18}/></button>
+                <button onClick={() => handleExport('PDF')} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Exportar PDF"><FileText size={18}/></button>
+            </div>
             <div className="relative" ref={columnRef}>
                 <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
                 {isColumnSelectorOpen && (
@@ -767,6 +873,14 @@ const DeviceManager = () => {
             <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
+                  <th className="px-6 py-4 w-12">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedIds.length === paginatedDevices.length && paginatedDevices.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                  </th>
                   <th className="px-6 py-4 relative" style={{ width: columnWidths['model'] || '200px' }}>Foto/Modelo<Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} /></th>
                   {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['assetTag'] || '120px' }}>Patrimônio<Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} /></th>)}
                   {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative" style={{ width: columnWidths['imei'] || '150px' }}>IMEI<Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} /></th>)}
@@ -789,7 +903,15 @@ const DeviceManager = () => {
                   const linkedSim = sims.find(s => s.id === d.linkedSimId);
                   const sector = sectors.find(s => s.id === d.sectorId);
                   return (
-                    <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'}`}>
+                    <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'} ${selectedIds.includes(d.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            checked={selectedIds.includes(d.id)}
+                            onChange={() => handleSelectOne(d.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                      </td>
                       <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-700 shadow-inner shrink-0">{model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" /> : <ImageIcon className="text-slate-300 dark:text-slate-600" size={16}/>}</div><div className="min-w-0"><div className="font-bold text-gray-900 dark:text-slate-100 truncate text-xs">{model?.name}</div><div className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tighter">{brand?.name}</div></div></div></td>
                       {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-blue-500"/> {d.assetTag || '---'}</div></td>)}
                       {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] text-slate-500 dark:text-slate-400 truncate">{d.imei || '---'}</td>)}
@@ -935,6 +1057,67 @@ const DeviceManager = () => {
       {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-blue-100"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 shadow-inner border border-blue-100"><Save size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs text-slate-400 mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 disabled:opacity-50 transition-all">Salvar</button></div></div></div></div>)}
       {isDeleteModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-sm overflow-hidden border border-red-100"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-4 shadow-inner border border-red-100"><AlertTriangle size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo..." value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar</button></div></div></div></div>)}
       {isRestoreModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100"><RotateCcw size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Motivo..." value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 transition-all">Restaurar</button></div></div></div></div>)}
+
+      {isBulkModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-indigo-100">
+                  <div className="p-8">
+                      <div className="flex flex-col items-center text-center mb-6">
+                          <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 shadow-inner border border-indigo-100">
+                              <Sliders size={32} />
+                          </div>
+                          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Ação em Massa</h3>
+                          <p className="text-xs text-slate-400 mt-2">Alterando {selectedIds.length} ativos selecionados.</p>
+                      </div>
+                      
+                      <div className="space-y-4 mb-6">
+                          {bulkActionType === 'STATUS' && (
+                              <div>
+                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Novo Status</label>
+                                  <select 
+                                    className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm font-black bg-slate-50 dark:bg-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500 transition-all"
+                                    value={bulkValue}
+                                    onChange={(e) => setBulkValue(e.target.value)}
+                                  >
+                                      <option value="">Selecionar...</option>
+                                      {Object.values(DeviceStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                  </select>
+                              </div>
+                          )}
+                          {bulkActionType === 'RESPONSIBLE' && (
+                              <div>
+                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Novo Responsável</label>
+                                  <SearchableDropdown 
+                                    options={users.map(u => ({ value: u.id, label: u.fullName, subLabel: u.internalCode }))}
+                                    value={bulkValue}
+                                    onChange={setBulkValue}
+                                    placeholder="Selecionar colaborador..."
+                                    icon={<Users size={18}/>}
+                                  />
+                              </div>
+                          )}
+                          {bulkActionType === 'SECTOR' && (
+                              <div>
+                                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1 tracking-widest">Novo Setor/Cargo</label>
+                                  <SearchableDropdown 
+                                    options={sectorOptions}
+                                    value={bulkValue}
+                                    onChange={setBulkValue}
+                                    placeholder="Selecionar setor..."
+                                    icon={<Briefcase size={18}/>}
+                                  />
+                              </div>
+                          )}
+                      </div>
+
+                      <div className="flex gap-4">
+                          <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200">Cancelar</button>
+                          <button onClick={handleBulkUpdate} disabled={!bulkValue} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-indigo-700 disabled:opacity-50 transition-all">Aplicar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
       {isModelSettingsOpen && <ModelSettings onClose={() => setIsModelSettingsOpen(false)} />}
     </div>
   );

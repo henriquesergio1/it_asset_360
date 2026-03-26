@@ -3,9 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { User, UserSector, ActionType, Device, SimCard, Term, AccountType, AuditLog } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2, ArrowRight, ArrowUp, ArrowDown, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, MapPin, Briefcase, Power, Settings, X, Smartphone, FileText, History, ExternalLink, AlertTriangle, Printer, Link as LinkIcon, User as UserIcon, Upload, CheckCircle, Filter, Users, Archive, Tag, ChevronRight, Cpu, Hash, CreditCard, Fingerprint, UserCheck, UserX, FileWarning, SlidersHorizontal, Check, Info, Save, Globe, Lock, Eye, EyeOff, Key, ChevronLeft, RefreshCw, Loader2, ArrowRight, ArrowUp, ArrowDown, AlertCircle, Download, FileSpreadsheet, FileJson } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { normalizeString } from '../utils/stringUtils';
 
@@ -177,6 +180,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 const UserManager = () => {
   const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -213,6 +217,11 @@ const UserManager = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'SECTOR' | null>(null);
+  const [bulkValue, setBulkValue] = useState('');
 
   useEffect(() => {
       const params = new URLSearchParams(location.search);
@@ -495,9 +504,14 @@ const UserManager = () => {
     if (uniquenessError) { alert(`ERRO:\n\n${uniquenessError}`); return; }
     if (editingId) { setEditReason(''); setIsReasonModalOpen(true); } 
     else {
-        const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
-        addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
-        setIsModalOpen(false);
+        try {
+            const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
+            addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+            setIsModalOpen(false);
+            showToast('Colaborador cadastrado com sucesso!', 'success');
+        } catch (error) {
+            showToast('Erro ao cadastrar colaborador.', 'error');
+        }
     }
   };
 
@@ -520,22 +534,41 @@ const UserManager = () => {
         }
     }
 
-    const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
-    updateUser(cleanedData as User, adminName, editReason);
-    setIsReasonModalOpen(false);
-    setIsModalOpen(false);
+    try {
+        const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
+        updateUser(cleanedData as User, adminName, editReason);
+        setIsReasonModalOpen(false);
+        setIsModalOpen(false);
+        showToast('Dados do colaborador atualizados!', 'success');
+    } catch (error) {
+        showToast('Erro ao atualizar colaborador.', 'error');
+    }
   };
 
   const handleToggleClick = (user: User) => {
       if (!user.active) { 
           const reason = prompt(`Reativar ${user.fullName}? Justificativa:`);
-          if (reason) toggleUserActive(user, adminName, reason); 
+          if (reason) {
+              try {
+                  toggleUserActive(user, adminName, reason);
+                  showToast('Colaborador reativado com sucesso!', 'success');
+              } catch (error) {
+                  showToast('Erro ao reativar colaborador.', 'error');
+              }
+          }
           return; 
       }
       const hasAssets = devices.some(d => d.currentUserId === user.id) || sims.some(s => s.currentUserId === user.id);
       if (hasAssets) return alert("Não é possível inativar com ativos em posse.");
       const reason = prompt(`Inativar ${user.fullName}? Justificativa:`);
-      if (reason) toggleUserActive(user, adminName, reason);
+      if (reason) {
+          try {
+              toggleUserActive(user, adminName, reason);
+              showToast('Colaborador inativado com sucesso!', 'success');
+          } catch (error) {
+              showToast('Erro ao inativar colaborador.', 'error');
+          }
+      }
   };
 
     const sortedUsers = React.useMemo(() => {
@@ -607,6 +640,82 @@ const UserManager = () => {
   const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
   const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(paginatedUsers.map(u => u.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkUpdate = async () => {
+    if (!bulkActionType || !bulkValue || selectedIds.length === 0) return;
+    
+    const adminName = currentUser?.name || 'Admin';
+    const reason = `Atualização em massa: Alteração de ${bulkActionType === 'STATUS' ? 'Status' : 'Setor'}`;
+
+    try {
+      for (const id of selectedIds) {
+        const user = users.find(u => u.id === id);
+        if (user) {
+          const updates: Partial<User> = {};
+          if (bulkActionType === 'STATUS') {
+            updates.status = bulkValue as any;
+          } else if (bulkActionType === 'SECTOR') {
+            updates.sectorId = bulkValue;
+          }
+          updateUser({ ...user, ...updates }, adminName, reason);
+        }
+      }
+      showToast(`${selectedIds.length} colaboradores atualizados com sucesso!`, 'success');
+      setSelectedIds([]);
+      setIsBulkModalOpen(false);
+      setBulkValue('');
+      setBulkActionType(null);
+    } catch (error) {
+      showToast('Erro ao realizar atualização em massa.', 'error');
+    }
+  };
+
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    const dataToExport = filteredUsers.map(u => {
+      const sector = sectors.find(s => s.id === u.sectorId);
+      const { userDevices, allUserSims } = getUserAssets(u.id);
+      return {
+        'Nome Completo': u.fullName,
+        'E-mail': u.email,
+        'CPF': u.cpf,
+        'RG': u.rg || '---',
+        'PIS': u.pis || '---',
+        'Setor': sector?.name || '---',
+        'Cód. Setor': u.internalCode || '---',
+        'Status': u.active ? (u.status || 'Ativo') : 'Inativo',
+        'Ativos': userDevices.length + allUserSims.length,
+        'Chips': allUserSims.map(s => s.phoneNumber).join(', '),
+        'Dispositivos': userDevices.map(d => {
+          const m = models.find(mod => mod.id === d.modelId);
+          return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+        }).join('; ')
+      };
+    });
+
+    const filename = `colaboradores_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') exportToCSV(dataToExport, filename);
+    else if (format === 'excel') exportToExcel(dataToExport, filename);
+    else if (format === 'pdf') {
+      const headers = Object.keys(dataToExport[0] || {});
+      const rows = dataToExport.map(obj => Object.values(obj));
+      exportToPDF(headers, rows, filename, 'Relatório de Colaboradores');
+    }
+  };
+
   // Lógica de Ativos por Usuário (v2.12.39 - Agregada para colunas e abas)
   const getUserAssets = (userId: string) => {
       const userDevices = devices.filter(d => d.currentUserId === userId);
@@ -640,6 +749,11 @@ const UserManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div><h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Colaboradores</h1><p className="text-gray-500 dark:text-slate-400 text-sm">Gestão de vínculos e termos.</p></div>
         <div className="flex gap-2">
+            <div className="flex bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm">
+                <button onClick={() => handleExport('csv')} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-600 dark:text-slate-400 border-r dark:border-slate-800 transition-colors" title="Exportar CSV"><FileText size={18} /></button>
+                <button onClick={() => handleExport('excel')} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-800 text-emerald-600 dark:text-emerald-400 border-r dark:border-slate-800 transition-colors" title="Exportar Excel"><FileSpreadsheet size={18} /></button>
+                <button onClick={() => handleExport('pdf')} className="p-2 hover:bg-gray-50 dark:hover:bg-slate-800 text-red-600 dark:text-red-400 transition-colors" title="Exportar PDF"><Download size={18} /></button>
+            </div>
             <div className="relative" ref={columnRef}>
                 <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
                 {isColumnSelectorOpen && (
@@ -675,11 +789,52 @@ const UserManager = () => {
         <input type="text" placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
       </div>
 
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between sticky top-4 z-50"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-black uppercase tracking-widest">{selectedIds.length} Selecionados</span>
+              <div className="h-6 w-px bg-white/20 mx-2" />
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setBulkActionType('STATUS'); setIsBulkModalOpen(true); }}
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Alterar Status
+                </button>
+                <button 
+                  onClick={() => { setBulkActionType('SECTOR'); setIsBulkModalOpen(true); }}
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  Alterar Setor
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setSelectedIds([])} className="p-1 hover:bg-white/10 rounded-full transition-all">
+              <X size={20} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left min-w-[1000px] table-fixed">
               <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
                 <tr>
+                  <th className="px-6 py-4 w-12">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      checked={selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
                   <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
                   {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
                   {visibleColumns.includes('cpf') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['cpf'] || '140px' }} onClick={() => handleSort('cpf')}><div className="flex items-center gap-1">CPF {sortConfig?.key === 'cpf' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('cpf', e.clientX, columnWidths['cpf'] || 140)} /></th>)}
@@ -706,7 +861,15 @@ const UserManager = () => {
                   }).join(', ') || '---';
 
                   return (
-                    <tr key={u.id} onClick={() => handleOpenModal(u, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer hover:bg-emerald-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900 ${!u.active ? 'opacity-60' : ''}`}>
+                    <tr key={u.id} onClick={() => handleOpenModal(u, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer hover:bg-emerald-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-50/50 dark:bg-emerald-900/20' : ''}`}>
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                          checked={selectedIds.includes(u.id)}
+                          onChange={() => handleSelectOne(u.id)}
+                        />
+                      </td>
                       <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border dark:border-slate-700 shrink-0"><UserIcon className="text-slate-400 dark:text-slate-500" size={18}/></div><div className="min-w-0"><div className="font-bold text-gray-900 dark:text-slate-100 truncate text-xs">{u.fullName}</div>{u.status === 'Afastado' && <span className="text-[8px] font-black uppercase text-blue-500 mr-1">Afastado</span>}{hasPending && <span className="text-[8px] font-black uppercase text-orange-500 animate-pulse">Pendente</span>}</div></div></td>
                       {visibleColumns.includes('email') && (<td className="px-6 py-4 truncate text-[11px] text-slate-500 dark:text-slate-400">{u.email}</td>)}
                       {visibleColumns.includes('cpf') && (<td className="px-6 py-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">{u.cpf}</td>)}
@@ -843,7 +1006,95 @@ const UserManager = () => {
         </div>
       )}
 
-      {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40"><Save size={32} /></div><h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" rows={3} placeholder="Descreva o que foi alterado..." value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button></div></div></div></div>)}
+      {isReasonModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40">
+                  <Save size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p>
+              </div>
+              <textarea 
+                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" 
+                rows={3} 
+                placeholder="Descreva o que foi alterado..." 
+                value={editReason} 
+                onChange={(e) => setEditReason(e.target.value)}
+              />
+              <div className="flex gap-4">
+                <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button>
+                <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBulkModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-emerald-100 dark:border-emerald-900/40">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-900/40">
+                  <Settings size={32} />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Ação em Massa</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                  Alterando {bulkActionType === 'STATUS' ? 'Status' : 'Setor'} de {selectedIds.length} colaboradores.
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {bulkActionType === 'STATUS' ? (
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Novo Status</label>
+                    <select 
+                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
+                      value={bulkValue}
+                      onChange={(e) => setBulkValue(e.target.value)}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Ativo">Ativo</option>
+                      <option value="Afastado">Afastado (INSS/Licença)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Novo Setor / Função</label>
+                    <select 
+                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
+                      value={bulkValue}
+                      onChange={(e) => setBulkValue(e.target.value)}
+                    >
+                      <option value="">Selecione...</option>
+                      {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => { setIsBulkModalOpen(false); setBulkValue(''); setBulkActionType(null); }} 
+                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleBulkUpdate} 
+                  disabled={!bulkValue}
+                  className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-50 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingTerm && (
         <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">

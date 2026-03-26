@@ -120,7 +120,11 @@ export interface DataContextType {
   // --- Gestão de Tarefas ---
   addTask: (task: Partial<Task>, adminName: string) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task> & { _actionNote?: string }, adminName: string) => Promise<void>;
+  bulkUpdateTasks: (taskIds: string[], updates: Partial<Task>, adminName: string) => Promise<void>;
   fetchTaskLogs: (taskId: string) => Promise<TaskLog[]>;
+
+  // --- Bulk Operations ---
+  bulkUpdateDevices: (deviceIds: string[], updates: Partial<Device>, adminName: string) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

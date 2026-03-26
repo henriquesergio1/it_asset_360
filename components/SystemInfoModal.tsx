@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.4.0',
+        date: '26/03/2026',
+        title: 'Sistema Global de Notificações (Toasts)',
+        changes: [
+            'UX: Implementação de notificações flutuantes em todo o sistema para feedback imediato de ações.',
+            'UX: Notificações para criação, edição, exclusão e movimentação de ativos e colaboradores.',
+            'UX: Padronização de mensagens de sucesso e erro em todos os módulos.',
+            'Versão: Atualizado para v3.4.0.'
+        ]
+    },
+    {
         version: '3.3.0',
         date: '24/03/2026',
         description: 'Refatoração e Modularização do Backend para melhor escalabilidade e manutenção.',

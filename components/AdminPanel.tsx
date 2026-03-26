@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
 import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap } from 'lucide-react';
 import DataImporter from './DataImporter';
@@ -36,6 +37,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => void }) => {
     const { getLogDetail, sectors, sims, users, models, customFields } = useData();
+    const { showToast } = useToast();
     const [log, setLog] = useState<AuditLog | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -44,11 +46,11 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
             try {
                 const detail = await getLogDetail(logId);
                 setLog(detail);
-            } catch (e) { alert("Erro ao carregar detalhes do log."); onClose(); }
+            } catch (e) { showToast("Erro ao carregar detalhes do log.", "error"); onClose(); }
             finally { setLoading(false); }
         };
         load();
-    }, [logId]);
+    }, [logId, getLogDetail, onClose, showToast]);
 
     const resolveFriendlyValue = (key: string, val: any): any => {
         if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-300 dark:text-slate-600 italic text-[10px]">vazio</span>;
@@ -169,6 +171,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
 
 const AdminPanel = () => {
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   
   const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP'>('USERS');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,22 +242,39 @@ const AdminPanel = () => {
   const handleUserSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const adminName = currentUser?.name || 'Admin';
-    if (editingId && userForm.id) updateSystemUser(userForm as SystemUser, adminName);
-    else addSystemUser({ ...userForm, id: Math.random().toString(36).substr(2, 9) } as SystemUser, adminName);
-    setIsModalOpen(false);
+    try {
+      if (editingId && userForm.id) {
+        updateSystemUser(userForm as SystemUser, adminName);
+        showToast("Usuário atualizado com sucesso!", "success");
+      } else {
+        addSystemUser({ ...userForm, id: Math.random().toString(36).substr(2, 9) } as SystemUser, adminName);
+        showToast("Usuário criado com sucesso!", "success");
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      showToast("Erro ao salvar usuário.", "error");
+    }
   };
 
   const handleSettingsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(settingsForm, currentUser?.name || 'Admin');
-    alert("Configurações atualizadas!");
+    try {
+      updateSettings(settingsForm, currentUser?.name || 'Admin');
+      showToast("Configurações atualizadas!", "success");
+    } catch (error) {
+      showToast("Erro ao atualizar configurações.", "error");
+    }
   };
 
   const handleTermTemplateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const updatedSettings = { ...settings, termTemplate: JSON.stringify(termConfig) };
-    updateSettings(updatedSettings, currentUser?.name || 'Admin');
-    alert("Templates de Termos salvos!");
+    try {
+      const updatedSettings = { ...settings, termTemplate: JSON.stringify(termConfig) };
+      updateSettings(updatedSettings, currentUser?.name || 'Admin');
+      showToast("Templates de Termos salvos!", "success");
+    } catch (error) {
+      showToast("Erro ao salvar templates.", "error");
+    }
   };
 
   const [logPage, setLogPage] = useState(1);

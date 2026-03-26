@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { SimCard, DeviceStatus } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save, ArrowUp, ArrowDown } from 'lucide-react';
 import { normalizeString } from '../utils/stringUtils';
@@ -18,6 +19,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 const SimManager = () => {
   const { sims, addSim, updateSim, deleteSim, users } = useData();
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,8 +92,13 @@ const SimManager = () => {
         setEditReason('');
         setIsReasonModalOpen(true);
     } else {
-        addSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim(), id: Math.random().toString(36).substr(2, 9), currentUserId: null } as SimCard, adminName);
-        setIsModalOpen(false);
+        try {
+            addSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim(), id: Math.random().toString(36).substr(2, 9), currentUserId: null } as SimCard, adminName);
+            setIsModalOpen(false);
+            showToast('Chip cadastrado com sucesso!', 'success');
+        } catch (error) {
+            showToast('Erro ao cadastrar chip.', 'error');
+        }
     }
   };
 
@@ -100,9 +107,14 @@ const SimManager = () => {
         alert('Por favor, informe o motivo da alteração.');
         return;
     }
-    updateSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim() } as SimCard, `${adminName} (Motivo: ${editReason})`);
-    setIsReasonModalOpen(false);
-    setIsModalOpen(false);
+    try {
+        updateSim({ ...formData, phoneNumber: (formData.phoneNumber || '').trim(), iccid: (formData.iccid || '').trim() } as SimCard, `${adminName} (Motivo: ${editReason})`);
+        setIsReasonModalOpen(false);
+        setIsModalOpen(false);
+        showToast('Dados do chip atualizados!', 'success');
+    } catch (error) {
+        showToast('Erro ao atualizar chip.', 'error');
+    }
   };
 
   const handleDeleteClick = (id: string) => {
@@ -113,10 +125,15 @@ const SimManager = () => {
 
   const handleConfirmDelete = () => {
       if (deleteTargetId && deleteReason.trim()) {
-          deleteSim(deleteTargetId, adminName, deleteReason);
-          setIsDeleteModalOpen(false);
-          setDeleteTargetId(null);
-          setDeleteReason('');
+          try {
+              deleteSim(deleteTargetId, adminName, deleteReason);
+              setIsDeleteModalOpen(false);
+              setDeleteTargetId(null);
+              setDeleteReason('');
+              showToast('Chip removido do inventário!', 'success');
+          } catch (error) {
+              showToast('Erro ao remover chip.', 'error');
+          }
       } else {
           alert('Por favor, informe o motivo da exclusão.');
       }

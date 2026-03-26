@@ -5,8 +5,13 @@ import {
     AlertCircle, CheckCircle2, XCircle, MoreVertical,
     Calendar, User, Tag, ChevronDown, ArrowUpDown,
     Repeat, Paperclip, Trash2, ExternalLink, FileText,
-    Smartphone, Bell, Wrench, ShieldCheck, CheckSquare
+    Smartphone, Bell, Wrench, ShieldCheck, CheckSquare,
+    Download, FileSpreadsheet, FileJson, Check
 } from 'lucide-react';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
@@ -33,6 +38,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
     const [isBatchMaintenance, setIsBatchMaintenance] = useState(false);
     const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
     const [assetTypeFilter, setAssetTypeFilter] = useState<string>('All');
+    
+    // Bulk Actions & Selection
+    const [selectedTasksIds, setSelectedTasksIds] = useState<string[]>([]);
+    const [isBulkActionOpen, setIsBulkActionOpen] = useState(false);
+    const [bulkActionType, setBulkActionType] = useState<'status' | 'assignee' | null>(null);
+    const [bulkValue, setBulkValue] = useState('');
+
     const [newTask, setNewTask] = useState<Partial<Task>>({
         title: '',
         description: '',
@@ -113,6 +125,108 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
         }));
     };
 
+    // Export Functions
+    const exportToCSV = () => {
+        const headers = ['ID', 'Título', 'Tipo', 'Status', 'Responsável', 'Prazo', 'Descrição'];
+        const rows = filteredTasks.map(t => [
+            t.id,
+            t.title,
+            t.type,
+            t.status,
+            systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
+            t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
+            t.description
+        ]);
+
+        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, `tarefas_it_${new Date().toISOString().split('T')[0]}.csv`);
+        showToast('Exportação CSV iniciada');
+    };
+
+    const exportToExcel = () => {
+        const data = filteredTasks.map(t => ({
+            'ID': t.id,
+            'Título': t.title,
+            'Tipo': t.type,
+            'Status': t.status,
+            'Responsável': systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
+            'Prazo': t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
+            'Descrição': t.description
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Tarefas");
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `tarefas_it_${new Date().toISOString().split('T')[0]}.xlsx`);
+        showToast('Exportação Excel iniciada');
+    };
+
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+        const tableColumn = ["Título", "Tipo", "Status", "Responsável", "Prazo"];
+        const tableRows = filteredTasks.map(t => [
+            t.title,
+            t.type,
+            t.status,
+            systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
+            t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A'
+        ]);
+
+        (doc as any).autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            startY: 20,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillStyle: [63, 81, 181] }
+        });
+
+        doc.text("Relatório de Gestão de Tarefas IT", 14, 15);
+        doc.save(`tarefas_it_${new Date().toISOString().split('T')[0]}.pdf`);
+        showToast('Exportação PDF iniciada');
+    };
+
+    // Bulk Action Handlers
+    const handleBulkUpdate = async () => {
+        if (!bulkActionType || !bulkValue || selectedTasksIds.length === 0) return;
+
+        try {
+            const updates = bulkActionType === 'status' 
+                ? { status: bulkValue as TaskStatus } 
+                : { assignedTo: bulkValue };
+
+            const promises = selectedTasksIds.map(id => 
+                onUpdateTask(id, { ...updates, _actionNote: `Atualização em massa: ${bulkActionType} alterado para ${bulkValue}` })
+            );
+
+            await Promise.all(promises);
+            showToast(`${selectedTasksIds.length} tarefas atualizadas com sucesso!`);
+            setSelectedTasksIds([]);
+            setIsBulkActionOpen(false);
+            setBulkValue('');
+        } catch (err) {
+            console.error('Erro na atualização em massa:', err);
+            showToast('Erro ao processar atualização em massa', 'error');
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedTasksIds.length === filteredTasks.length) {
+            setSelectedTasksIds([]);
+        } else {
+            setSelectedTasksIds(filteredTasks.map(t => t.id));
+        }
+    };
+
+    const toggleSelectTask = (id: string) => {
+        setSelectedTasksIds(prev => 
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
     const handleCreateTask = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -178,12 +292,37 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Gestão de Tarefas</h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Acompanhe e gerencie as rotinas do setor IT.</p>
                 </div>
-                <button 
-                    onClick={() => setIsAdding(true)}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-                >
-                    <Plus size={20} /> Nova Tarefa
-                </button>
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-white dark:bg-slate-900 p-1 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm">
+                        <button 
+                            onClick={exportToCSV}
+                            className="p-2.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            title="Exportar CSV"
+                        >
+                            <FileJson size={20} />
+                        </button>
+                        <button 
+                            onClick={exportToExcel}
+                            className="p-2.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            title="Exportar Excel"
+                        >
+                            <FileSpreadsheet size={20} />
+                        </button>
+                        <button 
+                            onClick={exportToPDF}
+                            className="p-2.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                            title="Exportar PDF"
+                        >
+                            <FileText size={20} />
+                        </button>
+                    </div>
+                    <button 
+                        onClick={() => setIsAdding(true)}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                    >
+                        <Plus size={20} /> Nova Tarefa
+                    </button>
+                </div>
             </div>
 
             {/* Filtros e Busca */}
@@ -238,6 +377,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+                                <th className="px-6 py-4 w-10">
+                                    <input 
+                                        type="checkbox"
+                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        checked={filteredTasks.length > 0 && selectedTasksIds.length === filteredTasks.length}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tarefa</th>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
                                 <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
@@ -251,9 +398,17 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                 filteredTasks.map((task) => (
                                     <tr 
                                         key={task.id} 
-                                        className="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group"
+                                        className={`hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group ${selectedTasksIds.includes(task.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
                                         onClick={() => setSelectedTaskId(task.id)}
                                     >
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                checked={selectedTasksIds.includes(task.id)}
+                                                onChange={() => toggleSelectTask(task.id)}
+                                            />
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -797,6 +952,130 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     models={models}
                 />
             )}
+
+            {/* Quick Action Bar */}
+            <AnimatePresence>
+                {selectedTasksIds.length > 0 && (
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-6"
+                    >
+                        <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
+                            <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                {selectedTasksIds.length}
+                            </div>
+                            <span className="text-sm font-bold uppercase tracking-widest whitespace-nowrap">Selecionadas</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => { setBulkActionType('status'); setIsBulkActionOpen(true); }}
+                                className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
+                            >
+                                <CheckCircle2 size={16} className="text-emerald-400" /> Alterar Status
+                            </button>
+                            <button 
+                                onClick={() => { setBulkActionType('assignee'); setIsBulkActionOpen(true); }}
+                                className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
+                            >
+                                <User size={16} className="text-blue-400" /> Alterar Responsável
+                            </button>
+                        </div>
+
+                        <button 
+                            onClick={() => setSelectedTasksIds([])}
+                            className="ml-4 p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+                        >
+                            <XCircle size={20} />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Bulk Action Modal */}
+            <AnimatePresence>
+                {isBulkActionOpen && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                                    {bulkActionType === 'status' ? 'Alterar Status em Lote' : 'Alterar Responsável em Lote'}
+                                </h2>
+                                <button onClick={() => setIsBulkActionOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                                    <XCircle size={24} className="text-slate-400" />
+                                </button>
+                            </div>
+                            
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Você está alterando {selectedTasksIds.length} tarefas simultaneamente.
+                                </p>
+
+                                {bulkActionType === 'status' ? (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Novo Status</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED, TaskStatus.CANCELED].map(status => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => setBulkValue(status)}
+                                                    className={`p-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
+                                                        bulkValue === status 
+                                                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200 dark:shadow-none' 
+                                                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-indigo-300'
+                                                    }`}
+                                                >
+                                                    {status === TaskStatus.PENDING ? 'Pendente' :
+                                                     status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
+                                                     status === TaskStatus.COMPLETED ? 'Concluída' : 'Cancelada'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Novo Responsável</label>
+                                        <select 
+                                            value={bulkValue}
+                                            onChange={(e) => setBulkValue(e.target.value)}
+                                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white font-bold"
+                                        >
+                                            <option value="">Selecione o responsável...</option>
+                                            <option value="Geral">Geral (Todos)</option>
+                                            {systemUsers.map(u => (
+                                                <option key={u.id} value={u.id}>{u.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex gap-3">
+                                <button 
+                                    onClick={() => setIsBulkActionOpen(false)}
+                                    className="flex-1 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleBulkUpdate}
+                                    disabled={!bulkValue}
+                                    className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none disabled:opacity-50"
+                                >
+                                    Confirmar Alteração
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
