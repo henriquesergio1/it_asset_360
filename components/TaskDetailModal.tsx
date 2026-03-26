@@ -678,7 +678,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                                 type="checkbox" 
                                                 checked={editHasDueDate}
                                                 onChange={(e) => setEditHasDueDate(e.target.checked)}
-                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors"
                                             />
                                             <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Definir Prazo</span>
                                         </label>
@@ -749,7 +749,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                             type="checkbox" 
                                             checked={editIsRecurring}
                                             onChange={(e) => setEditIsRecurring(e.target.checked)}
-                                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors"
                                         />
                                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Tarefa Recorrente</span>
                                     </label>
