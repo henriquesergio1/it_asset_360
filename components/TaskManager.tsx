@@ -15,6 +15,7 @@ import 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 interface TaskManagerProps {
     tasks: Task[];
@@ -126,27 +127,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
     };
 
     // Export Functions
-    const exportToCSV = () => {
-        const headers = ['ID', 'Título', 'Tipo', 'Status', 'Responsável', 'Prazo', 'Descrição'];
-        const rows = filteredTasks.map(t => [
-            t.id,
-            t.title,
-            t.type,
-            t.status,
-            systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
-            t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
-            t.description
-        ]);
-
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        saveAs(blob, `tarefas_it_${new Date().toISOString().split('T')[0]}.csv`);
-        showToast('Exportação CSV iniciada');
-    };
-
-    const exportToExcel = () => {
-        const data = filteredTasks.map(t => ({
-            'ID': t.id,
+    const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+        const dataToExport = filteredTasks.map(t => ({
             'Título': t.title,
             'Tipo': t.type,
             'Status': t.status,
@@ -155,38 +137,20 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             'Descrição': t.description
         }));
 
-        const worksheet = XLSX.utils.json_to_sheet(data);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Tarefas");
-        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        saveAs(blob, `tarefas_it_${new Date().toISOString().split('T')[0]}.xlsx`);
-        showToast('Exportação Excel iniciada');
-    };
+        const filename = `tarefas_it_${new Date().toISOString().split('T')[0]}`;
 
-    const exportToPDF = () => {
-        const doc = new jsPDF();
-        const tableColumn = ["Título", "Tipo", "Status", "Responsável", "Prazo"];
-        const tableRows = filteredTasks.map(t => [
-            t.title,
-            t.type,
-            t.status,
-            systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
-            t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A'
-        ]);
-
-        (doc as any).autoTable({
-            head: [tableColumn],
-            body: tableRows,
-            startY: 20,
-            theme: 'grid',
-            styles: { fontSize: 8 },
-            headStyles: { fillStyle: [63, 81, 181] }
-        });
-
-        doc.text("Relatório de Gestão de Tarefas IT", 14, 15);
-        doc.save(`tarefas_it_${new Date().toISOString().split('T')[0]}.pdf`);
-        showToast('Exportação PDF iniciada');
+        if (format === 'csv') {
+            exportToCSV(dataToExport, filename);
+            showToast('Exportação CSV iniciada');
+        } else if (format === 'excel') {
+            exportToExcel(dataToExport, filename);
+            showToast('Exportação Excel iniciada');
+        } else if (format === 'pdf') {
+            const headers = ['Título', 'Tipo', 'Status', 'Responsável', 'Prazo'];
+            const rows = dataToExport.map(t => [t.Título, t.Tipo, t.Status, t.Responsável, t.Prazo]);
+            exportToPDF(headers, rows, filename, 'Relatório de Gestão de Tarefas IT');
+            showToast('Exportação PDF iniciada');
+        }
     };
 
     // Bulk Action Handlers
@@ -293,27 +257,27 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <p className="text-slate-500 dark:text-slate-400 mt-1">Acompanhe e gerencie as rotinas do setor IT.</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex bg-white dark:bg-slate-900 p-1 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
                         <button 
-                            onClick={exportToCSV}
-                            className="p-2.5 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            onClick={() => handleExport('csv')}
+                            className="p-2.5 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors"
                             title="Exportar CSV"
                         >
-                            <FileJson size={20} />
+                            <FileText size={18} />
                         </button>
                         <button 
-                            onClick={exportToExcel}
-                            className="p-2.5 text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                            onClick={() => handleExport('excel')}
+                            className="p-2.5 text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors"
                             title="Exportar Excel"
                         >
-                            <FileSpreadsheet size={20} />
+                            <FileSpreadsheet size={18} />
                         </button>
                         <button 
-                            onClick={exportToPDF}
-                            className="p-2.5 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                            onClick={() => handleExport('pdf')}
+                            className="p-2.5 text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                             title="Exportar PDF"
                         >
-                            <FileText size={20} />
+                            <Download size={18} />
                         </button>
                     </div>
                     <button 

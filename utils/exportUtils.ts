@@ -1,13 +1,7 @@
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import autoTable from 'jspdf-autotable';
 
 export const exportToCSV = (data: any[], fileName: string) => {
   const worksheet = XLSX.utils.json_to_sheet(data);
@@ -33,13 +27,12 @@ export const exportToPDF = (headers: string[], data: any[][], fileName: string, 
   doc.setFontSize(11);
   doc.setTextColor(100);
   
-  // @ts-ignore
-  doc.autoTable({
+  autoTable(doc, {
     head: [headers],
     body: data,
     startY: 30,
     styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillStyle: 'bold', fillColor: [63, 81, 181] },
+    headStyles: { fillColor: [63, 81, 181] },
     alternateRowStyles: { fillColor: [245, 245, 245] },
   });
   

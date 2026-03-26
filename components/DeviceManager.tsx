@@ -465,7 +465,7 @@ const DeviceManager = () => {
     }
   };
 
-  const handleExport = (type: 'CSV' | 'EXCEL' | 'PDF') => {
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredDevices.map(d => {
         const { model, brand } = getModelDetails(d.modelId);
         const user = users.find(u => u.id === d.currentUserId);
@@ -486,9 +486,9 @@ const DeviceManager = () => {
 
     const fileName = `inventario_ativos_${new Date().toISOString().split('T')[0]}`;
 
-    if (type === 'CSV') exportToCSV(exportData, fileName);
-    if (type === 'EXCEL') exportToExcel(exportData, fileName);
-    if (type === 'PDF') {
+    if (format === 'csv') exportToCSV(exportData, fileName);
+    if (format === 'excel') exportToExcel(exportData, fileName);
+    if (format === 'pdf') {
         const headers = ['Patrimônio', 'Modelo', 'Status', 'Responsável', 'Setor'];
         const rows = exportData.map(d => [d.Patrimônio, d.Modelo, d.Status, d.Responsável, d.Setor]);
         exportToPDF(headers, rows, fileName, 'Relatório de Inventário de Ativos');
@@ -818,10 +818,28 @@ const DeviceManager = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div><h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Inventário de Dispositivos</h1><p className="text-gray-500 dark:text-slate-400 text-sm">Gestão centralizada de ativos.</p></div>
         <div className="flex gap-2">
-            <div className="flex bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-lg overflow-hidden shadow-sm">
-                <button onClick={() => handleExport('EXCEL')} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-r border-gray-200 dark:border-slate-800 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
-                <button onClick={() => handleExport('CSV')} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-r border-gray-200 dark:border-slate-800 transition-all" title="Exportar CSV"><FileJson size={18}/></button>
-                <button onClick={() => handleExport('PDF')} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" title="Exportar PDF"><FileText size={18}/></button>
+            <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <button 
+                  onClick={() => handleExport('csv')} 
+                  className="p-2.5 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
+                  title="Exportar CSV"
+                >
+                  <FileText size={18}/>
+                </button>
+                <button 
+                  onClick={() => handleExport('excel')} 
+                  className="p-2.5 text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
+                  title="Exportar Excel"
+                >
+                  <FileSpreadsheet size={18}/>
+                </button>
+                <button 
+                  onClick={() => handleExport('pdf')} 
+                  className="p-2.5 text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" 
+                  title="Exportar PDF"
+                >
+                  <Download size={18}/>
+                </button>
             </div>
             <div className="relative" ref={columnRef}>
                 <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>

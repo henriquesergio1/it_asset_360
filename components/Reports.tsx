@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
-import * as XLSX from 'xlsx';
 import { normalizeString } from '../utils/stringUtils';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 const Reports = () => {
   const { users, sectors, sims, devices, models, assetTypes } = useData();
@@ -298,7 +298,7 @@ const Reports = () => {
     window.print();
   };
 
-  const handleExportXLSX = () => {
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     const headers = ['Nome'];
     if (visibleColumns.includes('sector')) headers.push('Cargo / Setor');
     if (visibleColumns.includes('sectorCode')) headers.push('Cód. Setor');
@@ -316,15 +316,17 @@ const Reports = () => {
       return row;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Relatório");
-    
-    // Auto-size columns
-    const colWidths = headers.map(h => ({ wch: Math.max(h.length, 20) }));
-    worksheet['!cols'] = colWidths;
+    const fileName = `relatorio_colaboradores_${new Date().toISOString().split('T')[0]}`;
 
-    XLSX.writeFile(workbook, `relatorio_colaboradores_${new Date().toISOString().split('T')[0]}.xlsx`);
+    if (format === 'csv') {
+      exportToCSV(data, fileName);
+    } else if (format === 'excel') {
+      exportToExcel(data, fileName);
+    } else if (format === 'pdf') {
+      const pdfHeaders = headers;
+      const pdfRows = data.map(item => headers.map(h => item[h]));
+      exportToPDF(pdfHeaders, pdfRows, fileName, 'Relatório de Colaboradores');
+    }
   };
 
   return (
@@ -342,7 +344,7 @@ const Reports = () => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Relatório de Colaboradores</h2>
@@ -361,7 +363,7 @@ const Reports = () => {
                           </div>
                           <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
                               {assetTypes.map(type => (
-                                  <button key={type.id} onClick={() => toggleAssetType(type.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedAssetTypes.includes(type.id) ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                  <button key={type.id} onClick={() => toggleAssetType(type.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedAssetTypes.includes(type.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                                       {type.name}
                                       {selectedAssetTypes.includes(type.id) && <Check size={14}/>}
                                   </button>
@@ -382,7 +384,7 @@ const Reports = () => {
                           </div>
                           <div className="p-2 space-y-1">
                               {COLUMN_OPTIONS.map(col => (
-                                  <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                                  <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                                       {col.label}
                                       {visibleColumns.includes(col.id) && <Check size={14}/>}
                                   </button>
@@ -391,19 +393,35 @@ const Reports = () => {
                       </div>
                   )}
               </div>
+              <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                  <button 
+                    onClick={() => handleExport('csv')} 
+                    className="p-2.5 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
+                    title="Exportar CSV"
+                  >
+                    <FileText size={18}/>
+                  </button>
+                  <button 
+                    onClick={() => handleExport('excel')} 
+                    className="p-2.5 text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
+                    title="Exportar Excel"
+                  >
+                    <FileSpreadsheet size={18}/>
+                  </button>
+                  <button 
+                    onClick={() => handleExport('pdf')} 
+                    className="p-2.5 text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" 
+                    title="Exportar PDF"
+                  >
+                    <Download size={18}/>
+                  </button>
+              </div>
               <button 
                 onClick={handlePrint}
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               >
                 <Printer size={16} />
                 <span className="hidden md:inline">Imprimir</span>
-              </button>
-              <button 
-                onClick={handleExportXLSX}
-                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm font-bold hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-colors"
-              >
-                <Download size={16} />
-                <span className="hidden md:inline">Exportar Excel</span>
               </button>
             </div>
           </div>
@@ -444,7 +462,7 @@ const Reports = () => {
                       <button 
                         key={s.id} 
                         onClick={() => toggleSector(s.id)} 
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedSectors.includes(s.id) ? 'bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedSectors.includes(s.id) ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       >
                         <span className="truncate text-left">{s.name}</span>
                         {selectedSectors.includes(s.id) && <Check size={14} className="flex-shrink-0 ml-2"/>}
@@ -455,7 +473,7 @@ const Reports = () => {
               )}
             </div>
 
-            <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input 
@@ -487,7 +505,7 @@ const Reports = () => {
 
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 dark:bg-slate-800 text-[10px] uppercase font-black text-slate-500 tracking-widest border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 tracking-widest border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => requestSort('name')}>
                   <div className="flex items-center gap-2">
@@ -529,7 +547,7 @@ const Reports = () => {
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
                           {item.fullName.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-bold text-slate-800 dark:text-slate-100">{item.fullName}</span>
@@ -591,7 +609,7 @@ const Reports = () => {
           </table>
         </div>
         
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex justify-between items-center text-xs font-bold text-slate-500">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 flex justify-between items-center text-xs font-bold text-slate-500">
           <span>Total de registros: {reportData.length}</span>
           <span className="print:hidden">Relatório gerado em {new Date().toLocaleDateString('pt-BR')}</span>
         </div>
