@@ -252,7 +252,7 @@ const SimManager = () => {
               {filteredSims.map((sim) => {
                 const assignedUser = users.find(u => u.id === sim.currentUserId);
                 return (
-                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer group">
+                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/50 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20 transition-colors cursor-pointer group">
                     <td className="px-6 py-4 font-bold text-gray-900 dark:text-slate-100 truncate">{sim.phoneNumber}</td>
                     <td className="px-6 py-4 truncate">
                       <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider border dark:border-slate-700">{sim.operator}</span>
@@ -314,11 +314,11 @@ const SimManager = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Número da Linha</label>
-                              <input disabled={isViewOnly} required type="text" placeholder="(00) 00000-0000" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold transition-colors" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
+                              <input disabled={isViewOnly} required type="text" placeholder="(00) 00000-0000" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold transition-colors" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
                           </div>
                           <div>
                               <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Operadora</label>
-                              <select disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 dark:text-slate-100 font-bold transition-colors" value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
+                              <select disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold transition-colors" value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
                                   <option value="Vivo">Vivo</option>
                                   <option value="Claro">Claro</option>
                                   <option value="Tim">Tim</option>

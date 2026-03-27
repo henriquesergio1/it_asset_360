@@ -48,7 +48,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                     <div 
                         key={task.id} 
                         onClick={() => onTaskClick(task)}
-                        className="bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer"
+                        className="bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between group hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shadow-sm dark:shadow-none"
                     >
                         <div className="flex flex-1 items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${

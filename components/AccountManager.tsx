@@ -439,7 +439,7 @@ const AccountManager = () => {
                         <tbody className="divide-y dark:divide-slate-800">
                             {paginatedAccounts.map(acc => {
                                 return (
-                                    <tr key={acc.id} onClick={() => handleOpenModal(acc)} className="hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-colors cursor-pointer bg-white dark:bg-slate-900">
+                                    <tr key={acc.id} onClick={() => handleOpenModal(acc)} className="hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-colors cursor-pointer bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/50">
                                         {visibleColumns.includes('name') && (
                                             <td className="px-6 py-4 truncate">
                                                 <div className="font-bold text-gray-900 dark:text-slate-100">{acc.name}</div>
@@ -504,7 +504,7 @@ const AccountManager = () => {
                                         )}
                                         {visibleColumns.includes('status') && (
                                             <td className="px-6 py-4 text-center truncate">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${acc.status === 'Ativo' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${acc.status === 'Ativo' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/40' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/40'}`}>
                                                     {acc.status}
                                                 </span>
                                             </td>
@@ -606,7 +606,7 @@ const AccountManager = () => {
                                     </div>
                                 </div>
                                 <div className="md:col-span-2">
-                                    <h4 className="text-[10px] font-black uppercase text-indigo-500 mb-3 border-b dark:border-slate-800 pb-1 flex items-center gap-2">
+                                    <h4 className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 mb-3 border-b dark:border-slate-800 pb-1 flex items-center gap-2">
                                         <Info size={14}/> Vínculos de Responsabilidade
                                     </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

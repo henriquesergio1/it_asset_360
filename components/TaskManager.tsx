@@ -290,14 +290,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             </div>
 
             {/* Filtros e Busca */}
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 mb-6 transition-all">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 transition-all">
                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
                         <input
                             type="text"
                             placeholder="Buscar tarefas por título ou descrição..."
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-slate-100"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -362,7 +362,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                                 filteredTasks.map((task) => (
                                     <tr 
                                         key={task.id} 
-                                        className={`hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group ${selectedTasksIds.includes(task.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
+                                        className={`hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer group border-b border-slate-100 dark:border-slate-800/50 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'bg-white dark:bg-slate-900'}`}
                                         onClick={() => setSelectedTaskId(task.id)}
                                     >
                                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>

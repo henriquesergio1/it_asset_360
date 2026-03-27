@@ -144,7 +144,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
                                 </thead>
                                 <tbody className="divide-y dark:divide-slate-800">
                                     {diffs.map((d, i) => (
-                                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
+                                        <tr key={i} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
                                             <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{d.field}</td>
                                             <td className="px-4 py-3 text-red-600 dark:text-red-400 bg-red-50/30 dark:bg-red-900/10 line-through decoration-red-300 dark:decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
                                             <td className="px-4 py-3 text-emerald-700 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
@@ -334,7 +334,7 @@ const AdminPanel = () => {
                         </thead>
                         <tbody className="divide-y dark:divide-slate-800">
                             {systemUsers.map(u => (
-                                <tr key={u.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900">
+                                <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900 transition-colors">
                                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">{u.name}</td>
                                     <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-medium">{u.email}</td>
                                     <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${u.role === SystemRole.ADMIN ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-indigo-100' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200'}`}>{u.role}</span></td>
@@ -532,7 +532,7 @@ const AdminPanel = () => {
                             ) : filteredLogs.length === 0 ? (
                                 <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-500">Nenhum log encontrado.</td></tr>
                             ) : filteredLogs.map((log: AuditLog) => (
-                                <tr key={log.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/20 transition-colors bg-white dark:bg-slate-900">
+                                <tr key={log.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-blue-50/20 dark:hover:bg-blue-900/20 transition-colors bg-white dark:bg-slate-900">
                                     <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-100">{log.adminUser}</td>
                                     <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">{log.action}</span></td>

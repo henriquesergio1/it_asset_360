@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+        version: '3.5.6',
+        date: '27/03/2026',
+        title: 'Revisão Global do Tema Escuro',
+        changes: [
+            'UI: Revisão completa de todos os componentes para garantir suporte total ao modo escuro.',
+            'UI: Ajuste de cores de fundo, bordas e textos em modais, tabelas e formulários.',
+            'Versão: Atualizado para v3.5.6.'
+        ]
+    },
+    {
         version: '3.5.5',
         date: '26/03/2026',
         title: 'Polimento Final do Tema Escuro',

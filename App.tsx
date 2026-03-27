@@ -27,7 +27,7 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: a
   return (
     <NavLink 
       to={to} 
-      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-900 text-white border-l-4 border-blue-400' : 'text-gray-400 hover:bg-slate-800 hover:text-white'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
+      className={({ isActive }) => `flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-900 text-white border-l-4 border-blue-400' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-800 hover:text-white'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
       title={collapsed ? label : undefined}
     >
       <Icon size={20} className="shrink-0" />
@@ -74,20 +74,20 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-slate-950 transition-colors duration-300 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 dark:bg-slate-950 transition-colors duration-300 overflow-hidden text-slate-900 dark:text-slate-100">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-slate-900 shadow-xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-slate-900 dark:bg-black shadow-xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r dark:border-slate-800`}>
         
         {/* Toggle Button (Desktop Only) */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
-          className="hidden lg:flex absolute -right-3 top-24 bg-blue-600 text-white rounded-full p-1 border-2 border-slate-900 hover:bg-blue-700 transition-all z-[60] shadow-lg active:scale-90"
+          className="hidden lg:flex absolute -right-3 top-24 bg-blue-600 text-white rounded-full p-1 border-2 border-slate-900 dark:border-black hover:bg-blue-700 transition-all z-[60] shadow-lg active:scale-90"
         >
           {isSidebarCollapsed ? <ChevronRight size={14}/> : <ChevronLeft size={14}/>}
         </button>
 
         {/* Logo Section */}
-        <div className={`border-b border-slate-800 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
+        <div className={`border-b border-slate-800 dark:border-slate-900 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
           <div className="flex flex-col items-center text-center space-y-4">
             <div className={`bg-blue-600 shadow-xl shadow-blue-900/40 transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'}`}>
               {settings.logoUrl ? (
@@ -105,12 +105,12 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               </div>
             )}
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-gray-400 hover:text-white absolute top-4 right-4">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-slate-400 dark:text-slate-500 hover:text-white absolute top-4 right-4">
             <X size={24} />
           </button>
         </div>
 
-        {/* Navigation - Mandatory Order (v2.12.41) */}
+        {/* Navigation - Mandatory Order (v3.5.7) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
           <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />

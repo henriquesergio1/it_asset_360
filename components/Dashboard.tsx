@@ -167,7 +167,14 @@ const Dashboard = () => {
                   ))}
                 </Pie>
                 <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                    contentStyle={{ 
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                        borderRadius: '12px', 
+                        border: '1px solid rgba(51, 65, 85, 0.5)', 
+                        boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)',
+                        color: '#f1f5f9'
+                    }}
+                    itemStyle={{ color: '#f1f5f9', fontSize: '12px', fontWeight: 'bold' }}
                 />
                 <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
               </PieChart>
@@ -560,7 +567,7 @@ const Dashboard = () => {
                                               const model = models.find(m => m.id === item.device.modelId);
                                               const brand = brands.find(b => b.id === model?.brandId);
                                               return (
-                                                  <tr key={item.device.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                                  <tr key={item.device.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                                                       <td className="px-6 py-4">
                                                           <Link to={`/devices?deviceId=${item.device.id}`} className="flex flex-col">
                                                               <span className="font-bold text-gray-800 dark:text-slate-100 group-hover:text-blue-600 transition-colors">{brand?.name} {model?.name}</span>

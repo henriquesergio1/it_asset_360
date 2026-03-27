@@ -422,14 +422,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col transition-colors"
+                className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800 transition-colors"
             >
                 {/* Header */}
-                <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
                     <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-2xl ${
                             task.status === TaskStatus.COMPLETED ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
@@ -444,7 +444,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                                 <input 
                                     value={editTitle}
                                     onChange={(e) => setEditTitle(e.target.value)}
-                                    className="text-xl font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border-b-2 border-indigo-500 outline-none w-full"
+                                    className="text-xl font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 border-b-2 border-indigo-500 outline-none w-full px-2 rounded"
                                 />
                             ) : (
                                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{task.title}</h2>

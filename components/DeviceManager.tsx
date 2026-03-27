@@ -921,7 +921,7 @@ const DeviceManager = () => {
                   const linkedSim = sims.find(s => s.id === d.linkedSimId);
                   const sector = sectors.find(s => s.id === d.sectorId);
                   return (
-                    <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b dark:border-slate-800 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'} ${selectedIds.includes(d.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
+                    <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b border-slate-100 dark:border-slate-800/50 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-50 dark:hover:bg-slate-800/40' : 'hover:bg-blue-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900'} ${selectedIds.includes(d.id) ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}>
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                           <input 
                             type="checkbox" 
