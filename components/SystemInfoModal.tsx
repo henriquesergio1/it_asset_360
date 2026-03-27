@@ -4,766 +4,745 @@ import packageJson from '../package.json';
 import { X, GitCommit, Calendar, Tag, User } from 'lucide-react';
 
 interface SystemInfoModalProps {
- onClose: () => void;
+  onClose: () => void;
 }
 
 const versions = [
- {
- version: '3.5.7',
- date: '27/03/2026',
- title: 'Revisão Global do Tema Escuro - Final',
- changes: [
- 'UI: Revisão completa e aprimoramento do Modo Escuro (Dark Mode) em toda a aplicação.',
- 'UI: Correção de cores, contrastes e bordas em modais, tabelas, formulários e badges.',
- 'UI: Melhorias visuais nos componentes DeviceManager, Operations, UserManager, AccountManager e ModelSettings.',
- 'Versão: Atualizado para v3.5.7.'
- ]
- },
- {
- version: '3.5.6',
- date: '27/03/2026',
- title: 'Revisão Global do Tema Escuro',
- changes: [
- 'UI: Revisão completa de todos os componentes para garantir suporte total ao modo escuro.',
- 'UI: Ajuste de cores de fundo, bordas e textos em modais, tabelas e formulários.',
- 'Versão: Atualizado para v3.5.6.'
- ]
- },
- {
- version: '3.5.5',
- date: '26/03/2026',
- title: 'Polimento Final do Tema Escuro',
- changes: [
- 'UX: Correção de cores de texto em campos de input e selects no modo escuro.',
- 'UX: Ajustes finais de contraste em botões de ação e paginação.',
- 'Versão: Atualizado para v3.5.5.'
- ]
- },
- {
- version: '3.5.4',
- date: '26/03/2026',
- title: 'Polimento Final do Tema Escuro',
- changes: [
- 'UX: Revisão final e correção de cores em botões de ação e modais para garantir contraste e consistência no tema escuro.',
- 'UX: Ajuste de contrastes em estados de hover em todos os componentes.',
- 'Versão: Atualizado para v3.5.4.'
- ]
- },
- {
- version: '3.5.3',
- date: '26/03/2026',
- title: 'Correções do Tema Escuro',
- changes: [
- 'UX: Revisão e correção de cores de ícones (como a lixeira) e elementos em diversos componentes para garantir contraste e consistência no tema escuro.',
- 'UX: Ajuste visual na seção de tarefas pendentes do dashboard para alinhar com o padrão das demais seções.',
- 'Versão: Atualizado para v3.5.3.'
- ]
- },
- {
- version: '3.4.0',
- date: '26/03/2026',
- title: 'Sistema Global de Notificações (Toasts)',
- changes: [
- 'UX: Implementação de notificações flutuantes em todo o sistema para feedback imediato de ações.',
- 'UX: Notificações para criação, edição, exclusão e movimentação de ativos e colaboradores.',
- 'UX: Padronização de mensagens de sucesso e erro em todos os módulos.',
- 'Versão: Atualizado para v3.4.0.'
- ]
- },
- {
- version: '3.3.0',
- date: '24/03/2026',
- description: 'Refatoração e Modularização do Backend para melhor escalabilidade e manutenção.',
- changes: [
- 'Arquitetura: Modularização das rotas do servidor em arquivos separados (crud, devices, tasks, logs, terms, etc.).',
- 'Arquitetura: Centralização da lógica de banco de dados e funções utilitárias em server/utils/db.js.',
- 'Manutenibilidade: Código do servidor mais limpo, organizado e fácil de expandir.',
- 'Performance: Redução do tamanho do arquivo principal do servidor (server.js).'
- ]
- },
- {
- version: '3.2.0',
- date: '24/03/2026',
- description: 'Implementação de paginação server-side para logs de auditoria e histórico de ativos/usuários.',
- changes: [
- 'Performance: Paginação real no backend para a aba de Auditoria, reduzindo o tempo de carregamento inicial.',
- 'Performance: Otimização da busca de histórico de ativos e usuários usando rotas específicas.',
- 'UX: Adição de indicadores de carregamento e controles de paginação na tabela de logs.',
- 'Correção: O histórico de ativos e usuários agora exibe todos os eventos, sem limite de 200 registros.'
- ]
- },
- {
- version: '3.1.0',
- date: '24/03/2026',
- title: 'Performance do Frontend com React Query',
- changes: [
- 'Performance: Implementação do React Query para cache inteligente e redução de tráfego de rede.',
- 'UX: Telas carregam mais rápido e dados são atualizados automaticamente em background.'
- ]
- },
- {
- version: '3.0.0',
- date: '24/03/2026',
- title: 'Major Release: Estabilidade e Fundação',
- changes: [
- 'Marco: O sistema atinge sua primeira versão Major (3.0.0), marcando estabilidade e maturidade.',
- 'Performance: Criação de índices no banco de dados para otimização de consultas e velocidade.',
- 'Arquitetura: Modularização do backend para facilitar a manutenção e escalabilidade futura.'
- ]
- },
- {
- version: '2.20.11',
- date: '24/03/2026',
- title: 'Correção de Quebra de Linha',
- changes: [
- 'Correção: O campo de histórico de ações das tarefas agora respeita as quebras de linha (enter) digitadas pelo usuário.',
- 'Versão: Atualizado para v2.20.11.'
- ]
- },
- {
- version: '2.20.10',
- date: '23/03/2026',
- title: 'Correção no Alerta de Expediente',
- changes: [
- 'Correção: Resolvido erro 500 (Validation failed for parameter Codigo) ao salvar o motivo/observação no alerta de expediente.',
- 'Versão: Atualizado para v2.20.10.'
- ]
- },
- {
- version: '2.20.9',
- date: '23/03/2026',
- title: 'Correção na Edição de Tarefas e Prazos',
- changes: [
- 'Correção: Resolvido erro 500 ao salvar a edição de uma tarefa (campos auxiliares ignorados no backend).',
- 'Correção: A lista de tarefas agora exibe corretamente os prazos definidos (corrigido mapeamento do"Sem prazo").',
- 'Correção: Ajustado o formato da data no formulário de edição para evitar avisos no console.',
- 'Versão: Atualizado para v2.20.9.'
- ]
- },
- {
- version: '2.20.8',
- date: '23/03/2026',
- title: 'Correção de Erro no Alerta de Expediente',
- changes: [
- 'Correção: Resolvido erro 500 ao salvar a desativação temporária do alerta de expediente.',
- 'Melhoria: Adicionado tratamento de erro no frontend para exibir mensagens reais do servidor.',
- 'Versão: Atualizado para v2.20.8.'
- ]
- },
- {
- version: '2.20.7',
- date: '23/03/2026',
- title: 'Desativação Temporária de Alertas de Expediente',
- changes: [
- 'Funcionalidade: Adicionada opção para desativar temporariamente alertas de expediente (ERP).',
- 'UX: Alertas desativados vão para o final da lista com cor diferenciada (âmbar).',
- 'Versão: Atualizado para v2.20.7.'
- ]
- },
- {
- version: '2.20.6',
- date: '23/03/2026',
- title: 'Ajuste de Layout da Tela de Tarefas',
- changes: [
- 'UX: Ajuste do layout da tela de tarefas para utilizar a largura total da tela, padronizando com o restante do sistema.',
- 'Versão: Atualizado para v2.20.6.'
- ]
- },
- {
- version: '2.20.5',
- date: '23/03/2026',
- title: 'Múltiplos Vínculos em Contas e Licenças',
- changes: [
- 'Funcionalidade: Suporte a múltiplos vínculos de colaboradores e dispositivos em uma única conta/licença.',
- 'UX: Nova interface de gerenciamento de vínculos no modal de edição de contas.',
- 'Versão: Atualizado para v2.20.5.'
- ]
- },
- {
- version: '2.20.4',
- date: '23/03/2026',
- title: 'Edição Geral de Tarefas e Correção de Recorrência',
- changes: [
- 'Funcionalidade: Implementada edição geral de tarefas (título, descrição, prazo, responsável, recorrência).',
- 'Funcionalidade: Adição e remoção de dispositivos em tarefas de manutenção em lote.',
- 'Fix: Corrigido bug onde o campo"Dia Fixo"não aparecia na criação de tarefas recorrentes.',
- 'Versão: Atualizado para v2.20.4.'
- ]
- },
- {
- version: '2.20.3',
- date: '23/03/2026',
- title: 'Refinamento do Modal de Tarefas (Checklist)',
- changes: [
- 'UX: Checklist de dispositivos movido para o final do modal.',
- 'UX: Formulário de conclusão de item agora é exibido inline (abaixo do item).',
- 'Funcionalidade: Adicionado campo de observação/nota individual para cada item concluído.',
- 'Versão: Atualizado para v2.20.3.'
- ]
- },
- {
- version: '2.20.2',
- date: '23/03/2026',
- title: 'Correção de Banco de Dados (Manutenção em Lote)',
- changes: [
- 'Fix: Adicionada migração automática para a coluna MaintenanceItems na tabela Tasks.',
- 'Fix: Atualizado script database.sql.txt com as novas colunas da tabela Tasks.',
- 'Versão: Atualizado para v2.20.2.'
- ]
- },
- {
- version: '2.20.1',
- date: '23/03/2026',
- title: 'Refinamento de Manutenção em Lote',
- changes: [
- 'Funcionalidade: Adicionado botão"Iniciar"individual para itens de manutenção em lote.',
- 'UX: Status"Em Andamento"individual para cada dispositivo no checklist.',
- 'UX: Feedback visual (ícone pulsante) para itens em execução.',
- 'Integração: Iniciar um item altera automaticamente o status da tarefa principal para"Em Andamento".',
- 'Versão: Atualizado para v2.20.1.'
- ]
- },
- {
- version: '2.20.0',
- date: '23/03/2026',
- title: 'Manutenção em Lote (Checklist)',
- changes: [
- 'Funcionalidade: Implementação de Manutenção em Lote (Checklist).',
- 'Funcionalidade: Criação de tarefa única para múltiplos dispositivos.',
- 'Funcionalidade: Conclusão individual de itens com custo e NF por dispositivo.',
- 'Filtro: Seleção de dispositivos por tipo na criação de tarefas.',
- 'Integração: Geração automática de registros de manutenção individuais ao concluir cada item.',
- 'Versão: Atualizado para v2.20.0.'
- ]
- },
- {
- version: '2.19.20',
- date: '23/03/2026',
- title: 'Gestão de Manutenção Avançada',
- changes: [
- 'Funcionalidade: Ajuste de custo final na conclusão de tarefas de manutenção.',
- 'Funcionalidade: Upload de nota fiscal (PDF/Imagem) na conclusão de manutenção.',
- 'Integração: Registro automático no histórico do dispositivo com custo real e nota fiscal.',
- 'UX: Novo fluxo de confirmação de dados ao encerrar manutenções.',
- 'Versão: Atualizado para v2.19.20.'
- ]
- },
- {
- version: '2.19.19',
- date: '23/03/2026',
- title: 'Melhorias no Módulo de Tarefas',
- changes: [
- 'Funcionalidade: Adicionado suporte a dispositivos em tarefas de manutenção.',
- 'Funcionalidade: Suporte a tipos de manutenção (Preventiva/Corretiva).',
- 'Versão: Atualizado para v2.19.19.'
- ]
- },
- {
- version: '2.19.18',
- date: '23/03/2026',
- title: 'Integração de Manutenção',
- changes: [
- 'Funcionalidade: Criação automática de histórico de manutenção ao concluir tarefas.',
- 'Versão: Atualizado para v2.19.18.'
- ]
- },
- { 
- version: '2.19.17', 
- date: '16/03/2026',
- title: 'Conformidade Legal no Afastamento',
- changes: [
- 'Segurança: Implementada geração automática de Termo de Devolução Administrativa ao afastar colaborador.',
- 'Conformidade: Termos gerados por afastamento são marcados como"Resolvido Manulmente"com justificativa legal.',
- 'Auditoria: Adicionada observação"Funcionário em afastamento"nos logs e termos de devolução.',
- 'Versão: Atualizado para v2.19.17.'
- ] 
- },
- { 
- version: '2.19.16', 
- date: '16/03/2026',
- title: 'Automação de Inventário e Correções',
- changes: [
- 'Funcionalidade: Adicionada opção de liberação automática de equipamentos ao afastar colaborador.',
- 'Correção: Corrigido formato de data no campo de retorno de afastamento.',
- 'UX: Checkbox de liberação rápida integrado ao fluxo de alteração de status.',
- 'Versão: Atualizado para v2.19.16.'
- ] 
- },
- { 
- version: '2.19.15', 
- date: '16/03/2026',
- title: 'Gestão de Afastamentos e Substituições',
- changes: [
- 'Funcionalidade: Implementado status"Afastado"para colaboradores (INSS/Licença).',
- 'Funcionalidade: Adicionado campo"Data de Retorno"para controle de afastamento.',
- 'UX: Novos filtros na gestão de usuários (Ativos, Inativos, Afastados).',
- 'Integração: Sincronização automática de status global ao ativar/inativar usuários.',
- 'Versão: Atualizado para v2.19.15.'
- ] 
- },
- { 
- version: '2.19.14', 
- date: '16/03/2026',
- title: 'Validações, Auditoria e Notificações',
- changes: [
- 'Segurança: Impedido cancelamento de tarefas já concluídas.',
- 'Auditoria: Agora é obrigatório informar o motivo ao cancelar uma tarefa.',
- 'UX: Adicionado sistema de notificações flutuantes (Toasts) para feedback de ações.',
- 'Validação: Impedida conclusão direta de tarefas canceladas.',
- 'Versão: Atualizado para v2.19.14.'
- ] 
- },
- { 
- version: '2.19.13', 
- date: '16/03/2026',
- title: 'Sincronização em Tempo Real do Modal',
- changes: [
- 'Correção: Modal de detalhes agora reflete mudanças de status imediatamente sem recarregar a página.',
- 'Melhoria: Refatorada gestão de estado do modal para derivar dados da fonte única da verdade.',
- 'Versão: Atualizado para v2.19.13.'
- ] 
- },
- { 
- version: '2.19.12', 
- date: '16/03/2026',
- title: 'Correção Definitiva de Persistência de Tarefas',
- changes: [
- 'Correção: Implementada atualização parcial (PATCH) real no backend para tarefas.',
- 'Correção: Corrigido mapeamento de campos no histórico de ações (Timestamp -> timestamp).',
- 'Correção: Resolvido erro de"Data inválida"e perda de dados ao adicionar comentários.',
- 'Versão: Atualizado para v2.19.12.'
- ] 
- },
- { 
- version: '2.19.11', 
- date: 'Hoje',
- title: 'Correção Crítica de Persistência de Dados',
- changes: [
- 'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
- 'Correção: Backend agora realiza atualizações parciais (patch) e ignora campos nulos.',
- 'Versão: Atualizado para v2.19.11.'
- ] 
- },
- { 
- version: '2.19.10', 
- date: 'Hoje',
- title: 'Correção de Persistência de Dados e Histórico',
- changes: [
- 'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
- 'Correção: Corrigido erro"Invalid Date"no histórico de ações.',
- 'Versão: Atualizado para v2.19.10.'
- ] 
- },
- { 
- version: '2.19.09', 
- date: 'Hoje',
- title: 'Correção de Atualização de Tarefas',
- changes: [
- 'Correção: Corrigido erro"Invalid Date"ao atualizar tarefas.',
- 'Correção: Status da tarefa agora só é alterado via botão específico.',
- 'Versão: Atualizado para v2.19.09.'
- ] 
- },
- { 
- version: '2.19.08', 
- date: 'Hoje',
- title: 'Correção de Erro na Tela de Tarefas',
- changes: [
- 'Correção: Corrigido erro que impedia o carregamento da tela de tarefas ao enviar informações.',
- 'Versão: Atualizado para v2.19.08.'
- ] 
- },
- { 
- version: packageJson.version, 
- date: 'Hoje',
- title: 'Módulo de Gestão de Tarefas (Agenda/To-Do)',
- changes: [
- 'Módulo: Lançamento do novo módulo de Gestão de Tarefas para controle de rotinas do setor.',
- 'Dashboard: Novo widget de tarefas pendentes com alertas de prazos (Atrasado/Próximo do Vencimento).',
- 'Gestão: Tela completa de gerenciamento com filtros por status, tipo, responsável e data.',
- 'Auditoria: Histórico imutável de ações (quem, o que e quando) para cada tarefa.',
- 'Evidências: Suporte a comentários e anexos de arquivos na conclusão de tarefas.',
- 'Versão: Atualizado para v2.19.00 (Major Update).'
- ] 
- },
- { 
- version: '2.18.33', 
- date: 'Hoje',
- title: 'Layout de Evidências Dinâmico',
- changes: [
- 'Impressão: Novo layout dinâmico que prioriza o tamanho das fotos (1 grande + 2 menores).',
- 'Versão: Atualizado para v2.18.33.',
- 'Sincronização global para v2.18.33.'
- ] 
- },
- { 
- version: '2.18.32', 
- date: 'Hoje',
- title: 'Otimização de Impressão',
- changes: [
- 'Impressão: Novo layout de evidências que permite até 3 fotos na mesma página.',
- 'Versão: Atualizado para v2.18.32.',
- 'Sincronização global para v2.18.32.'
- ] 
- },
- { 
- version: '2.18.31', 
- date: 'Hoje',
- title: 'Correção na Edição de Termos',
- changes: [
- 'Termos: Corrigido erro 404 ao salvar edições de termos (URL malformada).',
- 'Versão: Atualizado para v2.18.31.',
- 'Sincronização global para v2.18.31.'
- ] 
- },
- { 
- version: '2.18.30', 
- date: 'Hoje',
- title: 'Gestão de Termos e Devoluções - Melhorias',
- changes: [
- 'Edição de Termos: Campo"Dados do Dispositivo"agora é apenas leitura para evitar quebras de integridade.',
- 'Devolução: Adicionado suporte para até 3 evidências (fotos/PDF) no ato da devolução.',
- 'Sincronização global para v2.18.30.'
- ] 
- },
- { 
- version: '2.18.29', 
- date: 'Hoje',
- title: 'Edição de Termos de Responsabilidade - Melhorias',
- changes: [
- 'Termos: Restrição de edição apenas para termos pendentes (sem arquivo digitalizado).',
- 'Termos: Suporte para até 3 evidências (imagens/PDF) por termo editado.',
- 'Versão: Atualizado para v2.18.29.',
- 'Sincronização global para v2.18.29.'
- ] 
- },
- { 
- version: '2.18.27', 
- date: 'Hoje',
- title: 'Edição de Termos de Responsabilidade',
- changes: [
- 'Termos: Adicionada a opção de editar os detalhes de um termo gerado (Condição, Avaria, Observações e Evidência) diretamente no perfil do colaborador.',
- 'Versão: Atualizado para v2.18.27.',
- 'Sincronização global para v2.18.27.'
- ] 
- },
- { 
- version: '2.18.26', 
- date: 'Hoje',
- title: 'Reimpressão de Termos com Evidência',
- changes: [
- 'Termos: A funcionalidade de reimprimir termo no painel do colaborador agora inclui a imagem de evidência de dano, caso exista.',
- 'Versão: Atualizado para v2.18.26.',
- 'Sincronização global para v2.18.26.'
- ] 
- },
- { 
- version: '2.18.25', 
- date: 'Hoje',
- title: 'Correção na Visualização de Termos',
- changes: [
- 'Usuários: Corrigido um erro que causava tela branca ao acessar a aba de Termos no perfil do colaborador.',
- 'Versão: Atualizado para v2.18.25.',
- 'Sincronização global para v2.18.25.'
- ] 
- },
- { 
- version: '2.18.24', 
- date: 'Ontem',
- title: 'Evidência de Danos no Termo de Devolução',
- changes: [
- 'Termos: Adicionado campo para registrar a condição do equipamento no momento da devolução.',
- 'Termos: Adicionado campo para descrever avarias (se houver).',
- 'Termos: Adicionado upload de evidência (foto/B.O.) em caso de dano.',
- 'Termos: O termo gerado agora inclui a condição, descrição do dano e a imagem da evidência.',
- 'Usuários: A aba de Termos no perfil do usuário agora exibe a condição e a descrição do dano, além de um botão para visualizar a evidência.',
- 'Versão: Atualizado para v2.18.24.',
- 'Sincronização global para v2.18.24.'
- ] 
- },
- { 
- version: '2.18.23', 
- date: 'Hoje',
- title: 'Filtro de Múltiplos Setores',
- changes: [
- 'Relatórios: O filtro de Cargos/Setores agora permite a seleção múltipla.',
- 'Relatórios: Interface do filtro atualizada para um dropdown com checkboxes, padronizando com o filtro de Tipos de Dispositivo.',
- 'Versão: Atualizado para v2.18.23.',
- 'Sincronização global para v2.18.23.'
- ] 
- },
- { 
- version: '2.18.22', 
- date: 'Hoje',
- title: 'Filtro de Tipo de Dispositivo no Relatório',
- changes: [
- 'Relatórios: Adicionado filtro por Tipo de Dispositivo no Relatório de Colaboradores.',
- 'Relatórios: Por padrão, o relatório agora exibe apenas colaboradores com dispositivos do tipo"Smartphone"ou"Celular", ou com chips avulsos.',
- 'Relatórios: A lista de contatos foi otimizada para focar em dispositivos móveis, com a flexibilidade de incluir outros tipos via filtro.',
- 'Versão: Atualizado para v2.18.22.',
- 'Sincronização global para v2.18.22.'
- ] 
- },
- { 
- version: '2.18.21', 
- date: 'Hoje',
- title: 'Relatório de Colaboradores Personalizável',
- changes: [
- 'Relatórios: Adicionado seletor de colunas para personalizar a visualização e exportação do relatório.',
- 'Relatórios: Agora é possível escolher exibir ou ocultar: Cargo/Setor, Cód. Setor, E-mail, Linha(s) e ID Pulsus.',
- 'Relatórios: A exportação para Excel respeita exatamente as colunas selecionadas em tela.',
- 'Versão: Atualizado para v2.18.21.',
- 'Sincronização global para v2.18.21.'
- ] 
- },
- { 
- version: '2.18.20', 
- date: 'Hoje',
- title: 'Relatório de Colaboradores e Pulsus ID',
- changes: [
- 'Relatórios: O antigo relatório"Lista de Contatos"foi aprimorado e renomeado para"Relatório de Colaboradores".',
- 'Relatórios: Adicionada a opção de exibir a coluna"ID Pulsus", que busca o ID do dispositivo vinculado ao colaborador.',
- 'Relatórios: O filtro"Apenas com linha"agora vem desmarcado por padrão para facilitar a visualização de todos os colaboradores.',
- 'Versão: Atualizado para v2.18.20.',
- 'Sincronização global para v2.18.20.'
- ] 
- },
- { 
- version: '2.18.19', 
- date: 'Hoje',
- title: 'Substituição de Termos Manuais',
- changes: [
- 'Termos: Agora é possível anexar um arquivo digitalizado mesmo em termos que foram"Resolvidos Manualmente".',
- 'Termos: Ao fazer o upload, a marcação de"Resolvido Manualmente"é removida e o termo passa a constar como digitalizado.',
- 'Versão: Atualizado para v2.18.19.',
- 'Sincronização global para v2.18.19.'
- ] 
- },
- { 
- version: '2.18.18', 
- date: 'Hoje',
- title: 'Dashboard: Código do Setor em Termos Pendentes',
- changes: [
- 'Dashboard: Adicionado o código do setor do dispositivo na lista de termos pendentes.',
- 'Dashboard: Agora exibe"Setor: [Nome] Código: [Código]"para facilitar a identificação.',
- 'Versão: Atualizado para v2.18.18.',
- 'Sincronização global para v2.18.18.'
- ] 
- },
- { 
- version: '2.18.17', 
- date: 'Hoje',
- title: 'Correção na Impressão de Termos',
- changes: [
- 'Termos: Corrigido o campo"Setor"no cabeçalho dos termos de entrega/devolução.',
- 'Termos: Agora o sistema prioriza o código do setor vinculado ao DISPOSITIVO, evitando campos em branco para novos colaboradores ou dados incorretos.',
- 'Versão: Atualizado para v2.18.17.',
- 'Sincronização global para v2.18.17.'
- ] 
- },
- { 
- version: '2.18.16', 
- date: 'Hoje',
- title: 'Busca Inteligente & Normalização',
- changes: [
- 'Busca: Implementada busca case-insensitive e ignorando acentos em todo o sistema (Colaboradores, Dispositivos, Chips, Contas, Modelos, Relatórios, Logs).',
- 'UX: Melhoria na experiência de busca, permitindo encontrar"André"buscando por"andre"ou"Caçapava"por"cacapava".',
- 'Versão: Atualizado para v2.18.16.',
- 'Sincronização global para v2.18.16.'
- ] 
- },
- { 
- version: '2.18.15', 
- date: 'Ontem',
- title: 'Resolução Manual de Pendências',
- changes: [
- 'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
- 'Registro de justificativa obrigatória para resoluções manuais.',
- 'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.',
- 'Restaurada exibição detalhada de dispositivos nos termos pendentes (modelo, patrimônio, serial, IMEI e data do termo).',
- 'Atualizados ícones dos botões de ação nos termos pendentes para maior clareza.'
- ] 
- },
- { 
- version: '2.12.52', 
- date: 'Hoje',
- title: 'Resolução Manual de Pendências', 
- changes: [
- 'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
- 'Registro de justificativa obrigatória para resoluções manuais.',
- 'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.'
- ] 
- },
- {
- version: '2.12.51',
- date: 'Hoje',
- title: 'LCC Dashboard Redesign & Global Financials',
- changes: [
- 'Dashboard: Redesign completo da seção de LCC para maior clareza e impacto visual.',
- 'Dashboard: Agrupamento de métricas financeiras globais (Aquisição vs Manutenção).',
- 'Dashboard: Tabela de alertas de saúde integrada com indicadores de obsolescência.',
- 'Versão: Atualizado para v2.12.51.',
- 'Sincronização global para v2.12.51.'
- ]
- },
- {
- version: '2.12.49',
- date: 'Hoje',
- title: 'Advanced LCC Dashboard & Financial Insights',
- changes: [
- 'Dashboard: Nova seção"Saúde Financeira & LCC"com métricas globais de investimento.',
- 'Dashboard: Visualização de alertas críticos de manutenção (>60%) e obsolescência (>4 anos).',
- 'Dashboard: Gráfico de distribuição de custos (Aquisição vs Manutenção).',
- 'Versão: Atualizado para v2.12.49.',
- 'Sincronização global para v2.12.49.'
- ]
- },
- {
- version: '2.12.48',
- date: 'Hoje',
- title: 'LCC Breakdown & UI Refinement',
- changes: [
- 'Financeiro: Detalhamento do LCC com separação de custos de aquisição e manutenção.',
- 'UI: Melhoria visual no card de Custo do Ciclo de Vida para maior clareza.',
- 'Versão: Atualizado para v2.12.48.',
- 'Sincronização global para v2.12.48.'
- ]
- },
- {
- version: '2.12.47',
- date: 'Hoje',
- title: 'LCC (Life Cycle Cost) & Asset Health',
- changes: [
- 'Financeiro: Implementado cálculo de LCC (Custo do Ciclo de Vida) na aba financeira dos dispositivos.',
- 'Alertas: Adicionados alertas visuais para dispositivos com gastos de manutenção > 60% do valor de compra.',
- 'Alertas: Adicionados alertas para dispositivos com mais de 4 anos de uso.',
- 'Dashboard: Nova seção de"Saúde dos Ativos"com indicadores de LCC e obsolescência.',
- 'Versão: Atualizado para v2.12.47.',
- 'Sincronização global para v2.12.47.'
- ]
- },
- {
- version: '2.12.46',
- date: 'Hoje',
- title: 'Enhanced Device Search',
- changes: [
- 'Busca: Agora é possível pesquisar dispositivos pelo nome do colaborador responsável.',
- 'Busca: Adicionada pesquisa pelo número do chip (linha) vinculado ao dispositivo.',
- 'Versão: Atualizado para v2.12.46.',
- 'Sincronização global para v2.12.46.'
- ]
- },
- {
- version: '2.12.45',
- date: 'Hoje',
- title: 'Infrastructure Renaming & Port Updates',
- changes: [
- 'Docker: Renomeados containers para it-asset-new-api e it-asset-new-app.',
- 'Portas: Alterada porta da API para 5002 e do App para 8084 no docker-compose.',
- 'Versão: Atualizado para v2.12.45.',
- 'Sincronização global para v2.12.45.'
- ]
- },
- {
- version: '2.12.44',
- date: 'Hoje',
- title: 'Vite Build & Docker Optimization',
- changes: [
- 'Build: Removido tsc do processo de build para garantir sucesso na compilação do Docker.',
- 'Docker: Simplificado Dockerfile removendo lógica legada do CRA e adaptando para Vite.',
- 'Configuração: Definido outDir para"build"no vite.config.ts para manter compatibilidade com Nginx.',
- 'Versão: Atualizado para v2.12.44.',
- 'Sincronização global para v2.12.44.'
- ]
- },
- {
- version: '2.12.43',
- date: 'Hoje',
- title: 'Deployment Optimization & Dependency Cleanup',
- changes: [
- 'Infraestrutura: Removido react-scripts e dependências legadas para resolver erro de build no Portainer.',
- 'Dependências: Organizado devDependencies e atualizado TypeScript/Vite para versões estáveis.',
- 'Versão: Atualizado para v2.12.43.',
- 'Sincronização global para v2.12.43.'
- ]
- },
- {
- version: '2.12.42',
- date: 'Hoje',
- title: 'Vite Environment & Sync Stability',
- changes: [
- 'Ambiente: Configurado proxy do Vite para evitar conflitos de rotas API/SPA.',
- 'Estabilidade: Corrigido erro de"Unexpected token <"na detecção de ambiente.',
- 'Versão: Atualizado para v2.12.42 em todos os componentes.',
- 'Sincronização global para v2.12.42.'
- ]
- },
- {
- version: '2.12.41',
- date: 'Hoje',
- title: 'Admin Panel Restoration & Visual Consistency',
- changes: [
- 'Administração: Restauradas as abas"Acesso","Geral"e"Editor de Termos"com CRUD funcional.',
- 'Acesso: Implementado gerenciamento de operadores e administradores do sistema.',
- 'Geral: Adicionado formulário para edição de nome do app, logo e CNPJ.',
- 'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
- 'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
- 'Sincronização global para v2.12.41.'
- ]
- },
- {
- version: '2.12.40',
- date: 'Ontem',
- title: 'TypeScript Stability & Missing Properties',
- changes: [
- 'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
- 'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
- 'Sincronização global para v2.12.40.'
- ]
- },
- {
- version: '2.12.39',
- date: '02/2025',
- title: 'Visual Standardization & Column Fixes',
- changes: [
- 'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
- 'Correção de Lista: Ativadas as colunas dinâmicas"Número de Chip"e"Detalhes do Aparelho"na listagem de colaboradores.',
- 'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
- 'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
- 'Sincronização global para v2.12.39.'
- ]
- }
+    {
+        version: '3.5.5',
+        date: '26/03/2026',
+        title: 'Polimento Final do Tema Escuro',
+        changes: [
+            'UX: Correção de cores de texto em campos de input e selects no modo escuro.',
+            'UX: Ajustes finais de contraste em botões de ação e paginação.',
+            'Versão: Atualizado para v3.5.5.'
+        ]
+    },
+    {
+        version: '3.5.4',
+        date: '26/03/2026',
+        title: 'Polimento Final do Tema Escuro',
+        changes: [
+            'UX: Revisão final e correção de cores em botões de ação e modais para garantir contraste e consistência no tema escuro.',
+            'UX: Ajuste de contrastes em estados de hover em todos os componentes.',
+            'Versão: Atualizado para v3.5.4.'
+        ]
+    },
+    {
+        version: '3.5.3',
+        date: '26/03/2026',
+        title: 'Correções do Tema Escuro',
+        changes: [
+            'UX: Revisão e correção de cores de ícones (como a lixeira) e elementos em diversos componentes para garantir contraste e consistência no tema escuro.',
+            'UX: Ajuste visual na seção de tarefas pendentes do dashboard para alinhar com o padrão das demais seções.',
+            'Versão: Atualizado para v3.5.3.'
+        ]
+    },
+    {
+        version: '3.4.0',
+        date: '26/03/2026',
+        title: 'Sistema Global de Notificações (Toasts)',
+        changes: [
+            'UX: Implementação de notificações flutuantes em todo o sistema para feedback imediato de ações.',
+            'UX: Notificações para criação, edição, exclusão e movimentação de ativos e colaboradores.',
+            'UX: Padronização de mensagens de sucesso e erro em todos os módulos.',
+            'Versão: Atualizado para v3.4.0.'
+        ]
+    },
+    {
+        version: '3.3.0',
+        date: '24/03/2026',
+        description: 'Refatoração e Modularização do Backend para melhor escalabilidade e manutenção.',
+        changes: [
+            'Arquitetura: Modularização das rotas do servidor em arquivos separados (crud, devices, tasks, logs, terms, etc.).',
+            'Arquitetura: Centralização da lógica de banco de dados e funções utilitárias em server/utils/db.js.',
+            'Manutenibilidade: Código do servidor mais limpo, organizado e fácil de expandir.',
+            'Performance: Redução do tamanho do arquivo principal do servidor (server.js).'
+        ]
+    },
+    {
+        version: '3.2.0',
+        date: '24/03/2026',
+        description: 'Implementação de paginação server-side para logs de auditoria e histórico de ativos/usuários.',
+        changes: [
+            'Performance: Paginação real no backend para a aba de Auditoria, reduzindo o tempo de carregamento inicial.',
+            'Performance: Otimização da busca de histórico de ativos e usuários usando rotas específicas.',
+            'UX: Adição de indicadores de carregamento e controles de paginação na tabela de logs.',
+            'Correção: O histórico de ativos e usuários agora exibe todos os eventos, sem limite de 200 registros.'
+        ]
+    },
+    {
+        version: '3.1.0',
+        date: '24/03/2026',
+        title: 'Performance do Frontend com React Query',
+        changes: [
+            'Performance: Implementação do React Query para cache inteligente e redução de tráfego de rede.',
+            'UX: Telas carregam mais rápido e dados são atualizados automaticamente em background.'
+        ]
+    },
+    {
+        version: '3.0.0',
+        date: '24/03/2026',
+        title: 'Major Release: Estabilidade e Fundação',
+        changes: [
+            'Marco: O sistema atinge sua primeira versão Major (3.0.0), marcando estabilidade e maturidade.',
+            'Performance: Criação de índices no banco de dados para otimização de consultas e velocidade.',
+            'Arquitetura: Modularização do backend para facilitar a manutenção e escalabilidade futura.'
+        ]
+    },
+    {
+        version: '2.20.11',
+        date: '24/03/2026',
+        title: 'Correção de Quebra de Linha',
+        changes: [
+            'Correção: O campo de histórico de ações das tarefas agora respeita as quebras de linha (enter) digitadas pelo usuário.',
+            'Versão: Atualizado para v2.20.11.'
+        ]
+    },
+    {
+        version: '2.20.10',
+        date: '23/03/2026',
+        title: 'Correção no Alerta de Expediente',
+        changes: [
+            'Correção: Resolvido erro 500 (Validation failed for parameter Codigo) ao salvar o motivo/observação no alerta de expediente.',
+            'Versão: Atualizado para v2.20.10.'
+        ]
+    },
+    {
+        version: '2.20.9',
+        date: '23/03/2026',
+        title: 'Correção na Edição de Tarefas e Prazos',
+        changes: [
+            'Correção: Resolvido erro 500 ao salvar a edição de uma tarefa (campos auxiliares ignorados no backend).',
+            'Correção: A lista de tarefas agora exibe corretamente os prazos definidos (corrigido mapeamento do "Sem prazo").',
+            'Correção: Ajustado o formato da data no formulário de edição para evitar avisos no console.',
+            'Versão: Atualizado para v2.20.9.'
+        ]
+    },
+    {
+        version: '2.20.8',
+        date: '23/03/2026',
+        title: 'Correção de Erro no Alerta de Expediente',
+        changes: [
+            'Correção: Resolvido erro 500 ao salvar a desativação temporária do alerta de expediente.',
+            'Melhoria: Adicionado tratamento de erro no frontend para exibir mensagens reais do servidor.',
+            'Versão: Atualizado para v2.20.8.'
+        ]
+    },
+    {
+        version: '2.20.7',
+        date: '23/03/2026',
+        title: 'Desativação Temporária de Alertas de Expediente',
+        changes: [
+            'Funcionalidade: Adicionada opção para desativar temporariamente alertas de expediente (ERP).',
+            'UX: Alertas desativados vão para o final da lista com cor diferenciada (âmbar).',
+            'Versão: Atualizado para v2.20.7.'
+        ]
+    },
+    {
+        version: '2.20.6',
+        date: '23/03/2026',
+        title: 'Ajuste de Layout da Tela de Tarefas',
+        changes: [
+            'UX: Ajuste do layout da tela de tarefas para utilizar a largura total da tela, padronizando com o restante do sistema.',
+            'Versão: Atualizado para v2.20.6.'
+        ]
+    },
+    {
+        version: '2.20.5',
+        date: '23/03/2026',
+        title: 'Múltiplos Vínculos em Contas e Licenças',
+        changes: [
+            'Funcionalidade: Suporte a múltiplos vínculos de colaboradores e dispositivos em uma única conta/licença.',
+            'UX: Nova interface de gerenciamento de vínculos no modal de edição de contas.',
+            'Versão: Atualizado para v2.20.5.'
+        ]
+    },
+    {
+        version: '2.20.4',
+        date: '23/03/2026',
+        title: 'Edição Geral de Tarefas e Correção de Recorrência',
+        changes: [
+            'Funcionalidade: Implementada edição geral de tarefas (título, descrição, prazo, responsável, recorrência).',
+            'Funcionalidade: Adição e remoção de dispositivos em tarefas de manutenção em lote.',
+            'Fix: Corrigido bug onde o campo "Dia Fixo" não aparecia na criação de tarefas recorrentes.',
+            'Versão: Atualizado para v2.20.4.'
+        ]
+    },
+    {
+        version: '2.20.3',
+        date: '23/03/2026',
+        title: 'Refinamento do Modal de Tarefas (Checklist)',
+        changes: [
+            'UX: Checklist de dispositivos movido para o final do modal.',
+            'UX: Formulário de conclusão de item agora é exibido inline (abaixo do item).',
+            'Funcionalidade: Adicionado campo de observação/nota individual para cada item concluído.',
+            'Versão: Atualizado para v2.20.3.'
+        ]
+    },
+    {
+        version: '2.20.2',
+        date: '23/03/2026',
+        title: 'Correção de Banco de Dados (Manutenção em Lote)',
+        changes: [
+            'Fix: Adicionada migração automática para a coluna MaintenanceItems na tabela Tasks.',
+            'Fix: Atualizado script database.sql.txt com as novas colunas da tabela Tasks.',
+            'Versão: Atualizado para v2.20.2.'
+        ]
+    },
+    {
+        version: '2.20.1',
+        date: '23/03/2026',
+        title: 'Refinamento de Manutenção em Lote',
+        changes: [
+            'Funcionalidade: Adicionado botão "Iniciar" individual para itens de manutenção em lote.',
+            'UX: Status "Em Andamento" individual para cada dispositivo no checklist.',
+            'UX: Feedback visual (ícone pulsante) para itens em execução.',
+            'Integração: Iniciar um item altera automaticamente o status da tarefa principal para "Em Andamento".',
+            'Versão: Atualizado para v2.20.1.'
+        ]
+    },
+    {
+        version: '2.20.0',
+        date: '23/03/2026',
+        title: 'Manutenção em Lote (Checklist)',
+        changes: [
+            'Funcionalidade: Implementação de Manutenção em Lote (Checklist).',
+            'Funcionalidade: Criação de tarefa única para múltiplos dispositivos.',
+            'Funcionalidade: Conclusão individual de itens com custo e NF por dispositivo.',
+            'Filtro: Seleção de dispositivos por tipo na criação de tarefas.',
+            'Integração: Geração automática de registros de manutenção individuais ao concluir cada item.',
+            'Versão: Atualizado para v2.20.0.'
+        ]
+    },
+    {
+        version: '2.19.20',
+        date: '23/03/2026',
+        title: 'Gestão de Manutenção Avançada',
+        changes: [
+            'Funcionalidade: Ajuste de custo final na conclusão de tarefas de manutenção.',
+            'Funcionalidade: Upload de nota fiscal (PDF/Imagem) na conclusão de manutenção.',
+            'Integração: Registro automático no histórico do dispositivo com custo real e nota fiscal.',
+            'UX: Novo fluxo de confirmação de dados ao encerrar manutenções.',
+            'Versão: Atualizado para v2.19.20.'
+        ]
+    },
+    {
+        version: '2.19.19',
+        date: '23/03/2026',
+        title: 'Melhorias no Módulo de Tarefas',
+        changes: [
+            'Funcionalidade: Adicionado suporte a dispositivos em tarefas de manutenção.',
+            'Funcionalidade: Suporte a tipos de manutenção (Preventiva/Corretiva).',
+            'Versão: Atualizado para v2.19.19.'
+        ]
+    },
+    {
+        version: '2.19.18',
+        date: '23/03/2026',
+        title: 'Integração de Manutenção',
+        changes: [
+            'Funcionalidade: Criação automática de histórico de manutenção ao concluir tarefas.',
+            'Versão: Atualizado para v2.19.18.'
+        ]
+    },
+    { 
+        version: '2.19.17', 
+        date: '16/03/2026',
+        title: 'Conformidade Legal no Afastamento',
+        changes: [
+            'Segurança: Implementada geração automática de Termo de Devolução Administrativa ao afastar colaborador.',
+            'Conformidade: Termos gerados por afastamento são marcados como "Resolvido Manulmente" com justificativa legal.',
+            'Auditoria: Adicionada observação "Funcionário em afastamento" nos logs e termos de devolução.',
+            'Versão: Atualizado para v2.19.17.'
+        ] 
+    },
+    { 
+        version: '2.19.16', 
+        date: '16/03/2026',
+        title: 'Automação de Inventário e Correções',
+        changes: [
+            'Funcionalidade: Adicionada opção de liberação automática de equipamentos ao afastar colaborador.',
+            'Correção: Corrigido formato de data no campo de retorno de afastamento.',
+            'UX: Checkbox de liberação rápida integrado ao fluxo de alteração de status.',
+            'Versão: Atualizado para v2.19.16.'
+        ] 
+    },
+    { 
+        version: '2.19.15', 
+        date: '16/03/2026',
+        title: 'Gestão de Afastamentos e Substituições',
+        changes: [
+            'Funcionalidade: Implementado status "Afastado" para colaboradores (INSS/Licença).',
+            'Funcionalidade: Adicionado campo "Data de Retorno" para controle de afastamento.',
+            'UX: Novos filtros na gestão de usuários (Ativos, Inativos, Afastados).',
+            'Integração: Sincronização automática de status global ao ativar/inativar usuários.',
+            'Versão: Atualizado para v2.19.15.'
+        ] 
+    },
+    { 
+        version: '2.19.14', 
+        date: '16/03/2026',
+        title: 'Validações, Auditoria e Notificações',
+        changes: [
+            'Segurança: Impedido cancelamento de tarefas já concluídas.',
+            'Auditoria: Agora é obrigatório informar o motivo ao cancelar uma tarefa.',
+            'UX: Adicionado sistema de notificações flutuantes (Toasts) para feedback de ações.',
+            'Validação: Impedida conclusão direta de tarefas canceladas.',
+            'Versão: Atualizado para v2.19.14.'
+        ] 
+    },
+    { 
+        version: '2.19.13', 
+        date: '16/03/2026',
+        title: 'Sincronização em Tempo Real do Modal',
+        changes: [
+            'Correção: Modal de detalhes agora reflete mudanças de status imediatamente sem recarregar a página.',
+            'Melhoria: Refatorada gestão de estado do modal para derivar dados da fonte única da verdade.',
+            'Versão: Atualizado para v2.19.13.'
+        ] 
+    },
+    { 
+        version: '2.19.12', 
+        date: '16/03/2026',
+        title: 'Correção Definitiva de Persistência de Tarefas',
+        changes: [
+            'Correção: Implementada atualização parcial (PATCH) real no backend para tarefas.',
+            'Correção: Corrigido mapeamento de campos no histórico de ações (Timestamp -> timestamp).',
+            'Correção: Resolvido erro de "Data inválida" e perda de dados ao adicionar comentários.',
+            'Versão: Atualizado para v2.19.12.'
+        ] 
+    },
+    { 
+        version: '2.19.11', 
+        date: 'Hoje',
+        title: 'Correção Crítica de Persistência de Dados',
+        changes: [
+            'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
+            'Correção: Backend agora realiza atualizações parciais (patch) e ignora campos nulos.',
+            'Versão: Atualizado para v2.19.11.'
+        ] 
+    },
+    { 
+        version: '2.19.10', 
+        date: 'Hoje',
+        title: 'Correção de Persistência de Dados e Histórico',
+        changes: [
+            'Correção: Corrigido erro de perda de dados ao adicionar comentários.',
+            'Correção: Corrigido erro "Invalid Date" no histórico de ações.',
+            'Versão: Atualizado para v2.19.10.'
+        ] 
+    },
+    { 
+        version: '2.19.09', 
+        date: 'Hoje',
+        title: 'Correção de Atualização de Tarefas',
+        changes: [
+            'Correção: Corrigido erro "Invalid Date" ao atualizar tarefas.',
+            'Correção: Status da tarefa agora só é alterado via botão específico.',
+            'Versão: Atualizado para v2.19.09.'
+        ] 
+    },
+    { 
+        version: '2.19.08', 
+        date: 'Hoje',
+        title: 'Correção de Erro na Tela de Tarefas',
+        changes: [
+            'Correção: Corrigido erro que impedia o carregamento da tela de tarefas ao enviar informações.',
+            'Versão: Atualizado para v2.19.08.'
+        ] 
+    },
+    { 
+        version: packageJson.version, 
+        date: 'Hoje',
+        title: 'Módulo de Gestão de Tarefas (Agenda/To-Do)',
+        changes: [
+            'Módulo: Lançamento do novo módulo de Gestão de Tarefas para controle de rotinas do setor.',
+            'Dashboard: Novo widget de tarefas pendentes com alertas de prazos (Atrasado/Próximo do Vencimento).',
+            'Gestão: Tela completa de gerenciamento com filtros por status, tipo, responsável e data.',
+            'Auditoria: Histórico imutável de ações (quem, o que e quando) para cada tarefa.',
+            'Evidências: Suporte a comentários e anexos de arquivos na conclusão de tarefas.',
+            'Versão: Atualizado para v2.19.00 (Major Update).'
+        ] 
+    },
+    { 
+        version: '2.18.33', 
+        date: 'Hoje',
+        title: 'Layout de Evidências Dinâmico',
+        changes: [
+            'Impressão: Novo layout dinâmico que prioriza o tamanho das fotos (1 grande + 2 menores).',
+            'Versão: Atualizado para v2.18.33.',
+            'Sincronização global para v2.18.33.'
+        ] 
+    },
+    { 
+        version: '2.18.32', 
+        date: 'Hoje',
+        title: 'Otimização de Impressão',
+        changes: [
+            'Impressão: Novo layout de evidências que permite até 3 fotos na mesma página.',
+            'Versão: Atualizado para v2.18.32.',
+            'Sincronização global para v2.18.32.'
+        ] 
+    },
+    { 
+        version: '2.18.31', 
+        date: 'Hoje',
+        title: 'Correção na Edição de Termos',
+        changes: [
+            'Termos: Corrigido erro 404 ao salvar edições de termos (URL malformada).',
+            'Versão: Atualizado para v2.18.31.',
+            'Sincronização global para v2.18.31.'
+        ] 
+    },
+    { 
+        version: '2.18.30', 
+        date: 'Hoje',
+        title: 'Gestão de Termos e Devoluções - Melhorias',
+        changes: [
+            'Edição de Termos: Campo "Dados do Dispositivo" agora é apenas leitura para evitar quebras de integridade.',
+            'Devolução: Adicionado suporte para até 3 evidências (fotos/PDF) no ato da devolução.',
+            'Sincronização global para v2.18.30.'
+        ] 
+    },
+    { 
+        version: '2.18.29', 
+        date: 'Hoje',
+        title: 'Edição de Termos de Responsabilidade - Melhorias',
+        changes: [
+            'Termos: Restrição de edição apenas para termos pendentes (sem arquivo digitalizado).',
+            'Termos: Suporte para até 3 evidências (imagens/PDF) por termo editado.',
+            'Versão: Atualizado para v2.18.29.',
+            'Sincronização global para v2.18.29.'
+        ] 
+    },
+    { 
+        version: '2.18.27', 
+        date: 'Hoje',
+        title: 'Edição de Termos de Responsabilidade',
+        changes: [
+            'Termos: Adicionada a opção de editar os detalhes de um termo gerado (Condição, Avaria, Observações e Evidência) diretamente no perfil do colaborador.',
+            'Versão: Atualizado para v2.18.27.',
+            'Sincronização global para v2.18.27.'
+        ] 
+    },
+    { 
+        version: '2.18.26', 
+        date: 'Hoje',
+        title: 'Reimpressão de Termos com Evidência',
+        changes: [
+            'Termos: A funcionalidade de reimprimir termo no painel do colaborador agora inclui a imagem de evidência de dano, caso exista.',
+            'Versão: Atualizado para v2.18.26.',
+            'Sincronização global para v2.18.26.'
+        ] 
+    },
+    { 
+        version: '2.18.25', 
+        date: 'Hoje',
+        title: 'Correção na Visualização de Termos',
+        changes: [
+            'Usuários: Corrigido um erro que causava tela branca ao acessar a aba de Termos no perfil do colaborador.',
+            'Versão: Atualizado para v2.18.25.',
+            'Sincronização global para v2.18.25.'
+        ] 
+    },
+    { 
+        version: '2.18.24', 
+        date: 'Ontem',
+        title: 'Evidência de Danos no Termo de Devolução',
+        changes: [
+            'Termos: Adicionado campo para registrar a condição do equipamento no momento da devolução.',
+            'Termos: Adicionado campo para descrever avarias (se houver).',
+            'Termos: Adicionado upload de evidência (foto/B.O.) em caso de dano.',
+            'Termos: O termo gerado agora inclui a condição, descrição do dano e a imagem da evidência.',
+            'Usuários: A aba de Termos no perfil do usuário agora exibe a condição e a descrição do dano, além de um botão para visualizar a evidência.',
+            'Versão: Atualizado para v2.18.24.',
+            'Sincronização global para v2.18.24.'
+        ] 
+    },
+    { 
+        version: '2.18.23', 
+        date: 'Hoje',
+        title: 'Filtro de Múltiplos Setores',
+        changes: [
+            'Relatórios: O filtro de Cargos/Setores agora permite a seleção múltipla.',
+            'Relatórios: Interface do filtro atualizada para um dropdown com checkboxes, padronizando com o filtro de Tipos de Dispositivo.',
+            'Versão: Atualizado para v2.18.23.',
+            'Sincronização global para v2.18.23.'
+        ] 
+    },
+    { 
+        version: '2.18.22', 
+        date: 'Hoje',
+        title: 'Filtro de Tipo de Dispositivo no Relatório',
+        changes: [
+            'Relatórios: Adicionado filtro por Tipo de Dispositivo no Relatório de Colaboradores.',
+            'Relatórios: Por padrão, o relatório agora exibe apenas colaboradores com dispositivos do tipo "Smartphone" ou "Celular", ou com chips avulsos.',
+            'Relatórios: A lista de contatos foi otimizada para focar em dispositivos móveis, com a flexibilidade de incluir outros tipos via filtro.',
+            'Versão: Atualizado para v2.18.22.',
+            'Sincronização global para v2.18.22.'
+        ] 
+    },
+    { 
+        version: '2.18.21', 
+        date: 'Hoje',
+        title: 'Relatório de Colaboradores Personalizável',
+        changes: [
+            'Relatórios: Adicionado seletor de colunas para personalizar a visualização e exportação do relatório.',
+            'Relatórios: Agora é possível escolher exibir ou ocultar: Cargo/Setor, Cód. Setor, E-mail, Linha(s) e ID Pulsus.',
+            'Relatórios: A exportação para Excel respeita exatamente as colunas selecionadas em tela.',
+            'Versão: Atualizado para v2.18.21.',
+            'Sincronização global para v2.18.21.'
+        ] 
+    },
+    { 
+        version: '2.18.20', 
+        date: 'Hoje',
+        title: 'Relatório de Colaboradores e Pulsus ID',
+        changes: [
+            'Relatórios: O antigo relatório "Lista de Contatos" foi aprimorado e renomeado para "Relatório de Colaboradores".',
+            'Relatórios: Adicionada a opção de exibir a coluna "ID Pulsus", que busca o ID do dispositivo vinculado ao colaborador.',
+            'Relatórios: O filtro "Apenas com linha" agora vem desmarcado por padrão para facilitar a visualização de todos os colaboradores.',
+            'Versão: Atualizado para v2.18.20.',
+            'Sincronização global para v2.18.20.'
+        ] 
+    },
+    { 
+        version: '2.18.19', 
+        date: 'Hoje',
+        title: 'Substituição de Termos Manuais',
+        changes: [
+            'Termos: Agora é possível anexar um arquivo digitalizado mesmo em termos que foram "Resolvidos Manualmente".',
+            'Termos: Ao fazer o upload, a marcação de "Resolvido Manualmente" é removida e o termo passa a constar como digitalizado.',
+            'Versão: Atualizado para v2.18.19.',
+            'Sincronização global para v2.18.19.'
+        ] 
+    },
+    { 
+        version: '2.18.18', 
+        date: 'Hoje',
+        title: 'Dashboard: Código do Setor em Termos Pendentes',
+        changes: [
+            'Dashboard: Adicionado o código do setor do dispositivo na lista de termos pendentes.',
+            'Dashboard: Agora exibe "Setor: [Nome] Código: [Código]" para facilitar a identificação.',
+            'Versão: Atualizado para v2.18.18.',
+            'Sincronização global para v2.18.18.'
+        ] 
+    },
+    { 
+        version: '2.18.17', 
+        date: 'Hoje',
+        title: 'Correção na Impressão de Termos',
+        changes: [
+            'Termos: Corrigido o campo "Setor" no cabeçalho dos termos de entrega/devolução.',
+            'Termos: Agora o sistema prioriza o código do setor vinculado ao DISPOSITIVO, evitando campos em branco para novos colaboradores ou dados incorretos.',
+            'Versão: Atualizado para v2.18.17.',
+            'Sincronização global para v2.18.17.'
+        ] 
+    },
+    { 
+        version: '2.18.16', 
+        date: 'Hoje',
+        title: 'Busca Inteligente & Normalização',
+        changes: [
+            'Busca: Implementada busca case-insensitive e ignorando acentos em todo o sistema (Colaboradores, Dispositivos, Chips, Contas, Modelos, Relatórios, Logs).',
+            'UX: Melhoria na experiência de busca, permitindo encontrar "André" buscando por "andre" ou "Caçapava" por "cacapava".',
+            'Versão: Atualizado para v2.18.16.',
+            'Sincronização global para v2.18.16.'
+        ] 
+    },
+    { 
+        version: '2.18.15', 
+        date: 'Ontem',
+        title: 'Resolução Manual de Pendências',
+        changes: [
+            'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
+            'Registro de justificativa obrigatória para resoluções manuais.',
+            'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.',
+            'Restaurada exibição detalhada de dispositivos nos termos pendentes (modelo, patrimônio, serial, IMEI e data do termo).',
+            'Atualizados ícones dos botões de ação nos termos pendentes para maior clareza.'
+        ] 
+    },
+    { 
+        version: '2.12.52', 
+        date: 'Hoje',
+        title: 'Resolução Manual de Pendências', 
+        changes: [
+            'Adicionada opção para resolver pendências de termos sem anexo diretamente no dashboard.',
+            'Registro de justificativa obrigatória para resoluções manuais.',
+            'Auditoria detalhada no colaborador, dispositivo e sistema para resoluções manuais.'
+        ] 
+    },
+    {
+    version: '2.12.51',
+    date: 'Hoje',
+    title: 'LCC Dashboard Redesign & Global Financials',
+    changes: [
+      'Dashboard: Redesign completo da seção de LCC para maior clareza e impacto visual.',
+      'Dashboard: Agrupamento de métricas financeiras globais (Aquisição vs Manutenção).',
+      'Dashboard: Tabela de alertas de saúde integrada com indicadores de obsolescência.',
+      'Versão: Atualizado para v2.12.51.',
+      'Sincronização global para v2.12.51.'
+    ]
+  },
+    {
+    version: '2.12.49',
+    date: 'Hoje',
+    title: 'Advanced LCC Dashboard & Financial Insights',
+    changes: [
+      'Dashboard: Nova seção "Saúde Financeira & LCC" com métricas globais de investimento.',
+      'Dashboard: Visualização de alertas críticos de manutenção (>60%) e obsolescência (>4 anos).',
+      'Dashboard: Gráfico de distribuição de custos (Aquisição vs Manutenção).',
+      'Versão: Atualizado para v2.12.49.',
+      'Sincronização global para v2.12.49.'
+    ]
+  },
+    {
+    version: '2.12.48',
+    date: 'Hoje',
+    title: 'LCC Breakdown & UI Refinement',
+    changes: [
+      'Financeiro: Detalhamento do LCC com separação de custos de aquisição e manutenção.',
+      'UI: Melhoria visual no card de Custo do Ciclo de Vida para maior clareza.',
+      'Versão: Atualizado para v2.12.48.',
+      'Sincronização global para v2.12.48.'
+    ]
+  },
+    {
+    version: '2.12.47',
+    date: 'Hoje',
+    title: 'LCC (Life Cycle Cost) & Asset Health',
+    changes: [
+      'Financeiro: Implementado cálculo de LCC (Custo do Ciclo de Vida) na aba financeira dos dispositivos.',
+      'Alertas: Adicionados alertas visuais para dispositivos com gastos de manutenção > 60% do valor de compra.',
+      'Alertas: Adicionados alertas para dispositivos com mais de 4 anos de uso.',
+      'Dashboard: Nova seção de "Saúde dos Ativos" com indicadores de LCC e obsolescência.',
+      'Versão: Atualizado para v2.12.47.',
+      'Sincronização global para v2.12.47.'
+    ]
+  },
+    {
+    version: '2.12.46',
+    date: 'Hoje',
+    title: 'Enhanced Device Search',
+    changes: [
+      'Busca: Agora é possível pesquisar dispositivos pelo nome do colaborador responsável.',
+      'Busca: Adicionada pesquisa pelo número do chip (linha) vinculado ao dispositivo.',
+      'Versão: Atualizado para v2.12.46.',
+      'Sincronização global para v2.12.46.'
+    ]
+  },
+    {
+    version: '2.12.45',
+    date: 'Hoje',
+    title: 'Infrastructure Renaming & Port Updates',
+    changes: [
+      'Docker: Renomeados containers para it-asset-new-api e it-asset-new-app.',
+      'Portas: Alterada porta da API para 5002 e do App para 8084 no docker-compose.',
+      'Versão: Atualizado para v2.12.45.',
+      'Sincronização global para v2.12.45.'
+    ]
+  },
+    {
+    version: '2.12.44',
+    date: 'Hoje',
+    title: 'Vite Build & Docker Optimization',
+    changes: [
+      'Build: Removido tsc do processo de build para garantir sucesso na compilação do Docker.',
+      'Docker: Simplificado Dockerfile removendo lógica legada do CRA e adaptando para Vite.',
+      'Configuração: Definido outDir para "build" no vite.config.ts para manter compatibilidade com Nginx.',
+      'Versão: Atualizado para v2.12.44.',
+      'Sincronização global para v2.12.44.'
+    ]
+  },
+    {
+    version: '2.12.43',
+    date: 'Hoje',
+    title: 'Deployment Optimization & Dependency Cleanup',
+    changes: [
+      'Infraestrutura: Removido react-scripts e dependências legadas para resolver erro de build no Portainer.',
+      'Dependências: Organizado devDependencies e atualizado TypeScript/Vite para versões estáveis.',
+      'Versão: Atualizado para v2.12.43.',
+      'Sincronização global para v2.12.43.'
+    ]
+  },
+    {
+    version: '2.12.42',
+    date: 'Hoje',
+    title: 'Vite Environment & Sync Stability',
+    changes: [
+      'Ambiente: Configurado proxy do Vite para evitar conflitos de rotas API/SPA.',
+      'Estabilidade: Corrigido erro de "Unexpected token <" na detecção de ambiente.',
+      'Versão: Atualizado para v2.12.42 em todos os componentes.',
+      'Sincronização global para v2.12.42.'
+    ]
+  },
+    {
+    version: '2.12.41',
+    date: 'Hoje',
+    title: 'Admin Panel Restoration & Visual Consistency',
+    changes: [
+      'Administração: Restauradas as abas "Acesso", "Geral" e "Editor de Termos" com CRUD funcional.',
+      'Acesso: Implementado gerenciamento de operadores e administradores do sistema.',
+      'Geral: Adicionado formulário para edição de nome do app, logo e CNPJ.',
+      'Editor de Termos: Novo editor dinâmico para personalização de cláusulas e declarações (Entrega/Devolução).',
+      'Importação: Adicionado suporte completo ao Dark Mode (Modo Escuro).',
+      'Sincronização global para v2.12.41.'
+    ]
+  },
+    {
+    version: '2.12.40',
+    date: 'Ontem',
+    title: 'TypeScript Stability & Missing Properties',
+    changes: [
+      'Correção de Tipos: Adicionadas as propriedades hasFile e hasInvoice às interfaces globais no types.ts.',
+      'Estabilidade: Resolvidos erros de compilação nos módulos Dashboard, DeviceManager e UserManager.',
+      'Sincronização global para v2.12.40.'
+    ]
+  },
+    {
+    version: '2.12.39',
+    date: '02/2025',
+    title: 'Visual Standardization & Column Fixes',
+    changes: [
+      'Colaboradores: Adicionados contadores de itens ao lado dos títulos das abas no modal de detalhes.',
+      'Correção de Lista: Ativadas as colunas dinâmicas "Número de Chip" e "Detalhes do Aparelho" na listagem de colaboradores.',
+      'Lógica de Chips: A coluna de chip vinculado agora exibe chips diretos E chips vinculados via dispositivo em posse.',
+      'Dispositivos: Indicador visual (bolinha verde/amarela) na aba Financeiro para monitoramento rápido de Nota Fiscal e Anexo.',
+      'Sincronização global para v2.12.39.'
+    ]
+  }
 ];
 
 const SystemInfoModal: React.FC<SystemInfoModalProps> = ({ onClose }) => {
- return (
- <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
- <div className="bg-slate-900 rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] transition-colors duration-300">
- <div className="bg-slate-900 px-8 py-6 flex justify-between items-start shrink-0 relative border-b border-slate-800">
- <div className="relative z-10"><h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2><p className="text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p></div>
- <button onClick={onClose} className="hover:text-white transition-colors relative z-10"><X size={24} /></button>
- <div className="absolute -right-10 -top-10 opacity-50"><GitCommit size={150} /></div>
- </div>
- <div className="flex-1 overflow-y-auto p-8 bg-slate-900">
- <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><GitCommit className=""size={20}/> Histórico de Versões</h3>
- <div className="relative border-l-2 border-slate-700 ml-3 space-y-8 pb-4">
- {versions.map((ver, index) => (
- <div key={index} className="relative pl-8">
- <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white border-slate-900 ${index === 0 ? ' ring-4 ring-blue-100 ring-blue-900/20' : 'bg-slate-300 bg-slate-600'}`}></div>
- <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
- <span className={`px-2 py-0.5 rounded text-xs font-bold border ${index === 0 ? ' text-white border-blue-600' : ' bg-slate-800 border-slate-700'}`}>v{ver.version}</span>
- <span className="text-xs flex items-center gap-1"><Calendar size={12}/> {ver.date}</span>
- </div>
- <h4 className="text-base font-bold text-slate-200 mb-2">{ver.title}</h4>
- <ul className="space-y-1">{ver.changes.map((change, i) => (<li key={i} className="text-sm flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400 bg-slate-600 shrink-0"></span>{change}</li>))}</ul>
- </div>
- ))}
- </div>
- </div>
- <div className="bg-slate-800 border-t border-slate-700 px-8 py-4 text-center"><p className="text-xs">© 2025 IT Asset 360. Todos os direitos reservados.</p></div>
- </div>
- </div>
- );
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] transition-colors duration-300">
+        <div className="bg-slate-900 px-8 py-6 flex justify-between items-start shrink-0 relative border-b dark:border-slate-800">
+          <div className="relative z-10"><h2 className="text-2xl font-bold text-white mb-1">Sobre o Sistema</h2><p className="text-slate-400 text-sm">IT Asset 360 - Gestão Inteligente de Ativos</p></div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10"><X size={24} /></button>
+          <div className="absolute -right-10 -top-10 text-slate-800 opacity-50"><GitCommit size={150} /></div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900">
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><GitCommit className="text-blue-600" size={20}/> Histórico de Versões</h3>
+          <div className="relative border-l-2 border-slate-200 dark:border-slate-700 ml-3 space-y-8 pb-4">
+            {versions.map((ver, index) => (
+              <div key={index} className="relative pl-8">
+                <div className={`absolute -left-[9px] top-1 h-4 w-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm ${index === 0 ? 'bg-blue-600 ring-4 ring-blue-100 dark:ring-blue-900/20' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${index === 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>v{ver.version}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1"><Calendar size={12}/> {ver.date}</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-2">{ver.title}</h4>
+                <ul className="space-y-1">{ver.changes.map((change, i) => (<li key={i} className="text-sm text-slate-600 dark:text-slate-400 flex items-start gap-2"><span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-600 shrink-0"></span>{change}</li>))}</ul>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-slate-50 dark:bg-slate-800 border-t dark:border-slate-700 px-8 py-4 text-center"><p className="text-xs text-slate-400 dark:text-slate-500">© 2025 IT Asset 360. Todos os direitos reservados.</p></div>
+      </div>
+    </div>
+  );
 };
 
 export default SystemInfoModal;
