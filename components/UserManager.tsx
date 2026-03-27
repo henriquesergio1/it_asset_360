@@ -13,1215 +13,1215 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { normalizeString } from '../utils/stringUtils';
 
 const formatCPF = (v: string): string => {
-    v = v.replace(/\D/g, "");
-    if (v.length > 11) v = v.substring(0, 11);
-    return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-            .replace(/(\d{3})(\d{3})(\d{3})/, "$1.$2.$3")
-            .replace(/(\d{3})(\d{3})/, "$1.$2")
-            .replace(/-$/, "");
+ v = v.replace(/\D/g,"");
+ if (v.length > 11) v = v.substring(0, 11);
+ return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,"$1.$2.$3-$4")
+ .replace(/(\d{3})(\d{3})(\d{3})/,"$1.$2.$3")
+ .replace(/(\d{3})(\d{3})/,"$1.$2")
+ .replace(/-$/,"");
 };
 
 const formatPIS = (v: string): string => {
-    v = v.replace(/\D/g, "");
-    if (v.length > 11) v = v.substring(0, 11);
-    return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/, "$1.$2.$3-$4")
-            .replace(/(\d{3})(\d{5})(\d{2})/, "$1.$2.$3")
-            .replace(/(\d{3})(\d{5})/, "$1.$2")
-            .replace(/-$/, "");
+ v = v.replace(/\D/g,"");
+ if (v.length > 11) v = v.substring(0, 11);
+ return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/,"$1.$2.$3-$4")
+ .replace(/(\d{3})(\d{5})(\d{2})/,"$1.$2.$3")
+ .replace(/(\d{3})(\d{5})/,"$1.$2")
+ .replace(/-$/,"");
 };
 
 const formatRG = (v: string): string => {
-    return v.toUpperCase().replace(/[^A-Z0-9]/g, "").trim();
+ return v.toUpperCase().replace(/[^A-Z0-9]/g,"").trim();
 };
 
 const FIELD_LABELS: Record<string, string> = {
-    sectorId: 'Setor/Cargo',
-    linkedSimId: 'Chip Vinculado',
-    currentUserId: 'Responsável Atual',
-    userId: 'Colaborador',
-    modelId: 'Modelo do Ativo',
-    purchaseDate: 'Data de Compra',
-    purchaseCost: 'Custo de Aquisição',
-    invoiceNumber: 'Número da Nota',
-    internalCode: 'Código Interno',
-    pulsusId: 'ID MDM Pulsus',
-    serialNumber: 'Nº Série',
-    assetTag: 'Patrimônio',
-    customData: 'Dados Extras',
-    fullName: 'Nome Completo',
-    email: 'E-mail',
-    active: 'Status Ativo',
-    status: 'Estado Global',
-    onLeaveUntil: 'Data de Retorno (Afastamento)',
-    address: 'Endereço Residencial',
-    phoneNumber: 'Linha Telefônica',
-    operator: 'Operadora',
-    iccid: 'ICCID',
-    planDetails: 'Plano',
-    id: 'ID Sistema'
+ sectorId: 'Setor/Cargo',
+ linkedSimId: 'Chip Vinculado',
+ currentUserId: 'Responsável Atual',
+ userId: 'Colaborador',
+ modelId: 'Modelo do Ativo',
+ purchaseDate: 'Data de Compra',
+ purchaseCost: 'Custo de Aquisição',
+ invoiceNumber: 'Número da Nota',
+ internalCode: 'Código Interno',
+ pulsusId: 'ID MDM Pulsus',
+ serialNumber: 'Nº Série',
+ assetTag: 'Patrimônio',
+ customData: 'Dados Extras',
+ fullName: 'Nome Completo',
+ email: 'E-mail',
+ active: 'Status Ativo',
+ status: 'Estado Global',
+ onLeaveUntil: 'Data de Retorno (Afastamento)',
+ address: 'Endereço Residencial',
+ phoneNumber: 'Linha Telefônica',
+ operator: 'Operadora',
+ iccid: 'ICCID',
+ planDetails: 'Plano',
+ id: 'ID Sistema'
 };
 
 const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
-    const { devices, sims, users, sectors, models, customFields } = useData();
-    const navigate = useNavigate();
-    const note = log.notes || '';
+ const { devices, sims, users, sectors, models, customFields } = useData();
+ const navigate = useNavigate();
+ const note = log.notes || '';
 
-    const resolveValue = (key: string, val: any): string => {
-        if (val === null || val === undefined || val === '---' || val === '') return 'Nenhum';
-        
-        // Formatação de data
-        if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
-            try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
-        }
+ const resolveValue = (key: string, val: any): string => {
+ if (val === null || val === undefined || val === '---' || val === '') return 'Nenhum';
+ 
+ // Formatação de data
+ if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
+ try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
+ }
 
-        // Formatação de dinheiro
-        if (key === 'purchaseCost') {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
-        }
+ // Formatação de dinheiro
+ if (key === 'purchaseCost') {
+ return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+ }
 
-        // Resolução de IDs
-        if (key === 'sectorId') return sectors.find(s => s.id === val)?.name || val;
-        if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
-        if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
-        if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
-        if (key === 'active') return val ? 'Ativo/Sim' : 'Inativo/Não';
-        if (key === 'status') return val || 'Ativo';
+ // Resolução de IDs
+ if (key === 'sectorId') return sectors.find(s => s.id === val)?.name || val;
+ if (key === 'linkedSimId') return sims.find(s => s.id === val)?.phoneNumber || val;
+ if (key === 'currentUserId' || key === 'userId') return users.find(u => u.id === val)?.fullName || val;
+ if (key === 'modelId') return models.find(m => m.id === val)?.name || val;
+ if (key === 'active') return val ? 'Ativo/Sim' : 'Inativo/Não';
+ if (key === 'status') return val || 'Ativo';
 
-        // Resolução de Dados Customizados
-        if (key === 'customData') {
-            try {
-                const data = typeof val === 'string' ? JSON.parse(val) : val;
-                return Object.entries(data).map(([fieldId, fieldVal]) => {
-                    const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
-                    return `${fieldName}: ${fieldVal || 'vazio'}`;
-                }).join('; ');
-            } catch (e) { return String(val); }
-        }
+ // Resolução de Dados Customizados
+ if (key === 'customData') {
+ try {
+ const data = typeof val === 'string' ? JSON.parse(val) : val;
+ return Object.entries(data).map(([fieldId, fieldVal]) => {
+ const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
+ return`${fieldName}: ${fieldVal || 'vazio'}`;
+ }).join('; ');
+ } catch (e) { return String(val); }
+ }
 
-        return String(val);
-    };
+ return String(val);
+ };
 
-    const lines = note.split('\n');
+ const lines = note.split('\n');
 
-    return (
-        <div className="space-y-1.5 py-1">
-            {lines.map((line, i) => {
-                if (!line.trim()) return null;
+ return (
+ <div className="space-y-1.5 py-1">
+ {lines.map((line, i) => {
+ if (!line.trim()) return null;
 
-                // Caso 1: Mudança de valor (estilo Sniper-IT: 'Campo: 'antigo' ➔ 'novo'')
-                if (line.includes('➔')) {
-                    const parts = line.split(':');
-                    const rawKey = parts[0]?.trim();
-                    const fieldLabel = FIELD_LABELS[rawKey] || rawKey;
-                    const valuesPart = parts.slice(1).join(':');
-                    const [oldVal, newVal] = (valuesPart || '').split('➔');
-                    
-                    const cleanOld = oldVal?.trim().replace(/'/g, '');
-                    const cleanNew = newVal?.trim().replace(/'/g, '');
+ // Caso 1: Mudança de valor (estilo Sniper-IT: 'Campo: 'antigo' ➔ 'novo'')
+ if (line.includes('➔')) {
+ const parts = line.split(':');
+ const rawKey = parts[0]?.trim();
+ const fieldLabel = FIELD_LABELS[rawKey] || rawKey;
+ const valuesPart = parts.slice(1).join(':');
+ const [oldVal, newVal] = (valuesPart || '').split('➔');
+ 
+ const cleanOld = oldVal?.trim().replace(/'/g, '');
+ const cleanNew = newVal?.trim().replace(/'/g, '');
 
-                    return (
-                        <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                            <span className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
-                            <span className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/30 line-through opacity-70">
-                                {resolveValue(rawKey, cleanOld)}
-                            </span>
-                            <ArrowRight size={10} className="text-slate-300"/>
-                            <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-bold">
-                                {resolveValue(rawKey, cleanNew)}
-                            </span>
-                        </div>
-                    );
-                }
+ return (
+ <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+ <span className="font-black uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
+ <span className="bg-red-900/20 text-red-400 px-1.5 py-0.5 rounded border border-red-900/30 line-through opacity-70">
+ {resolveValue(rawKey, cleanOld)}
+ </span>
+ <ArrowRight size={10} className="text-slate-300"/>
+ <span className="bg-emerald-900/30 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-900/40 font-bold">
+ {resolveValue(rawKey, cleanNew)}
+ </span>
+ </div>
+ );
+ }
 
-                // Caso 2: Menção a colaborador ou ativo (Linkable)
-                if (line.includes('Alvo:') || line.includes('Origem:')) {
-                    const [label, name] = line.split(':');
-                    const trimmedName = name?.trim();
-                    const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
-                    
-                    return (
-                        <div key={i} className="font-bold text-[11px] flex items-center gap-2">
-                             <span className="text-slate-400 uppercase text-[10px]">{label}:</span>
-                             {foundUser ? (
-                                 <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
-                                    <UserIcon size={10}/> {trimmedName}
-                                 </span>
-                             ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
-                        </div>
-                    );
-                }
+ // Caso 2: Menção a colaborador ou ativo (Linkable)
+ if (line.includes('Alvo:') || line.includes('Origem:')) {
+ const [label, name] = line.split(':');
+ const trimmedName = name?.trim();
+ const foundUser = users.find(u => u.fullName.toLowerCase() === trimmedName?.toLowerCase());
+ 
+ return (
+ <div key={i} className="font-bold text-[11px] flex items-center gap-2">
+ <span className="uppercase text-[10px]">{label}:</span>
+ {foundUser ? (
+ <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-400 hover:underline cursor-pointer bg-blue-900/30 px-2 py-0.5 rounded flex items-center gap-1">
+ <UserIcon size={10}/> {trimmedName}
+ </span>
+ ) : <span className="text-slate-200">{trimmedName}</span>}
+ </div>
+ );
+ }
 
-                return <div key={i} className="text-slate-600 dark:text-slate-300 font-medium">{line}</div>;
-            })}
-        </div>
-    );
+ return <div key={i} className="text-slate-300 font-medium">{line}</div>;
+ })}
+ </div>
+ );
 };
 
 const COLUMN_OPTIONS = [
-    { id: 'email', label: 'E-mail' },
-    { id: 'cpf', label: 'CPF' },
-    { id: 'rg', label: 'RG' },
-    { id: 'pis', label: 'PIS' },
-    { id: 'address', label: 'Endereço' },
-    { id: 'sector', label: 'Setor/Função' },
-    { id: 'internalCode', label: 'Cód. Setor' },
-    { id: 'assetsCount', label: 'Ativos' },
-    { id: 'activeSims', label: 'Números de Chip' },
-    { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
+ { id: 'email', label: 'E-mail' },
+ { id: 'cpf', label: 'CPF' },
+ { id: 'rg', label: 'RG' },
+ { id: 'pis', label: 'PIS' },
+ { id: 'address', label: 'Endereço' },
+ { id: 'sector', label: 'Setor/Função' },
+ { id: 'internalCode', label: 'Cód. Setor' },
+ { id: 'assetsCount', label: 'Ativos' },
+ { id: 'activeSims', label: 'Números de Chip' },
+ { id: 'devicesInfo', label: 'Detalhes de Aparelho' }
 ];
 
 const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) => (
-    <div 
-        onMouseDown={onMouseDown}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10 bg-slate-200/50 dark:bg-slate-700/50"
-    />
+ <div 
+ onMouseDown={onMouseDown}
+ className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-emerald-400/50 transition-colors z-10 bg-slate-200/50 bg-slate-700/50"
+ />
 );
 
 const UserManager = () => {
-  const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
-  const { user: currentUser } = useAuth();
-  const { showToast } = useToast();
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE' | 'ON_LEAVE'>('ACTIVE'); 
-  const [showPendingOnly, setShowPendingOnly] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
-  const [editReason, setEditReason] = useState('');
-  const [isViewOnly, setIsViewOnly] = useState(false); 
-  const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<User>>({ active: true });
-  const [releaseAssetsOnLeave, setReleaseAssetsOnLeave] = useState(true);
-  
-  const [editingTerm, setEditingTerm] = useState<Term | null>(null);
-  const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', notes: '', evidenceFiles: [] });
-  
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
-      const saved = localStorage.getItem('user_manager_columns');
-      return saved ? JSON.parse(saved) : ['sector', 'assetsCount'];
-  });
+ const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
+ const { user: currentUser } = useAuth();
+ const { showToast } = useToast();
+ const navigate = useNavigate();
+ const location = useLocation();
+ 
+ const [searchTerm, setSearchTerm] = useState('');
+ const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE' | 'ON_LEAVE'>('ACTIVE'); 
+ const [showPendingOnly, setShowPendingOnly] = useState(false);
+ const [isModalOpen, setIsModalOpen] = useState(false);
+ const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+ const [editReason, setEditReason] = useState('');
+ const [isViewOnly, setIsViewOnly] = useState(false); 
+ const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
+ const [editingId, setEditingId] = useState<string | null>(null);
+ const [formData, setFormData] = useState<Partial<User>>({ active: true });
+ const [releaseAssetsOnLeave, setReleaseAssetsOnLeave] = useState(true);
+ 
+ const [editingTerm, setEditingTerm] = useState<Term | null>(null);
+ const [termEditData, setTermEditData] = useState<{ condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[] }>({ condition: 'Perfeito', damageDescription: '', assetDetails: '', notes: '', evidenceFiles: [] });
+ 
+ const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+ const saved = localStorage.getItem('user_manager_columns');
+ return saved ? JSON.parse(saved) : ['sector', 'assetsCount'];
+ });
 
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-      const saved = localStorage.getItem('user_manager_widths');
-      return saved ? JSON.parse(saved) : {};
-  });
-  
-  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
-  const columnRef = useRef<HTMLDivElement>(null);
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+ const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+ const saved = localStorage.getItem('user_manager_widths');
+ return saved ? JSON.parse(saved) : {};
+ });
+ 
+ const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+ const columnRef = useRef<HTMLDivElement>(null);
+ const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
-  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+ const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
+ const [currentPage, setCurrentPage] = useState(1);
+ const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+ const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'SECTOR' | null>(null);
-  const [bulkValue, setBulkValue] = useState('');
+ const [selectedIds, setSelectedIds] = useState<string[]>([]);
+ const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+ const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'SECTOR' | null>(null);
+ const [bulkValue, setBulkValue] = useState('');
 
-  useEffect(() => {
-      const params = new URLSearchParams(location.search);
-      const userId = params.get('userId');
-      const tab = params.get('tab');
-      if (userId) {
-          const user = users.find(u => u.id === userId);
-          if (user) {
-              handleOpenModal(user, true);
-              if (tab === 'terms') {
-                  setActiveTab('TERMS');
-              }
-              navigate('/users', { replace: true });
-          }
-      }
-  }, [location, users, navigate]);
+ useEffect(() => {
+ const params = new URLSearchParams(location.search);
+ const userId = params.get('userId');
+ const tab = params.get('tab');
+ if (userId) {
+ const user = users.find(u => u.id === userId);
+ if (user) {
+ handleOpenModal(user, true);
+ if (tab === 'terms') {
+ setActiveTab('TERMS');
+ }
+ navigate('/users', { replace: true });
+ }
+ }
+ }, [location, users, navigate]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-        if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+ useEffect(() => {
+ const handleClickOutside = (e: MouseEvent) => {
+ if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+ };
+ document.addEventListener('mousedown', handleClickOutside);
+ return () => document.removeEventListener('mousedown', handleClickOutside);
+ }, []);
 
-  useEffect(() => {
-      localStorage.setItem('user_manager_columns', JSON.stringify(visibleColumns));
-  }, [visibleColumns]);
+ useEffect(() => {
+ localStorage.setItem('user_manager_columns', JSON.stringify(visibleColumns));
+ }, [visibleColumns]);
 
-  useEffect(() => {
-      localStorage.setItem('user_manager_widths', JSON.stringify(columnWidths));
-  }, [columnWidths]);
+ useEffect(() => {
+ localStorage.setItem('user_manager_widths', JSON.stringify(columnWidths));
+ }, [columnWidths]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, viewMode, showPendingOnly, itemsPerPage]);
+ useEffect(() => {
+ setCurrentPage(1);
+ }, [searchTerm, viewMode, showPendingOnly, itemsPerPage]);
 
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
+ const handleSort = (key: string) => {
+ let direction: 'asc' | 'desc' = 'asc';
+ if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+ direction = 'desc';
+ }
+ setSortConfig({ key, direction });
+ };
 
-  const adminName = currentUser?.name || 'Unknown';
+ const adminName = currentUser?.name || 'Unknown';
 
-  const handleResize = (colId: string, startX: number, startWidth: number) => {
-    const onMouseMove = (e: MouseEvent) => {
-        const delta = e.clientX - startX;
-        setColumnWidths(prev => ({ ...prev, [colId]: Math.max(startWidth + delta, 50) }));
-    };
-    const onMouseUp = () => {
-        document.removeEventListener('mouseup', onMouseUp);
-        document.removeEventListener('mousemove', onMouseMove);
-    };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  };
+ const handleResize = (colId: string, startX: number, startWidth: number) => {
+ const onMouseMove = (e: MouseEvent) => {
+ const delta = e.clientX - startX;
+ setColumnWidths(prev => ({ ...prev, [colId]: Math.max(startWidth + delta, 50) }));
+ };
+ const onMouseUp = () => {
+ document.removeEventListener('mouseup', onMouseUp);
+ document.removeEventListener('mousemove', onMouseMove);
+ };
+ document.addEventListener('mousemove', onMouseMove);
+ document.addEventListener('mouseup', onMouseUp);
+ };
 
-  const handleOpenModal = (user?: User, viewOnly: boolean = false) => {
-    setActiveTab('DATA');
-    setIsViewOnly(viewOnly);
-    setReleaseAssetsOnLeave(true);
-    if (user) { 
-        setEditingId(user.id); 
-        // Fix date format for input type="date" (v2.19.16)
-        const formattedUser = { ...user };
-        if (formattedUser.onLeaveUntil && typeof formattedUser.onLeaveUntil === 'string') {
-            formattedUser.onLeaveUntil = formattedUser.onLeaveUntil.split('T')[0];
-        }
-        setFormData(formattedUser); 
-    }
-    else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', sectorId: '' }); }
-    setIsModalOpen(true);
-  };
+ const handleOpenModal = (user?: User, viewOnly: boolean = false) => {
+ setActiveTab('DATA');
+ setIsViewOnly(viewOnly);
+ setReleaseAssetsOnLeave(true);
+ if (user) { 
+ setEditingId(user.id); 
+ // Fix date format for input type="date"(v2.19.16)
+ const formattedUser = { ...user };
+ if (formattedUser.onLeaveUntil && typeof formattedUser.onLeaveUntil === 'string') {
+ formattedUser.onLeaveUntil = formattedUser.onLeaveUntil.split('T')[0];
+ }
+ setFormData(formattedUser); 
+ }
+ else { setEditingId(null); setFormData({ active: true, fullName: '', email: '', cpf: '', rg: '', pis: '', address: '', sectorId: '' }); }
+ setIsModalOpen(true);
+ };
 
-  const toggleColumn = (id: string) => {
-      setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
-  };
+ const toggleColumn = (id: string) => {
+ setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+ };
 
-  const handleTermUpload = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !editingId) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-          const fileUrl = reader.result as string;
-          updateTermFile(termId, editingId, fileUrl, adminName);
-      };
-      reader.readAsDataURL(file);
-  };
+ const handleTermUpload = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+ const file = e.target.files?.[0];
+ if (!file || !editingId) return;
+ const reader = new FileReader();
+ reader.onloadend = () => {
+ const fileUrl = reader.result as string;
+ updateTermFile(termId, editingId, fileUrl, adminName);
+ };
+ reader.readAsDataURL(file);
+ };
 
-  const handleEditTerm = async (term: Term) => {
-      let evidenceFiles = term.evidenceFiles || [];
-      if (term.hasEvidence && evidenceFiles.length === 0) {
-          try {
-              const res = await fetch(`/api/terms/evidence/${term.id}`);
-              const data = await res.json();
-              if (data.fileUrls && data.fileUrls.length > 0) {
-                  evidenceFiles = data.fileUrls;
-              } else if (data.fileUrl) {
-                  evidenceFiles = [data.fileUrl];
-              }
-          } catch (e) {
-              console.error('Erro ao carregar evidência', e);
-          }
-      }
-      setTermEditData({
-          condition: term.condition || 'Perfeito',
-          damageDescription: term.damageDescription || '',
-          assetDetails: term.assetDetails || '',
-          notes: term.notes || '',
-          evidenceFiles: evidenceFiles
-      });
-      setEditingTerm(term);
-  };
+ const handleEditTerm = async (term: Term) => {
+ let evidenceFiles = term.evidenceFiles || [];
+ if (term.hasEvidence && evidenceFiles.length === 0) {
+ try {
+ const res = await fetch(`/api/terms/evidence/${term.id}`);
+ const data = await res.json();
+ if (data.fileUrls && data.fileUrls.length > 0) {
+ evidenceFiles = data.fileUrls;
+ } else if (data.fileUrl) {
+ evidenceFiles = [data.fileUrl];
+ }
+ } catch (e) {
+ console.error('Erro ao carregar evidência', e);
+ }
+ }
+ setTermEditData({
+ condition: term.condition || 'Perfeito',
+ damageDescription: term.damageDescription || '',
+ assetDetails: term.assetDetails || '',
+ notes: term.notes || '',
+ evidenceFiles: evidenceFiles
+ });
+ setEditingTerm(term);
+ };
 
-  const handleSaveTermEdit = () => {
-      if (!editingTerm) return;
-      const adminName = currentUser?.name || 'Admin';
-      updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.notes, termEditData.evidenceFiles, adminName);
-      setEditingTerm(null);
-  };
+ const handleSaveTermEdit = () => {
+ if (!editingTerm) return;
+ const adminName = currentUser?.name || 'Admin';
+ updateTermDetails(editingTerm.id, termEditData.condition, termEditData.damageDescription, termEditData.assetDetails, termEditData.notes, termEditData.evidenceFiles, adminName);
+ setEditingTerm(null);
+ };
 
-  const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (termEditData.evidenceFiles.length >= 3) {
-          alert("Máximo de 3 evidências permitidas.");
-          return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-          setTermEditData(prev => ({ ...prev, evidenceFiles: [...prev.evidenceFiles, reader.result as string] }));
-      };
-      reader.readAsDataURL(file);
-  };
+ const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+ const file = e.target.files?.[0];
+ if (!file) return;
+ if (termEditData.evidenceFiles.length >= 3) {
+ alert("Máximo de 3 evidências permitidas.");
+ return;
+ }
+ const reader = new FileReader();
+ reader.onloadend = () => {
+ setTermEditData(prev => ({ ...prev, evidenceFiles: [...prev.evidenceFiles, reader.result as string] }));
+ };
+ reader.readAsDataURL(file);
+ };
 
-  const handleRemoveEvidence = (index: number) => {
-      setTermEditData(prev => ({
-          ...prev,
-          evidenceFiles: prev.evidenceFiles.filter((_, i) => i !== index)
-      }));
-  };
+ const handleRemoveEvidence = (index: number) => {
+ setTermEditData(prev => ({
+ ...prev,
+ evidenceFiles: prev.evidenceFiles.filter((_, i) => i !== index)
+ }));
+ };
 
-  const handleReprintTerm = async (term: Term) => {
-      const user = users.find(u => u.id === term.userId);
-      if (!user) return;
-      
-      let asset: any = null;
-      
-      // v2.12.36: Regex robustas para múltiplos identificadores
-      const imeiMatch = term.assetDetails.match(/IMEI:\s*([^|\]\s]+)/i);
-      const tagMatch = term.assetDetails.match(/\[TAG:\s*([^|\]\s]+)/i);
-      const snMatch = term.assetDetails.match(/S\/N:\s*([^|\]\s]+)/i);
-      const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
+ const handleReprintTerm = async (term: Term) => {
+ const user = users.find(u => u.id === term.userId);
+ if (!user) return;
+ 
+ let asset: any = null;
+ 
+ // v2.12.36: Regex robustas para múltiplos identificadores
+ const imeiMatch = term.assetDetails.match(/IMEI:\s*([^|\]\s]+)/i);
+ const tagMatch = term.assetDetails.match(/\[TAG:\s*([^|\]\s]+)/i);
+ const snMatch = term.assetDetails.match(/S\/N:\s*([^|\]\s]+)/i);
+ const chipMatch = term.assetDetails.match(/\[CHIP:\s*([^\]]+)\]/i);
 
-      // 1. Prioridade Máxima: IMEI (Identificador Único Global)
-      if (imeiMatch) {
-          const imeiValue = imeiMatch[1].trim();
-          if (imeiValue && imeiValue.toLowerCase() !== 's/i' && imeiValue.toLowerCase() !== 'null') {
-              asset = devices.find(d => d.imei === imeiValue);
-          }
-      }
+ // 1. Prioridade Máxima: IMEI (Identificador Único Global)
+ if (imeiMatch) {
+ const imeiValue = imeiMatch[1].trim();
+ if (imeiValue && imeiValue.toLowerCase() !== 's/i' && imeiValue.toLowerCase() !== 'null') {
+ asset = devices.find(d => d.imei === imeiValue);
+ }
+ }
 
-      // 2. Segunda Prioridade: Patrimônio (Tag)
-      if (!asset && tagMatch) {
-          const tagValue = tagMatch[1].trim();
-          if (tagValue && tagValue.toLowerCase() !== 'null' && tagValue.toLowerCase() !== 's/t') {
-              asset = devices.find(d => d.assetTag === tagValue);
-          }
-      }
+ // 2. Segunda Prioridade: Patrimônio (Tag)
+ if (!asset && tagMatch) {
+ const tagValue = tagMatch[1].trim();
+ if (tagValue && tagValue.toLowerCase() !== 'null' && tagValue.toLowerCase() !== 's/t') {
+ asset = devices.find(d => d.assetTag === tagValue);
+ }
+ }
 
-      // 3. Terceira Prioridade: Serial Number
-      if (!asset && snMatch) {
-          const snValue = snMatch[1].trim();
-          if (snValue && snValue.toLowerCase() !== 's/s' && snValue.toLowerCase() !== 'null') {
-              asset = devices.find(d => d.serialNumber === snValue);
-          }
-      }
+ // 3. Terceira Prioridade: Serial Number
+ if (!asset && snMatch) {
+ const snValue = snMatch[1].trim();
+ if (snValue && snValue.toLowerCase() !== 's/s' && snValue.toLowerCase() !== 'null') {
+ asset = devices.find(d => d.serialNumber === snValue);
+ }
+ }
 
-      // 4. Quarta Prioridade: Chip
-      if (!asset && chipMatch) {
-          const phoneValue = chipMatch[1].trim();
-          asset = sims.find(s => s.phoneNumber === phoneValue);
-      }
+ // 4. Quarta Prioridade: Chip
+ if (!asset && chipMatch) {
+ const phoneValue = chipMatch[1].trim();
+ asset = sims.find(s => s.phoneNumber === phoneValue);
+ }
 
-      // 5. Fallback Heurístico Isolado (v2.12.36 - Evita ativos de terceiros)
-      if (!asset && editingId) {
-          const modelInDetail = term.assetDetails.toLowerCase();
-          // Só busca entre dispositivos que estão ATUALMENTE com este usuário ou LIVRES (estoque)
-          asset = devices.find(d => 
-            (d.currentUserId === editingId || !d.currentUserId) && 
-            modelInDetail.includes((models.find(m => m.id === d.modelId)?.name || '').toLowerCase())
-          );
-      }
+ // 5. Fallback Heurístico Isolado (v2.12.36 - Evita ativos de terceiros)
+ if (!asset && editingId) {
+ const modelInDetail = term.assetDetails.toLowerCase();
+ // Só busca entre dispositivos que estão ATUALMENTE com este usuário ou LIVRES (estoque)
+ asset = devices.find(d => 
+ (d.currentUserId === editingId || !d.currentUserId) && 
+ modelInDetail.includes((models.find(m => m.id === d.modelId)?.name || '').toLowerCase())
+ );
+ }
 
-      if (!asset) { 
-          alert("Não foi possível localizar o ativo exato no inventário para re-impressão.\n\nIdentificação no termo: " + term.assetDetails + "\n\nPossíveis motivos:\n1. O item foi excluído permanentemente.\n2. O identificador (IMEI/Tag) foi alterado no cadastro após a geração deste termo."); 
-          return; 
-      }
+ if (!asset) { 
+ alert("Não foi possível localizar o ativo exato no inventário para re-impressão.\n\nIdentificação no termo:"+ term.assetDetails +"\n\nPossíveis motivos:\n1. O item foi excluído permanentemente.\n2. O identificador (IMEI/Tag) foi alterado no cadastro após a geração deste termo."); 
+ return; 
+ }
 
-      let model, brand, type, linkedSim;
-      if ('serialNumber' in asset) {
-          model = models.find(m => m.id === asset.modelId);
-          brand = brands.find(b => b.id === model?.brandId);
-          type = assetTypes.find(t => t.id === model?.typeId);
-          if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
-      }
+ let model, brand, type, linkedSim;
+ if ('serialNumber' in asset) {
+ model = models.find(m => m.id === asset.modelId);
+ brand = brands.find(b => b.id === model?.brandId);
+ type = assetTypes.find(t => t.id === model?.typeId);
+ if (asset.linkedSimId) linkedSim = sims.find(s => s.id === asset.linkedSimId);
+ }
 
-      let evidenceFiles = term.evidenceFiles || [];
-      if (term.hasEvidence && evidenceFiles.length === 0) {
-          try {
-              const res = await fetch(`/api/terms/evidence/${term.id}`);
-              const data = await res.json();
-              if (data.fileUrls && data.fileUrls.length > 0) {
-                  evidenceFiles = data.fileUrls;
-              } else if (data.fileUrl) {
-                  evidenceFiles = [data.fileUrl];
-              }
-          } catch (e) {
-              console.error('Erro ao carregar evidência para reimpressão', e);
-          }
-      }
+ let evidenceFiles = term.evidenceFiles || [];
+ if (term.hasEvidence && evidenceFiles.length === 0) {
+ try {
+ const res = await fetch(`/api/terms/evidence/${term.id}`);
+ const data = await res.json();
+ if (data.fileUrls && data.fileUrls.length > 0) {
+ evidenceFiles = data.fileUrls;
+ } else if (data.fileUrl) {
+ evidenceFiles = [data.fileUrl];
+ }
+ } catch (e) {
+ console.error('Erro ao carregar evidência para reimpressão', e);
+ }
+ }
 
-      generateAndPrintTerm({
-          user, asset, settings, model, brand, type, linkedSim,
-          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
-          sectorName: sectors.find(s => s.id === user.sectorId)?.name,
-          notes: term.notes ? `${term.notes} (Re-impressão via painel do colaborador)` : 'Re-impressão via painel do colaborador.',
-          condition: term.condition,
-          damageDescription: term.damageDescription,
-          evidenceFiles: evidenceFiles
-      });
-  };
+ generateAndPrintTerm({
+ user, asset, settings, model, brand, type, linkedSim,
+ actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
+ sectorName: sectors.find(s => s.id === user.sectorId)?.name,
+ notes: term.notes ?`${term.notes} (Re-impressão via painel do colaborador)`: 'Re-impressão via painel do colaborador.',
+ condition: term.condition,
+ damageDescription: term.damageDescription,
+ evidenceFiles: evidenceFiles
+ });
+ };
 
-  const handleOpenFile = async (termId: string, fileUrl?: string) => {
-      if (!fileUrl && termId) {
-          setLoadingFiles(prev => ({ ...prev, [termId]: true }));
-          try {
-              const url = await getTermFile(termId);
-              if (url) openBlobFromBase64(url);
-              else alert("Arquivo não encontrado no servidor.");
-          } catch (e) {
-              alert("Erro ao baixar arquivo.");
-          } finally {
-              setLoadingFiles(prev => ({ ...prev, [termId]: false }));
-          }
-          return;
-      }
-      if (fileUrl) openBlobFromBase64(fileUrl);
-  };
+ const handleOpenFile = async (termId: string, fileUrl?: string) => {
+ if (!fileUrl && termId) {
+ setLoadingFiles(prev => ({ ...prev, [termId]: true }));
+ try {
+ const url = await getTermFile(termId);
+ if (url) openBlobFromBase64(url);
+ else alert("Arquivo não encontrado no servidor.");
+ } catch (e) {
+ alert("Erro ao baixar arquivo.");
+ } finally {
+ setLoadingFiles(prev => ({ ...prev, [termId]: false }));
+ }
+ return;
+ }
+ if (fileUrl) openBlobFromBase64(fileUrl);
+ };
 
-  const openBlobFromBase64 = (base64Url: string) => {
-      if (!base64Url.startsWith('data:')) {
-          window.open(base64Url, '_blank');
-          return;
-      }
-      const parts = base64Url.split(',');
-      const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-      const binary = atob(parts[1]);
-      const array = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
-      const blob = new Blob([array], { type: mime });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-  }
+ const openBlobFromBase64 = (base64Url: string) => {
+ if (!base64Url.startsWith('data:')) {
+ window.open(base64Url, '_blank');
+ return;
+ }
+ const parts = base64Url.split(',');
+ const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+ const binary = atob(parts[1]);
+ const array = new Uint8Array(binary.length);
+ for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i);
+ const blob = new Blob([array], { type: mime });
+ const blobUrl = URL.createObjectURL(blob);
+ window.open(blobUrl, '_blank');
+ }
 
-  const checkUniqueness = (data: Partial<User>) => {
-      const cleanedCpf = formatCPF(data.cpf || '');
-      const duplicateCpf = users.find(u => u.cpf === cleanedCpf && u.id !== editingId);
-      if (duplicateCpf) return `O CPF ${cleanedCpf} já está cadastrado.`;
-      return null;
-  };
+ const checkUniqueness = (data: Partial<User>) => {
+ const cleanedCpf = formatCPF(data.cpf || '');
+ const duplicateCpf = users.find(u => u.cpf === cleanedCpf && u.id !== editingId);
+ if (duplicateCpf) return`O CPF ${cleanedCpf} já está cadastrado.`;
+ return null;
+ };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isViewOnly) return;
-    const uniquenessError = checkUniqueness(formData);
-    if (uniquenessError) { alert(`ERRO:\n\n${uniquenessError}`); return; }
-    if (editingId) { setEditReason(''); setIsReasonModalOpen(true); } 
-    else {
-        try {
-            const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
-            addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
-            setIsModalOpen(false);
-            showToast('Colaborador cadastrado com sucesso!', 'success');
-        } catch (error) {
-            showToast('Erro ao cadastrar colaborador.', 'error');
-        }
-    }
-  };
+ const handleSubmit = (e: React.FormEvent) => {
+ e.preventDefault();
+ if (isViewOnly) return;
+ const uniquenessError = checkUniqueness(formData);
+ if (uniquenessError) { alert(`ERRO:\n\n${uniquenessError}`); return; }
+ if (editingId) { setEditReason(''); setIsReasonModalOpen(true); } 
+ else {
+ try {
+ const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
+ addUser({ ...cleanedData, id: Math.random().toString(36).substr(2, 9), terms: [] } as User, adminName);
+ setIsModalOpen(false);
+ showToast('Colaborador cadastrado com sucesso!', 'success');
+ } catch (error) {
+ showToast('Erro ao cadastrar colaborador.', 'error');
+ }
+ }
+ };
 
-  const confirmEdit = async () => {
-    if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
-    
-    // Liberação automática de ativos ao afastar (v2.19.16)
-    if (formData.status === 'Afastado' && releaseAssetsOnLeave && editingId) {
-        const { userDevices, allUserSims } = getUserAssets(editingId);
-        if (userDevices.length > 0 || allUserSims.length > 0) {
-            const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
-            if (confirmRelease) {
-                for (const device of userDevices) {
-                    await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
-                }
-                for (const sim of allUserSims) {
-                    await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
-                }
-            }
-        }
-    }
+ const confirmEdit = async () => {
+ if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
+ 
+ // Liberação automática de ativos ao afastar (v2.19.16)
+ if (formData.status === 'Afastado' && releaseAssetsOnLeave && editingId) {
+ const { userDevices, allUserSims } = getUserAssets(editingId);
+ if (userDevices.length > 0 || allUserSims.length > 0) {
+ const confirmRelease = window.confirm(`Deseja realmente liberar os ${userDevices.length + allUserSims.length} equipamentos vinculados a este colaborador?`);
+ if (confirmRelease) {
+ for (const device of userDevices) {
+ await returnAsset('Device', device.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
+ }
+ for (const sim of allUserSims) {
+ await returnAsset('Sim', sim.id, 'Liberação automática por afastamento do colaborador.', adminName, undefined, false, 'Perfeito', '', [], true, 'Afastamento do Colaborador (Resolução Administrativa)');
+ }
+ }
+ }
+ }
 
-    try {
-        const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
-        updateUser(cleanedData as User, adminName, editReason);
-        setIsReasonModalOpen(false);
-        setIsModalOpen(false);
-        showToast('Dados do colaborador atualizados!', 'success');
-    } catch (error) {
-        showToast('Erro ao atualizar colaborador.', 'error');
-    }
-  };
+ try {
+ const cleanedData = { ...formData, fullName: (formData.fullName || '').trim(), email: (formData.email || '').trim(), cpf: formatCPF((formData.cpf || '').trim()), rg: formatRG((formData.rg || '').trim()), pis: formatPIS((formData.pis || '').trim()) };
+ updateUser(cleanedData as User, adminName, editReason);
+ setIsReasonModalOpen(false);
+ setIsModalOpen(false);
+ showToast('Dados do colaborador atualizados!', 'success');
+ } catch (error) {
+ showToast('Erro ao atualizar colaborador.', 'error');
+ }
+ };
 
-  const handleToggleClick = (user: User) => {
-      if (!user.active) { 
-          const reason = prompt(`Reativar ${user.fullName}? Justificativa:`);
-          if (reason) {
-              try {
-                  toggleUserActive(user, adminName, reason);
-                  showToast('Colaborador reativado com sucesso!', 'success');
-              } catch (error) {
-                  showToast('Erro ao reativar colaborador.', 'error');
-              }
-          }
-          return; 
-      }
-      const hasAssets = devices.some(d => d.currentUserId === user.id) || sims.some(s => s.currentUserId === user.id);
-      if (hasAssets) return alert("Não é possível inativar com ativos em posse.");
-      const reason = prompt(`Inativar ${user.fullName}? Justificativa:`);
-      if (reason) {
-          try {
-              toggleUserActive(user, adminName, reason);
-              showToast('Colaborador inativado com sucesso!', 'success');
-          } catch (error) {
-              showToast('Erro ao inativar colaborador.', 'error');
-          }
-      }
-  };
+ const handleToggleClick = (user: User) => {
+ if (!user.active) { 
+ const reason = prompt(`Reativar ${user.fullName}? Justificativa:`);
+ if (reason) {
+ try {
+ toggleUserActive(user, adminName, reason);
+ showToast('Colaborador reativado com sucesso!', 'success');
+ } catch (error) {
+ showToast('Erro ao reativar colaborador.', 'error');
+ }
+ }
+ return; 
+ }
+ const hasAssets = devices.some(d => d.currentUserId === user.id) || sims.some(s => s.currentUserId === user.id);
+ if (hasAssets) return alert("Não é possível inativar com ativos em posse.");
+ const reason = prompt(`Inativar ${user.fullName}? Justificativa:`);
+ if (reason) {
+ try {
+ toggleUserActive(user, adminName, reason);
+ showToast('Colaborador inativado com sucesso!', 'success');
+ } catch (error) {
+ showToast('Erro ao inativar colaborador.', 'error');
+ }
+ }
+ };
 
-    const sortedUsers = React.useMemo(() => {
-    let sortableItems = [...users];
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue: any = a[sortConfig.key as keyof User];
-        let bValue: any = b[sortConfig.key as keyof User];
-        
-        // Resolução de nomes e campos calculados
-        if (sortConfig.key === 'sectorId') {
-            aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
-            bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
-        } else if (sortConfig.key === 'assetsCount') {
-            const assetsA = getUserAssets(a.id);
-            const assetsB = getUserAssets(b.id);
-            aValue = assetsA.userDevices.length + assetsA.allUserSims.length;
-            bValue = assetsB.userDevices.length + assetsB.allUserSims.length;
-        } else if (sortConfig.key === 'activeSims') {
-            const assetsA = getUserAssets(a.id);
-            const assetsB = getUserAssets(b.id);
-            aValue = assetsA.allUserSims.map(s => s.phoneNumber).join(', ');
-            bValue = assetsB.allUserSims.map(s => s.phoneNumber).join(', ');
-        } else if (sortConfig.key === 'devicesInfo') {
-            const assetsA = getUserAssets(a.id);
-            const assetsB = getUserAssets(b.id);
-            aValue = assetsA.userDevices.map(d => {
-                const m = models.find(mod => mod.id === d.modelId);
-                return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
-            }).join(', ');
-            bValue = assetsB.userDevices.map(d => {
-                const m = models.find(mod => mod.id === d.modelId);
-                return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
-            }).join(', ');
-        }
+ const sortedUsers = React.useMemo(() => {
+ let sortableItems = [...users];
+ if (sortConfig !== null) {
+ sortableItems.sort((a, b) => {
+ let aValue: any = a[sortConfig.key as keyof User];
+ let bValue: any = b[sortConfig.key as keyof User];
+ 
+ // Resolução de nomes e campos calculados
+ if (sortConfig.key === 'sectorId') {
+ aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
+ bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
+ } else if (sortConfig.key === 'assetsCount') {
+ const assetsA = getUserAssets(a.id);
+ const assetsB = getUserAssets(b.id);
+ aValue = assetsA.userDevices.length + assetsA.allUserSims.length;
+ bValue = assetsB.userDevices.length + assetsB.allUserSims.length;
+ } else if (sortConfig.key === 'activeSims') {
+ const assetsA = getUserAssets(a.id);
+ const assetsB = getUserAssets(b.id);
+ aValue = assetsA.allUserSims.map(s => s.phoneNumber).join(', ');
+ bValue = assetsB.allUserSims.map(s => s.phoneNumber).join(', ');
+ } else if (sortConfig.key === 'devicesInfo') {
+ const assetsA = getUserAssets(a.id);
+ const assetsB = getUserAssets(b.id);
+ aValue = assetsA.userDevices.map(d => {
+ const m = models.find(mod => mod.id === d.modelId);
+ return`${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+ }).join(', ');
+ bValue = assetsB.userDevices.map(d => {
+ const m = models.find(mod => mod.id === d.modelId);
+ return`${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+ }).join(', ');
+ }
 
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-            return sortConfig.direction === 'asc' 
-                ? aValue.localeCompare(bValue) 
-                : bValue.localeCompare(aValue);
-        }
+ if (typeof aValue === 'string' && typeof bValue === 'string') {
+ return sortConfig.direction === 'asc' 
+ ? aValue.localeCompare(bValue) 
+ : bValue.localeCompare(aValue);
+ }
 
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    } else {
-        sortableItems.sort((a, b) => a.fullName.localeCompare(b.fullName));
-    }
-    return sortableItems;
-  }, [users, sortConfig]);
+ if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+ if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+ return 0;
+ });
+ } else {
+ sortableItems.sort((a, b) => a.fullName.localeCompare(b.fullName));
+ }
+ return sortableItems;
+ }, [users, sortConfig]);
 
-  const filteredUsers = sortedUsers.filter(u => {
-    if (viewMode === 'ACTIVE') {
-        if (!u.active || (u.status && u.status === 'Afastado')) return false;
-    } else if (viewMode === 'INACTIVE') {
-        if (u.active) return false;
-    } else if (viewMode === 'ON_LEAVE') {
-        if (!u.active || u.status !== 'Afastado') return false;
-    }
-    
-    if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl && !t.hasFile)) return false;
-    return normalizeString(`${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`).includes(normalizeString(searchTerm));
-  });
+ const filteredUsers = sortedUsers.filter(u => {
+ if (viewMode === 'ACTIVE') {
+ if (!u.active || (u.status && u.status === 'Afastado')) return false;
+ } else if (viewMode === 'INACTIVE') {
+ if (u.active) return false;
+ } else if (viewMode === 'ON_LEAVE') {
+ if (!u.active || u.status !== 'Afastado') return false;
+ }
+ 
+ if (showPendingOnly && !(u.terms || []).some(t => !t.fileUrl && !t.hasFile)) return false;
+ return normalizeString(`${u.fullName} ${u.cpf} ${u.email} ${u.rg || ''} ${u.pis || ''}`).includes(normalizeString(searchTerm));
+ });
 
-  const totalItems = filteredUsers.length;
-  const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
-  const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
-  const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
-  const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
+ const totalItems = filteredUsers.length;
+ const currentItemsPerPage = itemsPerPage === 'ALL' ? totalItems : itemsPerPage;
+ const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / currentItemsPerPage);
+ const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
+ const paginatedUsers = itemsPerPage === 'ALL' ? filteredUsers : filteredUsers.slice(startIndex, startIndex + (itemsPerPage as number));
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(paginatedUsers.map(u => u.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
+ const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+ if (e.target.checked) {
+ setSelectedIds(paginatedUsers.map(u => u.id));
+ } else {
+ setSelectedIds([]);
+ }
+ };
 
-  const handleSelectOne = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
+ const handleSelectOne = (id: string) => {
+ setSelectedIds(prev => 
+ prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+ );
+ };
 
-  const handleBulkUpdate = async () => {
-    if (!bulkActionType || !bulkValue || selectedIds.length === 0) return;
-    
-    const adminName = currentUser?.name || 'Admin';
-    const reason = `Atualização em massa: Alteração de ${bulkActionType === 'STATUS' ? 'Status' : 'Setor'}`;
+ const handleBulkUpdate = async () => {
+ if (!bulkActionType || !bulkValue || selectedIds.length === 0) return;
+ 
+ const adminName = currentUser?.name || 'Admin';
+ const reason =`Atualização em massa: Alteração de ${bulkActionType === 'STATUS' ? 'Status' : 'Setor'}`;
 
-    try {
-      for (const id of selectedIds) {
-        const user = users.find(u => u.id === id);
-        if (user) {
-          const updates: Partial<User> = {};
-          if (bulkActionType === 'STATUS') {
-            updates.status = bulkValue as any;
-          } else if (bulkActionType === 'SECTOR') {
-            updates.sectorId = bulkValue;
-          }
-          updateUser({ ...user, ...updates }, adminName, reason);
-        }
-      }
-      showToast(`${selectedIds.length} colaboradores atualizados com sucesso!`, 'success');
-      setSelectedIds([]);
-      setIsBulkModalOpen(false);
-      setBulkValue('');
-      setBulkActionType(null);
-    } catch (error) {
-      showToast('Erro ao realizar atualização em massa.', 'error');
-    }
-  };
+ try {
+ for (const id of selectedIds) {
+ const user = users.find(u => u.id === id);
+ if (user) {
+ const updates: Partial<User> = {};
+ if (bulkActionType === 'STATUS') {
+ updates.status = bulkValue as any;
+ } else if (bulkActionType === 'SECTOR') {
+ updates.sectorId = bulkValue;
+ }
+ updateUser({ ...user, ...updates }, adminName, reason);
+ }
+ }
+ showToast(`${selectedIds.length} colaboradores atualizados com sucesso!`, 'success');
+ setSelectedIds([]);
+ setIsBulkModalOpen(false);
+ setBulkValue('');
+ setBulkActionType(null);
+ } catch (error) {
+ showToast('Erro ao realizar atualização em massa.', 'error');
+ }
+ };
 
-  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
-    const dataToExport = filteredUsers.map(u => {
-      const sector = sectors.find(s => s.id === u.sectorId);
-      const { userDevices, allUserSims } = getUserAssets(u.id);
-      return {
-        'Nome Completo': u.fullName,
-        'E-mail': u.email,
-        'CPF': u.cpf,
-        'RG': u.rg || '---',
-        'PIS': u.pis || '---',
-        'Setor': sector?.name || '---',
-        'Cód. Setor': u.internalCode || '---',
-        'Status': u.active ? (u.status || 'Ativo') : 'Inativo',
-        'Ativos': userDevices.length + allUserSims.length,
-        'Chips': allUserSims.map(s => s.phoneNumber).join(', '),
-        'Dispositivos': userDevices.map(d => {
-          const m = models.find(mod => mod.id === d.modelId);
-          return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
-        }).join('; ')
-      };
-    });
+ const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+ const dataToExport = filteredUsers.map(u => {
+ const sector = sectors.find(s => s.id === u.sectorId);
+ const { userDevices, allUserSims } = getUserAssets(u.id);
+ return {
+ 'Nome Completo': u.fullName,
+ 'E-mail': u.email,
+ 'CPF': u.cpf,
+ 'RG': u.rg || '---',
+ 'PIS': u.pis || '---',
+ 'Setor': sector?.name || '---',
+ 'Cód. Setor': u.internalCode || '---',
+ 'Status': u.active ? (u.status || 'Ativo') : 'Inativo',
+ 'Ativos': userDevices.length + allUserSims.length,
+ 'Chips': allUserSims.map(s => s.phoneNumber).join(', '),
+ 'Dispositivos': userDevices.map(d => {
+ const m = models.find(mod => mod.id === d.modelId);
+ return`${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+ }).join('; ')
+ };
+ });
 
-    const filename = `colaboradores_${new Date().toISOString().split('T')[0]}`;
+ const filename =`colaboradores_${new Date().toISOString().split('T')[0]}`;
 
-    if (format === 'csv') exportToCSV(dataToExport, filename);
-    else if (format === 'excel') exportToExcel(dataToExport, filename);
-    else if (format === 'pdf') {
-      const headers = Object.keys(dataToExport[0] || {});
-      const rows = dataToExport.map(obj => Object.values(obj));
-      exportToPDF(headers, rows, filename, 'Relatório de Colaboradores');
-    }
-  };
+ if (format === 'csv') exportToCSV(dataToExport, filename);
+ else if (format === 'excel') exportToExcel(dataToExport, filename);
+ else if (format === 'pdf') {
+ const headers = Object.keys(dataToExport[0] || {});
+ const rows = dataToExport.map(obj => Object.values(obj));
+ exportToPDF(headers, rows, filename, 'Relatório de Colaboradores');
+ }
+ };
 
-  // Lógica de Ativos por Usuário (v2.12.39 - Agregada para colunas e abas)
-  const getUserAssets = (userId: string) => {
-      const userDevices = devices.filter(d => d.currentUserId === userId);
-      const directSims = sims.filter(s => s.currentUserId === userId);
-      const linkedSimIdsFromDevices = userDevices.map(d => d.linkedSimId).filter(Boolean);
-      const linkedSimsFromDevices = sims.filter(s => linkedSimIdsFromDevices.includes(s.id));
-      
-      // Unir chips sem duplicidade (v2.12.39)
-      const allUserSims = [...new Map([...directSims, ...linkedSimsFromDevices].map(s => [s.id, s])).values()];
-      
-      return { userDevices, allUserSims };
-  };
+ // Lógica de Ativos por Usuário (v2.12.39 - Agregada para colunas e abas)
+ const getUserAssets = (userId: string) => {
+ const userDevices = devices.filter(d => d.currentUserId === userId);
+ const directSims = sims.filter(s => s.currentUserId === userId);
+ const linkedSimIdsFromDevices = userDevices.map(d => d.linkedSimId).filter(Boolean);
+ const linkedSimsFromDevices = sims.filter(s => linkedSimIdsFromDevices.includes(s.id));
+ 
+ // Unir chips sem duplicidade (v2.12.39)
+ const allUserSims = [...new Map([...directSims, ...linkedSimsFromDevices].map(s => [s.id, s])).values()];
+ 
+ return { userDevices, allUserSims };
+ };
 
-  const { userDevices: userAssets, allUserSims: userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], allUserSims: [] };
-  
-  const { data: userHistory = [], isLoading: historyLoading } = useQuery({
-      queryKey: ['user-history', editingId],
-      queryFn: async () => {
-          const res = await fetch(`/api/logs/asset/${editingId}`);
-          if (!res.ok) throw new Error('Failed to fetch history');
-          return res.json();
-      },
-      enabled: activeTab === 'LOGS' && !!editingId
-  });
+ const { userDevices: userAssets, allUserSims: userSims } = editingId ? getUserAssets(editingId) : { userDevices: [], allUserSims: [] };
+ 
+ const { data: userHistory = [], isLoading: historyLoading } = useQuery({
+ queryKey: ['user-history', editingId],
+ queryFn: async () => {
+ const res = await fetch(`/api/logs/asset/${editingId}`);
+ if (!res.ok) throw new Error('Failed to fetch history');
+ return res.json();
+ },
+ enabled: activeTab === 'LOGS' && !!editingId
+ });
 
-  const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
-  const userAccounts = editingId ? accounts.filter(a => a.userIds?.includes(editingId)) : [];
+ const currentUserTerms = editingId ? (users.find(u => u.id === editingId)?.terms || []) : [];
+ const userAccounts = editingId ? accounts.filter(a => a.userIds?.includes(editingId)) : [];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div><h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Colaboradores</h1><p className="text-gray-500 dark:text-slate-400 text-sm">Gestão de vínculos e termos.</p></div>
-        <div className="flex gap-2">
-            <div className="flex bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <button 
-                  onClick={() => handleExport('csv')} 
-                  className="p-2.5 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
-                  title="Exportar CSV"
-                >
-                  <FileText size={18}/>
-                </button>
-                <button 
-                  onClick={() => handleExport('excel')} 
-                  className="p-2.5 text-emerald-600 hover:bg-slate-50 dark:hover:bg-slate-800 border-r dark:border-slate-800 transition-colors" 
-                  title="Exportar Excel"
-                >
-                  <FileSpreadsheet size={18}/>
-                </button>
-                <button 
-                  onClick={() => handleExport('pdf')} 
-                  className="p-2.5 text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" 
-                  title="Exportar PDF"
-                >
-                  <Download size={18}/>
-                </button>
-            </div>
-            <div className="relative" ref={columnRef}>
-                <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 text-gray-700 dark:text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
-                {isColumnSelectorOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[80] overflow-hidden animate-fade-in">
-                        <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center"><span className="text-[10px] font-black uppercase text-slate-500">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button></div>
-                        <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
-                    </div>
-                )}
-            </div>
-            <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm font-bold transition-all active:scale-95"><Plus size={18} /> Novo Colaborador</button>
-        </div>
-      </div>
+ return (
+ <div className="space-y-6">
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+ <div><h1 className="text-2xl font-bold text-slate-100">Colaboradores</h1><p className="text-sm">Gestão de vínculos e termos.</p></div>
+ <div className="flex gap-2">
+ <div className="flex bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+ <button 
+ onClick={() => handleExport('csv')} 
+ className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
+ title="Exportar CSV"
+ >
+ <FileText size={18}/>
+ </button>
+ <button 
+ onClick={() => handleExport('excel')} 
+ className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
+ title="Exportar Excel"
+ >
+ <FileSpreadsheet size={18}/>
+ </button>
+ <button 
+ onClick={() => handleExport('pdf')} 
+ className="p-2.5 hover:bg-slate-800 transition-colors"
+ title="Exportar PDF"
+ >
+ <Download size={18}/>
+ </button>
+ </div>
+ <div className="relative"ref={columnRef}>
+ <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
+ {isColumnSelectorOpen && (
+ <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
+ <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span className="text-[10px] font-black uppercase">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button></div>
+ <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-900/30 text-emerald-400' : ' hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
+ </div>
+ )}
+ </div>
+ <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95"><Plus size={18} /> Novo Colaborador</button>
+ </div>
+ </div>
 
-      <div className="flex gap-4 border-b border-gray-200 dark:border-slate-800 overflow-x-auto bg-white dark:bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
-          {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
-              <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'}`}>
-                  {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
-                  <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full text-[10px]">
-                      {users.filter(u => {
-                          if (mode === 'ACTIVE') return u.active && (!u.status || u.status === 'Ativo');
-                          if (mode === 'INACTIVE') return !u.active;
-                          if (mode === 'ON_LEAVE') return u.active && u.status === 'Afastado';
-                          return false;
-                      }).length}
-                  </span>
-              </button>
-          ))}
-          <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-500' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
-      </div>
+ <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
+ {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
+ <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 ' : 'border-transparent hover:text-slate-300'}`}>
+ {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
+ <span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">
+ {users.filter(u => {
+ if (mode === 'ACTIVE') return u.active && (!u.status || u.status === 'Ativo');
+ if (mode === 'INACTIVE') return !u.active;
+ if (mode === 'ON_LEAVE') return u.active && u.status === 'Afastado';
+ return false;
+ }).length}
+ </span>
+ </button>
+ ))}
+ <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
+ </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-3 text-gray-400" size={20} />
-        <input type="text" placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..." className="pl-12 w-full border-none rounded-xl py-3 shadow-lg focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700 dark:text-slate-200 bg-white dark:bg-slate-900 transition-colors" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
-      </div>
+ <div className="relative">
+ <Search className="absolute left-4 top-3"size={20} />
+ <input type="text"placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-200 bg-slate-900 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+ </div>
 
-      <AnimatePresence>
-        {selectedIds.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between sticky top-4 z-50"
-          >
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-black uppercase tracking-widest">{selectedIds.length} Selecionados</span>
-              <div className="h-6 w-px bg-white/20 mx-2" />
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => { setBulkActionType('STATUS'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                >
-                  Alterar Status
-                </button>
-                <button 
-                  onClick={() => { setBulkActionType('SECTOR'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                >
-                  Alterar Setor
-                </button>
-              </div>
-            </div>
-            <button onClick={() => setSelectedIds([])} className="p-1 hover:bg-white/10 rounded-full transition-all">
-              <X size={20} />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+ <AnimatePresence>
+ {selectedIds.length > 0 && (
+ <motion.div 
+ initial={{ opacity: 0, y: -20 }}
+ animate={{ opacity: 1, y: 0 }}
+ exit={{ opacity: 0, y: -20 }}
+ className="bg-emerald-600 text-white px-6 py-3 rounded-xl flex items-center justify-between sticky top-4 z-50"
+ >
+ <div className="flex items-center gap-4">
+ <span className="text-sm font-black uppercase tracking-widest">{selectedIds.length} Selecionados</span>
+ <div className="h-6 w-px bg-white/20 mx-2"/>
+ <div className="flex gap-2">
+ <button 
+ onClick={() => { setBulkActionType('STATUS'); setIsBulkModalOpen(true); }}
+ className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+ >
+ Alterar Status
+ </button>
+ <button 
+ onClick={() => { setBulkActionType('SECTOR'); setIsBulkModalOpen(true); }}
+ className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+ >
+ Alterar Setor
+ </button>
+ </div>
+ </div>
+ <button onClick={() => setSelectedIds([])} className="p-1 hover:bg-white/10 rounded-full transition-all">
+ <X size={20} />
+ </button>
+ </motion.div>
+ )}
+ </AnimatePresence>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border dark:border-slate-800 overflow-hidden">
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[1000px] table-fixed">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 tracking-widest">
-                <tr>
-                  <th className="px-6 py-4 w-12">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                      checked={selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                  <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
-                  {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
-                  {visibleColumns.includes('cpf') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['cpf'] || '140px' }} onClick={() => handleSort('cpf')}><div className="flex items-center gap-1">CPF {sortConfig?.key === 'cpf' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('cpf', e.clientX, columnWidths['cpf'] || 140)} /></th>)}
-                  {visibleColumns.includes('rg') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['rg'] || '120px' }} onClick={() => handleSort('rg')}><div className="flex items-center gap-1">RG {sortConfig?.key === 'rg' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('rg', e.clientX, columnWidths['rg'] || 120)} /></th>)}
-                  {visibleColumns.includes('sector') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['sector'] || '180px' }} onClick={() => handleSort('sectorId')}><div className="flex items-center gap-1">Setor / Função {sortConfig?.key === 'sectorId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sector', e.clientX, columnWidths['sector'] || 180)} /></th>)}
-                  {visibleColumns.includes('assetsCount') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['assetsCount'] || '100px' }} onClick={() => handleSort('assetsCount')}><div className="flex items-center justify-center gap-1">Ativos {sortConfig?.key === 'assetsCount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('assetsCount', e.clientX, columnWidths['assetsCount'] || 100)} /></th>)}
-                  {visibleColumns.includes('activeSims') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['activeSims'] || '160px' }} onClick={() => handleSort('activeSims')}><div className="flex items-center gap-1">Números de Chip {sortConfig?.key === 'activeSims' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('activeSims', e.clientX, columnWidths['activeSims'] || 160)} /></th>)}
-                  {visibleColumns.includes('devicesInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors" style={{ width: columnWidths['devicesInfo'] || '250px' }} onClick={() => handleSort('devicesInfo')}><div className="flex items-center gap-1">Detalhes de Aparelho {sortConfig?.key === 'devicesInfo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('devicesInfo', e.clientX, columnWidths['devicesInfo'] || 250)} /></th>)}
-                  <th className="px-6 py-4 text-right" style={{ width: '120px' }}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedUsers.map(u => {
-                  const sector = sectors.find(s => s.id === u.sectorId);
-                  const { userDevices, allUserSims } = getUserAssets(u.id);
-                  const assets = userDevices.length + allUserSims.length;
-                  const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile);
-                  
-                  // Detalhes estendidos (v2.12.39 - Correção colunas dinâmicas)
-                  const chipsString = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
-                  const devicesString = userDevices.map(d => {
-                      const m = models.find(mod => mod.id === d.modelId);
-                      return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
-                  }).join(', ') || '---';
+ <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+ <div className="overflow-x-auto">
+ <table className="w-full text-sm text-left min-w-[1000px] table-fixed">
+ <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest">
+ <tr>
+ <th className="px-6 py-4 w-12">
+ <input 
+ type="checkbox"
+ className="rounded focus:ring-emerald-500"
+ checked={selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0}
+ onChange={handleSelectAll}
+ />
+ </th>
+ <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
+ {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
+ {visibleColumns.includes('cpf') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['cpf'] || '140px' }} onClick={() => handleSort('cpf')}><div className="flex items-center gap-1">CPF {sortConfig?.key === 'cpf' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('cpf', e.clientX, columnWidths['cpf'] || 140)} /></th>)}
+ {visibleColumns.includes('rg') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['rg'] || '120px' }} onClick={() => handleSort('rg')}><div className="flex items-center gap-1">RG {sortConfig?.key === 'rg' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('rg', e.clientX, columnWidths['rg'] || 120)} /></th>)}
+ {visibleColumns.includes('sector') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['sector'] || '180px' }} onClick={() => handleSort('sectorId')}><div className="flex items-center gap-1">Setor / Função {sortConfig?.key === 'sectorId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sector', e.clientX, columnWidths['sector'] || 180)} /></th>)}
+ {visibleColumns.includes('assetsCount') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['assetsCount'] || '100px' }} onClick={() => handleSort('assetsCount')}><div className="flex items-center justify-center gap-1">Ativos {sortConfig?.key === 'assetsCount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('assetsCount', e.clientX, columnWidths['assetsCount'] || 100)} /></th>)}
+ {visibleColumns.includes('activeSims') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['activeSims'] || '160px' }} onClick={() => handleSort('activeSims')}><div className="flex items-center gap-1">Números de Chip {sortConfig?.key === 'activeSims' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('activeSims', e.clientX, columnWidths['activeSims'] || 160)} /></th>)}
+ {visibleColumns.includes('devicesInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['devicesInfo'] || '250px' }} onClick={() => handleSort('devicesInfo')}><div className="flex items-center gap-1">Detalhes de Aparelho {sortConfig?.key === 'devicesInfo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('devicesInfo', e.clientX, columnWidths['devicesInfo'] || 250)} /></th>)}
+ <th className="px-6 py-4 text-right"style={{ width: '120px' }}>Ações</th>
+ </tr>
+ </thead>
+ <tbody>
+ {paginatedUsers.map(u => {
+ const sector = sectors.find(s => s.id === u.sectorId);
+ const { userDevices, allUserSims } = getUserAssets(u.id);
+ const assets = userDevices.length + allUserSims.length;
+ const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile);
+ 
+ // Detalhes estendidos (v2.12.39 - Correção colunas dinâmicas)
+ const chipsString = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
+ const devicesString = userDevices.map(d => {
+ const m = models.find(mod => mod.id === d.modelId);
+ return`${m?.name || 'Device'} (${d.assetTag || d.serialNumber})`;
+ }).join(', ') || '---';
 
-                  return (
-                    <tr 
-                      key={u.id} 
-                      onClick={() => handleOpenModal(u, true)} 
-                      className={`border-b border-slate-100 dark:border-slate-800/50 transition-colors cursor-pointer hover:bg-emerald-50/30 dark:hover:bg-slate-800/40 bg-white dark:bg-slate-900 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-50/50 dark:bg-emerald-900/20' : ''}`}
-                    >
-                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                        <input 
-                          type="checkbox" 
-                          className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-emerald-600 focus:ring-emerald-500"
-                          checked={selectedIds.includes(u.id)}
-                          onChange={() => handleSelectOne(u.id)}
-                        />
-                      </td>
-                      <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0"><UserIcon className="text-slate-400 dark:text-slate-500" size={18}/></div><div className="min-w-0"><div className="font-bold text-slate-900 dark:text-slate-100 truncate text-xs">{u.fullName}</div>{u.status === 'Afastado' && <span className="text-[8px] font-black uppercase text-blue-500 dark:text-blue-400 mr-1">Afastado</span>}{hasPending && <span className="text-[8px] font-black uppercase text-orange-500 dark:text-orange-400 animate-pulse">Pendente</span>}</div></div></td>
-                      {visibleColumns.includes('email') && (<td className="px-6 py-4 truncate text-[11px] text-slate-500 dark:text-slate-400">{u.email}</td>)}
-                      {visibleColumns.includes('cpf') && (<td className="px-6 py-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">{u.cpf}</td>)}
-                      {visibleColumns.includes('rg') && (<td className="px-6 py-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">{u.rg || '---'}</td>)}
-                      {visibleColumns.includes('sector') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-700">{sector?.name || 'Não Informado'}</span></td>)}
-                      {visibleColumns.includes('assetsCount') && (<td className="px-6 py-4 text-center truncate"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${assets > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-100 dark:border-slate-700'}`}>{assets}</span></td>)}
-                      {visibleColumns.includes('activeSims') && (<td className="px-6 py-4 truncate text-[10px] font-mono text-slate-500 dark:text-slate-400">{chipsString}</td>)}
-                      {visibleColumns.includes('devicesInfo') && (<td className="px-6 py-4 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">{devicesString}</td>)}
-                      <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}><button onClick={() => handleOpenModal(u, false)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Editar"><Edit2 size={16}/></button><button onClick={() => handleToggleClick(u)} className={`p-1.5 rounded-lg transition-all ${u.active ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'}`} title={u.active ? 'Inativar' : 'Reativar'}>{u.active ? <Power size={16}/> : <RefreshCw size={16}/>}</button></div></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-        </div>
-        <div className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Exibir:</span><select className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all" value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total: {totalItems} colaboradores</p></div>
-            {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1.5 rounded-lg shadow-sm">{currentPage}</span><span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}><ChevronRight size={18}/></button></div>)}
-        </div>
-      </div>
+ return (
+ <tr 
+ key={u.id} 
+ onClick={() => handleOpenModal(u, true)} 
+ className={`border-b border-slate-800/50 transition-colors cursor-pointer hover:bg-emerald-50/30 hover:bg-slate-800/40 bg-slate-900 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-50/50 bg-emerald-900/20' : ''}`}
+ >
+ <td className="px-6 py-4"onClick={(e) => e.stopPropagation()}>
+ <input 
+ type="checkbox"
+ className="rounded border-slate-700 bg-slate-800 focus:ring-emerald-500"
+ checked={selectedIds.includes(u.id)}
+ onChange={() => handleSelectOne(u.id)}
+ />
+ </td>
+ <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-9 w-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0"><UserIcon className=""size={18}/></div><div className="min-w-0"><div className="font-bold text-slate-100 truncate text-xs">{u.fullName}</div>{u.status === 'Afastado' && <span className="text-[8px] font-black uppercase text-blue-400 mr-1">Afastado</span>}{hasPending && <span className="text-[8px] font-black uppercase text-orange-400 animate-pulse">Pendente</span>}</div></div></td>
+ {visibleColumns.includes('email') && (<td className="px-6 py-4 truncate text-[11px]">{u.email}</td>)}
+ {visibleColumns.includes('cpf') && (<td className="px-6 py-4 font-mono text-[11px] truncate">{u.cpf}</td>)}
+ {visibleColumns.includes('rg') && (<td className="px-6 py-4 font-mono text-[11px] truncate">{u.rg || '---'}</td>)}
+ {visibleColumns.includes('sector') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold bg-slate-800 px-2 py-1 rounded border border-slate-700">{sector?.name || 'Não Informado'}</span></td>)}
+ {visibleColumns.includes('assetsCount') && (<td className="px-6 py-4 text-center truncate"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${assets > 0 ? ' bg-blue-900/30 text-blue-400 border-blue-800' : ' bg-slate-800 border-slate-700'}`}>{assets}</span></td>)}
+ {visibleColumns.includes('activeSims') && (<td className="px-6 py-4 truncate text-[10px] font-mono">{chipsString}</td>)}
+ {visibleColumns.includes('devicesInfo') && (<td className="px-6 py-4 truncate text-[10px] font-medium">{devicesString}</td>)}
+ <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1"onClick={(e) => e.stopPropagation()}><button onClick={() => handleOpenModal(u, false)} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all"title="Editar"><Edit2 size={16}/></button><button onClick={() => handleToggleClick(u)} className={`p-1.5 rounded-lg transition-all ${u.active ? ' hover:bg-orange-900/30' : ' hover:bg-emerald-900/30'}`} title={u.active ? 'Inativar' : 'Reativar'}>{u.active ? <Power size={16}/> : <RefreshCw size={16}/>}</button></div></td>
+ </tr>
+ )
+ })}
+ </tbody>
+ </table>
+ </div>
+ <div className="bg-slate-900 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+ <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold uppercase tracking-widest">Exibir:</span><select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold uppercase tracking-widest">Total: {totalItems} colaboradores</p></div>
+ {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : ' text-emerald-400 hover:bg-emerald-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-300 bg-emerald-900/40 px-3 py-1.5 rounded-lg">{currentPage}</span><span className="text-xs font-bold uppercase mx-1">de</span><span className="text-xs font-black text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : ' text-emerald-400 hover:bg-emerald-900/30'}`}><ChevronRight size={18}/></button></div>)}
+ </div>
+ </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-800 transition-colors">
-            <div className="bg-slate-900 dark:bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 text-slate-400 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div>
-            <div className="flex bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
-                <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Dados Cadastrais</button>
-                <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-bold">{(userAssets.length + userSims.length)}</span></button>
-                <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-bold">{userAccounts.length}</span></button>
-                <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded text-[10px] font-bold">{currentUserTerms.length}</span></button>
-                <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-white dark:bg-slate-900 shadow-sm' : 'border-transparent text-gray-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>Histórico</button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-900 transition-colors">
-                {activeTab === 'DATA' && (<form id="userForm" onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-600 dark:text-emerald-400" size={20}/><p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value.trim())})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value.trim()})}/></div><div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-<div><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 ml-1 tracking-widest">Status do Colaborador</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="Ativo">Ativo</option><option value="Afastado">Afastado (INSS/Licença)</option></select></div>
+ {isModalOpen && (
+ <div className="fixed inset-0 bg-slate-950/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800 transition-colors">
+ <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div>
+ <div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
+ <button type="button"onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Dados Cadastrais</button>
+ <button type="button"onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{(userAssets.length + userSims.length)}</span></button>
+ <button type="button"onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{userAccounts.length}</span></button>
+ <button type="button"onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{currentUserTerms.length}</span></button>
+ <button type="button"onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Histórico</button>
+ </div>
+ <div className="flex-1 overflow-y-auto p-8 bg-slate-900 transition-colors">
+ {activeTab === 'DATA' && (<form id="userForm"onSubmit={handleSubmit} className="space-y-6">{isViewOnly && (<div className="md:col-span-2 bg-emerald-900/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4"><Info className="text-emerald-400"size={20}/><p className="text-xs font-bold text-emerald-200">Modo de visualização. Clique no botão"Habilitar Edição"abaixo para realizar alterações.</p></div>)}<div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="md:col-span-2"><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Nome Completo</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})}/></div><div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">CPF</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100"value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">RG</label><input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100"value={formData.rg || ''} onChange={e => setFormData({...formData, rg: formatRG(e.target.value)})}/></div><div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">PIS / PASEP</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100"value={formData.pis || ''} onChange={e => setFormData({...formData, pis: formatPIS(e.target.value.trim())})} placeholder="000.00000.00-0"/></div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">E-mail Corporativo</label><input disabled={isViewOnly} required type="email"className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100"value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value.trim()})}/></div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Cargo / Setor Atual</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}><option value="">Selecione um cargo...</option>{[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+<div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Status do Colaborador</label><select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"value={formData.status || 'Ativo'} onChange={e => setFormData({...formData, status: e.target.value as any})}><option value="Ativo">Ativo</option><option value="Afastado">Afastado (INSS/Licença)</option></select></div>
 {formData.status === 'Afastado' && (
-    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-        <div>
-            <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">Data Prevista de Retorno</label>
-            <input disabled={isViewOnly} type="date" className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100" value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/>
-        </div>
-        <div className="flex items-center gap-3 pt-4">
-            <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" disabled={isViewOnly} className="sr-only peer" checked={releaseAssetsOnLeave} onChange={(e) => setReleaseAssetsOnLeave(e.target.checked)} />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-600"></div>
-                <span className="ml-3 text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest">Liberar equipamentos vinculados?</span>
-            </label>
-        </div>
-    </div>
+ <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+ <div>
+ <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Data Prevista de Retorno</label>
+ <input disabled={isViewOnly} type="date"className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"value={formData.onLeaveUntil || ''} onChange={e => setFormData({...formData, onLeaveUntil: e.target.value})}/>
+ </div>
+ <div className="flex items-center gap-3 pt-4">
+ <label className="relative inline-flex items-center cursor-pointer">
+ <input type="checkbox"disabled={isViewOnly} className="sr-only peer"checked={releaseAssetsOnLeave} onChange={(e) => setReleaseAssetsOnLeave(e.target.checked)} />
+ <div className="w-11 h-6 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 peer-focus:ring-emerald-800 rounded-full peer bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+ <span className="ml-3 text-xs font-black uppercase tracking-widest">Liberar equipamentos vinculados?</span>
+ </label>
+ </div>
+ </div>
 )}
-<div className="md:col-span-2"><label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 text-sm" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
-                {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800"><div className="flex items-center gap-3"><Smartphone className="text-blue-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">{d.assetTag || (d.imei ? `IMEI: ${d.imei}` : 'S/ Identificação')}</span></div><button type="button" onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800"><div className="flex items-center gap-3"><Cpu className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-100 dark:border-slate-700">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
-                {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border dark:border-slate-800"><div className="flex items-center gap-3"><Globe className="text-indigo-500" size={20}/><span className="font-bold text-sm text-slate-800 dark:text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button" onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase text-blue-600 hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
-                {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm hover:border-emerald-200 dark:hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-800 dark:text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1">{new Date(term.date).toLocaleString()}</p>{term.condition && term.condition !== 'Perfeito' && <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg"><p className="text-[10px] font-bold text-red-700 dark:text-red-400 uppercase">Condição: {term.condition}</p><p className="text-[10px] text-red-600 dark:text-red-300 mt-1">{term.damageDescription}</p></div>}</div></div><div className="flex items-center gap-2">
-  {term.hasEvidence && (
-      <button onClick={async () => {
-          try {
-              const res = await fetch(`/api/terms/evidence/${term.id}`);
-              const data = await res.json();
-              if (data.fileUrl) {
-                  const win = window.open();
-                  win?.document.write(`<img src="${data.fileUrl}" style="max-width: 100%;" />`);
-              } else {
-                  alert('Evidência não encontrada.');
-              }
-          } catch (e) {
-              alert('Erro ao carregar evidência.');
-          }
-      }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all flex items-center justify-center" title="Ver Evidência de Dano">
-          <AlertCircle size={18}/>
-      </button>
-  )}
-  {term.isManual ? (
-    <div className="flex items-center gap-2">
-      <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-900/30 flex items-center gap-2" title={term.resolutionReason}>
-        <Info size={14}/> Resolvido Manualmente
-      </div>
-      {!isViewOnly && (
-        <label className="cursor-pointer bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-800 transition-all flex items-center justify-center" title="Substituir por arquivo digitalizado">
-          <Upload size={14}/>
-          <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
-        </label>
-      )}
-    </div>
-  ) : (term.fileUrl || term.hasFile) ? (
-    <>
-      <button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all flex items-center justify-center" title="Abrir Arquivo">
-        {loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}
-      </button>
-      {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-all" title="Remover Arquivo"><Trash2 size={18}/></button>}
-    </>
-  ) : (!isViewOnly && (
-    <label className="cursor-pointer bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-200 dark:border-orange-800 hover:bg-orange-100 transition-all flex items-center gap-2">
-      <Upload size={14}/> Digitalizar
-      <input type="file" className="hidden" accept="application/pdf,image/*" onChange={(e) => handleTermUpload(term.id, e)} />
-    </label>
-  ))}
-  {!term.hasFile && !term.isManual && (
-    <button onClick={() => handleEditTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Editar Termo">
-      <Edit2 size={18}/>
-    </button>
-  )}
-  <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all" title="Re-imprimir Termo">
-    <Printer size={18}/>
-  </button>
-</div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 text-slate-400 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
-                {activeTab === 'LOGS' && (
-                    <div className="relative border-l-4 border-slate-100 dark:border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">
-                        {historyLoading ? (
-                            <div className="text-center py-8 text-slate-500"><Loader2 className="animate-spin inline-block mr-2" size={20}/> Carregando histórico...</div>
-                        ) : userHistory.length === 0 ? (
-                            <div className="text-center py-8 text-slate-500">Nenhum histórico encontrado.</div>
-                        ) : userHistory.map((log: AuditLog) => (
-                            <div key={log.id} className="relative pl-8">
-                                <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white dark:border-slate-950 shadow-md ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
-                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
-                                <div className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase tracking-tight">{log.action}</div>
-                                <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"><LogNoteRenderer log={log} /></div>
-                                <div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t dark:border-slate-800 shrink-0 transition-colors">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 font-black text-[10px] uppercase text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all tracking-widest shadow-sm">Fechar</button>
-              {isViewOnly ? (
-                <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-600 dark:bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-100 dark:shadow-none hover:bg-blue-700 dark:hover:bg-blue-600 transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>
-              ) : (
-                <button type="submit" form="userForm" className="px-10 py-3 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95">Salvar Colaborador</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+<div className="md:col-span-2"><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Endereço Residencial Completo</label><textarea disabled={isViewOnly} rows={2} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 text-sm"value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF, CEP"/></div></div></form>)}
+ {activeTab === 'ASSETS' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase tracking-widest">Equipamentos e Chips</h4><div className="grid grid-cols-1 gap-3">{userAssets.map(d => (<div key={d.id} className="flex items-center justify-between p-4 bg-slate-800/40 rounded-2xl border border-slate-800"><div className="flex items-center gap-3"><Smartphone className=""size={20}/><span className="font-bold text-sm text-slate-100">{models.find(m => m.id === d.modelId)?.name}</span><span className="text-[10px] font-black uppercase bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{d.assetTag || (d.imei ?`IMEI: ${d.imei}`: 'S/ Identificação')}</span></div><button type="button"onClick={() => navigate(`/devices?deviceId=${d.id}`)} className="text-[10px] font-black uppercase hover:underline">Ver Detalhes</button></div>))}{userSims.map(s => (<div key={s.id} className="flex items-center justify-between p-4 bg-slate-800/40 rounded-2xl border border-slate-800"><div className="flex items-center gap-3"><Cpu className=""size={20}/><span className="font-bold text-sm text-slate-100">{s.phoneNumber}</span><span className="text-[10px] font-black uppercase bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{s.operator}</span></div></div>))}{userAssets.length === 0 && userSims.length === 0 && <p className="text-center py-10 italic text-sm">Nenhum ativo vinculado no momento.</p>}</div></div>)}
+ {activeTab === 'LICENSES' && (<div className="space-y-4"><h4 className="text-xs font-black uppercase tracking-widest">Licenças, Contas e Acessos</h4><div className="grid grid-cols-1 gap-3">{userAccounts.map(acc => (<div key={acc.id} className="flex items-center justify-between p-4 bg-slate-800/40 rounded-2xl border border-slate-800"><div className="flex items-center gap-3"><Globe className=""size={20}/><span className="font-bold text-sm text-slate-100">{acc.name}</span><span className="text-[10px] font-black uppercase bg-slate-800 px-2 py-0.5 rounded border">{acc.login}</span></div><button type="button"onClick={() => navigate(`/accounts`)} className="text-[10px] font-black uppercase hover:underline">Ver Gestão</button></div>))}{userAccounts.length === 0 && <p className="text-center py-10 italic text-sm">Nenhuma licença vinculada.</p>}</div></div>)}
+ {activeTab === 'TERMS' && (<div className="space-y-6"><div className="flex justify-between items-center"><h4 className="text-xs font-black uppercase tracking-widest">Termos de Responsabilidade</h4></div><div className="grid grid-cols-1 gap-3">{currentUserTerms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(term => (<div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-slate-900 border border-slate-800 rounded-2xl hover:border-emerald-200 hover:border-emerald-900 transition-all gap-4"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${term.type === 'ENTREGA' ? ' bg-blue-900/30 text-blue-400' : ' bg-orange-900/30 text-orange-400'}`}><FileText size={24}/></div><div><p className="font-bold text-slate-100 text-sm">Termo de {term.type === 'ENTREGA' ? 'Entrega' : 'Devolução'}</p><p className="text-[10px] font-black uppercase tracking-tighter">{term.assetDetails}</p><p className="text-[9px] font-mono mt-1">{new Date(term.date).toLocaleString()}</p>{term.condition && term.condition !== 'Perfeito' && <div className="mt-2 p-2 bg-red-900/20 border border-red-900/30 rounded-lg"><p className="text-[10px] font-bold text-red-400 uppercase">Condição: {term.condition}</p><p className="text-[10px] text-red-300 mt-1">{term.damageDescription}</p></div>}</div></div><div className="flex items-center gap-2">
+ {term.hasEvidence && (
+ <button onClick={async () => {
+ try {
+ const res = await fetch(`/api/terms/evidence/${term.id}`);
+ const data = await res.json();
+ if (data.fileUrl) {
+ const win = window.open();
+ win?.document.write(`<img src="${data.fileUrl}"style="max-width: 100%;"/>`);
+ } else {
+ alert('Evidência não encontrada.');
+ }
+ } catch (e) {
+ alert('Erro ao carregar evidência.');
+ }
+ }} className="p-2.5 bg-red-900/30 text-red-400 rounded-xl hover:bg-red-900/50 transition-all flex items-center justify-center"title="Ver Evidência de Dano">
+ <AlertCircle size={18}/>
+ </button>
+ )}
+ {term.isManual ? (
+ <div className="flex items-center gap-2">
+ <div className="bg-blue-900/20 text-blue-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-blue-900/30 flex items-center gap-2"title={term.resolutionReason}>
+ <Info size={14}/> Resolvido Manualmente
+ </div>
+ {!isViewOnly && (
+ <label className="cursor-pointer bg-blue-900/40 text-blue-300 px-3 py-2 rounded-xl hover:bg-blue-800 transition-all flex items-center justify-center"title="Substituir por arquivo digitalizado">
+ <Upload size={14}/>
+ <input type="file"className="hidden"accept="application/pdf,image/*"onChange={(e) => handleTermUpload(term.id, e)} />
+ </label>
+ )}
+ </div>
+ ) : (term.fileUrl || term.hasFile) ? (
+ <>
+ <button disabled={loadingFiles[term.id]} onClick={() => handleOpenFile(term.id, term.fileUrl)} className="p-2.5 bg-emerald-900/30 text-emerald-400 rounded-xl hover:bg-emerald-900/50 transition-all flex items-center justify-center"title="Abrir Arquivo">
+ {loadingFiles[term.id] ? <Loader2 size={18} className="animate-spin"/> : <ExternalLink size={18}/>}
+ </button>
+ {!isViewOnly && <button onClick={() => { if(window.confirm('Remover arquivo digitalizado?')) deleteTermFile(term.id, editingId!, 'Remoção via painel', adminName) }} className="p-2.5 bg-red-900/30 text-red-400 rounded-xl hover:bg-red-900/50 transition-all"title="Remover Arquivo"><Trash2 size={18}/></button>}
+ </>
+ ) : (!isViewOnly && (
+ <label className="cursor-pointer bg-orange-900/30 text-orange-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-orange-800 transition-all flex items-center gap-2">
+ <Upload size={14}/> Digitalizar
+ <input type="file"className="hidden"accept="application/pdf,image/*"onChange={(e) => handleTermUpload(term.id, e)} />
+ </label>
+ ))}
+ {!term.hasFile && !term.isManual && (
+ <button onClick={() => handleEditTerm(term)} className="p-2.5 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all"title="Editar Termo">
+ <Edit2 size={18}/>
+ </button>
+ )}
+ <button onClick={() => handleReprintTerm(term)} className="p-2.5 bg-slate-800 rounded-xl hover:bg-slate-700 transition-all"title="Re-imprimir Termo">
+ <Printer size={18}/>
+ </button>
+</div></div>))}{currentUserTerms.length === 0 && <p className="text-center py-10 italic text-sm">Nenhum termo gerado para este colaborador.</p>}</div></div>)}
+ {activeTab === 'LOGS' && (
+ <div className="relative border-l-4 border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">
+ {historyLoading ? (
+ <div className="text-center py-8"><Loader2 className="animate-spin inline-block mr-2"size={20}/> Carregando histórico...</div>
+ ) : userHistory.length === 0 ? (
+ <div className="text-center py-8">Nenhum histórico encontrado.</div>
+ ) : userHistory.map((log: AuditLog) => (
+ <div key={log.id} className="relative pl-8">
+ <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white border-slate-950 ${log.action === ActionType.create ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+ <div className="text-[10px] font-black uppercase mb-1 tracking-widest">{new Date(log.timestamp).toLocaleString()}</div>
+ <div className="font-black text-slate-100 text-sm uppercase tracking-tight">{log.action}</div>
+ <div className="text-xs bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-700 transition-colors"><LogNoteRenderer log={log} /></div>
+ <div className="text-[9px] font-black text-slate-300 uppercase mt-2 tracking-tighter">Realizado por: {log.adminUser}</div>
+ </div>
+ ))}
+ </div>
+ )}
+ </div>
+ <div className="bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t border-slate-800 shrink-0 transition-colors">
+ <button type="button"onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-slate-800 border-2 border-slate-700 font-black text-[10px] uppercase hover:bg-slate-700 transition-all tracking-widest">Fechar</button>
+ {isViewOnly ? (
+ <button type="button"onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest shadow-none transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>
+ ) : (
+ <button type="submit"form="userForm"className="px-10 py-3 rounded-2xl bg-emerald-600 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95">Salvar Colaborador</button>
+ )}
+ </div>
+ </div>
+ </div>
+ )}
 
-      {isReasonModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-emerald-100 dark:border-emerald-900/40">
-            <div className="p-8">
-              <div className="flex flex-col items-center text-center mb-6">
-                <div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-800">
-                  <Save size={32} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Informe o motivo da alteração para auditoria:</p>
-              </div>
-              <textarea 
-                className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-900/20 focus:border-emerald-300 dark:focus:border-emerald-700 outline-none mb-6 transition-all bg-white dark:bg-slate-800 dark:text-slate-100" 
-                rows={3} 
-                placeholder="Descreva o que foi alterado..." 
-                value={editReason} 
-                onChange={(e) => setEditReason(e.target.value)}
-              />
-              <div className="flex gap-4">
-                <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">Voltar</button>
-                <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+ {isReasonModalOpen && (
+ <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-emerald-900/40">
+ <div className="p-8">
+ <div className="flex flex-col items-center text-center mb-6">
+ <div className="h-16 w-16 bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-400 mb-4 shadow-inner border border-emerald-800">
+ <Save size={32} />
+ </div>
+ <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3>
+ <p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p>
+ </div>
+ <textarea 
+ className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 focus:border-emerald-300 focus:border-emerald-700 outline-none mb-6 transition-all bg-slate-800 text-slate-100"
+ rows={3} 
+ placeholder="Descreva o que foi alterado..."
+ value={editReason} 
+ onChange={(e) => setEditReason(e.target.value)}
+ />
+ <div className="flex gap-4">
+ <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Voltar</button>
+ <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
 
-      {isBulkModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-emerald-100 dark:border-emerald-900/40">
-            <div className="p-8">
-              <div className="flex flex-col items-center text-center mb-6">
-                <div className="h-16 w-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 mb-4 shadow-inner border border-emerald-100 dark:border-emerald-800">
-                  <Settings size={32} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Ação em Massa</h3>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                  Alterando {bulkActionType === 'STATUS' ? 'Status' : 'Setor'} de {selectedIds.length} colaboradores.
-                </p>
-              </div>
+ {isBulkModalOpen && (
+ <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden border border-emerald-900/40">
+ <div className="p-8">
+ <div className="flex flex-col items-center text-center mb-6">
+ <div className="h-16 w-16 bg-emerald-900/30 rounded-full flex items-center justify-center text-emerald-400 mb-4 shadow-inner border border-emerald-800">
+ <Settings size={32} />
+ </div>
+ <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Ação em Massa</h3>
+ <p className="text-xs mt-2">
+ Alterando {bulkActionType === 'STATUS' ? 'Status' : 'Setor'} de {selectedIds.length} colaboradores.
+ </p>
+ </div>
 
-              <div className="space-y-4 mb-6">
-                {bulkActionType === 'STATUS' ? (
-                  <div>
-                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Novo Status</label>
-                    <select 
-                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
-                      value={bulkValue}
-                      onChange={(e) => setBulkValue(e.target.value)}
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="Ativo">Ativo</option>
-                      <option value="Afastado">Afastado (INSS/Licença)</option>
-                    </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Novo Setor / Função</label>
-                    <select 
-                      className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-50 dark:bg-slate-800/50 dark:text-slate-100"
-                      value={bulkValue}
-                      onChange={(e) => setBulkValue(e.target.value)}
-                    >
-                      <option value="">Selecione...</option>
-                      {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                )}
-              </div>
+ <div className="space-y-4 mb-6">
+ {bulkActionType === 'STATUS' ? (
+ <div>
+ <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Novo Status</label>
+ <select 
+ className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"
+ value={bulkValue}
+ onChange={(e) => setBulkValue(e.target.value)}
+ >
+ <option value="">Selecione...</option>
+ <option value="Ativo">Ativo</option>
+ <option value="Afastado">Afastado (INSS/Licença)</option>
+ </select>
+ </div>
+ ) : (
+ <div>
+ <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Novo Setor / Função</label>
+ <select 
+ className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100"
+ value={bulkValue}
+ onChange={(e) => setBulkValue(e.target.value)}
+ >
+ <option value="">Selecione...</option>
+ {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+ </select>
+ </div>
+ )}
+ </div>
 
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => { setIsBulkModalOpen(false); setBulkValue(''); setBulkActionType(null); }} 
-                  className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleBulkUpdate} 
-                  disabled={!bulkValue}
-                  className="flex-1 py-3 bg-emerald-600 dark:bg-emerald-50 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 disabled:opacity-50 transition-all"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+ <div className="flex gap-4">
+ <button 
+ onClick={() => { setIsBulkModalOpen(false); setBulkValue(''); setBulkActionType(null); }} 
+ className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700"
+ >
+ Cancelar
+ </button>
+ <button 
+ onClick={handleBulkUpdate} 
+ disabled={!bulkValue}
+ className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 transition-all"
+ >
+ Confirmar
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
 
-      {editingTerm && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-                  <Edit2 size={20} />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Editar Termo</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Ajuste as informações do termo gerado</p>
-                </div>
-              </div>
-              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto space-y-6">
-              <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Condição do Equipamento</label>
-                <select 
-                  value={termEditData.condition}
-                  onChange={(e) => setTermEditData({...termEditData, condition: e.target.value})}
-                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
-                >
-                  <option value="Perfeito">Perfeito</option>
-                  <option value="Bom">Bom (Marcas de Uso)</option>
-                  <option value="Danificado">Danificado</option>
-                  <option value="Furtado/Roubado">Furtado / Roubado</option>
-                  <option value="Extraviado">Extraviado</option>
-                </select>
-              </div>
+ {editingTerm && (
+ <div className="fixed inset-0 bg-slate-900/80 z-[400] flex items-center justify-center p-4 backdrop-blur-sm">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden border border-slate-800 flex flex-col max-h-[90vh]">
+ <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+ <div className="flex items-center gap-3">
+ <div className="h-10 w-10 bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-400">
+ <Edit2 size={20} />
+ </div>
+ <div>
+ <h3 className="font-black text-slate-100 uppercase tracking-tight">Editar Termo</h3>
+ <p className="text-xs">Ajuste as informações do termo gerado</p>
+ </div>
+ </div>
+ <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+ <X size={20} />
+ </button>
+ </div>
+ 
+ <div className="p-6 overflow-y-auto space-y-6">
+ <div>
+ <label className="block text-xs font-black uppercase tracking-widest mb-2">Condição do Equipamento</label>
+ <select 
+ value={termEditData.condition}
+ onChange={(e) => setTermEditData({...termEditData, condition: e.target.value})}
+ className="w-full border-2 border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 focus:border-blue-400 focus:border-blue-600 outline-none transition-all bg-slate-800 text-slate-100"
+ >
+ <option value="Perfeito">Perfeito</option>
+ <option value="Bom">Bom (Marcas de Uso)</option>
+ <option value="Danificado">Danificado</option>
+ <option value="Furtado/Roubado">Furtado / Roubado</option>
+ <option value="Extraviado">Extraviado</option>
+ </select>
+ </div>
 
-              {termEditData.condition !== 'Perfeito' && termEditData.condition !== 'Bom' && (
-                <div className="animate-fade-in">
-                  <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Descrição da Avaria / Ocorrência</label>
-                  <textarea 
-                    value={termEditData.damageDescription}
-                    onChange={(e) => setTermEditData({...termEditData, damageDescription: e.target.value})}
-                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
-                    rows={3}
-                    placeholder="Descreva o que aconteceu com o equipamento..."
-                  ></textarea>
-                </div>
-              )}
+ {termEditData.condition !== 'Perfeito' && termEditData.condition !== 'Bom' && (
+ <div className="animate-fade-in">
+ <label className="block text-xs font-black uppercase tracking-widest mb-2">Descrição da Avaria / Ocorrência</label>
+ <textarea 
+ value={termEditData.damageDescription}
+ onChange={(e) => setTermEditData({...termEditData, damageDescription: e.target.value})}
+ className="w-full border-2 border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 focus:border-blue-400 focus:border-blue-600 outline-none transition-all bg-slate-800 text-slate-100"
+ rows={3}
+ placeholder="Descreva o que aconteceu com o equipamento..."
+ ></textarea>
+ </div>
+ )}
 
-              <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Dados do Dispositivo (Apenas Leitura)</label>
-                <div className="w-full border-2 border-slate-100 dark:border-slate-800 rounded-xl p-3 text-sm bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-mono">
-                  {termEditData.assetDetails}
-                </div>
-              </div>
+ <div>
+ <label className="block text-xs font-black uppercase tracking-widest mb-2">Dados do Dispositivo (Apenas Leitura)</label>
+ <div className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm bg-slate-800/50 font-mono">
+ {termEditData.assetDetails}
+ </div>
+ </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Observações do Termo</label>
-                <textarea 
-                  value={termEditData.notes}
-                  onChange={(e) => setTermEditData({...termEditData, notes: e.target.value})}
-                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20 focus:border-blue-400 dark:focus:border-blue-600 outline-none transition-all bg-white dark:bg-slate-800 dark:text-slate-100"
-                  rows={4}
-                  placeholder="Detalhes adicionais sobre o equipamento..."
-                ></textarea>
-              </div>
+ <div>
+ <label className="block text-xs font-black uppercase tracking-widest mb-2">Observações do Termo</label>
+ <textarea 
+ value={termEditData.notes}
+ onChange={(e) => setTermEditData({...termEditData, notes: e.target.value})}
+ className="w-full border-2 border-slate-700 rounded-xl p-3 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 focus:border-blue-400 focus:border-blue-600 outline-none transition-all bg-slate-800 text-slate-100"
+ rows={4}
+ placeholder="Detalhes adicionais sobre o equipamento..."
+ ></textarea>
+ </div>
 
-              <div>
-                <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Evidências (Fotos / B.O.) - Máx 3</label>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  {termEditData.evidenceFiles.map((file, index) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 group h-32">
-                      <img src={file} alt={`Evidência ${index + 1}`} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button onClick={() => handleRemoveEvidence(index)} className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform shadow-lg" title="Remover Imagem">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {termEditData.evidenceFiles.length < 3 && (
-                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className="flex flex-col items-center justify-center p-4 text-center">
-                        <Upload className="w-6 h-6 mb-2 text-slate-400" />
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Adicionar</p>
-                      </div>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleEvidenceUpload} />
-                    </label>
-                  )}
-                </div>
-              </div>
-            </div>
+ <div>
+ <label className="block text-xs font-black uppercase tracking-widest mb-2">Evidências (Fotos / B.O.) - Máx 3</label>
+ <div className="grid grid-cols-3 gap-4 mb-4">
+ {termEditData.evidenceFiles.map((file, index) => (
+ <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-700 group h-32">
+ <img src={file} alt={`Evidência ${index + 1}`} className="w-full h-full object-cover"/>
+ <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+ <button onClick={() => handleRemoveEvidence(index)} className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform"title="Remover Imagem">
+ <Trash2 size={16} />
+ </button>
+ </div>
+ </div>
+ ))}
+ {termEditData.evidenceFiles.length < 3 && (
+ <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:bg-slate-800/50 transition-colors">
+ <div className="flex flex-col items-center justify-center p-4 text-center">
+ <Upload className="w-6 h-6 mb-2"/>
+ <p className="text-xs">Adicionar</p>
+ </div>
+ <input type="file"className="hidden"accept="image/*"onChange={handleEvidenceUpload} />
+ </label>
+ )}
+ </div>
+ </div>
+ </div>
 
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
-                Cancelar
-              </button>
-              <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 shadow-md transition-all">
-                Salvar Alterações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+ <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3 justify-end">
+ <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-colors">
+ Cancelar
+ </button>
+ <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-white transition-all">
+ Salvar Alterações
+ </button>
+ </div>
+ </div>
+ </div>
+ )}
+ </div>
+ );
 };
 
 export default UserManager;
