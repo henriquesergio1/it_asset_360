@@ -327,7 +327,7 @@ const Dashboard = () => {
  const sectorCode = foundDevice?.internalCode;
 
  return (
- <div key={term.id} className="bg-slate-900/50 p-3 rounded-lg border border-orange-900/30 flex items-center justify-between group hover:border-orange-300 hover:border-orange-700 transition-all">
+ <div key={term.id} className="bg-slate-950/50 p-2 rounded-lg border border-orange-900/30 flex items-center justify-between group hover:border-orange-700 transition-all">
  <div className="flex flex-1 items-center gap-3">
  <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0">
  {user.fullName.charAt(0)}
