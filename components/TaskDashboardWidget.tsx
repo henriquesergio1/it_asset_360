@@ -40,21 +40,21 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
  <div className="space-y-2">
  {pendingTasks.length === 0 ? (
  <div className="flex flex-col items-center justify-center py-6">
- <ClipboardList size={24} strokeWidth={1.5} className="mb-2 text-slate-300"/>
- <p className="text-xs text-slate-500">Nenhuma tarefa pendente</p>
+ <ClipboardList size={24} strokeWidth={1.5} className="mb-2 text-slate-600"/>
+ <p className="text-xs text-slate-400">Nenhuma tarefa pendente</p>
  </div>
  ) : (
  pendingTasks.slice(0, 5).map(task => (
  <div 
  key={task.id} 
  onClick={() => onTaskClick(task)}
- className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+ className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer"
  >
  <div className="flex flex-1 items-center gap-3">
  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
- task.isOverdue ? 'bg-red-100 text-red-600' : 
- task.isNearDue ? 'bg-amber-100 text-amber-600' : 
- 'bg-indigo-100 text-indigo-600'
+ task.isOverdue ? 'bg-red-900/30 text-red-400' : 
+ task.isNearDue ? 'bg-amber-900/30 text-amber-400' : 
+ 'bg-indigo-900/30 text-indigo-400'
  }`}>
  {getAssignedUserName(task.assignedTo).charAt(0)}
  </div>

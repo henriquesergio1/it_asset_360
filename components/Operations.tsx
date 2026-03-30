@@ -367,11 +367,11 @@ const Operations = () => {
  </div>
 
  <div className="flex gap-4">
- <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-200 hover:border-slate-700 text-slate-300'}`}>
+ <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Smartphone size={32}/>
  <span className="font-black uppercase text-[10px] tracking-widest">Dispositivo / Equipamento</span>
  </button>
- <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-200 hover:border-slate-700 text-slate-300'}`}>
+ <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Cpu size={32}/>
  <span className="font-black uppercase text-[10px] tracking-widest">Chip SIM Card</span>
  </button>
@@ -419,7 +419,7 @@ const Operations = () => {
  <button 
  key={acc.id} 
  onClick={() => toggleAccessory(acc.id)}
- className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-900/30 border-blue-500 text-blue-100 ' : ' bg-slate-800 border-slate-700 hover:border-slate-200 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-900/30 border-blue-500 text-blue-100 ' : ' bg-slate-800 border-slate-700 hover:border-slate-600'}`}
  >
  <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-white' : ' bg-slate-700 text-slate-300 '}`}>
  {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}

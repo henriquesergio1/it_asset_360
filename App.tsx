@@ -27,7 +27,7 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: a
   return (
     <NavLink 
       to={to} 
-      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
+      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-900/20 text-blue-400 border-l-4 border-blue-600' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
       title={collapsed ? label : undefined}
     >
       <Icon size={20} className="shrink-0" />
@@ -56,9 +56,9 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   }, [isSidebarCollapsed]);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white shadow-xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-slate-200`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-slate-900 shadow-2xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-slate-800`}>
         
         {/* Toggle Button (Desktop Only) */}
         <button 
@@ -69,9 +69,9 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         </button>
 
         {/* Logo Section */}
-        <div className={`border-b border-slate-100 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
+        <div className={`border-b border-slate-800 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className={`bg-blue-600 shadow-xl shadow-blue-100 transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'}`}>
+            <div className={`bg-blue-600 shadow-xl shadow-blue-900/20 transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'}`}>
               {settings.logoUrl ? (
                   <img src={settings.logoUrl} alt="Logo" className={`${isSidebarCollapsed ? 'h-8' : 'h-14'} w-auto object-contain transition-all duration-300`} />
               ) : (
@@ -80,14 +80,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             </div>
             {!isSidebarCollapsed && (
               <div className="w-full overflow-hidden">
-                <h1 className="text-sm font-bold text-slate-900 leading-tight break-words px-1 tracking-tight">
+                <h1 className="text-sm font-bold text-slate-100 leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
                 </h1>
-                <p className="text-[10px] text-blue-600 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.9.0</p>
+                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.9.0</p>
               </div>
             )}
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600 absolute top-4 right-4">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-200 absolute top-4 right-4">
             <X size={24} />
           </button>
         </div>
@@ -104,24 +104,24 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />
           
           {isAdmin && (
-            <div className={`pt-4 mt-4 border-t border-slate-100 ${isSidebarCollapsed ? 'px-0' : ''}`}>
-               {!isSidebarCollapsed && <p className="px-6 text-xs text-slate-400 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
+            <div className={`pt-4 mt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'px-0' : ''}`}>
+               {!isSidebarCollapsed && <p className="px-6 text-xs text-slate-500 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
                <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isSidebarCollapsed} />
             </div>
           )}
         </nav>
 
         {/* Footer Info & Logout */}
-        <div className={`border-t border-slate-100 bg-slate-50 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-6'}`}>
+        <div className={`border-t border-slate-800 bg-slate-950 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-6'}`}>
           {!isSidebarCollapsed && (
-              <div className="flex items-center gap-2 text-xs text-blue-600 mb-4 w-full overflow-hidden whitespace-nowrap">
+              <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
                  <span>Versão {packageJson.version}</span>
               </div>
           )}
           <button 
             onClick={logout} 
-            className={`flex items-center space-x-3 text-slate-500 hover:text-slate-900 cursor-pointer transition-colors w-full pt-4 border-t border-slate-100 ${isSidebarCollapsed ? 'justify-center space-x-0' : ''}`}
+            className={`flex items-center space-x-3 text-slate-400 hover:text-slate-100 cursor-pointer transition-colors w-full pt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'justify-center space-x-0' : ''}`}
             title={isSidebarCollapsed ? "Sair do Sistema" : undefined}
           >
             <LogOut size={20} className="shrink-0" />
@@ -131,23 +131,23 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm z-10 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-200">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-400 hover:text-slate-600">
+        <header className="bg-slate-900 z-10 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-800">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-400 hover:text-slate-200">
             <Menu size={24} />
           </button>
           
           <div className="flex items-center space-x-4 ml-auto">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-900">{user?.name}</p>
+              <p className="text-sm font-bold text-slate-100">{user?.name}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200">
+            <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400 font-bold border border-blue-900/50 shadow-inner">
               {user?.name.charAt(0)}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-slate-50">
+        <main className="flex-1 overflow-auto bg-slate-950">
           <div className="max-w-[1850px] mx-auto w-full p-6">
             {children}
           </div>

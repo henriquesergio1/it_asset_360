@@ -36,9 +36,9 @@ const Login = () => {
   const currentMode = localStorage.getItem('app_mode') || 'auto';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200 transition-all">
-        <div className="bg-white p-8 text-center relative">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-800 transition-all">
+        <div className="bg-slate-900 p-8 text-center relative">
           <div className="flex justify-center mb-4">
             {settings.logoUrl ? (
                 <img src={settings.logoUrl} alt="Logo" className="h-12 object-contain" />
@@ -48,8 +48,8 @@ const Login = () => {
                 </div>
             )}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">{settings.appName || 'IT Asset 360'}</h1>
-          <p className="text-slate-500 mt-2 text-sm">Entre para gerenciar seus ativos de TI</p>
+          <h1 className="text-2xl font-bold text-slate-100">{settings.appName || 'IT Asset 360'}</h1>
+          <p className="text-slate-400 mt-2 text-sm">Entre para gerenciar seus ativos de TI</p>
           
           <div className="absolute top-4 right-4">
              <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider ${currentMode === 'mock' ? 'bg-amber-600 text-white' : 'bg-green-600 text-white'}`}>
@@ -62,14 +62,14 @@ const Login = () => {
           
           {/* Alerta de Erro de Conexão com API */}
           {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <div className="mb-6 bg-red-900/20 border border-red-900/50 rounded-lg p-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
                       <AlertTriangle size={16} /> Falha de Sincronização
                   </div>
-                  <p className="text-xs text-red-500">{error}</p>
+                  <p className="text-xs text-red-400">{error}</p>
                   <button 
                     onClick={switchToMockMode}
-                    className="mt-1 bg-white border border-red-300 text-red-600 text-xs py-1.5 rounded hover:bg-red-50 font-semibold transition-colors"
+                    className="mt-1 bg-slate-900 border border-red-900/50 text-red-400 text-xs py-1.5 rounded hover:bg-red-900/30 font-semibold transition-colors"
                   >
                     Usar Modo de Emergência (Mock)
                   </button>
@@ -78,13 +78,13 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">E-mail Corporativo</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">E-mail Corporativo</label>
               <div className="relative">
                 <Mail className="absolute top-3 left-3 text-slate-400 h-5 w-5" />
                 <input 
                   type="email" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400 transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-800 disabled:text-slate-500 transition-all"
                   placeholder="seu.email@empresa.com"
                   value={email}
                   disabled={loading}
@@ -94,13 +94,13 @@ const Login = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
               <div className="relative">
                 <Lock className="absolute top-3 left-3 text-slate-400 h-5 w-5" />
                 <input 
                   type="password" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400 transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-700 bg-slate-900 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-800 disabled:text-slate-500 transition-all"
                   placeholder="••••••••"
                   value={password}
                   disabled={loading}
@@ -136,7 +136,7 @@ const Login = () => {
             </div>
           )}
           
-          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
              <p className="text-xs text-slate-400 mb-1">Problemas no acesso?</p>
              <p className="text-xs text-blue-600 font-bold hover:underline cursor-pointer">Contatar Suporte de T.I.</p>
              <p className="text-[10px] text-slate-400 mt-4 font-mono">v{packageJson.version}</p>
