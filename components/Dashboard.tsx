@@ -239,23 +239,23 @@ const Dashboard = () => {
  </div>
 
  {/* Gestão de Tarefas em Destaque - Formato Alerta */}
- <div className="bg-slate-900 border-l-4 border-l-indigo-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="bg-slate-900 border-l-4 border-l-indigo-500 border-y border-r border-slate-800 rounded-xl p-3 animate-fade-in shadow-sm">
  <div className="flex items-start gap-3">
- <div className="p-2 bg-indigo-900/30 text-indigo-400 rounded-lg shrink-0">
- <ClipboardList size={20} />
+ <div className="p-1.5 bg-indigo-900/30 text-indigo-400 rounded-lg shrink-0">
+ <ClipboardList size={16} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+ <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
  Gestão de Tarefas Pendentes
- <span className="bg-indigo-900/40 text-indigo-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+ <span className="bg-indigo-900/40 text-indigo-400 px-2 py-0 rounded-full text-[9px] font-bold uppercase">
  {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
  </span>
  </h3>
- <div className="flex items-center gap-2">
+ <div className="flex items-center gap-1">
  <button 
  onClick={() => navigate('/tasks')}
- className="text-[10px] font-black uppercase tracking-widest text-indigo-400 transition-colors mr-2"
+ className="text-[9px] font-black uppercase tracking-widest text-indigo-400 transition-colors mr-1"
  >
  Ver Todas
  </button>
@@ -263,11 +263,11 @@ const Dashboard = () => {
  onClick={() => setIsTasksExpanded(!isTasksExpanded)}
  className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isTasksExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+ {isTasksExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
  </button>
  </div>
  </div>
- <p className="text-xs text-slate-400 mb-3">
+ <p className="text-[10px] text-slate-400 mb-2">
  Acompanhamento de manutenções, envios de arquivos e outras pendências operacionais da equipe de TI.
  </p>
  
@@ -286,24 +286,24 @@ const Dashboard = () => {
 
  {/* Alerta de Termos Pendentes - 3ª posição */}
  {pendingTerms.length > 0 && (
- <div className="bg-slate-900 border-l-4 border-l-orange-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="bg-slate-900 border-l-4 border-l-orange-500 border-y border-r border-slate-800 rounded-xl p-3 animate-fade-in shadow-sm">
  <div className="flex items-start gap-3">
- <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
- <FileWarning size={20} />
+ <div className="p-1.5 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
+ <FileWarning size={16} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-base font-bold text-slate-100">
+ <h3 className="text-sm font-bold text-slate-100">
  {pendingTerms.length} Termos de Responsabilidade Pendentes
  </h3>
  <button 
  onClick={() => setIsTermsExpanded(!isTermsExpanded)}
  className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isTermsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+ {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
  </button>
  </div>
- <p className="text-xs text-slate-400 mb-3">
+ <p className="text-[10px] text-slate-400 mb-2">
  Existem colaboradores com dispositivos em uso que ainda não assinaram ou anexaram o termo digital.
  </p>
  
@@ -421,24 +421,24 @@ const Dashboard = () => {
 
  {/* Alerta de Validação de Expediente (ERP) - 4ª posição, Formato Lista */}
  {filteredExpedienteAlerts.length > 0 && (
- <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-3 animate-fade-in shadow-sm">
  <div className="flex items-start gap-3">
- <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
- <Clock size={20} />
+ <div className="p-1.5 bg-red-900/30 text-red-400 rounded-lg shrink-0">
+ <Clock size={16} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-base font-bold text-slate-100">
+ <h3 className="text-sm font-bold text-slate-100">
  {filteredExpedienteAlerts.length} Alertas de Expediente (ERP)
  </h3>
  <button 
  onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
  className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isExpedienteExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+ {isExpedienteExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
  </button>
  </div>
- <p className="text-xs text-slate-400 mb-3">
+ <p className="text-[10px] text-slate-400 mb-2">
  Colaboradores ativos da equipe de vendas identificados com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
  </p>
  
