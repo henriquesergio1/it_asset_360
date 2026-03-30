@@ -429,9 +429,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  className="bg-slate-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-800 transition-colors"
  >
  {/* Header */}
- <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-50/50 bg-slate-950/50">
+ <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
  <div className="flex items-center gap-4">
- <div className={`p-3 rounded-2xl ${
+ <div className={`p-2 rounded-xl ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
  task.status === TaskStatus.CANCELED ? ' bg-slate-800 ' :
  task.isOverdue ? ' bg-red-900/30 text-red-400' :
@@ -493,9 +493,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
  <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
  {/* Main Info */}
- <div className="flex-1 overflow-y-auto p-6 space-y-8 border-r border-slate-800">
+ <div className="flex-1 overflow-y-auto p-4 space-y-6 border-r border-slate-800 bg-slate-900">
  <section>
- <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+ <h3 className="text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
  <FileText size={16} /> Descrição
  </h3>
  {isEditingGeneral ? (
@@ -505,14 +505,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  className="w-full p-4 bg-slate-800 border-2 border-indigo-900/30 rounded-2xl text-slate-300 leading-relaxed min-h-[100px] focus:ring-2 focus:ring-indigo-500 outline-none"
  />
  ) : (
- <div className="bg-slate-800/50 p-4 rounded-2xl text-slate-300 leading-relaxed whitespace-pre-wrap">
+ <div className="bg-slate-800/50 p-3 rounded-xl text-slate-300 leading-relaxed whitespace-pre-wrap">
  {task.description || 'Sem descrição detalhada.'}
  </div>
  )}
  </section>
 
  <section>
- <div className="flex items-center justify-between mb-3">
+ <div className="flex items-center justify-between mb-2">
  <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <ClipboardList size={16} /> Manual / Passo a Passo
  </h3>
@@ -546,11 +546,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  value={tempInstructions}
  onChange={(e) => setTempInstructions(e.target.value)}
  placeholder="Descreva o passo a passo para realização desta tarefa..."
- className="w-full p-4 bg-slate-800 border-2 border-indigo-900/30 rounded-2xl text-slate-300 leading-relaxed min-h-[200px] focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+ className="w-full p-3 bg-slate-800 border-2 border-indigo-900/30 rounded-xl text-slate-300 leading-relaxed min-h-[150px] focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
  />
  
- <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
- <div className="flex items-center justify-between mb-3">
+ <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+ <div className="flex items-center justify-between mb-2">
  <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
  </h4>
@@ -624,8 +624,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  </div>
  ) : (
- <div className="space-y-4">
- <div className="bg-indigo-50/50 bg-indigo-900/10 p-4 rounded-2xl text-slate-300 leading-relaxed whitespace-pre-wrap border border-indigo-100/50 border-indigo-900/20">
+ <div className="space-y-3">
+ <div className="bg-slate-800/50 p-3 rounded-xl text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-700/50">
  {task.instructions || 'Nenhum manual ou passo a passo anexado a esta tarefa.'}
  </div>
  
@@ -666,9 +666,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  )}
  </section>
 
- <div className="grid grid-cols-2 gap-6">
+ <div className="grid grid-cols-2 gap-4">
  <section>
- <h3 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+ <h3 className="text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
  <Clock size={16} /> Prazo de Conclusão
  </h3>
  {isEditingGeneral ? (
@@ -737,13 +737,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
  {/* Recurrence Edit */}
  <section>
- <div className="flex items-center justify-between mb-3">
+ <div className="flex items-center justify-between mb-2">
  <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <History size={16} /> Recorrência
  </h3>
  </div>
  {isEditingGeneral ? (
- <div className="p-4 bg-indigo-900/10 rounded-2xl border border-indigo-900/20 space-y-4">
+ <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50 space-y-3">
  <label className="flex items-center gap-2 cursor-pointer">
  <input 
  type="checkbox"
@@ -1124,7 +1124,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
 
  {/* Timeline / Audit Logs */}
- <div className="w-full md:w-80 bg-slate-50/50 bg-slate-800/30 flex flex-col">
+ <div className="w-full md:w-80 bg-slate-900 flex flex-col border-l border-slate-800">
  <div className="p-4 border-b border-slate-800 bg-slate-900">
  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
  <History size={16} className="text-indigo-400"/> Histórico de Ações

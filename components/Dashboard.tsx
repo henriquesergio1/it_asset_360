@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, Info, Clock, X, ClipboardList, ChevronRight } from 'lucide-react';
 import { DeviceStatus, AccountType, Task, TaskStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { TaskDashboardWidget } from './TaskDashboardWidget';
 import { TaskDetailModal } from './TaskDetailModal';
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
- <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex items-start justify-between hover:shadow-md transition-all">
+const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick }: any) => (
+ <div 
+   className={`bg-slate-900 rounded-xl border border-slate-800 p-6 flex items-start justify-between hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-slate-700' : ''}`}
+   onClick={onClick}
+ >
  <div>
- <p className="text-sm font-medium mb-1">{title}</p>
+ <p className="text-sm font-medium mb-1 text-slate-400">{title}</p>
  <h3 className="text-2xl font-bold text-slate-100">{value}</h3>
- {subtitle && <p className="text-xs mt-2">{subtitle}</p>}
+ {subtitle && <p className="text-xs mt-2 text-slate-500">{subtitle}</p>}
  </div>
  <div className={`p-3 rounded-lg ${color}`}>
  <Icon className="w-6 h-6 text-white"/>
@@ -23,22 +25,23 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
 
 const ExpandableDeviceCard = ({ devices }: { devices: any[] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const available = devices.filter(d => d.status === DeviceStatus.AVAILABLE).length;
   const inUse = devices.filter(d => d.status === DeviceStatus.IN_USE).length;
   const maintenance = devices.filter(d => d.status === DeviceStatus.MAINTENANCE).length;
 
   return (
     <div 
-      className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+      className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col hover:shadow-md hover:border-slate-700 transition-all cursor-pointer group relative overflow-hidden"
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => navigate('/devices')}
     >
       <div className="flex items-start justify-between z-10">
         <div>
-          <p className="text-sm font-medium mb-1">Dispositivos</p>
+          <p className="text-sm font-medium mb-1 text-slate-400">Dispositivos</p>
           <h3 className="text-2xl font-bold text-slate-100">{devices.length}</h3>
-          <p className="text-xs mt-2 text-slate-400">{available} disponíveis</p>
+          <p className="text-xs mt-2 text-slate-500">{available} disponíveis</p>
         </div>
         <div className="p-3 rounded-lg bg-blue-600 group-hover:scale-110 transition-transform">
           <Smartphone className="w-6 h-6 text-white"/>
@@ -70,20 +73,21 @@ const ExpandableDeviceCard = ({ devices }: { devices: any[] }) => {
 
 const ExpandableAccountCard = ({ accounts }: { accounts: any[] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
   const active = accounts.filter(a => a.status === 'Ativo').length;
   
   return (
     <div 
-      className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+      className="bg-slate-900 rounded-xl border border-slate-800 p-6 flex flex-col hover:shadow-md hover:border-slate-700 transition-all cursor-pointer group relative overflow-hidden"
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => navigate('/accounts')}
     >
       <div className="flex items-start justify-between z-10">
         <div>
-          <p className="text-sm font-medium mb-1">Licenças / Contas</p>
+          <p className="text-sm font-medium mb-1 text-slate-400">Licenças / Contas</p>
           <h3 className="text-2xl font-bold text-slate-100">{accounts.length}</h3>
-          <p className="text-xs mt-2 text-slate-400">{active} ativas</p>
+          <p className="text-xs mt-2 text-slate-500">{active} ativas</p>
         </div>
         <div className="p-3 rounded-lg bg-indigo-600 group-hover:scale-110 transition-transform">
           <Lock className="w-6 h-6 text-white"/>
@@ -214,26 +218,15 @@ const Dashboard = () => {
 
  {/* Cards Principais Restaurados */}
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
- <StatCard 
- title="Dispositivos"
- value={devices.length} 
- icon={Smartphone} 
- color=""
- subtitle={`${availableDevices} disponíveis`}
- />
- <StatCard 
- title="Licenças / Contas"
- value={accounts.length} 
- icon={Lock} 
- color="bg-indigo-600"
- subtitle={`${accounts.filter(a => a.status === 'Ativo').length} e-mails ativos`}
- />
+ <ExpandableDeviceCard devices={devices} />
+ <ExpandableAccountCard accounts={accounts} />
  <StatCard 
  title="Colaboradores"
  value={users.length} 
  icon={Users} 
  color="bg-emerald-600"
  subtitle={`${users.filter(u => u.active).length} ativos`}
+ onClick={() => navigate('/users')}
  />
  <StatCard 
  title="Em Manutenção"
@@ -241,85 +234,21 @@ const Dashboard = () => {
  icon={Wrench} 
  color="bg-amber-500"
  subtitle="Aguardando reparo"
+ onClick={() => navigate('/devices')}
  />
- </div>
-
- {/* Gráficos Principais */}
- <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
- <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col h-[320px]">
- <h2 className="text-lg font-bold text-slate-100 mb-3">Status dos Dispositivos</h2>
- <div className="flex-1">
- <ResponsiveContainer width="100%"height="100%">
- <PieChart>
- <Pie data={dataStatus} cx="40%"cy="50%"innerRadius={45} outerRadius={65} paddingAngle={5} dataKey="value">
- {dataStatus.map((entry, index) => (
- <Cell key={`cell-${index}`} fill={entry.color} />
- ))}
- </Pie>
- <Tooltip 
- contentStyle={{ 
- backgroundColor: '#0f172a', 
- borderRadius: '12px', 
- border: '1px solid #334155', 
- boxShadow: '0 10px 15px -3px rgba(0,0,0,0.3)',
- color: '#f1f5f9'
- }}
- itemStyle={{ color: '#f1f5f9', fontSize: '12px', fontWeight: 'bold' }}
- />
- <Legend 
- layout="vertical"
- align="right"
- verticalAlign="middle"
- wrapperStyle={{ 
- fontSize: '10px', 
- fontWeight: 'bold', 
- textTransform: 'uppercase',
- color: '#94a3b8'
- }} 
- />
- </PieChart>
- </ResponsiveContainer>
- </div>
- </div>
-
- <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 h-[320px] flex flex-col">
- <div className="flex justify-between items-center mb-3">
- <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
- <Lock size={18} className="text-indigo-400"/> Licenças / Contas
- </h2>
- <Link to="/accounts"className="text-[10px] font-black uppercase text-indigo-400 hover:underline">Ver Tudo</Link>
- </div>
- <div className="space-y-2 overflow-hidden">
- {Object.values(AccountType).map(type => {
- const count = accounts.filter(a => a.type === type).length;
- const percentage = accounts.length > 0 ? (count / accounts.length) * 100 : 0;
- return (
- <div key={type} className="space-y-1">
- <div className="flex justify-between text-[10px] font-bold uppercase">
- <span>{type}</span>
- <span>{count}</span>
- </div>
- <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
- <div className="bg-indigo-600 bg-indigo-500 h-full transition-all duration-1000"style={{ width:`${percentage}%`}}></div>
- </div>
- </div>
- );
- })}
- </div>
- </div>
  </div>
 
  {/* Gestão de Tarefas em Destaque - Formato Alerta */}
- <div className="bg-indigo-900/20 border border-indigo-900/50 rounded-xl p-6 animate-fade-in">
- <div className="flex items-start gap-4">
- <div className="p-3 bg-indigo-900/40 text-indigo-400 rounded-lg shrink-0">
- <ClipboardList size={24} />
+ <div className="bg-slate-900 border-l-4 border-l-indigo-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="flex items-start gap-3">
+ <div className="p-2 bg-indigo-900/30 text-indigo-400 rounded-lg shrink-0">
+ <ClipboardList size={20} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-lg font-bold text-indigo-200 flex items-center gap-2">
+ <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
  Gestão de Tarefas Pendentes
- <span className="bg-indigo-900/40 text-indigo-400 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+ <span className="bg-indigo-900/40 text-indigo-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
  {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
  </span>
  </h3>
@@ -332,13 +261,13 @@ const Dashboard = () => {
  </button>
  <button 
  onClick={() => setIsTasksExpanded(!isTasksExpanded)}
- className="text-indigo-400 transition-colors"
+ className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isTasksExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+ {isTasksExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
  </button>
  </div>
  </div>
- <p className="text-sm text-indigo-800/70 text-indigo-300/60 mb-4">
+ <p className="text-xs text-slate-400 mb-3">
  Acompanhamento de manutenções, envios de arquivos e outras pendências operacionais da equipe de TI.
  </p>
  
@@ -357,24 +286,24 @@ const Dashboard = () => {
 
  {/* Alerta de Termos Pendentes - 3ª posição */}
  {pendingTerms.length > 0 && (
- <div className="bg-orange-900/20 border border-orange-900/50 rounded-xl p-6 animate-fade-in">
- <div className="flex items-start gap-4">
- <div className="p-3 bg-orange-900/40 text-orange-400 rounded-lg shrink-0">
- <FileWarning size={24} />
+ <div className="bg-slate-900 border-l-4 border-l-orange-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="flex items-start gap-3">
+ <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
+ <FileWarning size={20} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-lg font-bold text-orange-200">
+ <h3 className="text-base font-bold text-slate-100">
  {pendingTerms.length} Termos de Responsabilidade Pendentes
  </h3>
  <button 
  onClick={() => setIsTermsExpanded(!isTermsExpanded)}
- className="text-orange-400 transition-colors"
+ className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isTermsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+ {isTermsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
  </button>
  </div>
- <p className="text-sm text-orange-800/70 text-orange-300/60 mb-4">
+ <p className="text-xs text-slate-400 mb-3">
  Existem colaboradores com dispositivos em uso que ainda não assinaram ou anexaram o termo digital.
  </p>
  
@@ -492,25 +421,25 @@ const Dashboard = () => {
 
  {/* Alerta de Validação de Expediente (ERP) - 4ª posição, Formato Lista */}
  {filteredExpedienteAlerts.length > 0 && (
- <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-6 animate-fade-in">
- <div className="flex items-start gap-4">
- <div className="p-3 bg-red-900/40 text-red-400 rounded-lg shrink-0">
- <Clock size={24} />
+ <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+ <div className="flex items-start gap-3">
+ <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
+ <Clock size={20} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-1">
- <h3 className="text-lg font-bold text-red-200">
+ <h3 className="text-base font-bold text-slate-100">
  {filteredExpedienteAlerts.length} Alertas de Expediente (ERP)
  </h3>
  <button 
  onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
- className="text-red-400 transition-colors"
+ className="text-slate-400 hover:text-slate-200 transition-colors"
  >
- {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+ {isExpedienteExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
  </button>
  </div>
- <p className="text-sm text-red-800/70 text-red-300/60 mb-4">
- Colaboradores ativos da equipe de vendas identificados com expediente <span className="font-bold">FALSO</span> no ERP.
+ <p className="text-xs text-slate-400 mb-3">
+ Colaboradores ativos da equipe de vendas identificados com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
  </p>
  
  <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
