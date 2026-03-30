@@ -255,12 +255,11 @@ const SimManager = () => {
  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-indigo-50/30 hover:bg-indigo-900/20 transition-colors cursor-pointer group">
  <td className="px-6 py-4 font-bold text-slate-100 truncate">{sim.phoneNumber}</td>
  <td className="px-6 py-4 truncate">
- <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-black uppercase tracking-wider border border-slate-700">{sim.operator}</span>
+ <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold uppercase tracking-wider">{sim.operator}</span>
  </td>
  <td className="px-6 py-4 font-mono text-xs font-bold truncate">{sim.iccid}</td>
  <td className="px-6 py-4 text-center truncate">
- <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border
- ${sim.status === DeviceStatus.AVAILABLE ? ' bg-green-900/30 text-green-400 border-green-900/40' : ' bg-indigo-900/30 text-indigo-400 border-indigo-900/40'}`}>
+ <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${sim.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/30 text-emerald-400' : ' bg-blue-900/30 text-blue-400'}`}>
  {sim.status}
  </span>
  </td>

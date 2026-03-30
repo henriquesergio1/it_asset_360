@@ -452,7 +452,7 @@ const AccountManager = () => {
  {visibleColumns.includes('password') && (
  <td className="px-6 py-4 truncate">
  <div className="flex items-center gap-2"onClick={(e) => e.stopPropagation()}>
- <div className="bg-slate-800 px-2 py-1 rounded font-mono text-xs">
+ <div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold">
  {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
  </div>
  <button onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="">
@@ -504,7 +504,7 @@ const AccountManager = () => {
  )}
  {visibleColumns.includes('status') && (
  <td className="px-6 py-4 text-center truncate">
- <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${acc.status === 'Ativo' ? ' bg-green-900/30 text-green-400 border-green-900/40' : ' bg-red-900/30 text-red-400 border-red-900/40'}`}>
+ <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${acc.status === 'Ativo' ? ' bg-emerald-900/30 text-emerald-400' : ' bg-rose-900/30 text-rose-400'}`}>
  {acc.status}
  </span>
  </td>

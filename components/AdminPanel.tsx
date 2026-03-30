@@ -337,7 +337,7 @@ const AdminPanel = () => {
  <tr key={u.id} className="border-b border-slate-800/50 hover:bg-slate-50/50 hover:bg-slate-800/50 bg-slate-900 transition-colors">
  <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
  <td className="px-6 py-4 font-medium">{u.email}</td>
- <td className="px-6 py-4"><span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
+ <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
  <td className="px-6 py-4 text-right">
  <div className="flex justify-end gap-2">
  <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
@@ -535,7 +535,7 @@ const AdminPanel = () => {
  <tr key={log.id} className="border-b border-slate-800/50 hover:bg-blue-50/20 hover:bg-blue-900/20 transition-colors bg-slate-900">
  <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</td>
  <td className="px-6 py-4 font-bold text-slate-100">{log.adminUser}</td>
- <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-900/30 text-blue-400 border border-blue-900/40">{log.action}</span></td>
+ <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">{log.action}</span></td>
  <td className="px-6 py-4 font-bold text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
  <td className="px-6 py-4 text-right">
  <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-slate-800 border border-blue-900/50 text-blue-400 px-3 py-1.5 rounded-xl hover:text-white hover:text-white transition-all">Detalhes</button>

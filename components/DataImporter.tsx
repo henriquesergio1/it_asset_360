@@ -499,10 +499,10 @@ const DataImporter = () => {
  {step === 'ANALYSIS' && (
  <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
  <div className="flex gap-4 mb-4">
- <div className="bg-green-900/30 text-green-400 px-4 py-1.5 rounded-full text-xs font-black uppercase border border-green-800">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
- <div className="bg-orange-900/30 text-orange-400 px-4 py-1.5 rounded-full text-xs font-black uppercase border border-orange-800">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
+ <div className="bg-emerald-900/30 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
+ <div className="bg-amber-900/30 text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
  {analyzedData.some(i => i.status === 'ERROR') && (
- <div className="bg-red-900/30 text-red-400 px-4 py-1.5 rounded-full text-xs font-black uppercase border border-red-800">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
+ <div className="bg-rose-900/30 text-rose-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
  )}
  </div>
  <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-slate-950 border-slate-800">
@@ -523,7 +523,7 @@ const DataImporter = () => {
  item.row['Numero']}
  </td>
  <td className="px-6 py-3">
- <span className={`px-2.5 py-1 rounded font-black text-[10px] tracking-widest border ${item.status === 'NEW' ? ' bg-green-900/30 text-green-400 border-green-900/40' : item.status === 'CONFLICT' ? ' bg-orange-900/30 text-orange-400 border-orange-900/40' : ' bg-red-900/30 text-red-400 border-red-900/40'}`}>
+ <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] tracking-widest ${item.status === 'NEW' ? ' bg-emerald-900/30 text-emerald-400' : item.status === 'CONFLICT' ? ' bg-amber-900/30 text-amber-400' : ' bg-rose-900/30 text-rose-400'}`}>
  {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
  </span>
  </td>

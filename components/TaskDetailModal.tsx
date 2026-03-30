@@ -454,7 +454,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <Clock size={14} /> Criada em {new Date(task.createdAt).toLocaleDateString('pt-BR')}
  </span>
  <span className="text-slate-300">•</span>
- <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+ <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
  task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/30 text-blue-400' :
  task.status === TaskStatus.PENDING ? ' bg-amber-900/30 text-amber-400' :
@@ -958,7 +958,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  )}
  {task.maintenanceItems && !isEditingGeneral && (
- <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-900/40 text-amber-400 rounded-full uppercase tracking-widest">
+ <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-900/40 text-amber-400">
  Manutenção em Lote
  </span>
  )}

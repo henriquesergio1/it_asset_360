@@ -319,7 +319,7 @@ const Dashboard = () => {
  <div className="flex justify-between items-center mb-1">
  <h3 className="text-lg font-bold text-indigo-200 flex items-center gap-2">
  Gestão de Tarefas Pendentes
- <span className="bg-indigo-900/40 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+ <span className="bg-indigo-900/40 text-indigo-400 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
  {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
  </span>
  </h3>

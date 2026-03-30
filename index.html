@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR" class="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,22 +7,21 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script>
       tailwind.config = {
-        darkMode: 'class',
         theme: {
           extend: {
             colors: {
               blue: {
-                50: 'var(--primary-50, #eff6ff)',
-                100: 'var(--primary-100, #dbeafe)',
-                200: 'var(--primary-200, #bfdbfe)',
-                300: 'var(--primary-300, #93c5fd)',
-                400: 'var(--primary-400, #60a5fa)',
-                500: 'var(--primary-500, #3b82f6)',
-                600: 'var(--primary-600, #2563eb)',
-                700: 'var(--primary-700, #1d4ed8)',
-                800: 'var(--primary-800, #1e40af)',
-                900: 'var(--primary-900, #1e3a8a)',
-                950: 'var(--primary-950, #172554)',
+                50: '#eff6ff',
+                100: '#dbeafe',
+                200: '#bfdbfe',
+                300: '#93c5fd',
+                400: '#60a5fa',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+                800: '#1e40af',
+                900: '#1e3a8a',
+                950: '#172554',
               }
             },
             animation: {
@@ -54,24 +53,8 @@
         background: #cbd5e1; 
         border-radius: 4px;
       }
-      .dark ::-webkit-scrollbar-thumb {
-        background: #1e293b; /* slate-800 */
-        border: 2px solid #020617;
-      }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
-      }
-      .dark ::-webkit-scrollbar-thumb:hover {
-        background: #334155; /* slate-700 */
-      }
-      .dark ::-webkit-scrollbar-track {
-        background: #020617; /* slate-950 */
-      }
-      
-      /* Force dark background on html and body to prevent white flashes */
-      html.dark, html.dark body {
-        background-color: #020617 !important;
-        color: #f1f5f9 !important;
       }
     </style>
     <!-- 
@@ -90,7 +73,7 @@
     -->
     <script type="module" src="/index.tsx"></script>
   </head>
-  <body class="bg-gray-100 dark:bg-slate-950 transition-colors duration-300">
+  <body class="bg-slate-50">
     <div id="root"></div>
   </body>
 </html>

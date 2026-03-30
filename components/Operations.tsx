@@ -322,7 +322,7 @@ const Operations = () => {
  if (isProcessed) {
  return (
  <div className="max-w-2xl mx-auto mt-20 p-10 bg-slate-900 rounded-3xl border-2 border-blue-50 border-slate-800 text-center animate-scale-up">
- <div className="h-24 w-24 bg-green-900/30 text-green-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+ <div className="h-24 w-24 bg-emerald-900/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
  <CheckCircle size={48} />
  </div>
  <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tight mb-2">Operação Realizada!</h2>
