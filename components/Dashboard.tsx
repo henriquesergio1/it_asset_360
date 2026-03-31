@@ -327,22 +327,22 @@ const Dashboard = () => {
  const sectorCode = foundDevice?.internalCode;
 
  return (
- <div key={term.id} className="bg-slate-950/50 p-2 rounded-lg border border-orange-900/30 flex items-center justify-between group hover:border-orange-700 transition-all">
+ <div key={term.id} className="bg-slate-900/50 p-3 rounded-lg border border-orange-900/30 flex items-center justify-between group hover:border-orange-700 transition-all">
  <div className="flex flex-1 items-center gap-3">
  <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0">
  {user.fullName.charAt(0)}
  </div>
  <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
  <p className="text-sm font-bold text-slate-200">{user.fullName}</p>
- <p className="text-[10px] uppercase font-black tracking-tighter md:mt-0">
+ <p className="text-[10px] uppercase font-black tracking-tighter md:mt-0 text-slate-400">
  Setor: {sectors.find(s => s.id === user.sectorId)?.name || 'N/A'}
  {sectorCode && <span className="ml-2">Código: {sectorCode}</span>}
  </p>
- <p className="text-[10px] italic md:mt-0">{term.assetDetails}</p>
+ <p className="text-[10px] italic md:mt-0 text-slate-500">{term.assetDetails}</p>
  </div>
  </div>
  <div className="flex items-center gap-x-4 shrink-0">
- <p className="text-[10px] font-bold uppercase tracking-tight hidden md:block">{new Date(term.date).toLocaleDateString('pt-BR')}</p>
+ <p className="text-[10px] font-bold uppercase tracking-tight hidden md:block text-slate-500">{new Date(term.date).toLocaleDateString('pt-BR')}</p>
  <div className="flex items-center gap-1">
  <button 
  onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
