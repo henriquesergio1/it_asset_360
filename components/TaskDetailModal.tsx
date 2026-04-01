@@ -422,14 +422,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  };
 
  return (
- <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+ <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
  <motion.div 
  initial={{ opacity: 0, scale: 0.95, y: 20 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
- className="bg-slate-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-800 transition-colors"
+ className="bg-slate-900 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-800 transition-colors"
  >
  {/* Header */}
- <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900">
+ <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
  <div className="flex items-center gap-4">
  <div className={`p-2 rounded-xl ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
@@ -444,21 +444,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <input 
  value={editTitle}
  onChange={(e) => setEditTitle(e.target.value)}
- className="text-xl font-bold text-slate-100 bg-slate-800 border-b-2 border-indigo-500 outline-none w-full px-2 rounded"
+ className="text-lg font-bold text-slate-100 bg-slate-800 border-b-2 border-indigo-500 outline-none w-full px-2 rounded"
  />
  ) : (
- <h2 className="text-xl font-bold text-slate-100">{task.title}</h2>
+ <h2 className="text-lg font-bold text-slate-100">{task.title}</h2>
  )}
  <div className="flex items-center gap-3 mt-1">
- <span className="text-xs font-medium flex items-center gap-1">
+ <span className="text-xs text-slate-400 flex items-center gap-1">
  <Clock size={14} /> Criada em {new Date(task.createdAt).toLocaleDateString('pt-BR')}
  </span>
- <span className="text-slate-300">•</span>
- <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+ <span className="text-slate-500">•</span>
+ <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
  task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/30 text-blue-400' :
  task.status === TaskStatus.PENDING ? ' bg-amber-900/30 text-amber-400' :
- ' bg-slate-800 '
+ ' bg-slate-800 text-slate-400'
  }`}>
  {task.status}
  </span>
@@ -485,8 +485,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <Wrench size={20} />
  </button>
  )}
- <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
- <X size={24} className=""/>
+ <button onClick={onClose} className="p-2 hover:text-slate-300 hover:bg-slate-800 rounded-full transition-colors">
+ <X size={20} />
  </button>
  </div>
  </div>

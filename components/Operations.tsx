@@ -596,7 +596,7 @@ const Operations = () => {
  <button 
  onClick={handleExecute}
  disabled={isExecuting || !selectedAssetId || (activeTab === 'CHECKOUT' && !selectedUserId)}
- className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-sm transition-all flex items-center justify-center gap-3 active:scale-95 ${activeTab === 'CHECKOUT' ? ' text-white ' : 'bg-orange-600 text-white hover:bg-orange-700'} disabled:opacity-50 disabled:grayscale`}
+ className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-sm transition-all flex items-center justify-center gap-3 active:scale-95 ${activeTab === 'CHECKOUT' ? ' bg-blue-600 text-white hover:bg-blue-700 ' : 'bg-orange-600 text-white hover:bg-orange-700'} disabled:opacity-50 disabled:grayscale`}
  >
  {isExecuting ? <RefreshCw className="animate-spin"size={24}/> : (activeTab === 'CHECKOUT' ? <CheckCircle size={24}/> : <ArrowLeft size={24} className="rotate-180"/>)}
  {isExecuting ? 'PROCESSANDO...' : (activeTab === 'CHECKOUT' ? 'FINALIZAR ENTREGA' : 'FINALIZAR DEVOLUÇÃO')}

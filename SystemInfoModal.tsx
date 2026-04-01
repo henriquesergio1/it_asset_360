@@ -8,6 +8,26 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.9.2',
+    date: 'Hoje',
+    title: 'Padronização & Condensação do Dashboard',
+    changes: [
+      'Dashboard: Padronização visual dos widgets de alerta (Tarefas, Termos e Alertas ERP).',
+      'UI: Condensação de espaçamentos verticais para otimização de espaço na tela.',
+      'Sincronização: Atualização global para v3.9.2.'
+    ]
+  },
+    {
+    version: '3.9.1',
+    date: 'Hoje',
+    title: 'Ajustes Visuais & Sincronização de Versão',
+    changes: [
+      'Operações: Estilização do botão "Finalizar Entrega" com padrão azul e hover.',
+      'Sincronização: Unificação da versão do sistema para v3.9.1 em todas as telas (Login, Menu, Sobre).',
+      'Correção: Padronização visual dos botões de ação principal no fluxo de movimentação.'
+    ]
+  },
+    {
     version: '3.8.0',
     date: 'Hoje',
     title: 'Padronização Tema Escuro & Limpeza de Sistema',
