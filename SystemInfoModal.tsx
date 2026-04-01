@@ -8,6 +8,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.9.6',
+    date: 'Hoje',
+    title: 'Título da Janela Dinâmico',
+    changes: [
+      'Sistema: O título da aba do navegador agora exibe o nome da empresa configurada (ex: "Empresa - IT Asset 360").',
+      'Sincronização: Atualização global para v3.9.6.'
+    ]
+  },
+    {
     version: '3.9.5',
     date: 'Hoje',
     title: 'Atualização de Favicon',
