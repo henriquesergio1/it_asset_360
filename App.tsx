@@ -83,7 +83,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                 <h1 className="text-sm font-bold text-slate-100 leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
                 </h1>
-                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.9.2</p>
+                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.9.4</p>
               </div>
             )}
           </div>

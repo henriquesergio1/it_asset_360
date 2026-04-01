@@ -8,6 +8,27 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.9.4',
+    date: 'Hoje',
+    title: 'Validação de PIS/PASEP',
+    changes: [
+      'Colaboradores: Implementada validação obrigatória de 11 dígitos para o campo PIS/PASEP.',
+      'Cadastro: O sistema agora impede o salvamento caso o PIS tenha menos ou mais de 11 dígitos.',
+      'Sincronização: Atualização global para v3.9.4.'
+    ]
+  },
+    {
+    version: '3.9.3',
+    date: 'Hoje',
+    title: 'Ajuste no Campo PIS/PASEP',
+    changes: [
+      'Colaboradores: Removida a normalização automática (pontos e traços) do campo PIS/PASEP.',
+      'Cadastro: O campo agora salva apenas números brutos, conforme solicitado.',
+      'Importação: Ajustada a lógica de importação para manter a consistência dos dados do PIS.',
+      'Sincronização: Atualização global para v3.9.3.'
+    ]
+  },
+    {
     version: '3.9.2',
     date: 'Hoje',
     title: 'Padronização & Condensação do Dashboard',

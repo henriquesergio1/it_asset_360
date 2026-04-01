@@ -28,10 +28,7 @@ const formatCPF = (v: string): string => {
 };
 
 const formatPIS = (v: string): string => {
- v = v.replace(/\D/g,"");
- if (v.length > 11) v = v.substring(0, 11);
- if (v.length < 11) return v;
- return v.replace(/(\d{3})(\d{5})(\d{2})(\d{1})/,"$1.$2.$3-$4");
+  return v.replace(/\D/g,"").substring(0, 11);
 };
 
 const formatRG = (v: string): string => {
@@ -176,6 +173,9 @@ const DataImporter = () => {
  
  const rawPis = formatPIS(row['PIS'] || '');
  const pisClean = cleanId(rawPis);
+ if (pisClean && pisClean.length !== 11) {
+   throw new Error(`PIS / PASEP inválido: deve conter exatamente 11 dígitos. (Atual: ${pisClean.length})`);
+ }
 
  // 1. Verificar duplicidade dentro do próprio CSV (lote)
  if (batchSeen.cpfs.has(cpfClean)) throw new Error(`CPF duplicado no arquivo: ${cpf}`);
