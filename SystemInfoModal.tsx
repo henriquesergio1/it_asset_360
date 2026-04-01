@@ -8,6 +8,15 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.9.5',
+    date: 'Hoje',
+    title: 'Atualização de Favicon',
+    changes: [
+      'Sistema: Adicionado favicon personalizado (ícone de CPU) para exibição na aba do navegador.',
+      'Sincronização: Atualização global para v3.9.5.'
+    ]
+  },
+    {
     version: '3.9.4',
     date: 'Hoje',
     title: 'Validação de PIS/PASEP',
