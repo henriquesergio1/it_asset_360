@@ -32,6 +32,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  const [tempInstructions, setTempInstructions] = useState(task.instructions || '');
  const [tempManualAttachments, setTempManualAttachments] = useState<string[]>(task.manualAttachments || []);
  const [showCancelReason, setShowCancelReason] = useState(false);
+ const [showCompletionNotePrompt, setShowCompletionNotePrompt] = useState(false);
+ const [isFinalizingWithNote, setIsFinalizingWithNote] = useState(false);
  const [cancelReason, setCancelReason] = useState('');
  const [showCostConfirmation, setShowCostConfirmation] = useState(false);
  const [completingItemId, setCompletingItemId] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  const [editRecurrenceConfig, setEditRecurrenceConfig] = useState<any>(task.recurrenceConfig || { type: 'Nenhuma' as any });
  const [editMaintenanceItems, setEditMaintenanceItems] = useState(task.maintenanceItems || []);
  const [searchTerm, setSearchTerm] = useState('');
+ const noteInputRef = useRef<HTMLTextAreaElement>(null);
 
  useEffect(() => {
  if (!isEditingInstructions) {
@@ -160,7 +163,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  }
  };
 
- const handleStatusChange = async (newStatus: TaskStatus) => {
+ const handleStatusChange = async (newStatus: TaskStatus, bypassPrompt = false) => {
  if (newStatus === task.status) return;
 
  // Validação: Tarefas concluídas não podem ser canceladas
@@ -187,6 +190,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  return;
  }
 
+ // Se for conclusão, perguntar sobre nota no histórico (se não for bypass)
+ if (newStatus === TaskStatus.COMPLETED && !showCompletionNotePrompt && !bypassPrompt) {
+ setShowCompletionNotePrompt(true);
+ return;
+ }
+
  // Se for conclusão de manutenção, pedir confirmação de custo e nota fiscal
  if (newStatus === TaskStatus.COMPLETED && task.type === TaskType.MAINTENANCE && !showCostConfirmation) {
  setShowCostConfirmation(true);
@@ -208,6 +217,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  updates.maintenanceInvoice = invoiceFile;
  }
  updates._actionNote =`Manutenção concluída. Custo final: R$ ${finalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+ } else if (newStatus === TaskStatus.COMPLETED) {
+ updates._actionNote = newNote || 'Tarefa finalizada';
  } else {
  updates._actionNote = newNote ||`Status alterado para ${newStatus}`;
  }
@@ -260,11 +271,18 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  if (!newNote.trim()) return;
  setUpdating(true);
  try {
+ if (isFinalizingWithNote) {
+ // Se estiver no fluxo de finalização com nota, conclui a tarefa usando a nota
+ await handleStatusChange(TaskStatus.COMPLETED, true);
+ setIsFinalizingWithNote(false);
+ } else {
+ // Fluxo normal de adicionar nota
  await onUpdate(task.id, { _actionNote: newNote });
  setNewNote('');
  showToast('Comentário adicionado com sucesso!');
  const res = await fetch(`/api/tasks/${task.id}/logs`);
  if (res.ok) setLogs(await res.json());
+ }
  } catch (err) {
  console.error('Erro ao adicionar nota:', err);
  showToast('Erro ao adicionar comentário.', 'error');
@@ -854,6 +872,49 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </motion.div>
  )}
 
+ {showCompletionNotePrompt && (
+ <motion.div 
+ initial={{ opacity: 0, y: -10 }}
+ animate={{ opacity: 1, y: 0 }}
+ className="w-full p-4 bg-blue-900/20 border border-blue-900/30 rounded-2xl space-y-3 mb-4"
+ >
+ <div className="flex items-center justify-between">
+ <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2">
+ <MessageSquare size={14} /> Finalizar Tarefa
+ </h4>
+ <button onClick={() => {
+ setShowCompletionNotePrompt(false);
+ setIsFinalizingWithNote(false);
+ }} className="text-blue-400">
+ <X size={14} />
+ </button>
+ </div>
+ <p className="text-sm text-slate-300">Deseja acrescentar mais alguma informação ao histórico de ações antes de finalizar?</p>
+ <div className="flex justify-end gap-2">
+ <button 
+ onClick={() => {
+ setShowCompletionNotePrompt(false);
+ handleStatusChange(TaskStatus.COMPLETED, true);
+ }}
+ disabled={updating}
+ className="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all"
+ >
+ Não, finalizar agora
+ </button>
+ <button 
+ onClick={() => {
+ setShowCompletionNotePrompt(false);
+ setIsFinalizingWithNote(true);
+ setTimeout(() => noteInputRef.current?.focus(), 100);
+ }}
+ className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all"
+ >
+ Sim, adicionar nota
+ </button>
+ </div>
+ </motion.div>
+ )}
+
  {/* Task Actions */}
  <div className="flex flex-wrap gap-3">
  {isEditingGeneral ? (
@@ -1167,9 +1228,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="relative">
  <textarea
  value={newNote}
+ ref={noteInputRef}
  onChange={(e) => setNewNote(e.target.value)}
- placeholder="Adicionar nota/comentário..."
- className="w-full p-3 pr-10 text-xs bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none h-20 text-slate-100"
+ placeholder={isFinalizingWithNote ? "Digite a nota de encerramento para finalizar a tarefa..." : (task.status === TaskStatus.IN_PROGRESS ? "Adicionar nota/comentário..." : "Inicie a tarefa para adicionar notas")}
+ disabled={(task.status !== TaskStatus.IN_PROGRESS && !isFinalizingWithNote) || updating}
+ className={`w-full p-3 pr-10 text-xs bg-slate-800 border rounded-xl focus:ring-2 transition-all resize-none h-20 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed ${
+  isFinalizingWithNote 
+  ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+  : 'border-slate-700 focus:ring-indigo-500 focus:border-transparent'
+ }`}
  />
  <button 
  onClick={handleAddNote}
