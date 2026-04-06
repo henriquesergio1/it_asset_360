@@ -8,6 +8,16 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.9.7',
+    date: 'Hoje',
+    title: 'Auditoria Visual e Padronização',
+    changes: [
+      'UI/UX: Auditoria visual completa para garantir consistência em bordas, fundos e contornos.',
+      'Sistema: Padronização de cores (substituição de tons residuais de indigo por azul/slate).',
+      'Sincronização: Atualização global para v3.9.7.'
+    ]
+  },
+    {
     version: '3.9.6',
     date: 'Hoje',
     title: 'Título da Janela Dinâmico',

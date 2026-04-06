@@ -53,8 +53,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  onClick={() => !disabled && setIsOpen(!isOpen)}
  className={`w-full p-3 border-2 rounded-xl flex items-center justify-between transition-all
- ${disabled ? 'bg-slate-900 cursor-not-allowed border-slate-800 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-indigo-400 border-slate-700'}
- ${isOpen ? 'ring-4 ring-indigo-900/20 border-indigo-500' : ''}
+ ${disabled ? 'bg-slate-900 cursor-not-allowed border-slate-800 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-700'}
+ ${isOpen ? 'ring-4 ring-blue-900/20 border-blue-500' : ''}
 `}
  >
  <div className="flex items-center gap-3 overflow-hidden">
@@ -70,7 +70,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  )}
  </div>
  </div>
- <ChevronDown size={16} className={`text-indigo-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+ <ChevronDown size={16} className={`text-blue-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
  </div>
 
  {isOpen && !disabled && (
@@ -97,7 +97,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  key={opt.value}
  onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
- className={`px-4 py-3 cursor-pointer hover:bg-indigo-900/20 border-b border-slate-700 last:border-0 ${value === opt.value ? 'bg-indigo-900/30' : ''}`}
+ className={`px-4 py-3 cursor-pointer hover:bg-blue-900/20 border-b border-slate-700 last:border-0 ${value === opt.value ? 'bg-blue-900/30' : ''}`}
  >
  <div className="font-bold text-slate-100 text-sm">{opt.label}</div>
  {opt.subLabel && <div className="text-[10px] font-mono uppercase">{opt.subLabel}</div>}

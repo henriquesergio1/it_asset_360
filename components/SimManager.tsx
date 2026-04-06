@@ -193,7 +193,7 @@ const SimManager = () => {
  <h1 className="text-2xl font-bold text-slate-100">Gestão de Chips / SIMs</h1>
  <p className="text-sm">Controle de linhas (Ordem A-Z por Número).</p>
  </div>
- <button onClick={() => handleOpenModal()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-bold">
+ <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-bold">
  <Plus size={18} /> Novo SIM
  </button>
  </div>
@@ -215,10 +215,10 @@ const SimManager = () => {
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Em Uso</span>
+ <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">Em Uso</span>
  <p className="text-3xl font-black text-slate-100">{inUse}</p>
  </div>
- <div className="h-10 w-10 bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-400"><Smartphone size={20}/></div>
+ <div className="h-10 w-10 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400"><Smartphone size={20}/></div>
  </div>
  </div>
 
@@ -229,7 +229,7 @@ const SimManager = () => {
  <input 
  type="text"
  placeholder="Buscar por número, ICCID ou operadora..."
- className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-900 transition-colors"
+ className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 bg-slate-900 transition-colors"
  value={searchTerm}
  onChange={(e) => setSearchTerm(e.target.value)}
  />
@@ -252,7 +252,7 @@ const SimManager = () => {
  {filteredSims.map((sim) => {
  const assignedUser = users.find(u => u.id === sim.currentUserId);
  return (
- <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-indigo-50/30 hover:bg-indigo-900/20 transition-colors cursor-pointer group">
+ <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-blue-900/20 transition-colors cursor-pointer group">
  <td className="px-6 py-4 font-bold text-slate-100 truncate">{sim.phoneNumber}</td>
  <td className="px-6 py-4 truncate">
  <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold uppercase tracking-wider">{sim.operator}</span>
@@ -278,7 +278,7 @@ const SimManager = () => {
  </td>
  <td className="px-6 py-4 text-right"onClick={(e) => e.stopPropagation()}>
  <div className="flex items-center justify-end gap-2">
- <button onClick={() => handleOpenModal(sim, false)} className="text-blue-400 hover:bg-indigo-900/30 p-2 rounded-xl transition-all"title="Editar"><Edit2 size={16} /></button>
+ <button onClick={() => handleOpenModal(sim, false)} className="text-blue-400 hover:bg-blue-900/30 p-2 rounded-xl transition-all"title="Editar"><Edit2 size={16} /></button>
  <button onClick={() => handleDeleteClick(sim.id)} className="text-red-400 hover:text-red-400 hover:bg-red-900/30 p-2 rounded-xl transition-all"title="Excluir"><Trash2 size={16} /></button>
  </div>
  </td>
@@ -298,7 +298,7 @@ const SimManager = () => {
  {/* Modal de Cadastro/Edição */}
  {isModalOpen && (
  <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
- <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-indigo-900/40 transition-colors">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-blue-900/40 transition-colors">
  <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
  <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Visualização do Chip' : 'Edição de Linha') : 'Novo Chip / SIM'}</h3>
  <button onClick={() => setIsModalOpen(false)} className="hover:text-white transition-colors"><X size={20}/></button>
@@ -313,11 +313,11 @@ const SimManager = () => {
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Número da Linha</label>
- <input disabled={isViewOnly} required type="text"placeholder="(00) 00000-0000"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
+ <input disabled={isViewOnly} required type="text"placeholder="(00) 00000-0000"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Operadora</label>
- <select disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
+ <select disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
  <option value="Vivo">Vivo</option>
  <option value="Claro">Claro</option>
  <option value="Tim">Tim</option>
@@ -328,22 +328,22 @@ const SimManager = () => {
  </div>
  <div className="md:col-span-2">
  <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ICCID (20 dígitos)</label>
- <input disabled={isViewOnly} required type="text"placeholder="8955..."className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-800 text-slate-100 font-mono transition-colors"value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value.trim()})}/>
+ <input disabled={isViewOnly} required type="text"placeholder="8955..."className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-mono transition-colors"value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value.trim()})}/>
  </div>
  <div className="md:col-span-2">
  <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Detalhes do Plano</label>
- <input disabled={isViewOnly} type="text"placeholder="Ex: 50GB Mensal Corporativo"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-indigo-500 outline-none bg-slate-800 text-slate-100 transition-colors"value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
+ <input disabled={isViewOnly} type="text"placeholder="Ex: 50GB Mensal Corporativo"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 transition-colors"value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
  </div>
  </div>
  
  <div className="flex justify-end gap-3 pt-6 border-t border-slate-800 transition-colors">
  <button type="button"onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase hover:bg-slate-800 rounded-xl transition-all tracking-widest border border-slate-700">Fechar</button>
  {isViewOnly ? (
- <button type="button"onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-3 bg-indigo-600 bg-indigo-500 text-white rounded-xl hover:bg-indigo-700 hover:bg-indigo-600 font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
+ <button type="button"onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
  <Edit2 size={16}/> Habilitar Edição
  </button>
  ) : (
- <button type="submit"className="px-8 py-3 bg-indigo-600 bg-indigo-500 text-white rounded-xl hover:bg-indigo-700 hover:bg-indigo-600 font-black text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
+ <button type="submit"className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
  )}
  </div>
  </form>
@@ -353,17 +353,17 @@ const SimManager = () => {
 
  {isReasonModalOpen && (
  <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
- <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-indigo-900/40 transition-colors">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-900/40 transition-colors">
  <div className="p-8">
  <div className="flex flex-col items-center text-center mb-6">
- <div className="h-16 w-16 bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-400 mb-4 shadow-inner border border-indigo-900/40"><Save size={32} /></div>
+ <div className="h-16 w-16 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400 mb-4 shadow-inner border border-blue-900/40"><Save size={32} /></div>
  <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3>
  <p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p>
  </div>
- <textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 focus:border-indigo-300 focus:border-indigo-700 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
+ <textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-900/20 focus:border-blue-700 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
  <div className="flex gap-4">
  <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors">Voltar</button>
- <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-indigo-600 bg-indigo-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
+ <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 disabled:opacity-50 transition-all">Salvar Alterações</button>
  </div>
  </div>
  </div>

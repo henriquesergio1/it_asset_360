@@ -89,7 +89,7 @@ const ExpandableAccountCard = ({ accounts }: { accounts: any[] }) => {
           <h3 className="text-2xl font-bold text-slate-100">{accounts.length}</h3>
           <p className="text-xs mt-2 text-slate-500">{active} ativas</p>
         </div>
-        <div className="p-3 rounded-lg bg-indigo-600 group-hover:scale-110 transition-transform">
+        <div className="p-3 rounded-lg bg-blue-600 group-hover:scale-110 transition-transform">
           <Lock className="w-6 h-6 text-white"/>
         </div>
       </div>
@@ -110,7 +110,7 @@ const ExpandableAccountCard = ({ accounts }: { accounts: any[] }) => {
       </div>
       
       {/* Background glow effect */}
-      <div className={`absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl transition-all duration-500 ${isExpanded ? 'scale-150 opacity-100' : 'scale-100 opacity-0'}`}></div>
+      <div className={`absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 rounded-full blur-2xl transition-all duration-500 ${isExpanded ? 'scale-150 opacity-100' : 'scale-100 opacity-0'}`}></div>
     </div>
   );
 };
@@ -239,23 +239,23 @@ const Dashboard = () => {
  </div>
 
  {/* Gestão de Tarefas em Destaque - Formato Alerta */}
- <div className="bg-slate-900 border-l-4 border-l-indigo-500 border-y border-r border-slate-800 rounded-xl p-2.5 animate-fade-in shadow-sm">
+ <div className="bg-slate-900 border-l-4 border-l-blue-500 border-y border-r border-slate-800 rounded-xl p-2.5 animate-fade-in shadow-sm">
  <div className="flex items-start gap-3">
- <div className="p-1 bg-indigo-900/30 text-indigo-400 rounded-lg shrink-0">
+ <div className="p-1 bg-blue-900/30 text-blue-400 rounded-lg shrink-0">
  <ClipboardList size={16} />
  </div>
  <div className="flex-1 overflow-hidden">
  <div className="flex justify-between items-center mb-0.5">
  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
  Gestão de Tarefas Pendentes
- <span className="bg-indigo-900/40 text-indigo-400 px-2 py-0 rounded-full text-[9px] font-bold uppercase">
+ <span className="bg-blue-900/40 text-blue-400 px-2 py-0 rounded-full text-[9px] font-bold uppercase">
  {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
  </span>
  </h3>
  <div className="flex items-center gap-1">
  <button 
  onClick={() => navigate('/tasks')}
- className="text-[9px] font-black uppercase tracking-widest text-indigo-400 transition-colors mr-1"
+ className="text-[9px] font-black uppercase tracking-widest text-blue-400 transition-colors mr-1"
  >
  Ver Todas
  </button>
