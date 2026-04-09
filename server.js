@@ -356,6 +356,21 @@ async function initializeDatabase() {
             }
         }
 
+        // Garante que exista pelo menos um usuário administrador
+        const userCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemUsers');
+        if (userCheck.recordset[0].count === 0) {
+            console.log('- Criando usuário administrador padrão...');
+            const adminId = 'admin-' + Date.now();
+            await pool.request()
+                .input('id', sql.NVarChar, adminId)
+                .input('name', sql.NVarChar, 'Administrador')
+                .input('email', sql.NVarChar, 'admin@admin')
+                .input('pass', sql.NVarChar, 'admin')
+                .input('role', sql.NVarChar, 'admin')
+                .query("INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@id, @name, @email, @pass, @role)");
+            console.log('  ... Usuário admin@admin criado (Senha: admin).');
+        }
+
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
         const extDbCheck = await pool.request().query('SELECT COUNT(*) as count FROM ExternalDbConfig');
         if (extDbCheck.recordset[0].count === 0) {
@@ -1658,6 +1673,29 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             res.json({ success: true, client: decoded.client, expiresAt });
         } catch (err) {
             res.status(400).json({ error: 'Erro ao validar licença: ' + err.message });
+        }
+    });
+
+    app.get('/api/license/status', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT TOP 1 LicenseClient as client, LicenseExpires as expiresAt FROM SystemSettings");
+            const license = result.recordset[0];
+
+            if (!license || !license.expiresAt) {
+                return res.json({ status: 'EXPIRED', client: 'Nenhum', expiresAt: null });
+            }
+
+            const now = new Date();
+            const expiresAt = new Date(license.expiresAt);
+            
+            if (expiresAt < now) {
+                return res.json({ status: 'EXPIRED', client: license.client, expiresAt });
+            }
+
+            res.json({ status: 'ACTIVE', client: license.client, expiresAt });
+        } catch (err) {
+            res.status(500).send(err.message);
         }
     });
 
