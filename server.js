@@ -335,6 +335,39 @@ async function initializeDatabase() {
             }
         }
 
+        // --- CONSUMABLES TABLES ---
+        const checkConsumables = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Consumables'");
+        if (checkConsumables.recordset.length === 0) {
+            console.log('- Criando tabela Consumables...');
+            await pool.request().query(`
+                CREATE TABLE Consumables (
+                    Id NVARCHAR(255) PRIMARY KEY,
+                    Name NVARCHAR(255) NOT NULL,
+                    Category NVARCHAR(100) NOT NULL,
+                    CurrentStock INT DEFAULT 0,
+                    MinStock INT DEFAULT 0,
+                    Unit NVARCHAR(50) NOT NULL,
+                    CreatedAt DATETIME DEFAULT GETDATE()
+                )
+            `);
+        }
+
+        const checkConsumableTransactions = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ConsumableTransactions'");
+        if (checkConsumableTransactions.recordset.length === 0) {
+            console.log('- Criando tabela ConsumableTransactions...');
+            await pool.request().query(`
+                CREATE TABLE ConsumableTransactions (
+                    Id NVARCHAR(255) PRIMARY KEY,
+                    ConsumableId NVARCHAR(255) FOREIGN KEY REFERENCES Consumables(Id) ON DELETE CASCADE,
+                    Type NVARCHAR(50) NOT NULL,
+                    Quantity INT NOT NULL,
+                    Date DATETIME DEFAULT GETDATE(),
+                    AdminUser NVARCHAR(255),
+                    Notes NVARCHAR(MAX)
+                )
+            `);
+        }
+
         // Garante que a tabela de settings tenha pelo menos uma linha
         const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
         if (settingsCheck.recordset[0].count === 0) {
@@ -1643,6 +1676,157 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         } catch (err) { 
             console.error('Erro ao atualizar tarefa:', err);
             res.status(500).send(err.message); 
+        }
+    });
+
+    // --- CONSUMABLES ---
+    app.get('/api/consumables', authenticateToken, async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query(`
+                SELECT 
+                    c.*,
+                    ISNULL((
+                        SELECT SUM(Quantity) 
+                        FROM ConsumableTransactions 
+                        WHERE ConsumableId = c.Id AND Type = 'OUT' AND Date >= DATEADD(day, -30, GETDATE())
+                    ), 0) as UsedLast30Days
+                FROM Consumables c
+                ORDER BY c.Name ASC
+            `);
+            
+            const consumables = result.recordset.map(c => {
+                const avgDaily = c.UsedLast30Days / 30;
+                const estimatedDays = avgDaily > 0 ? Math.floor(c.CurrentStock / avgDaily) : null;
+                return {
+                    ...c,
+                    AvgDailyConsumption: avgDaily,
+                    EstimatedDaysLeft: estimatedDays
+                };
+            });
+
+            res.json(consumables);
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/consumables', authenticateToken, async (req, res) => {
+        try {
+            const { name, category, currentStock, minStock, unit } = req.body;
+            const id = 'cons-' + Date.now();
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .input('name', sql.NVarChar, name)
+                .input('category', sql.NVarChar, category)
+                .input('currentStock', sql.Int, currentStock || 0)
+                .input('minStock', sql.Int, minStock || 0)
+                .input('unit', sql.NVarChar, unit)
+                .query(`
+                    INSERT INTO Consumables (Id, Name, Category, CurrentStock, MinStock, Unit)
+                    VALUES (@id, @name, @category, @currentStock, @minStock, @unit)
+                `);
+            
+            if (currentStock > 0) {
+                await pool.request()
+                    .input('tId', sql.NVarChar, 'ctrans-' + Date.now())
+                    .input('cId', sql.NVarChar, id)
+                    .input('type', sql.NVarChar, 'IN')
+                    .input('qty', sql.Int, currentStock)
+                    .input('admin', sql.NVarChar, req.user.email)
+                    .input('notes', sql.NVarChar, 'Estoque inicial')
+                    .query(`
+                        INSERT INTO ConsumableTransactions (Id, ConsumableId, Type, Quantity, AdminUser, Notes)
+                        VALUES (@tId, @cId, @type, @qty, @admin, @notes)
+                    `);
+            }
+
+            res.json({ success: true, id });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/consumables/:id/transaction', authenticateToken, async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { type, quantity, notes } = req.body;
+            
+            if (!['IN', 'OUT'].includes(type) || quantity <= 0) {
+                return res.status(400).json({ error: 'Transação inválida' });
+            }
+
+            const pool = await sql.connect(dbConfig);
+            
+            if (type === 'OUT') {
+                const check = await pool.request()
+                    .input('id', sql.NVarChar, id)
+                    .query('SELECT CurrentStock FROM Consumables WHERE Id = @id');
+                if (check.recordset.length === 0) return res.status(404).json({ error: 'Consumível não encontrado' });
+                if (check.recordset[0].CurrentStock < quantity) {
+                    return res.status(400).json({ error: 'Estoque insuficiente' });
+                }
+            }
+
+            const tId = 'ctrans-' + Date.now();
+            const stockModifier = type === 'IN' ? quantity : -quantity;
+            
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .input('qty', sql.Int, stockModifier)
+                .query('UPDATE Consumables SET CurrentStock = CurrentStock + @qty WHERE Id = @id');
+
+            await pool.request()
+                .input('tId', sql.NVarChar, tId)
+                .input('cId', sql.NVarChar, id)
+                .input('type', sql.NVarChar, type)
+                .input('qty', sql.Int, quantity)
+                .input('admin', sql.NVarChar, req.user.email)
+                .input('notes', sql.NVarChar, notes || '')
+                .query(`
+                    INSERT INTO ConsumableTransactions (Id, ConsumableId, Type, Quantity, AdminUser, Notes)
+                    VALUES (@tId, @cId, @type, @qty, @admin, @notes)
+                `);
+
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.put('/api/consumables/:id', authenticateToken, async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { name, category, minStock, unit } = req.body;
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .input('name', sql.NVarChar, name)
+                .input('category', sql.NVarChar, category)
+                .input('minStock', sql.Int, minStock)
+                .input('unit', sql.NVarChar, unit)
+                .query(`
+                    UPDATE Consumables 
+                    SET Name = @name, Category = @category, MinStock = @minStock, Unit = @unit
+                    WHERE Id = @id
+                `);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.delete('/api/consumables/:id', authenticateToken, async (req, res) => {
+        try {
+            const { id } = req.params;
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('id', sql.NVarChar, id)
+                .query('DELETE FROM Consumables WHERE Id = @id');
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).send(err.message);
         }
     });
 
