@@ -95,7 +95,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const externalDbConfig = externalDbConfigData || null;
  const expedienteAlerts = expedienteAlertsData || [];
 
- const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
+ const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
  const checkReadOnly = () => {
   if (isReadOnly) {
