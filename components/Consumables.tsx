@@ -71,7 +71,7 @@ const Consumables = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, adminUser: user?.name })
             });
 
             if (res.ok) {
@@ -101,7 +101,8 @@ const Consumables = () => {
                 body: JSON.stringify({
                     type: transactionType,
                     quantity: transactionData.quantity,
-                    notes: transactionData.notes
+                    notes: transactionData.notes,
+                    adminUser: user?.name
                 })
             });
 

@@ -154,7 +154,7 @@ async function createIndexes(pool) {
         { table: 'Users', column: 'Active', name: 'IX_Users_Active' },
         { table: 'Users', column: 'SectorId', name: 'IX_Users_SectorId' },
         { table: 'SimCards', column: 'Status', name: 'IX_SimCards_Status' },
-        { table: 'SimCards', column: 'Provider', name: 'IX_SimCards_Provider' }
+        { table: 'SimCards', column: 'Operator', name: 'IX_SimCards_Operator' }
     ];
 
     for (const idx of indexes) {
@@ -1680,7 +1680,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     });
 
     // --- CONSUMABLES ---
-    app.get('/api/consumables', authenticateToken, async (req, res) => {
+    app.get('/api/consumables', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
             const result = await pool.request().query(`
@@ -1711,9 +1711,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         }
     });
 
-    app.post('/api/consumables', authenticateToken, async (req, res) => {
+    app.post('/api/consumables', async (req, res) => {
         try {
-            const { name, category, currentStock, minStock, unit } = req.body;
+            const { name, category, currentStock, minStock, unit, adminUser } = req.body;
             const id = 'cons-' + Date.now();
             const pool = await sql.connect(dbConfig);
             await pool.request()
@@ -1734,7 +1734,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                     .input('cId', sql.NVarChar, id)
                     .input('type', sql.NVarChar, 'IN')
                     .input('qty', sql.Int, currentStock)
-                    .input('admin', sql.NVarChar, req.user.email)
+                    .input('admin', sql.NVarChar, adminUser || 'Sistema')
                     .input('notes', sql.NVarChar, 'Estoque inicial')
                     .query(`
                         INSERT INTO ConsumableTransactions (Id, ConsumableId, Type, Quantity, AdminUser, Notes)
@@ -1748,10 +1748,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         }
     });
 
-    app.post('/api/consumables/:id/transaction', authenticateToken, async (req, res) => {
+    app.post('/api/consumables/:id/transaction', async (req, res) => {
         try {
             const { id } = req.params;
-            const { type, quantity, notes } = req.body;
+            const { type, quantity, notes, adminUser } = req.body;
             
             if (!['IN', 'OUT'].includes(type) || quantity <= 0) {
                 return res.status(400).json({ error: 'Transação inválida' });
@@ -1782,7 +1782,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 .input('cId', sql.NVarChar, id)
                 .input('type', sql.NVarChar, type)
                 .input('qty', sql.Int, quantity)
-                .input('admin', sql.NVarChar, req.user.email)
+                .input('admin', sql.NVarChar, adminUser || 'Sistema')
                 .input('notes', sql.NVarChar, notes || '')
                 .query(`
                     INSERT INTO ConsumableTransactions (Id, ConsumableId, Type, Quantity, AdminUser, Notes)
@@ -1795,7 +1795,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         }
     });
 
-    app.put('/api/consumables/:id', authenticateToken, async (req, res) => {
+    app.put('/api/consumables/:id', async (req, res) => {
         try {
             const { id } = req.params;
             const { name, category, minStock, unit } = req.body;
@@ -1817,7 +1817,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         }
     });
 
-    app.delete('/api/consumables/:id', authenticateToken, async (req, res) => {
+    app.delete('/api/consumables/:id', async (req, res) => {
         try {
             const { id } = req.params;
             const pool = await sql.connect(dbConfig);
