@@ -197,6 +197,9 @@ export interface SystemSettings {
   termTemplate?: string; 
   returnTermTemplate?: string; 
   accentColor?: string; // NOVO: Cor de destaque do sistema
+  licenseKey?: string;
+  licenseClient?: string;
+  licenseExpires?: string;
 }
 
 export interface ExternalDbConfig {

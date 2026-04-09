@@ -7,6 +7,7 @@ import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, Shiel
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useData } from './contexts/DataContext';
+import { LicenseGuard } from './components/LicenseGuard';
 
 // Pages imports
 import Login from './components/Login';
@@ -83,7 +84,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                 <h1 className="text-sm font-bold text-slate-100 leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
                 </h1>
-                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.10.0</p>
+                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.11.4</p>
               </div>
             )}
           </div>
@@ -223,7 +224,9 @@ const App = () => {
   return (
     <HashRouter>
         <AuthProvider>
-            <AppRoutes />
+            <LicenseGuard>
+                <AppRoutes />
+            </LicenseGuard>
         </AuthProvider>
     </HashRouter>
   );

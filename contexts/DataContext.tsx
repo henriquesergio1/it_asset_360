@@ -125,6 +125,10 @@ export interface DataContextType {
 
  // --- Bulk Operations ---
  bulkUpdateDevices: (deviceIds: string[], updates: Partial<Device>, adminName: string) => Promise<void>;
+
+ // --- Licensing ---
+ updateLicense: (licenseKey: string) => Promise<{ success: boolean; error?: string }>;
+ getLicenseStatus: () => Promise<{ status: 'ACTIVE' | 'EXPIRED'; client: string; expiresAt: string | null }>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

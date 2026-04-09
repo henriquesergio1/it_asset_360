@@ -1,6 +1,6 @@
 {
   "name": "it-asset-360",
-  "version": "3.10.0",
+  "version": "3.11.4",
   "private": true,
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",
@@ -9,6 +9,7 @@
     "express": "^4.19.2",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.36.0",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.395.0",

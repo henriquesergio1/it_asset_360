@@ -82,7 +82,11 @@ CREATE TABLE SystemSettings (
     AppName NVARCHAR(255),
     LogoUrl NVARCHAR(MAX),
     Cnpj NVARCHAR(50),
-    TermTemplate NVARCHAR(MAX)
+    TermTemplate NVARCHAR(MAX),
+    AccentColor NVARCHAR(50),
+    LicenseKey NVARCHAR(MAX),
+    LicenseClient NVARCHAR(255),
+    LicenseExpires DATETIME
 );
 
 -- Tabela de Modelos de Ativos

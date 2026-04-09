@@ -3,6 +3,7 @@ const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 5000;
@@ -83,7 +84,7 @@ const DB_SCHEMAS = {
         NewData NVARCHAR(MAX)
     )`,
     SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
-    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50))`,
+    SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50), LicenseKey NVARCHAR(MAX), LicenseClient NVARCHAR(255), LicenseExpires DATETIME)`,
     Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
@@ -346,6 +347,13 @@ async function initializeDatabase() {
                 console.log('- Adicionando coluna AccentColor em SystemSettings...');
                 await pool.request().query("ALTER TABLE SystemSettings ADD AccentColor NVARCHAR(50) DEFAULT '#2563eb'");
             }
+
+            // Verifica colunas de licenciamento
+            const checkLicense = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'LicenseKey'`);
+            if (checkLicense.recordset.length === 0) {
+                console.log('- Adicionando colunas de licenciamento em SystemSettings...');
+                await pool.request().query("ALTER TABLE SystemSettings ADD LicenseKey NVARCHAR(MAX) NULL, LicenseClient NVARCHAR(255) NULL, LicenseExpires DATETIME NULL");
+            }
         }
 
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
@@ -466,7 +474,7 @@ app.get('/api/bootstrap', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
-            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor FROM SystemSettings"),
+            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires FROM SystemSettings"),
             pool.request().query("SELECT * FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
@@ -1620,6 +1628,59 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         } catch (err) { 
             console.error('Erro ao atualizar tarefa:', err);
             res.status(500).send(err.message); 
+        }
+    });
+
+    // --- LICENSING SYSTEM ---
+    app.post('/api/system/license', async (req, res) => {
+        try {
+            const { licenseKey } = req.body;
+            const secret = process.env.JWT_SECRET || 'fallback_secret_change_me';
+            
+            const decoded = jwt.verify(licenseKey, secret);
+            
+            if (!decoded.client || !decoded.expiresAt) {
+                return res.status(400).json({ error: 'Licença inválida: Campos obrigatórios ausentes' });
+            }
+
+            const expiresAt = new Date(decoded.expiresAt);
+            if (expiresAt < new Date()) {
+                return res.status(400).json({ error: 'Licença expirada' });
+            }
+
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('key', sql.NVarChar, licenseKey)
+                .input('client', sql.NVarChar, decoded.client)
+                .input('expires', sql.DateTime, expiresAt)
+                .query("UPDATE SystemSettings SET LicenseKey=@key, LicenseClient=@client, LicenseExpires=@expires");
+
+            res.json({ success: true, client: decoded.client, expiresAt });
+        } catch (err) {
+            res.status(400).json({ error: 'Erro ao validar licença: ' + err.message });
+        }
+    });
+
+    app.get('/api/system/status', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT TOP 1 LicenseClient as client, LicenseExpires as expiresAt FROM SystemSettings");
+            const license = result.recordset[0];
+
+            if (!license || !license.expiresAt) {
+                return res.json({ status: 'EXPIRED', client: 'Nenhum', expiresAt: null });
+            }
+
+            const now = new Date();
+            const expiresAt = new Date(license.expiresAt);
+            
+            if (expiresAt < now) {
+                return res.json({ status: 'EXPIRED', client: license.client, expiresAt });
+            }
+
+            res.json({ status: 'ACTIVE', client: license.client, expiresAt });
+        } catch (err) {
+            res.status(500).send(err.message);
         }
     });
 

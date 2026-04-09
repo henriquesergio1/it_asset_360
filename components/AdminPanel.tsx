@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
 
@@ -173,7 +173,7 @@ const AdminPanel = () => {
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
  
- const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP'>('USERS');
+ const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE'>('USERS');
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
@@ -188,8 +188,39 @@ const AdminPanel = () => {
  const { 
  systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings,
  clearLogs, restoreItem, 
- externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData 
+ externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData,
+ getLicenseStatus, updateLicense
  } = useData();
+ const [licenseStatus, setLicenseStatus] = useState<{ status: string; client: string; expiresAt: string | null } | null>(null);
+ const [licenseKeyInput, setLicenseKeyInput] = useState('');
+ const [isValidatingLicense, setIsValidatingLicense] = useState(false);
+
+ useEffect(() => {
+ if (activeTab === 'LICENSE') {
+ getLicenseStatus().then(setLicenseStatus);
+ }
+ }, [activeTab, getLicenseStatus]);
+
+ const handleLicenseSubmit = async (e: React.FormEvent) => {
+ e.preventDefault();
+ if (!licenseKeyInput.trim()) return;
+ setIsValidatingLicense(true);
+ try {
+ const res = await updateLicense(licenseKeyInput);
+ if (res.success) {
+ showToast("Licença ativada com sucesso!", "success");
+ const status = await getLicenseStatus();
+ setLicenseStatus(status);
+ setLicenseKeyInput('');
+ } else {
+ showToast(res.error || "Erro ao validar licença", "error");
+ }
+ } catch (err) {
+ showToast("Erro de conexão", "error");
+ } finally {
+ setIsValidatingLicense(false);
+ }
+ };
  const [settingsForm, setSettingsForm] = useState<SystemSettings>(settings);
  const [erpForm, setErpForm] = useState({
  technology: 'SQL Server',
@@ -317,6 +348,7 @@ const AdminPanel = () => {
  <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
  <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
  <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
+ <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
  <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
  </div>
 
@@ -420,6 +452,69 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'IMPORT' && <DataImporter />}
+
+ {activeTab === 'LICENSE' && (
+ <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 animate-fade-in">
+ <div className="flex items-center gap-3 mb-8">
+ <ShieldCheck size={24} className="text-blue-500" />
+ <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Status da Licença</h3>
+ </div>
+
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+ {/* Lado Esquerdo: Status */}
+ <div className={`p-8 rounded-3xl border-2 transition-all ${licenseStatus?.status === 'ACTIVE' ? 'bg-emerald-900/10 border-emerald-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
+ <div className="space-y-6">
+ <div>
+ <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Situação</p>
+ <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'}`}>
+ {licenseStatus?.status === 'ACTIVE' ? 'ATIVA' : 'EXPIRADA / INVÁLIDA'}
+ </p>
+ </div>
+ <div>
+ <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cliente</p>
+ <p className="text-lg font-bold text-slate-100">{licenseStatus?.client || '---'}</p>
+ </div>
+ <div>
+ <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Vencimento</p>
+ <p className="text-lg font-bold text-slate-100">
+ {licenseStatus?.expiresAt ? new Date(licenseStatus.expiresAt).toLocaleDateString('pt-BR') : '---'}
+ </p>
+ </div>
+ </div>
+ </div>
+
+ {/* Lado Direito: Ativação */}
+ <div className="bg-slate-800/30 p-8 rounded-3xl border border-slate-700/50">
+ <h4 className="text-sm font-black uppercase text-slate-100 tracking-widest mb-6">Ativar Licença</h4>
+ <form onSubmit={handleLicenseSubmit} className="space-y-6">
+ <div className="relative">
+ <textarea
+ rows={4}
+ className="w-full border-2 border-slate-700 rounded-2xl p-4 text-sm focus:border-blue-500 outline-none bg-slate-900/50 text-slate-100 font-mono resize-none transition-all"
+ placeholder="Cole a chave aqui..."
+ value={licenseKeyInput}
+ onChange={e => setLicenseKeyInput(e.target.value)}
+ />
+ </div>
+ <button
+ type="submit"
+ disabled={isValidatingLicense || !licenseKeyInput.trim()}
+ className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-900/20"
+ >
+ {isValidatingLicense ? (
+ <>
+ <Loader2 size={18} className="animate-spin" />
+ Validando...
+ </>
+ ) : (
+ 'Validar'
+ )}
+ </button>
+ </form>
+ </div>
+ </div>
+ </div>
+ )}
 
  {activeTab === 'ERP' && (
  <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8">
