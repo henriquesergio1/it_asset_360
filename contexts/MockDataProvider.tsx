@@ -38,6 +38,16 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const [tasks, setTasks] = useState<Task[]>([]);
  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
 
+ const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
+
+ const checkReadOnly = () => {
+  if (isReadOnly) {
+  showToast('Sistema em Modo Consulta. Ação não permitida.', 'error');
+  return true;
+  }
+  return false;
+ };
+
  const [externalDbConfig, setExternalDbConfig] = useState<ExternalDbConfig | null>(null);
  const [expedienteAlerts, setExpedienteAlerts] = useState<ExpedienteAlert[]>([]);
 
@@ -88,12 +98,14 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const addDevice = (device: Device, adminName: string) => {
+  if (checkReadOnly()) return;
  setDevices(prev => [...prev, device]);
  const model = models.find(m => m.id === device.modelId);
  logAction(ActionType.create, 'Device', device.id, model?.name || 'Unknown', adminName,`Tag: ${device.assetTag}`);
  };
 
  const updateDevice = (device: Device, adminName: string) => {
+  if (checkReadOnly()) return;
  const old = devices.find(d => d.id === device.id);
  setDevices(prev => prev.map(d => d.id === device.id ? device : d));
  const model = models.find(m => m.id === device.modelId);
@@ -101,42 +113,50 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const deleteDevice = (id: string, adminName: string, reason: string) => {
+  if (checkReadOnly()) return;
  const dev = devices.find(d => d.id === id);
  setDevices(prev => prev.map(d => d.id === id ? { ...d, status: DeviceStatus.RETIRED, currentUserId: null } : d));
  if (dev) logAction(ActionType.DELETE, 'Device', id, dev.assetTag, adminName,`Motivo: ${reason}`, JSON.stringify(dev));
  };
 
  const restoreDevice = (id: string, adminName: string, reason: string) => {
+  if (checkReadOnly()) return;
  const dev = devices.find(d => d.id === id);
  setDevices(prev => prev.map(d => d.id === id ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
  if (dev) logAction(ActionType.RESTORE, 'Device', id, dev.assetTag, adminName,`Motivo: ${reason}`);
  };
 
  const addSim = (sim: SimCard, adminName: string) => { 
+  if (checkReadOnly()) return;
  setSims(prev => [...prev, sim]); 
  logAction(ActionType.create, 'Sim', sim.id, sim.phoneNumber, adminName); 
  };
  const updateSim = (sim: SimCard, adminName: string) => { 
+  if (checkReadOnly()) return;
  const old = sims.find(s => s.id === sim.id);
  setSims(prev => prev.map(s => s.id === sim.id ? sim : s)); 
  logAction(ActionType.UPDATE, 'Sim', sim.id, sim.phoneNumber, adminName, '', undefined, old, sim); 
  };
  const deleteSim = (id: string, adminName: string, reason: string) => { 
+  if (checkReadOnly()) return;
  setSims(prev => prev.filter(s => s.id !== id)); 
  const sim = sims.find(s => s.id === id); 
  if (sim) logAction(ActionType.DELETE, 'Sim', id, sim.phoneNumber, adminName,`Motivo: ${reason}`); 
  };
 
  const addUser = (user: User, adminName: string) => { 
+  if (checkReadOnly()) return;
  setUsers(prev => [...prev, user]); 
  logAction(ActionType.create, 'User', user.id, user.fullName, adminName); 
  };
  const updateUser = (user: User, adminName: string, notes?: string) => { 
+  if (checkReadOnly()) return;
  const old = users.find(u => u.id === user.id);
  setUsers(prev => prev.map(u => u.id === user.id ? user : u)); 
  logAction(ActionType.UPDATE, 'User', user.id, user.fullName, adminName, notes, undefined, old, user); 
  };
  const toggleUserActive = (user: User, adminName: string, reason?: string) => {
+  if (checkReadOnly()) return;
  const old = { ...user };
  const updatedUser = { ...user, active: !user.active };
  setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
@@ -144,35 +164,42 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const addAccount = (acc: SoftwareAccount, adminName: string) => { 
+  if (checkReadOnly()) return;
  setAccounts(prev => [...prev, acc]); 
  logAction(ActionType.create, 'Account', acc.id, acc.login, adminName, acc.name); 
  };
  const updateAccount = (acc: SoftwareAccount, adminName: string) => { 
+  if (checkReadOnly()) return;
  const old = accounts.find(a => a.id === acc.id);
  setAccounts(prev => prev.map(a => a.id === acc.id ? acc : a)); 
  logAction(ActionType.UPDATE, 'Account', acc.id, acc.login, adminName, acc.name, undefined, old, acc); 
  };
  const deleteAccount = (id: string, adminName: string) => { 
- const acc = accounts.find(a => a.id === id); 
+      if (checkReadOnly()) return;
+    const acc = accounts.find(a => a.id === id); 
  setAccounts(prev => prev.filter(a => a.id !== id)); 
  if (acc) logAction(ActionType.DELETE, 'Account', id, acc.login, adminName); 
  };
 
  const addSector = (sector: UserSector, adminName: string) => { 
+  if (checkReadOnly()) return;
  setSectors(prev => [...prev, sector]); 
  logAction(ActionType.create, 'Sector', sector.id, sector.name, adminName); 
  };
  const updateSector = (sector: UserSector, adminName: string) => { 
+  if (checkReadOnly()) return;
  const old = sectors.find(s => s.id === sector.id);
  setSectors(prev => prev.map(s => s.id === sector.id ? sector : s)); 
  logAction(ActionType.UPDATE, 'Sector', sector.id, sector.name, adminName, '', undefined, old, sector); 
  };
  const deleteSector = (id: string, adminName: string) => { 
+  if (checkReadOnly()) return;
  setSectors(prev => prev.filter(s => s.id !== id)); 
  logAction(ActionType.DELETE, 'Sector', id, 'Setor', adminName); 
  };
 
  const updateSettings = (newSettings: SystemSettings, adminName: string) => { 
+  if (checkReadOnly()) return;
  const old = { ...settings };
  setSettings(newSettings); 
  localStorage.setItem('mock_settings', JSON.stringify(newSettings)); 
@@ -216,7 +243,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const value: DataContextType = {
- devices, sims, users, loading: false, error: null, systemUsers, settings,
+ devices, sims, users, loading: false, error: null, systemUsers, settings, isReadOnly,
  models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
  externalDbConfig, expedienteAlerts,
  fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
@@ -574,38 +601,47 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  deleteModel: (id, adm) => { 
  setModels(p => p.filter(x => x.id !== id)); 
  },
- addAccessoryType: (t, adm) => { 
+   addAccessoryType: (t, adm) => { 
+    if (checkReadOnly()) return;
  setAccessoryTypes(p => [...p, t]); 
  logAction(ActionType.create, 'Accessory', t.id, t.name, adm); 
  },
- updateAccessoryType: (t, adm) => { 
+   updateAccessoryType: (t, adm) => { 
+    if (checkReadOnly()) return;
  const old = accessoryTypes.find(x => x.id === t.id);
  setAccessoryTypes(p => p.map(x => x.id === t.id ? t : x)); 
  logAction(ActionType.UPDATE, 'Accessory', t.id, t.name, adm, '', undefined, old, t);
  },
- deleteAccessoryType: (id, adm) => { 
+   deleteAccessoryType: (id, adm) => { 
+    if (checkReadOnly()) return;
  setAccessoryTypes(p => p.filter(x => x.id !== id)); 
  },
- addCustomField: (f, adm) => { 
+   addCustomField: (f, adm) => { 
+    if (checkReadOnly()) return;
  setCustomFields(p => [...p, f]); 
  logAction(ActionType.create, 'CustomField', f.id, f.name, adm); 
  },
- updateCustomField: (f, adm) => { 
+   updateCustomField: (f, adm) => { 
+    if (checkReadOnly()) return;
  const old = customFields.find(x => x.id === f.id);
  setCustomFields(p => p.map(x => x.id === f.id ? f : x)); 
  logAction(ActionType.UPDATE, 'CustomField', f.id, f.name, adm, '', undefined, old, f);
  },
- deleteCustomField: (id, adm) => { 
+   deleteCustomField: (id, adm) => { 
+    if (checkReadOnly()) return;
  setCustomFields(p => p.filter(x => x.id !== id)); 
  },
- addMaintenance: (r, adm) => { 
+   addMaintenance: (r, adm) => { 
+    if (checkReadOnly()) return;
  setMaintenances(p => [...p, r]); 
  logAction(ActionType.create, 'Device', r.deviceId, 'Manutenção', adm, r.description); 
  },
- deleteMaintenance: (id, adm) => { 
+   deleteMaintenance: (id, adm) => { 
+    if (checkReadOnly()) return;
  setMaintenances(p => p.filter(x => x.id !== id)); 
  },
- finishMaintenance: (deviceId, record, adminName) => {
+   finishMaintenance: (deviceId, record, adminName) => {
+    if (checkReadOnly()) return;
  const device = devices.find(d => d.id === deviceId);
  if (!device) return;
 

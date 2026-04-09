@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import packageJson from './package.json';
+import { APP_VERSION } from './constants';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare } from 'lucide-react';
 
@@ -84,7 +84,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                 <h1 className="text-sm font-bold text-slate-100 leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
                 </h1>
-                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v3.11.4</p>
+                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v{APP_VERSION}</p>
               </div>
             )}
           </div>
@@ -117,7 +117,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           {!isSidebarCollapsed && (
               <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão {packageJson.version}</span>
+                 <span>Versão {APP_VERSION}</span>
               </div>
           )}
           <button 

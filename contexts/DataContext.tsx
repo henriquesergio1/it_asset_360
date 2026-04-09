@@ -127,6 +127,7 @@ export interface DataContextType {
  bulkUpdateDevices: (deviceIds: string[], updates: Partial<Device>, adminName: string) => Promise<void>;
 
  // --- Licensing ---
+ isReadOnly: boolean;
  updateLicense: (licenseKey: string) => Promise<{ success: boolean; error?: string }>;
  getLicenseStatus: () => Promise<{ status: 'ACTIVE' | 'EXPIRED'; client: string; expiresAt: string | null }>;
 }

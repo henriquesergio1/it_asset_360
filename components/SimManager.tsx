@@ -17,7 +17,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const SimManager = () => {
- const { sims, addSim, updateSim, deleteSim, users } = useData();
+ const { sims, addSim, updateSim, deleteSim, users, isReadOnly } = useData();
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
  const navigate = useNavigate();
@@ -193,7 +193,7 @@ const SimManager = () => {
  <h1 className="text-2xl font-bold text-slate-100">Gestão de Chips / SIMs</h1>
  <p className="text-sm">Controle de linhas (Ordem A-Z por Número).</p>
  </div>
- <button onClick={() => handleOpenModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-bold">
+ <button onClick={() => !isReadOnly && handleOpenModal()} disabled={isReadOnly} className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-bold ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
  <Plus size={18} /> Novo SIM
  </button>
  </div>
@@ -278,8 +278,8 @@ const SimManager = () => {
  </td>
  <td className="px-6 py-4 text-right"onClick={(e) => e.stopPropagation()}>
  <div className="flex items-center justify-end gap-2">
- <button onClick={() => handleOpenModal(sim, false)} className="text-blue-400 hover:bg-blue-900/30 p-2 rounded-xl transition-all"title="Editar"><Edit2 size={16} /></button>
- <button onClick={() => handleDeleteClick(sim.id)} className="text-red-400 hover:text-red-400 hover:bg-red-900/30 p-2 rounded-xl transition-all"title="Excluir"><Trash2 size={16} /></button>
+ <button onClick={() => handleOpenModal(sim, false)} disabled={isReadOnly} className={`text-blue-400 hover:bg-blue-900/30 p-2 rounded-xl transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}title="Editar"><Edit2 size={16} /></button>
+ <button onClick={() => !isReadOnly && handleDeleteClick(sim.id)} disabled={isReadOnly} className={`text-red-400 hover:text-red-400 hover:bg-red-900/30 p-2 rounded-xl transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}title="Excluir"><Trash2 size={16} /></button>
  </div>
  </td>
  </tr>
@@ -339,7 +339,7 @@ const SimManager = () => {
  <div className="flex justify-end gap-3 pt-6 border-t border-slate-800 transition-colors">
  <button type="button"onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase hover:bg-slate-800 rounded-xl transition-all tracking-widest border border-slate-700">Fechar</button>
  {isViewOnly ? (
- <button type="button"onClick={(e) => { e.preventDefault(); setIsViewOnly(false); }} className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2">
+ <button type="button"onClick={(e) => { e.preventDefault(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
  <Edit2 size={16}/> Habilitar Edição
  </button>
  ) : (

@@ -95,6 +95,16 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const externalDbConfig = externalDbConfigData || null;
  const expedienteAlerts = expedienteAlertsData || [];
 
+ const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
+
+ const checkReadOnly = () => {
+  if (isReadOnly) {
+  showToast('Sistema em Modo Consulta. Ação não permitida.', 'error');
+  return true;
+  }
+  return false;
+ };
+
  const fetchData = async (silent: boolean = false) => {
  if (silent) {
  await queryClient.invalidateQueries({ queryKey: ['sync'] });
@@ -130,17 +140,20 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const postData = async (endpoint: string, data: any) => {
- const res = await fetch(`${API_URL}/api/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
- return safeJson(res, endpoint);
+  if (checkReadOnly()) throw new Error('MODO_CONSULTA');
+  const res = await fetch(`${API_URL}/api/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  return safeJson(res, endpoint);
  };
 
  const putData = async (endpoint: string, data: any) => {
- const res = await fetch(`${API_URL}/api/${endpoint}/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
- return safeJson(res, endpoint);
+  if (checkReadOnly()) throw new Error('MODO_CONSULTA');
+  const res = await fetch(`${API_URL}/api/${endpoint}/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  return safeJson(res, endpoint);
  };
 
  // CRUD Dispositivos
  const addDevice = async (device: Device, adminName: string) => { 
+  if (checkReadOnly()) return;
  try {
  await postData('devices', { ...device, _adminUser: adminName }); 
  fetchData(true); 
@@ -149,6 +162,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const updateDevice = async (device: Device, adminName: string) => { 
+  if (checkReadOnly()) return;
  try {
  await putData('devices', { ...device, _adminUser: adminName }); 
  fetchData(true); 
@@ -157,6 +171,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const deleteDevice = async (id: string, adminName: string, reason: string) => {
+  if (checkReadOnly()) return;
  const device = devices.find(d => d.id === id);
  if (device) { 
  try {
@@ -170,6 +185,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const restoreDevice = async (id: string, adminName: string, reason: string) => {
+  if (checkReadOnly()) return;
  const device = devices.find(d => d.id === id);
  if (device) { 
  try {
@@ -183,6 +199,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const addUser = async (user: User, adminName: string) => { 
+  if (checkReadOnly()) return;
  try {
  await postData('users', { ...user, _adminUser: adminName }); 
  fetchData(true); 
@@ -191,6 +208,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const updateUser = async (user: User, adminName: string, notes?: string) => { 
+  if (checkReadOnly()) return;
  try {
  await putData('users', { ...user, _adminUser: adminName, _notes: notes }); 
  fetchData(true); 
@@ -199,6 +217,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const toggleUserActive = async (user: User, adminName: string, reason?: string) => {
+  if (checkReadOnly()) return;
  const newActive = !user.active;
  const updated = { 
  ...user, 
@@ -214,6 +233,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const addAccount = async (account: SoftwareAccount, adminName: string) => { 
+  if (checkReadOnly()) return;
  try {
  await postData('accounts', { ...account, _adminUser: adminName }); 
  fetchData(true); 
@@ -222,6 +242,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const updateAccount = async (account: SoftwareAccount, adminName: string) => { 
+  if (checkReadOnly()) return;
  try {
  await putData('accounts', { ...account, _adminUser: adminName }); 
  fetchData(true); 
@@ -230,6 +251,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const deleteAccount = async (id: string, adminName: string) => {
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/accounts/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _adminUser: adminName }) });
  fetchData(true);
@@ -239,6 +261,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const updateTermFile = async (termId: string, userId: string, fileUrl: string, adminName: string) => {
+  if (checkReadOnly()) return;
  try { 
  await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName }); 
  fetchData(true); 
@@ -248,6 +271,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const updateTermDetails = async (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string) => {
+  if (checkReadOnly()) return;
  try { 
  await putData('terms', { id: termId, condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser: adminName }); 
  fetchData(true); 
@@ -257,6 +281,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
+  if (checkReadOnly()) return;
  try { 
  await fetch(`${API_URL}/api/terms/${termId}/file`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ _adminUser: adminName, reason }) }); 
  fetchData(true); 
@@ -266,6 +291,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const addSim = async (s: SimCard, a: string) => { 
+  if (checkReadOnly()) return;
  try {
  await postData('sims', {...s, _adminUser: a}); 
  fetchData(true); 
@@ -274,6 +300,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const updateSim = async (s: SimCard, a: string) => { 
+  if (checkReadOnly()) return;
  try {
  await putData('sims', {...s, _adminUser: a}); 
  fetchData(true); 
@@ -282,6 +309,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  };
  const deleteSim = async (id: string, a: string, r: string) => { 
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/sims/${id}`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({_adminUser: a, reason: r}) });
  fetchData(true);
@@ -295,6 +323,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const saveExpedienteOverride = async (codigo: string, observation: string, reactivationDate: string | null) => {
+  if (checkReadOnly()) return;
  try {
  const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts/override`, {
  method: 'POST',
@@ -314,6 +343,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const updateExternalDbConfig = async (config: ExternalDbConfig, adminName: string) => {
+  if (checkReadOnly()) return;
  try {
  await postData('admin/external-db/config', { ...config, _adminUser: adminName });
  await queryClient.invalidateQueries({ queryKey: ['externalDbConfig'] });
@@ -367,6 +397,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    accounts, externalDbConfig, expedienteAlerts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
    updateLicense, getLicenseStatus,
+   isReadOnly,
    updateSettings: async (s: SystemSettings, a: string) => { 
  try {
  await fetch(`${API_URL}/api/settings`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...s, _adminUser: a}) }); 
@@ -570,6 +601,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  deleteCustomField: async (id) => { 
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/custom-fields/${id}`, {method: 'DELETE'}); 
  fetchData(true); 
@@ -578,6 +610,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  addSystemUser: async (u, adm) => { 
+  if (checkReadOnly()) return;
  try {
  await postData('system-users', {...u, _adminUser: adm}); 
  fetchData(true); 
@@ -586,6 +619,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  updateSystemUser: async (u, adm) => { 
+  if (checkReadOnly()) return;
  try {
  await putData('system-users', {...u, _adminUser: adm}); 
  fetchData(true); 
@@ -594,6 +628,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  deleteSystemUser: async (id) => { 
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/system-users/${id}`, {method: 'DELETE'}); 
  fetchData(true); 
@@ -605,6 +640,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  // --- Gestão de Tarefas ---
  tasks, taskLogs,
  addTask: async (t, adm) => { 
+  if (checkReadOnly()) return;
  try {
  const id = Math.random().toString(36).substring(2, 11);
  await postData('tasks', { ...t, id, _adminUser: adm }); 
@@ -614,6 +650,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  updateTask: async (tid, u, adm) => { 
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/tasks/${tid}`, { 
  method: 'PUT', 
@@ -626,6 +663,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  bulkUpdateTasks: async (taskIds, updates, adm) => {
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/tasks/bulk`, {
  method: 'POST',
@@ -638,6 +676,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  },
  bulkUpdateDevices: async (deviceIds, updates, adm) => {
+  if (checkReadOnly()) return;
  try {
  await fetch(`${API_URL}/api/devices/bulk`, {
  method: 'POST',

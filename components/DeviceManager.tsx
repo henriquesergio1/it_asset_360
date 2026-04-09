@@ -373,7 +373,7 @@ const DeviceManager = () => {
  devices, addDevice, updateDevice, deleteDevice, restoreDevice,
  users, models, brands, assetTypes, sims, customFields, sectors,
  maintenances, addMaintenance, deleteMaintenance, accounts,
- getDeviceInvoice, getMaintenanceInvoice
+   getDeviceInvoice, getMaintenanceInvoice, isReadOnly
  } = useData();
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
@@ -854,7 +854,13 @@ const DeviceManager = () => {
  )}
  </div>
  <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-semibold transition-all"><Settings size={18} /> Catálogo</button>
- <button onClick={() => handleOpenModal()} className="text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95"><Plus size={18} /> Novo Ativo</button>
+   <button 
+    onClick={() => !isReadOnly && handleOpenModal()} 
+    disabled={isReadOnly}
+    className={`px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95 ${isReadOnly ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : 'text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20'}`}
+  >
+    <Plus size={18} /> Novo Ativo
+  </button>
  </div>
  </div>
 
@@ -1039,9 +1045,166 @@ const DeviceManager = () => {
  </div>
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-xs font-black text-slate-100 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-800 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-slate-900 rounded-2xl border-2 border-slate-800 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-400"><FileCode size={64}/><span className="text-[10px] font-black uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-800 border-2 border-emerald-900/40 text-emerald-400 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-900/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-slate-900 rounded-full flex items-center justify-center text-slate-200 mb-4 border-2 border-slate-800"><Paperclip size={32}/></div><h5 className="font-black text-slate-100 uppercase tracking-tighter">Anexo da Nota Fiscal</h5><p className="text-xs mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 bg-emerald-500 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo<input type="file"className="hidden"onChange={handleNFFileChange} accept="application/pdf,image/*"/></label>)}</>)}</div></div></div>)}
- {activeTab === 'MAINTENANCE' && (<div className="space-y-6 animate-fade-in">{!isViewOnly && (<div className="bg-orange-900/20 p-6 rounded-2xl border border-orange-900/40 space-y-4 transition-colors"><div className="flex items-center gap-2"><div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400"><Wrench size={16}/></div><h5 className="text-[10px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5></div><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div className="md:col-span-3"><label className="block text-[10px] font-bold text-orange-400 mb-1">Descrição</label><input placeholder="Ex: Troca de tela..."className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100 shadow-inner"value={newMaint.description || ''} onChange={e => setNewMaint({...newMaint, description: e.target.value})}/></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Custo (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span><input type="text"className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"value={formatCurrencyBR(newMaint.cost || 0)} onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Data</label><div className="relative"><Calendar className="absolute left-3 top-3 text-orange-300"size={16}/><input type="date"className="w-full border-2 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"value={newMaint.date || ''} onChange={e => setNewMaint({...newMaint, date: e.target.value})}/></div></div><div><label className="block text-[10px] font-bold text-orange-400 mb-1">Anexo</label><label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}><div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">{isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}</div><span className="text-[10px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span><input type="file"className="hidden"onChange={handleMaintFileChange} accept="application/pdf,image/*"/></label></div></div><div className="flex justify-end pt-2"><button type="button"onClick={saveMaintenance} disabled={!newMaint.description || isUploadingMaint} className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50">Lançar</button></div></div>)}<div className="space-y-3"><h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4><div className="grid grid-cols-1 gap-3">{deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (<div key={m.id} className="flex justify-between items-center p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-orange-200 transition-all group"><div className="flex items-center gap-4"><div className="h-10 w-10 bg-orange-900/40 rounded-xl flex items-center justify-center"><Wrench size={20}/></div><div><p className="font-bold text-slate-100 text-sm">{m.description}</p><div className="flex items-center gap-2 mt-0.5"><span className="text-[10px] font-black uppercase">{formatDateBR(m.date)}</span><span className="text-[10px] font-black uppercase">R$ {formatCurrencyBR(m.cost)}</span></div></div></div><div className="flex gap-2">{(m.invoiceUrl || m.hasInvoice) && (<button disabled={loadingFiles[m.id]} type="button"onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-900/30 text-blue-400 rounded-xl transition-all flex items-center justify-center">{loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}</button>)}{!isViewOnly && <button type="button"onClick={() => { if(window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} className="p-2.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all"><Trash2 size={16}/></button>}</div></div>)) : (<div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800"><p className="font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p></div>)}</div></div></div>)}
- {activeTab === 'LICENSES' && (<div className="space-y-4 animate-fade-in"><h4 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4><div className="grid grid-cols-1 gap-3">{deviceAccounts.length > 0 ? deviceAccounts.map(acc => (<div key={acc.id} className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all"><div className="flex items-center gap-4"><div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? ' ' : acc.type === AccountType.OFFICE ? ' ' : acc.type === AccountType.ERP ? ' ' : ' '}`}>{acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}</div><div><p className="font-bold text-slate-100 text-sm">{acc.name}</p><p className="text-[10px] font-black uppercase tracking-tighter">{acc.login}</p></div></div><div className="flex items-center gap-2">{acc.accessUrl && (<button type="button"onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 rounded-lg transition-colors"><ExternalLink size={16}/></button>)}<div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold min-w-[80px] text-center">{showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}</div><button type="button"onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2">{showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></div>)) : (<div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800"><Globe size={32} className="mx-auto text-slate-200 mb-2"/><p className="text-xs font-bold uppercase tracking-widest italic">Nenhuma licença vinculada.</p></div>)}</div></div>)}
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-xs font-black text-slate-100 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-800 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-slate-900 rounded-2xl border-2 border-slate-800 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-400"><FileCode size={64}/><span className="text-[10px] font-black uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-800 border-2 border-emerald-900/40 text-emerald-400 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-900/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-slate-900 rounded-full flex items-center justify-center text-slate-200 mb-4 border-2 border-slate-800"><Paperclip size={32}/></div><h5 className="font-black text-slate-100 uppercase tracking-tighter">Anexo da Nota Fiscal</h5><p className="text-xs mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo
+                    <input type="file" className="hidden" onChange={handleNFFileChange} accept="application/pdf,image/*"/>
+                  </label>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {activeTab === 'MAINTENANCE' && (
+      <div className="space-y-6 animate-fade-in">
+        {!isViewOnly && (
+          <div className="bg-orange-900/20 p-6 rounded-2xl border border-orange-900/40 space-y-4 transition-colors">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400">
+                <Wrench size={16}/>
+              </div>
+              <h5 className="text-[10px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-3">
+                <label className="block text-[10px] font-bold text-orange-400 mb-1">Descrição</label>
+                <input 
+                  placeholder="Ex: Troca de tela..."
+                  className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
+                  value={newMaint.description || ''} 
+                  onChange={e => setNewMaint({...newMaint, description: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-orange-400 mb-1">Custo (R$)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
+                  <input 
+                    type="text"
+                    className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
+                    value={formatCurrencyBR(newMaint.cost || 0)} 
+                    onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-orange-400 mb-1">Data</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
+                  <input 
+                    type="date"
+                    className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
+                    value={newMaint.date || ''} 
+                    onChange={e => setNewMaint({...newMaint, date: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-orange-400 mb-1">Anexo</label>
+                <label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
+                    {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
+                  </div>
+                  <span className="text-[10px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
+                  <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*"/>
+                </label>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button 
+                type="button" 
+                onClick={saveMaintenance} 
+                disabled={!newMaint.description || isUploadingMaint || isReadOnly} 
+                className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50"
+              >
+                Lançar
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
+          <div className="grid grid-cols-1 gap-3">
+            {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
+              <div key={m.id} className="flex justify-between items-center p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-orange-200 transition-all group">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-orange-900/40 rounded-xl flex items-center justify-center">
+                    <Wrench size={20}/>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-100 text-sm">{m.description}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-black uppercase">{formatDateBR(m.date)}</span>
+                      <span className="text-[10px] font-black uppercase">R$ {formatCurrencyBR(m.cost)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {(m.invoiceUrl || m.hasInvoice) && (
+                    <button disabled={loadingFiles[m.id]} type="button" onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-900/30 text-blue-400 rounded-xl transition-all flex items-center justify-center">
+                      {loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}
+                    </button>
+                  )}
+                  {!isViewOnly && (
+                    <button 
+                      type="button" 
+                      onClick={() => { if(!isReadOnly && window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} 
+                      disabled={isReadOnly} 
+                      className="p-2.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      <Trash2 size={16}/>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">
+                <p className="font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    {activeTab === 'LICENSES' && (
+      <div className="space-y-4 animate-fade-in">
+        <h4 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4>
+        <div className="grid grid-cols-1 gap-3">
+          {deviceAccounts.length > 0 ? deviceAccounts.map(acc => (
+            <div key={acc.id} className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
+              <div className="flex items-center gap-4">
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-900/20 text-blue-400' : acc.type === AccountType.OFFICE ? 'bg-orange-900/20 text-orange-400' : acc.type === AccountType.ERP ? 'bg-purple-900/20 text-purple-400' : 'bg-slate-800 text-slate-400'}`}>
+                  {acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
+                </div>
+                <div>
+                  <p className="font-bold text-slate-100 text-sm">{acc.name}</p>
+                  <p className="text-[10px] font-black uppercase tracking-tighter">{acc.login}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {acc.accessUrl && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 text-slate-400 hover:text-white transition-colors">
+                    <ExternalLink size={16}/>
+                  </button>
+                )}
+                <div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold min-w-[80px] text-center text-slate-300">
+                  {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
+                </div>
+                <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-white">
+                  {showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
+            </div>
+          )) : (
+            <div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">
+              <Globe size={32} className="mx-auto text-slate-200 mb-2"/>
+              <p className="text-xs font-bold uppercase tracking-widest italic">Nenhuma licença vinculada.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
  {activeTab === 'CUSTODY' && (<PossessionHistory deviceId={editingId || ''} />)}
  {activeTab === 'HISTORY' && (
  <div className="relative border-l-4 border-slate-800 ml-4 space-y-8 py-4 animate-fade-in">
@@ -1065,9 +1228,9 @@ const DeviceManager = () => {
  <div className="bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t border-slate-800 shrink-0 transition-colors">
  <button type="button"onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-slate-800 border-2 border-slate-700 font-black text-[10px] uppercase transition-all tracking-widest">Fechar</button>
  {isViewOnly ? (
- <button type="button"onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>
+ <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-10 py-3 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}><Edit2 size={16}/> Habilitar Edição</button>
  ) : (
- <button type="submit"form="devForm"className="px-10 py-3 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95">Salvar</button>
+ <button type="submit" form="devForm" disabled={isReadOnly} className={`px-10 py-3 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>Salvar Alterações</button>
  )}
  </div>
  </form>

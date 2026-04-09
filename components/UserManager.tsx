@@ -173,7 +173,7 @@ const Resizer = ({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }
 );
 
 const UserManager = () => {
- const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset } = useData();
+ const { users, addUser, updateUser, toggleUserActive, sectors, addSector, devices, sims, models, brands, assetTypes, accounts, settings, updateTermFile, deleteTermFile, getTermFile, updateTermDetails, returnAsset, isReadOnly } = useData();
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
  const navigate = useNavigate();
@@ -783,7 +783,13 @@ const UserManager = () => {
  </div>
  )}
  </div>
- <button onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95"><Plus size={18} /> Novo Colaborador</button>
+ <button 
+  onClick={() => !isReadOnly && handleOpenModal()} 
+  disabled={isReadOnly}
+  className={`bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+ >
+  <Plus size={18} /> Novo Colaborador
+ </button>
  </div>
  </div>
 
@@ -902,7 +908,7 @@ const UserManager = () => {
  {visibleColumns.includes('assetsCount') && (<td className="px-6 py-4 text-center truncate"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${assets > 0 ? ' bg-blue-900/30 text-blue-400' : ' bg-slate-800 text-slate-400'}`}>{assets}</span></td>)}
  {visibleColumns.includes('activeSims') && (<td className="px-6 py-4 truncate text-[10px] font-mono">{chipsString}</td>)}
  {visibleColumns.includes('devicesInfo') && (<td className="px-6 py-4 truncate text-[10px] font-medium">{devicesString}</td>)}
- <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1"onClick={(e) => e.stopPropagation()}><button onClick={() => handleOpenModal(u, false)} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all"title="Editar"><Edit2 size={16}/></button><button onClick={() => handleToggleClick(u)} className={`p-1.5 rounded-lg transition-all ${u.active ? ' hover:bg-orange-900/30' : ' hover:bg-emerald-900/30'}`} title={u.active ? 'Inativar' : 'Reativar'}>{u.active ? <Power size={16}/> : <RefreshCw size={16}/>}</button></div></td>
+ <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1"onClick={(e) => e.stopPropagation()}><button onClick={() => handleOpenModal(u, false)} disabled={isReadOnly} className={`p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}title="Editar"><Edit2 size={16}/></button><button onClick={() => !isReadOnly && handleToggleClick(u)} disabled={isReadOnly} className={`p-1.5 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : (u.active ? ' hover:bg-orange-900/30' : ' hover:bg-emerald-900/30')}`} title={u.active ? 'Inativar' : 'Reativar'}>{u.active ? <Power size={16}/> : <RefreshCw size={16}/>}</button></div></td>
  </tr>
  )
  })}
@@ -1021,9 +1027,16 @@ const UserManager = () => {
  <div className="bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t border-slate-800 shrink-0 transition-colors">
  <button type="button"onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-slate-800 border-2 border-slate-700 font-black text-[10px] uppercase hover:bg-slate-700 transition-all tracking-widest">Fechar</button>
  {isViewOnly ? (
- <button type="button"onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsViewOnly(false); }} className="px-10 py-3 rounded-2xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest shadow-none transition-all hover:scale-105 flex items-center gap-2"><Edit2 size={16}/> Habilitar Edição</button>
+ <button type="button"onClick={(e) => { e.preventDefault(); e.stopPropagation(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-10 py-3 rounded-2xl bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest shadow-none transition-all hover:scale-105 flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}><Edit2 size={16}/> Habilitar Edição</button>
  ) : (
- <button type="submit"form="userForm"className="px-10 py-3 rounded-2xl bg-emerald-600 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95">Salvar Colaborador</button>
+ <button 
+  type="submit" 
+  form="userForm" 
+  disabled={isReadOnly}
+  className={`px-10 py-3 rounded-2xl bg-emerald-600 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+ >
+  Salvar Colaborador
+ </button>
  )}
  </div>
  </div>
@@ -1050,7 +1063,13 @@ const UserManager = () => {
  />
  <div className="flex gap-4">
  <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Voltar</button>
- <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-emerald-600 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 transition-all">Salvar Alterações</button>
+ <button 
+  onClick={confirmEdit} 
+  disabled={!editReason.trim() || isReadOnly} 
+  className={`flex-1 py-3 bg-emerald-600 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+ >
+  Salvar Alterações
+ </button>
  </div>
  </div>
  </div>
@@ -1109,7 +1128,7 @@ const UserManager = () => {
  </button>
  <button 
  onClick={handleBulkUpdate} 
- disabled={!bulkValue}
+ disabled={!bulkValue || isReadOnly}
  className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 transition-all"
  >
  Confirmar
