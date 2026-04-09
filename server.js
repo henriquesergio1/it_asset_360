@@ -1654,11 +1654,19 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             const decoded = jwt.verify(licenseKey, secret);
             
-            if (!decoded.client || !decoded.expiresAt) {
-                return res.status(400).json({ error: 'Licença inválida: Campos obrigatórios ausentes' });
+            // Flexibilidade: aceita 'client' ou 'customer', e 'expiresAt' ou 'exp'
+            const client = decoded.client || decoded.customer;
+            const expiresAtRaw = decoded.expiresAt || (decoded.exp ? new Date(decoded.exp * 1000) : null);
+
+            if (!client || !expiresAtRaw) {
+                console.error('Falha na validação da licença. Payload recebido:', decoded);
+                return res.status(400).json({ 
+                    error: 'Licença inválida: Campos obrigatórios ausentes (client/expiresAt)',
+                    receivedKeys: Object.keys(decoded)
+                });
             }
 
-            const expiresAt = new Date(decoded.expiresAt);
+            const expiresAt = new Date(expiresAtRaw);
             if (expiresAt < new Date()) {
                 return res.status(400).json({ error: 'Licença expirada' });
             }
@@ -1666,12 +1674,13 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const pool = await sql.connect(dbConfig);
             await pool.request()
                 .input('key', sql.NVarChar, licenseKey)
-                .input('client', sql.NVarChar, decoded.client)
+                .input('client', sql.NVarChar, client)
                 .input('expires', sql.DateTime, expiresAt)
                 .query("UPDATE SystemSettings SET LicenseKey=@key, LicenseClient=@client, LicenseExpires=@expires");
 
-            res.json({ success: true, client: decoded.client, expiresAt });
+            res.json({ success: true, client, expiresAt });
         } catch (err) {
+            console.error('Erro JWT:', err.message);
             res.status(400).json({ error: 'Erro ao validar licença: ' + err.message });
         }
     });

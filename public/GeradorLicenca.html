@@ -74,6 +74,7 @@
             
             const payload = {
                 client: client,
+                expiresAt: new Date(expiresAt * 1000).toISOString(),
                 exp: expiresAt,
                 iat: now,
                 iss: "IT-ASSET-360-GENERATOR"
