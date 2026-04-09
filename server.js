@@ -1647,6 +1647,35 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     });
 
     // --- LICENSING SYSTEM ---
+    app.post('/api/license/update', async (req, res) => {
+        try {
+            const { licenseKey } = req.body;
+            const secret = process.env.JWT_SECRET || 'fallback_secret_change_me';
+            
+            const decoded = jwt.verify(licenseKey, secret);
+            
+            if (!decoded.client || !decoded.expiresAt) {
+                return res.status(400).json({ error: 'Licença inválida: Campos obrigatórios ausentes' });
+            }
+
+            const expiresAt = new Date(decoded.expiresAt);
+            if (expiresAt < new Date()) {
+                return res.status(400).json({ error: 'Licença expirada' });
+            }
+
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('key', sql.NVarChar, licenseKey)
+                .input('client', sql.NVarChar, decoded.client)
+                .input('expires', sql.DateTime, expiresAt)
+                .query("UPDATE SystemSettings SET LicenseKey=@key, LicenseClient=@client, LicenseExpires=@expires");
+
+            res.json({ success: true, client: decoded.client, expiresAt });
+        } catch (err) {
+            res.status(400).json({ error: 'Erro ao validar licença: ' + err.message });
+        }
+    });
+
     app.post('/api/system/license', async (req, res) => {
         try {
             const { licenseKey } = req.body;
