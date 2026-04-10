@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -23,6 +23,7 @@ export interface DataContextType {
  accounts: SoftwareAccount[]; 
  tasks: Task[];
  taskLogs: TaskLog[];
+ consumableTransactions: ConsumableTransaction[];
 
  loading?: boolean;
  error?: string | null;
@@ -122,6 +123,7 @@ export interface DataContextType {
  updateTask: (taskId: string, updates: Partial<Task> & { _actionNote?: string }, adminName: string) => Promise<void>;
  bulkUpdateTasks: (taskIds: string[], updates: Partial<Task>, adminName: string) => Promise<void>;
  fetchTaskLogs: (taskId: string) => Promise<TaskLog[]>;
+ fetchConsumableTransactions: () => Promise<ConsumableTransaction[]>;
 
  // --- Bulk Operations ---
  bulkUpdateDevices: (deviceIds: string[], updates: Partial<Device>, adminName: string) => Promise<void>;

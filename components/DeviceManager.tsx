@@ -425,6 +425,7 @@ const DeviceManager = () => {
  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
  const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
  const [filterNoInvoice, setFilterNoInvoice] = useState(false);
+ const [filterAssetType, setFilterAssetType] = useState<string>('');
 
  const [selectedIds, setSelectedIds] = useState<string[]>([]);
  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -500,6 +501,7 @@ const DeviceManager = () => {
  setViewStatus('ALL');
  setFilterNoPulsusId(false);
  setFilterNoInvoice(false);
+ setFilterAssetType('');
  };
 
  useEffect(() => {
@@ -706,6 +708,10 @@ const DeviceManager = () => {
  if (filterNoInvoice && d.hasInvoice) return false;
 
  const { model, brand } = getModelDetails(d.modelId);
+ 
+ // Filtro por tipo de dispositivo
+ if (filterAssetType && model?.typeId !== filterAssetType) return false;
+ 
  const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
  const userName = users.find(u => u.id === d.currentUserId)?.fullName || '';
  const chipNumber = sims.find(s => s.id === d.linkedSimId)?.phoneNumber || '';
@@ -877,6 +883,18 @@ const DeviceManager = () => {
  </div>
  <div className="flex items-center justify-end gap-4 bg-slate-900 p-2 rounded-xl">
  <span className="text-[10px] font-black uppercase tracking-widest">Filtros:</span>
+ 
+ <select 
+ value={filterAssetType} 
+ onChange={(e) => setFilterAssetType(e.target.value)}
+ className="bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+ >
+ <option value="">Todos os Tipos</option>
+ {assetTypes.map(type => (
+ <option key={type.id} value={type.id}>{type.name}</option>
+ ))}
+ </select>
+ 
  <label className="flex items-center gap-2 cursor-pointer">
  <input type="checkbox"checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-700 bg-slate-800 transition-colors cursor-pointer"/>
  <span className="text-xs font-bold text-slate-300">Sem ID Pulsus</span>
@@ -939,7 +957,20 @@ const DeviceManager = () => {
  className="h-4 w-4 rounded focus:ring-indigo-500"
  />
  </td>
- <td className="px-6 py-4 truncate"><div className="flex items-center gap-3"><div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 shadow-inner shrink-0">{model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover"alt="Ativo"/> : <ImageIcon className="text-slate-300"size={16}/>}</div><div className="min-w-0"><div className="font-bold text-slate-100 truncate text-xs">{model?.name}</div><div className="text-[9px] font-black uppercase tracking-tighter">{brand?.name}</div></div></div></td>
+ <td className="px-6 py-4 truncate">
+ <div className="flex items-center gap-3">
+ <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 shadow-inner shrink-0">
+ {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo"/> : <ImageIcon className="text-slate-300" size={16}/>}
+ </div>
+ <div className="min-w-0">
+ <div className="font-bold text-slate-100 truncate text-xs">{model?.name}</div>
+ <div className="flex flex-col">
+ <div className="text-[9px] font-black uppercase tracking-tighter text-slate-400">{brand?.name}</div>
+ <div className="text-[8px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
+ </div>
+ </div>
+ </div>
+ </td>
  {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300"><TagIcon size={12} className=""/> {d.assetTag || '---'}</div></td>)}
  {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] truncate">{d.imei || '---'}</td>)}
  {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[9px] truncate">{d.serialNumber || '---'}</td>)}

@@ -54,6 +54,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }
  });
 
+ const { data: consumableTransactionsData } = useQuery({
+ queryKey: ['consumableTransactions'],
+ queryFn: async () => {
+ const res = await fetch(`${API_URL}/api/consumables/transactions`);
+ return safeJson(res, '/api/consumables/transactions');
+ },
+ refetchInterval: 60000,
+ });
+
  const loading = isBootstrapLoading || (isSyncLoading && !syncData);
  const error = (bootstrapError as Error)?.message || (syncError as Error)?.message || null;
 
@@ -94,6 +103,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
  const externalDbConfig = externalDbConfigData || null;
  const expedienteAlerts = expedienteAlertsData || [];
+ const consumableTransactions = consumableTransactionsData || [];
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -391,10 +401,16 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    }
  };
 
+ const fetchConsumableTransactions = async () => {
+   const res = await fetch(`${API_URL}/api/consumables/transactions`);
+   return safeJson(res, '/api/consumables/transactions');
+ };
+
  const value: DataContextType = {
    devices, sims, users, loading, error, systemUsers, settings,
    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-   accounts, externalDbConfig, expedienteAlerts, fetchData, refreshData: fetchData, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+   accounts, externalDbConfig, expedienteAlerts, consumableTransactions: consumableTransactionsData || [],
+   fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
    updateLicense, getLicenseStatus,
    isReadOnly,

@@ -1830,6 +1830,23 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         }
     });
 
+    app.get('/api/consumables/transactions', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query(`
+                SELECT 
+                    t.*,
+                    c.Name as ConsumableName
+                FROM ConsumableTransactions t
+                JOIN Consumables c ON t.ConsumableId = c.Id
+                ORDER BY t.Date DESC
+            `);
+            res.json(result.recordset);
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
     // --- LICENSING SYSTEM ---
     app.post('/api/license/update', async (req, res) => {
         try {

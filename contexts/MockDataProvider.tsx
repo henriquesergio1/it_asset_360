@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemRole, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, AccountType, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, ConsumableTransaction } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -37,6 +37,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
  const [tasks, setTasks] = useState<Task[]>([]);
  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
+ const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([]);
 
  const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 
@@ -245,9 +246,10 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const value: DataContextType = {
  devices, sims, users, loading: false, error: null, systemUsers, settings, isReadOnly,
  models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
- externalDbConfig, expedienteAlerts,
+ externalDbConfig, expedienteAlerts, consumableTransactions,
  fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
  refreshData: async () => { console.log("[Mock] Data refreshed."); },
+ fetchConsumableTransactions: async () => { return consumableTransactions; },
  getTermFile: async (id: string) =>"",
  getDeviceInvoice: async (id: string) =>"",
  getMaintenanceInvoice: async (id: string) =>"",

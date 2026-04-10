@@ -327,6 +327,29 @@ export interface Task {
   maintenanceItems?: MaintenanceItem[];
 }
 
+export interface Consumable {
+  id: string;
+  name: string;
+  category: string;
+  currentStock: number;
+  minStock: number;
+  unit: string;
+  usedLast30Days?: number;
+  avgDailyConsumption?: number;
+  estimatedDaysLeft?: number | null;
+}
+
+export interface ConsumableTransaction {
+  id: string;
+  consumableId: string;
+  type: 'IN' | 'OUT';
+  quantity: number;
+  date: string;
+  adminUser: string;
+  notes?: string;
+  consumableName?: string; // Join
+}
+
 export interface MaintenanceItem {
   deviceId: string;
   assetTag: string;
