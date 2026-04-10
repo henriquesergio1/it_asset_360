@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 
 interface Consumable {
     Id: string;
@@ -15,14 +16,17 @@ interface Consumable {
 
 const Consumables = () => {
     const { user } = useAuth();
+    const { consumableTransactions, refreshData } = useData();
     const [consumables, setConsumables] = useState<Consumable[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+    const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
     
     const [editingConsumable, setEditingConsumable] = useState<Consumable | null>(null);
     const [transactionConsumable, setTransactionConsumable] = useState<Consumable | null>(null);
+    const [selectedConsumableForLogs, setSelectedConsumableForLogs] = useState<Consumable | null>(null);
     const [transactionType, setTransactionType] = useState<'IN' | 'OUT'>('IN');
 
     // Form states
@@ -109,6 +113,7 @@ const Consumables = () => {
             if (res.ok) {
                 setIsTransactionModalOpen(false);
                 fetchConsumables();
+                refreshData(); // Atualiza o contexto global para o relatório
             } else {
                 const err = await res.json();
                 alert(err.error || 'Erro ao registrar transação.');
@@ -163,6 +168,11 @@ const Consumables = () => {
         setTransactionType(type);
         setTransactionData({ quantity: 1, notes: '' });
         setIsTransactionModalOpen(true);
+    };
+
+    const openLogsModal = (c: Consumable) => {
+        setSelectedConsumableForLogs(c);
+        setIsLogsModalOpen(true);
     };
 
     const filteredConsumables = consumables.filter(c => 
@@ -296,6 +306,9 @@ const Consumables = () => {
                                                     <button onClick={() => openEditModal(c)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors" title="Editar">
                                                         <Edit size={16} />
                                                     </button>
+                                                    <button onClick={() => openLogsModal(c)} className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-900/20 rounded-lg transition-colors" title="Ver Histórico">
+                                                        <History size={16} />
+                                                    </button>
                                                     <button onClick={() => handleDelete(c.Id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Excluir">
                                                         <Trash2 size={16} />
                                                     </button>
@@ -408,6 +421,68 @@ const Consumables = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Histórico */}
+            {isLogsModalOpen && selectedConsumableForLogs && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                                    <History className="text-amber-400" /> Histórico de Movimentações
+                                </h2>
+                                <p className="text-xs text-slate-400 mt-1">{selectedConsumableForLogs.Name}</p>
+                            </div>
+                            <button onClick={() => setIsLogsModalOpen(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+                                <X size={20} className="text-slate-400" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="space-y-4">
+                                {consumableTransactions
+                                    .filter(t => t.consumableId === selectedConsumableForLogs.Id)
+                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                    .map(t => (
+                                        <div key={t.id} className="bg-slate-800/30 border border-slate-800/50 rounded-2xl p-4 flex items-start gap-4">
+                                            <div className={`p-2 rounded-xl ${t.type === 'IN' ? 'bg-emerald-900/20 text-emerald-400' : 'bg-rose-900/20 text-rose-400'}`}>
+                                                {t.type === 'IN' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start">
+                                                    <p className="font-bold text-slate-100">
+                                                        {t.type === 'IN' ? 'Entrada' : 'Saída'} de {t.quantity} {selectedConsumableForLogs.Unit}
+                                                    </p>
+                                                    <span className="text-[10px] font-medium text-slate-500 whitespace-nowrap">
+                                                        {new Date(t.date).toLocaleString('pt-BR')}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                                                    <span className="flex items-center gap-1"><Package size={12} /> {t.adminUser}</span>
+                                                    {t.notes && <span className="flex items-center gap-1 italic"><FileText size={12} /> {t.notes}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                {consumableTransactions.filter(t => t.consumableId === selectedConsumableForLogs.Id).length === 0 && (
+                                    <div className="py-12 text-center">
+                                        <History size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
+                                        <p className="text-slate-500 font-medium">Nenhum registro de movimentação encontrado.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+                            <button 
+                                onClick={() => setIsLogsModalOpen(false)}
+                                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold transition-all"
+                            >
+                                Fechar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

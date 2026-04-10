@@ -1,17 +1,25 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 const Reports = () => {
-  const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions } = useData();
-  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS'>('USERS');
+  const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances } = useData();
+  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL'>('USERS');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
   const [showVagos, setShowVagos] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode' | 'pulsusId', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+
+  // Filtros de Data para Consumíveis
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1); // Primeiro dia do mês atual
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['sector', 'sectorCode', 'email', 'lines', 'pulsusId']);
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
@@ -278,12 +286,39 @@ const Reports = () => {
   const consumablesReportData = useMemo(() => {
     if (!consumableTransactions) return [];
     const searchNormalized = normalizeString(searchTerm);
-    return consumableTransactions.filter(t => 
-      normalizeString(t.consumableName || '').includes(searchNormalized) ||
-      normalizeString(t.adminUser || '').includes(searchNormalized) ||
-      normalizeString(t.notes || '').includes(searchNormalized)
-    );
-  }, [consumableTransactions, searchTerm]);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    return consumableTransactions.filter(t => {
+      const transDate = new Date(t.date);
+      const matchesDate = transDate >= start && transDate <= end;
+      const matchesSearch = normalizeString(t.consumableName || '').includes(searchNormalized) ||
+                           normalizeString(t.adminUser || '').includes(searchNormalized) ||
+                           normalizeString(t.notes || '').includes(searchNormalized);
+      return matchesDate && matchesSearch;
+    });
+  }, [consumableTransactions, searchTerm, startDate, endDate]);
+
+  const consumablesSummaryData = useMemo(() => {
+    const summary: Record<string, { id: string, name: string, totalIn: number, totalOut: number, net: number }> = {};
+    
+    consumablesReportData.forEach(t => {
+      const id = t.consumableId;
+      if (!summary[id]) {
+        summary[id] = { id, name: t.consumableName || 'Desconhecido', totalIn: 0, totalOut: 0, net: 0 };
+      }
+      if (t.type === 'IN') {
+        summary[id].totalIn += t.quantity;
+        summary[id].net += t.quantity;
+      } else {
+        summary[id].totalOut += t.quantity;
+        summary[id].net -= t.quantity;
+      }
+    });
+
+    return Object.values(summary).sort((a, b) => a.name.localeCompare(b.name));
+  }, [consumablesReportData]);
 
   const assetsSummaryData = useMemo(() => {
     const summary: Record<string, { type: string, brand: string, model: string, count: number }> = {};
@@ -318,6 +353,58 @@ const Reports = () => {
   const handlePrint = () => {
     window.print();
   };
+
+  const financialReportData = useMemo(() => {
+    const data = devices.map(d => {
+      const model = models.find(m => m.id === d.modelId);
+      const brand = brands.find(b => b.id === model?.brandId);
+      const type = assetTypes.find(t => t.id === model?.typeId);
+      
+      const deviceMaints = maintenances.filter(m => m.deviceId === d.id);
+      const totalMaint = deviceMaints.reduce((sum, m) => sum + (m.cost || 0), 0);
+      const purchaseCost = d.purchaseCost || 0;
+      const lcc = purchaseCost + totalMaint;
+      const ratio = purchaseCost > 0 ? (totalMaint / purchaseCost) : 0;
+      const age = d.purchaseDate ? (new Date().getTime() - new Date(d.purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25) : 0;
+
+      return {
+        id: d.id,
+        assetTag: d.assetTag,
+        serialNumber: d.serialNumber,
+        type: type?.name || 'Outros',
+        typeId: model?.typeId,
+        brand: brand?.name || 'Outros',
+        model: model?.name || 'Desconhecido',
+        purchaseCost,
+        totalMaint,
+        lcc,
+        ratio,
+        age,
+        status: d.status
+      };
+    });
+
+    const searchNormalized = normalizeString(searchTerm);
+    return data.filter(item => {
+      const matchesSearch = normalizeString(item.assetTag || '').includes(searchNormalized) ||
+                           normalizeString(item.serialNumber || '').includes(searchNormalized) ||
+                           normalizeString(item.model).includes(searchNormalized) ||
+                           normalizeString(item.brand).includes(searchNormalized);
+      
+      const matchesType = selectedAssetTypes.length === 0 || (item.typeId && selectedAssetTypes.includes(item.typeId));
+      
+      return matchesSearch && matchesType;
+    }).sort((a, b) => b.lcc - a.lcc);
+  }, [devices, models, brands, assetTypes, maintenances, searchTerm, selectedAssetTypes]);
+
+  const financialSummary = useMemo(() => {
+    const totalPurchase = financialReportData.reduce((sum, item) => sum + item.purchaseCost, 0);
+    const totalMaint = financialReportData.reduce((sum, item) => sum + item.totalMaint, 0);
+    const totalLCC = totalPurchase + totalMaint;
+    const criticalCount = financialReportData.filter(item => item.ratio >= 0.6 || item.age >= 5).length;
+
+    return { totalPurchase, totalMaint, totalLCC, criticalCount };
+  }, [financialReportData]);
 
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     let headers: string[] = [];
@@ -366,6 +453,23 @@ const Reports = () => {
       }));
       fileName = `resumo_ativos_${new Date().toISOString().split('T')[0]}`;
       pdfTitle = 'Resumo de Ativos por Modelo';
+    } else if (activeTab === 'FINANCIAL') {
+      headers = ['Patrimônio', 'S/N', 'Tipo', 'Marca', 'Modelo', 'Custo Aquisição', 'Custo Manutenção', 'LCC Total', 'Índice LCC', 'Idade (Anos)', 'Status'];
+      data = financialReportData.map(item => ({
+        'Patrimônio': item.assetTag || 'S/T',
+        'S/N': item.serialNumber || 'S/N',
+        'Tipo': item.type,
+        'Marca': item.brand,
+        'Modelo': item.model,
+        'Custo Aquisição': item.purchaseCost,
+        'Custo Manutenção': item.totalMaint,
+        'LCC Total': item.lcc,
+        'Índice LCC': `${(item.ratio * 100).toFixed(0)}%`,
+        'Idade (Anos)': item.age.toFixed(1),
+        'Status': item.status
+      }));
+      fileName = `saude_financeira_ativos_${new Date().toISOString().split('T')[0]}`;
+      pdfTitle = 'Relatório de Saúde Financeira e Ciclo de Vida (LCC)';
     }
 
     if (format === 'csv') {
@@ -415,6 +519,13 @@ const Reports = () => {
               <Smartphone size={16} />
               Ativos
             </button>
+            <button
+              onClick={() => setActiveTab('FINANCIAL')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'FINANCIAL' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+            >
+              <DollarSign size={16} />
+              Financeiro
+            </button>
           </div>
         </div>
 
@@ -426,15 +537,17 @@ const Reports = () => {
                   {activeTab === 'USERS' && 'Relatório de Colaboradores'}
                   {activeTab === 'CONSUMABLES' && 'Histórico de Consumo de Insumos'}
                   {activeTab === 'ASSETS' && 'Resumo de Ativos por Modelo'}
+                  {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
                 </h2>
                 <p className="text-xs mt-1">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
                   {activeTab === 'CONSUMABLES' && 'Histórico detalhado de entradas e saídas de itens consumíveis.'}
                   {activeTab === 'ASSETS' && 'Contagem total de ativos agrupados por tipo, marca e modelo.'}
+                  {activeTab === 'FINANCIAL' && 'Análise de investimento total, custos de manutenção e alertas de obsolescência.'}
                 </p>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
-                {(activeTab === 'USERS' || activeTab === 'ASSETS') && (
+                {(activeTab === 'USERS' || activeTab === 'ASSETS' || activeTab === 'FINANCIAL') && (
                   <>
                     <div className="relative" ref={assetTypeRef}>
                       <button onClick={() => setIsAssetTypeSelectorOpen(!isAssetTypeSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-bold text-sm transition-all">
@@ -516,7 +629,7 @@ const Reports = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className={`relative ${activeTab === 'USERS' ? 'md:col-span-2' : 'md:col-span-4'}`}>
+              <div className={`relative ${activeTab === 'USERS' ? 'md:col-span-2' : activeTab === 'CONSUMABLES' ? 'md:col-span-2' : 'md:col-span-4'}`}>
                 <Search className="absolute left-3 top-3" size={18} />
                 <input
                   type="text"
@@ -530,6 +643,29 @@ const Reports = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+              
+              {activeTab === 'CONSUMABLES' && (
+                <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-slate-400 ml-2">De:</span>
+                    <input 
+                      type="date" 
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="bg-slate-900 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase text-slate-400">Até:</span>
+                    <input 
+                      type="date" 
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-slate-900 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+              )}
               
               {activeTab === 'USERS' && (
                 <>
@@ -708,55 +844,121 @@ const Reports = () => {
             )}
 
             {activeTab === 'CONSUMABLES' && (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-                  <tr>
-                    <th className="px-6 py-4">Data</th>
-                    <th className="px-6 py-4">Item</th>
-                    <th className="px-6 py-4">Tipo</th>
-                    <th className="px-6 py-4 text-center">Qtd</th>
-                    <th className="px-6 py-4">Usuário</th>
-                    <th className="px-6 py-4">Notas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {consumablesReportData.length > 0 ? (
-                    consumablesReportData.map(t => (
-                      <tr key={t.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/50">
-                        <td className="px-6 py-4 text-xs">
-                          {new Date(t.date).toLocaleString('pt-BR')}
-                        </td>
-                        <td className="px-6 py-4 font-bold text-slate-100">
-                          {t.consumableName}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
-                            {t.type === 'IN' ? 'Entrada' : 'Saída'}
+              <div className="space-y-6 p-6">
+                {/* Resumo de Consumíveis */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total de Movimentações</p>
+                    <p className="text-2xl font-bold text-slate-100">{consumablesReportData.length}</p>
+                  </div>
+                  <div className="bg-emerald-900/10 p-4 rounded-2xl border border-emerald-900/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Total Recebido (Entradas)</p>
+                    <p className="text-2xl font-bold text-emerald-400">
+                      {consumablesReportData.filter(t => t.type === 'IN').reduce((acc, t) => acc + t.quantity, 0)}
+                    </p>
+                  </div>
+                  <div className="bg-rose-900/10 p-4 rounded-2xl border border-rose-900/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-1">Total Utilizado (Saídas)</p>
+                    <p className="text-2xl font-bold text-rose-400">
+                      {consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}
+                    </p>
+                  </div>
+                  <div className="bg-blue-900/10 p-4 rounded-2xl border border-blue-900/20">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1">Saldo do Período</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {consumablesReportData.reduce((acc, t) => acc + (t.type === 'IN' ? t.quantity : -t.quantity), 0)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <Package size={14} /> Resumo por Item no Período
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {consumablesSummaryData.map(item => (
+                      <div key={item.id} className="bg-slate-800/20 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all">
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="font-bold text-slate-100 truncate">{item.name}</span>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${item.net >= 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                            {item.net > 0 ? '+' : ''}{item.net}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-center font-mono font-bold">
-                          {t.quantity}
-                        </td>
-                        <td className="px-6 py-4 text-xs">
-                          {t.adminUser}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-400 italic">
-                          {t.notes || '-'}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
-                        <div className="flex flex-col items-center justify-center">
-                          <Package size={48} className="mb-4 text-slate-300"/>
-                          <p className="text-sm font-bold">Nenhuma transação encontrada</p>
                         </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-tighter">
+                          <div className="flex flex-col">
+                            <span className="text-slate-500">Entradas</span>
+                            <span className="text-emerald-400">+{item.totalIn}</span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-slate-500">Saídas</span>
+                            <span className="text-rose-400">-{item.totalOut}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {consumablesSummaryData.length === 0 && (
+                      <div className="col-span-full py-8 text-center text-xs text-slate-500 italic">
+                        Nenhuma movimentação no período selecionado.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-800">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <FileText size={14} /> Detalhamento de Movimentações
+                  </h3>
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
+                      <tr>
+                        <th className="px-6 py-4">Data</th>
+                        <th className="px-6 py-4">Item</th>
+                        <th className="px-6 py-4">Tipo</th>
+                        <th className="px-6 py-4 text-center">Qtd</th>
+                        <th className="px-6 py-4">Usuário</th>
+                        <th className="px-6 py-4">Notas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {consumablesReportData.length > 0 ? (
+                        consumablesReportData.map(t => (
+                          <tr key={t.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/50">
+                            <td className="px-6 py-4 text-xs">
+                              {new Date(t.date).toLocaleString('pt-BR')}
+                            </td>
+                            <td className="px-6 py-4 font-bold text-slate-100">
+                              {t.consumableName}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                                {t.type === 'IN' ? 'Entrada' : 'Saída'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center font-mono font-bold">
+                              {t.quantity}
+                            </td>
+                            <td className="px-6 py-4 text-xs">
+                              {t.adminUser}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-400 italic">
+                              {t.notes || '-'}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center justify-center">
+                              <Package size={48} className="mb-4 text-slate-300"/>
+                              <p className="text-sm font-bold">Nenhuma transação encontrada</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
 
             {activeTab === 'ASSETS' && (
@@ -805,13 +1007,106 @@ const Reports = () => {
                 </tbody>
               </table>
             )}
+            {activeTab === 'FINANCIAL' && (
+              <div className="overflow-x-auto">
+                <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-800/20 border-b border-slate-800">
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Aquisição</p>
+                    <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalPurchase)}</p>
+                  </div>
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Manutenção</p>
+                    <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalMaint)}</p>
+                  </div>
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">LCC Global (TCO)</p>
+                    <p className="text-lg font-bold text-blue-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalLCC)}</p>
+                  </div>
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Alertas Críticos</p>
+                    <p className={`text-lg font-bold ${financialSummary.criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{financialSummary.criticalCount}</p>
+                  </div>
+                </div>
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-800 text-[10px] uppercase font-black tracking-widest border-b border-slate-700">
+                    <tr>
+                      <th className="px-6 py-4">Ativo</th>
+                      <th className="px-6 py-4">Tipo/Marca</th>
+                      <th className="px-6 py-4 text-right">Aquisição</th>
+                      <th className="px-6 py-4 text-right">Manutenção</th>
+                      <th className="px-6 py-4 text-right">LCC Total</th>
+                      <th className="px-6 py-4 text-center">Índice LCC</th>
+                      <th className="px-6 py-4 text-center">Idade</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {financialReportData.length > 0 ? (
+                      financialReportData.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-800/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-100">{item.model}</span>
+                              <span className="text-[10px] text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-slate-300">{item.type}</span>
+                              <span className="text-[10px] text-slate-500 uppercase">{item.brand}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.purchaseCost)}</td>
+                          <td className="px-6 py-4 text-right font-medium text-amber-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalMaint)}</td>
+                          <td className="px-6 py-4 text-right font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.lcc)}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`text-xs font-bold ${item.ratio >= 0.6 ? 'text-red-400' : 'text-slate-300'}`}>
+                                {(item.ratio * 100).toFixed(0)}%
+                              </span>
+                              <div className="w-12 bg-slate-800 h-1 rounded-full overflow-hidden">
+                                <div className={`h-full ${item.ratio >= 0.6 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(item.ratio * 100, 100)}%` }}></div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`text-xs font-bold ${item.age >= 5 ? 'text-red-400' : 'text-slate-300'}`}>
+                              {item.age.toFixed(1)}a
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              item.status === 'Disponível' ? 'bg-emerald-900/30 text-emerald-400' :
+                              item.status === 'Em Uso' ? 'bg-blue-900/30 text-blue-400' :
+                              'bg-amber-900/30 text-amber-400'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                          <div className="flex flex-col items-center justify-center">
+                            <DollarSign size={48} className="mb-4 text-slate-300"/>
+                            <p className="text-sm font-bold">Nenhum dado financeiro encontrado</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-slate-800 bg-slate-800/30 flex justify-between items-center text-xs font-bold">
             <span>Total de registros: {
               activeTab === 'USERS' ? reportData.length :
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
-              assetsSummaryData.length
+              activeTab === 'ASSETS' ? assetsSummaryData.length :
+              financialReportData.length
             }</span>
             <span className="print:hidden">Relatório gerado em {new Date().toLocaleDateString('pt-BR')}</span>
           </div>

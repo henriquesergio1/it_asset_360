@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -23,6 +23,7 @@ export interface DataContextType {
  accounts: SoftwareAccount[]; 
  tasks: Task[];
  taskLogs: TaskLog[];
+ consumables: Consumable[];
  consumableTransactions: ConsumableTransaction[];
 
  loading?: boolean;

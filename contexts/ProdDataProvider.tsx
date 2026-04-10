@@ -116,7 +116,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
  const externalDbConfig = externalDbConfigData || null;
  const expedienteAlerts = expedienteAlertsData || [];
- const consumableTransactions = consumableTransactionsData || [];
+ const consumableTransactions = consumableTransactionsData || syncData?.consumableTransactions || bootstrapData?.consumableTransactions || [];
+const consumables = syncData?.consumables || bootstrapData?.consumables || [];
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -422,7 +423,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const value: DataContextType = {
    devices, sims, users, loading, error, systemUsers, settings,
    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-   accounts, externalDbConfig, expedienteAlerts, consumableTransactions: consumableTransactionsData || [],
+   accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions,
    fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
    updateLicense, getLicenseStatus,
