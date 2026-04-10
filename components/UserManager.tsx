@@ -10,6 +10,7 @@ import { generateAndPrintTerm } from '../utils/termGenerator';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { SortableResizableHeader } from './SortableResizableHeader';
 import { normalizeString } from '../utils/stringUtils';
 
 const formatCPF = (v: string): string => {
@@ -851,25 +852,25 @@ const UserManager = () => {
  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left min-w-[1000px] table-fixed">
- <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest">
+ <thead className="bg-slate-800/50">
  <tr>
- <th className="px-6 py-4 w-12">
+ <th className="px-6 py-4 w-12 border-b border-slate-700">
  <input 
  type="checkbox"
- className="rounded focus:ring-emerald-500"
+ className="rounded border-slate-700 bg-slate-800 focus:ring-emerald-500"
  checked={selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0}
  onChange={handleSelectAll}
  />
  </th>
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['name'] || '250px' }} onClick={() => handleSort('fullName')}><div className="flex items-center gap-1">Nome Completo {sortConfig?.key === 'fullName' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 250)} /></th>
- {visibleColumns.includes('email') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['email'] || '200px' }} onClick={() => handleSort('email')}><div className="flex items-center gap-1">E-mail {sortConfig?.key === 'email' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('email', e.clientX, columnWidths['email'] || 200)} /></th>)}
- {visibleColumns.includes('cpf') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['cpf'] || '140px' }} onClick={() => handleSort('cpf')}><div className="flex items-center gap-1">CPF {sortConfig?.key === 'cpf' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('cpf', e.clientX, columnWidths['cpf'] || 140)} /></th>)}
- {visibleColumns.includes('rg') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['rg'] || '120px' }} onClick={() => handleSort('rg')}><div className="flex items-center gap-1">RG {sortConfig?.key === 'rg' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('rg', e.clientX, columnWidths['rg'] || 120)} /></th>)}
- {visibleColumns.includes('sector') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['sector'] || '180px' }} onClick={() => handleSort('sectorId')}><div className="flex items-center gap-1">Setor / Função {sortConfig?.key === 'sectorId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('sector', e.clientX, columnWidths['sector'] || 180)} /></th>)}
- {visibleColumns.includes('assetsCount') && (<th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['assetsCount'] || '100px' }} onClick={() => handleSort('assetsCount')}><div className="flex items-center justify-center gap-1">Ativos {sortConfig?.key === 'assetsCount' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('assetsCount', e.clientX, columnWidths['assetsCount'] || 100)} /></th>)}
- {visibleColumns.includes('activeSims') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['activeSims'] || '160px' }} onClick={() => handleSort('activeSims')}><div className="flex items-center gap-1">Números de Chip {sortConfig?.key === 'activeSims' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('activeSims', e.clientX, columnWidths['activeSims'] || 160)} /></th>)}
- {visibleColumns.includes('devicesInfo') && (<th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['devicesInfo'] || '250px' }} onClick={() => handleSort('devicesInfo')}><div className="flex items-center gap-1">Detalhes de Aparelho {sortConfig?.key === 'devicesInfo' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('devicesInfo', e.clientX, columnWidths['devicesInfo'] || 250)} /></th>)}
- <th className="px-6 py-4 text-right"style={{ width: '120px' }}>Ações</th>
+ <SortableResizableHeader label="Nome Completo" sortKey="fullName" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['fullName']} onResize={(x, w) => handleResize('fullName', x, w)} />
+ {visibleColumns.includes('email') && <SortableResizableHeader label="E-mail" sortKey="email" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['email']} onResize={(x, w) => handleResize('email', x, w)} />}
+ {visibleColumns.includes('cpf') && <SortableResizableHeader label="CPF" sortKey="cpf" currentSort={sortConfig} requestSort={handleSort} minWidth="140px" width={columnWidths['cpf']} onResize={(x, w) => handleResize('cpf', x, w)} />}
+ {visibleColumns.includes('rg') && <SortableResizableHeader label="RG" sortKey="rg" currentSort={sortConfig} requestSort={handleSort} minWidth="120px" width={columnWidths['rg']} onResize={(x, w) => handleResize('rg', x, w)} />}
+ {visibleColumns.includes('sector') && <SortableResizableHeader label="Setor / Função" sortKey="sectorId" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['sectorId']} onResize={(x, w) => handleResize('sectorId', x, w)} />}
+ {visibleColumns.includes('assetsCount') && <SortableResizableHeader label="Ativos" sortKey="assetsCount" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['assetsCount']} onResize={(x, w) => handleResize('assetsCount', x, w)} />}
+ {visibleColumns.includes('activeSims') && <SortableResizableHeader label="Números de Chip" sortKey="activeSims" currentSort={sortConfig} requestSort={handleSort} minWidth="160px" width={columnWidths['activeSims']} onResize={(x, w) => handleResize('activeSims', x, w)} />}
+ {visibleColumns.includes('devicesInfo') && <SortableResizableHeader label="Detalhes de Aparelho" sortKey="devicesInfo" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['devicesInfo']} onResize={(x, w) => handleResize('devicesInfo', x, w)} />}
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
  </tr>
  </thead>
  <tbody>

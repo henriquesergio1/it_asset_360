@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, Download, FileSpreadsheet, FileJson } from 'lucide-react';
+import { SortableResizableHeader } from './SortableResizableHeader';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
@@ -395,6 +396,15 @@ const DeviceManager = () => {
  const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'LICENSES' | 'CUSTODY' | 'HISTORY'>('GENERAL');
+ const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+ const requestSort = (key: string) => {
+ let direction: 'asc' | 'desc' = 'asc';
+ if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+ direction = 'desc';
+ }
+ setSortConfig({ key, direction });
+ };
  
  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
  const saved = localStorage.getItem('device_manager_columns');
@@ -718,6 +728,32 @@ const DeviceManager = () => {
  const searchString = normalizeString(`${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`);
  return searchString.includes(normalizeString(searchTerm));
  }).sort((a, b) => {
+ if (sortConfig) {
+ let aValue: any = a[sortConfig.key as keyof Device] || '';
+ let bValue: any = b[sortConfig.key as keyof Device] || '';
+
+ if (sortConfig.key === 'modelId') {
+ aValue = models.find(m => m.id === a.modelId)?.name || '';
+ bValue = models.find(m => m.id === b.modelId)?.name || '';
+ } else if (sortConfig.key === 'sectorId') {
+ aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
+ bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
+ } else if (sortConfig.key === 'currentUserId') {
+ aValue = users.find(u => u.id === a.currentUserId)?.fullName || '';
+ bValue = users.find(u => u.id === b.currentUserId)?.fullName || '';
+ } else if (sortConfig.key === 'linkedSimId') {
+ aValue = sims.find(s => s.id === a.linkedSimId)?.phoneNumber || '';
+ bValue = sims.find(s => s.id === b.linkedSimId)?.phoneNumber || '';
+ }
+
+ if (typeof aValue === 'string' && typeof bValue === 'string') {
+ return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+ }
+
+ if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+ if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+ return 0;
+ }
  const modelA = models.find(m => m.id === a.modelId)?.name || '';
  const modelB = models.find(m => m.id === b.modelId)?.name || '';
  return modelA.localeCompare(modelB);
@@ -916,9 +952,9 @@ const DeviceManager = () => {
  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
- <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest">
+ <thead className="bg-slate-800/50">
  <tr>
- <th className="px-6 py-4 w-12">
+ <th className="px-6 py-4 w-12 border-b border-slate-700">
  <input 
  type="checkbox"
  checked={selectedIds.length === paginatedDevices.length && paginatedDevices.length > 0}
@@ -926,18 +962,18 @@ const DeviceManager = () => {
  className="h-4 w-4 rounded focus:ring-indigo-500"
  />
  </th>
- <th className="px-6 py-4 relative"style={{ width: columnWidths['model'] || '200px' }}>Foto/Modelo<Resizer onMouseDown={(e) => handleResize('model', e.clientX, columnWidths['model'] || 200)} /></th>
- {visibleColumns.includes('assetTag') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['assetTag'] || '120px' }}>Patrimônio<Resizer onMouseDown={(e) => handleResize('assetTag', e.clientX, columnWidths['assetTag'] || 120)} /></th>)}
- {visibleColumns.includes('imei') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['imei'] || '150px' }}>IMEI<Resizer onMouseDown={(e) => handleResize('imei', e.clientX, columnWidths['imei'] || 150)} /></th>)}
- {visibleColumns.includes('serial') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['serial'] || '120px' }}>S/N<Resizer onMouseDown={(e) => handleResize('serial', e.clientX, columnWidths['serial'] || 120)} /></th>)}
- {visibleColumns.includes('sectorCode') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['sectorCode'] || '100px' }}>Cód. Setor<Resizer onMouseDown={(e) => handleResize('sectorCode', e.clientX, columnWidths['sectorCode'] || 100)} /></th>)}
- {visibleColumns.includes('sectorName') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['sectorName'] || '150px' }}>Cargo / Função<Resizer onMouseDown={(e) => handleResize('sectorName', e.clientX, columnWidths['sectorName'] || 150)} /></th>)}
- {visibleColumns.includes('pulsusId') && (<th className="px-6 py-4 relative text-center"style={{ width: columnWidths['pulsusId'] || '100px' }}>Pulsus ID<Resizer onMouseDown={(e) => handleResize('pulsusId', e.clientX, columnWidths['pulsusId'] || 100)} /></th>)}
- {visibleColumns.includes('linkedSim') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['linkedSim'] || '150px' }}>Chip<Resizer onMouseDown={(e) => handleResize('linkedSim', e.clientX, columnWidths['linkedSim'] || 150)} /></th>)}
- {visibleColumns.includes('purchaseInfo') && (<th className="px-6 py-4 relative"style={{ width: columnWidths['purchaseInfo'] || '120px' }}>Aquisição<Resizer onMouseDown={(e) => handleResize('purchaseInfo', e.clientX, columnWidths['purchaseInfo'] || 120)} /></th>)}
- <th className="px-6 py-4 relative"style={{ width: columnWidths['status'] || '120px' }}>Status<Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
- <th className="px-6 py-4 relative"style={{ width: columnWidths['user'] || '180px' }}>Responsável Atual<Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 180)} /></th>
- <th className="px-6 py-4 text-right"style={{ width: '150px' }}>Ações</th>
+ <SortableResizableHeader label="Foto/Modelo" sortKey="modelId" currentSort={sortConfig} requestSort={requestSort} minWidth="200px" width={columnWidths['modelId']} onResize={(x, w) => handleResize('modelId', x, w)} />
+ {visibleColumns.includes('assetTag') && <SortableResizableHeader label="Patrimônio" sortKey="assetTag" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['assetTag']} onResize={(x, w) => handleResize('assetTag', x, w)} />}
+ {visibleColumns.includes('imei') && <SortableResizableHeader label="IMEI" sortKey="imei" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['imei']} onResize={(x, w) => handleResize('imei', x, w)} />}
+ {visibleColumns.includes('serial') && <SortableResizableHeader label="S/N" sortKey="serialNumber" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['serialNumber']} onResize={(x, w) => handleResize('serialNumber', x, w)} />}
+ {visibleColumns.includes('sectorCode') && <SortableResizableHeader label="Cód. Setor" sortKey="sectorId" currentSort={sortConfig} requestSort={requestSort} minWidth="100px" width={columnWidths['sectorId']} onResize={(x, w) => handleResize('sectorId', x, w)} />}
+ {visibleColumns.includes('sectorName') && <SortableResizableHeader label="Cargo / Função" sortKey="sectorId" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['sectorId']} onResize={(x, w) => handleResize('sectorId', x, w)} />}
+ {visibleColumns.includes('pulsusId') && <SortableResizableHeader label="Pulsus ID" sortKey="pulsusId" currentSort={sortConfig} requestSort={requestSort} minWidth="100px" width={columnWidths['pulsusId']} onResize={(x, w) => handleResize('pulsusId', x, w)} />}
+ {visibleColumns.includes('linkedSim') && <SortableResizableHeader label="Chip" sortKey="linkedSimId" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['linkedSimId']} onResize={(x, w) => handleResize('linkedSimId', x, w)} />}
+ {visibleColumns.includes('purchaseInfo') && <SortableResizableHeader label="Aquisição" sortKey="purchaseDate" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['purchaseDate']} onResize={(x, w) => handleResize('purchaseDate', x, w)} />}
+ <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
+ <SortableResizableHeader label="Responsável Atual" sortKey="currentUserId" currentSort={sortConfig} requestSort={requestSort} minWidth="180px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '150px' }}>Ações</th>
  </tr>
  </thead>
  <tbody>

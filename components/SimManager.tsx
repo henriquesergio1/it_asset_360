@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SimCard, DeviceStatus } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, AlertTriangle, Wifi, Signal, X, Eye, Info, Save, ArrowUp, ArrowDown } from 'lucide-react';
+import { SortableResizableHeader } from './SortableResizableHeader';
 import { normalizeString } from '../utils/stringUtils';
 
 // Componente divisor para redimensionamento
@@ -238,14 +239,14 @@ const SimManager = () => {
  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden transition-colors">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left table-fixed">
- <thead className="text-[10px] uppercase bg-slate-800/50 font-black tracking-widest border-b border-slate-800">
+ <thead className="bg-slate-800/50">
  <tr>
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['phone'] || '180px' }} onClick={() => handleSort('phoneNumber')}><div className="flex items-center gap-1">Número {sortConfig?.key === 'phoneNumber' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('phone', e.clientX, columnWidths['phone'] || 180)} /></th>
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['operator'] || '140px' }} onClick={() => handleSort('operator')}><div className="flex items-center gap-1">Operadora {sortConfig?.key === 'operator' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('operator', e.clientX, columnWidths['operator'] || 140)} /></th>
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['iccid'] || '200px' }} onClick={() => handleSort('iccid')}><div className="flex items-center gap-1">ICCID {sortConfig?.key === 'iccid' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('iccid', e.clientX, columnWidths['iccid'] || 200)} /></th>
- <th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['status'] || '120px' }} onClick={() => handleSort('status')}><div className="flex items-center justify-center gap-1">Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 120)} /></th>
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['user'] || '200px' }} onClick={() => handleSort('currentUserId')}><div className="flex items-center gap-1">Usuário {sortConfig?.key === 'currentUserId' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div><Resizer onMouseDown={(e) => handleResize('user', e.clientX, columnWidths['user'] || 200)} /></th>
- <th className="px-6 py-4 text-right"style={{ width: '120px' }}>Ações</th>
+ <SortableResizableHeader label="Número" sortKey="phoneNumber" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['phoneNumber']} onResize={(x, w) => handleResize('phoneNumber', x, w)} />
+ <SortableResizableHeader label="Operadora" sortKey="operator" currentSort={sortConfig} requestSort={handleSort} minWidth="140px" width={columnWidths['operator']} onResize={(x, w) => handleResize('operator', x, w)} />
+ <SortableResizableHeader label="ICCID" sortKey="iccid" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['iccid']} onResize={(x, w) => handleResize('iccid', x, w)} />
+ <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
+ <SortableResizableHeader label="Usuário" sortKey="currentUserId" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
  </tr>
  </thead>
  <tbody>

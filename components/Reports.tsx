@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { SortableResizableHeader } from './SortableResizableHeader';
 
 const Reports = () => {
   const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances } = useData();
@@ -283,6 +284,16 @@ const Reports = () => {
     });
   }, [users, sectors, sims, devices, models, selectedAssetTypes, searchTerm, selectedSectors, showOnlyWithLine, showVagos, sortConfig]);
 
+  const [consumablesSortConfig, setConsumablesSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const requestConsumablesSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (consumablesSortConfig && consumablesSortConfig.key === key && consumablesSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setConsumablesSortConfig({ key, direction });
+  };
+
   const consumablesReportData = useMemo(() => {
     if (!consumableTransactions) return [];
     const searchNormalized = normalizeString(searchTerm);
@@ -290,7 +301,7 @@ const Reports = () => {
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
-    return consumableTransactions.filter(t => {
+    let filtered = consumableTransactions.filter(t => {
       const transDate = new Date(t.date);
       const matchesDate = transDate >= start && transDate <= end;
       const matchesSearch = normalizeString(t.consumableName || '').includes(searchNormalized) ||
@@ -298,7 +309,31 @@ const Reports = () => {
                            normalizeString(t.notes || '').includes(searchNormalized);
       return matchesDate && matchesSearch;
     });
-  }, [consumableTransactions, searchTerm, startDate, endDate]);
+
+    if (consumablesSortConfig !== null) {
+      filtered.sort((a, b) => {
+        let aValue: any = a[consumablesSortConfig.key as keyof typeof a];
+        let bValue: any = b[consumablesSortConfig.key as keyof typeof b];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return consumablesSortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        }
+
+        if (aValue < bValue) return consumablesSortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return consumablesSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    return filtered;
+  }, [consumableTransactions, searchTerm, startDate, endDate, consumablesSortConfig]);
 
   const consumablesSummaryData = useMemo(() => {
     const summary: Record<string, { id: string, name: string, totalIn: number, totalOut: number, net: number }> = {};
@@ -319,6 +354,16 @@ const Reports = () => {
 
     return Object.values(summary).sort((a, b) => a.name.localeCompare(b.name));
   }, [consumablesReportData]);
+
+  const [assetsSortConfig, setAssetsSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const requestAssetsSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (assetsSortConfig && assetsSortConfig.key === key && assetsSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setAssetsSortConfig({ key, direction });
+  };
 
   const assetsSummaryData = useMemo(() => {
     const summary: Record<string, { type: string, brand: string, model: string, count: number }> = {};
@@ -343,15 +388,74 @@ const Reports = () => {
     });
 
     const searchNormalized = normalizeString(searchTerm);
-    return Object.values(summary).filter(item => 
+    let filtered = Object.values(summary).filter(item => 
       normalizeString(item.type).includes(searchNormalized) ||
       normalizeString(item.brand).includes(searchNormalized) ||
       normalizeString(item.model).includes(searchNormalized)
-    ).sort((a, b) => a.type.localeCompare(b.type) || a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model));
-  }, [devices, models, brands, assetTypes, searchTerm, selectedAssetTypes]);
+    );
+
+    if (assetsSortConfig !== null) {
+      filtered.sort((a, b) => {
+        let aValue: any = a[assetsSortConfig.key as keyof typeof a];
+        let bValue: any = b[assetsSortConfig.key as keyof typeof b];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return assetsSortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        }
+
+        if (aValue < bValue) return assetsSortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return assetsSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      filtered.sort((a, b) => a.type.localeCompare(b.type) || a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model));
+    }
+
+    return filtered;
+  }, [devices, models, brands, assetTypes, searchTerm, selectedAssetTypes, assetsSortConfig]);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const [financialSortConfig, setFinancialSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('reports_widths');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('reports_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
+  const handleResize = (colId: string, startX: number, startWidth: number) => {
+    const onMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX;
+      setColumnWidths(prev => ({
+        ...prev,
+        [colId]: Math.max(startWidth + delta, 50)
+      }));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const requestFinancialSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (financialSortConfig && financialSortConfig.key === key && financialSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setFinancialSortConfig({ key, direction });
   };
 
   const financialReportData = useMemo(() => {
@@ -385,7 +489,7 @@ const Reports = () => {
     });
 
     const searchNormalized = normalizeString(searchTerm);
-    return data.filter(item => {
+    let filtered = data.filter(item => {
       const matchesSearch = normalizeString(item.assetTag || '').includes(searchNormalized) ||
                            normalizeString(item.serialNumber || '').includes(searchNormalized) ||
                            normalizeString(item.model).includes(searchNormalized) ||
@@ -394,8 +498,32 @@ const Reports = () => {
       const matchesType = selectedAssetTypes.length === 0 || (item.typeId && selectedAssetTypes.includes(item.typeId));
       
       return matchesSearch && matchesType;
-    }).sort((a, b) => b.lcc - a.lcc);
-  }, [devices, models, brands, assetTypes, maintenances, searchTerm, selectedAssetTypes]);
+    });
+
+    if (financialSortConfig !== null) {
+      filtered.sort((a, b) => {
+        let aValue: any = a[financialSortConfig.key as keyof typeof a];
+        let bValue: any = b[financialSortConfig.key as keyof typeof b];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return financialSortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        }
+
+        if (aValue < bValue) return financialSortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return financialSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      filtered.sort((a, b) => b.lcc - a.lcc);
+    }
+
+    return filtered;
+  }, [devices, models, brands, assetTypes, maintenances, searchTerm, selectedAssetTypes, financialSortConfig]);
 
   const financialSummary = useMemo(() => {
     const totalPurchase = financialReportData.reduce((sum, item) => sum + item.purchaseCost, 0);
@@ -738,40 +866,20 @@ const Reports = () => {
 
           <div className="overflow-x-auto print:overflow-visible">
             {activeTab === 'USERS' && (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-                  <tr>
-                    <th className="px-6 py-4 cursor-pointer hover:bg-slate-800 transition-colors" onClick={() => requestSort('name')}>
-                      <div className="flex items-center gap-2">
-                        Colaborador
-                        <ArrowUpDown size={12} className={sortConfig.key === 'name' ? '' : 'text-slate-300'} />
-                      </div>
-                    </th>
+              <table className="w-full text-sm text-left table-fixed">
+                <thead className="bg-slate-800/50">
+                  <tr className="border-b border-slate-800">
+                    <SortableResizableHeader label="Colaborador" sortKey="name" currentSort={sortConfig} requestSort={requestSort} minWidth="250px" width={columnWidths['name']} onResize={(x, w) => handleResize('name', x, w)} />
                     {visibleColumns.includes('sector') && (
-                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-800 transition-colors" onClick={() => requestSort('sector')}>
-                        <div className="flex items-center gap-2">
-                          Cargo / Setor
-                          <ArrowUpDown size={12} className={sortConfig.key === 'sector' ? '' : 'text-slate-300'} />
-                        </div>
-                      </th>
+                      <SortableResizableHeader label="Cargo / Setor" sortKey="sector" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['sector']} onResize={(x, w) => handleResize('sector', x, w)} />
                     )}
                     {visibleColumns.includes('sectorCode') && (
-                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-800 transition-colors" onClick={() => requestSort('sectorCode')}>
-                        <div className="flex items-center gap-2">
-                          Cód. Setor
-                          <ArrowUpDown size={12} className={sortConfig.key === 'sectorCode' ? '' : 'text-slate-300'} />
-                        </div>
-                      </th>
+                      <SortableResizableHeader label="Cód. Setor" sortKey="sectorCode" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['sectorCode']} onResize={(x, w) => handleResize('sectorCode', x, w)} />
                     )}
-                    {visibleColumns.includes('email') && <th className="px-6 py-4">E-mail</th>}
-                    {visibleColumns.includes('lines') && <th className="px-6 py-4">Linha(s)</th>}
+                    {visibleColumns.includes('email') && <th className="px-6 py-4 text-[10px] uppercase font-black tracking-widest text-slate-400">E-mail</th>}
+                    {visibleColumns.includes('lines') && <th className="px-6 py-4 text-[10px] uppercase font-black tracking-widest text-slate-400">Linha(s)</th>}
                     {visibleColumns.includes('pulsusId') && (
-                      <th className="px-6 py-4 cursor-pointer hover:bg-slate-800 transition-colors" onClick={() => requestSort('pulsusId')}>
-                        <div className="flex items-center gap-2">
-                          ID Pulsus
-                          <ArrowUpDown size={12} className={sortConfig.key === 'pulsusId' ? '' : 'text-slate-300'} />
-                        </div>
-                      </th>
+                      <SortableResizableHeader label="ID Pulsus" sortKey="pulsusId" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['pulsusId']} onResize={(x, w) => handleResize('pulsusId', x, w)} />
                     )}
                   </tr>
                 </thead>
@@ -908,15 +1016,15 @@ const Reports = () => {
                   <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <FileText size={14} /> Detalhamento de Movimentações
                   </h3>
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-                      <tr>
-                        <th className="px-6 py-4">Data</th>
-                        <th className="px-6 py-4">Item</th>
-                        <th className="px-6 py-4">Tipo</th>
-                        <th className="px-6 py-4 text-center">Qtd</th>
-                        <th className="px-6 py-4">Usuário</th>
-                        <th className="px-6 py-4">Notas</th>
+                  <table className="w-full text-sm text-left table-fixed">
+                    <thead className="bg-slate-800/50">
+                      <tr className="border-b border-slate-800">
+                        <SortableResizableHeader label="Data" sortKey="date" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="150px" width={columnWidths['date']} onResize={(x, w) => handleResize('date', x, w)} />
+                        <SortableResizableHeader label="Item" sortKey="consumableName" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="200px" width={columnWidths['consumableName']} onResize={(x, w) => handleResize('consumableName', x, w)} />
+                        <SortableResizableHeader label="Tipo" sortKey="type" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="120px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
+                        <SortableResizableHeader label="Qtd" sortKey="quantity" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="100px" width={columnWidths['quantity']} onResize={(x, w) => handleResize('quantity', x, w)} />
+                        <SortableResizableHeader label="Usuário" sortKey="adminUser" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="150px" width={columnWidths['adminUser']} onResize={(x, w) => handleResize('adminUser', x, w)} />
+                        <SortableResizableHeader label="Notas" sortKey="notes" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="200px" width={columnWidths['notes']} onResize={(x, w) => handleResize('notes', x, w)} />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
@@ -962,13 +1070,13 @@ const Reports = () => {
             )}
 
             {activeTab === 'ASSETS' && (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-800/50 text-[10px] uppercase font-black tracking-widest border-b border-slate-800">
-                  <tr>
-                    <th className="px-6 py-4">Tipo</th>
-                    <th className="px-6 py-4">Marca</th>
-                    <th className="px-6 py-4">Modelo</th>
-                    <th className="px-6 py-4 text-center">Total</th>
+              <table className="w-full text-sm text-left table-fixed">
+                <thead className="bg-slate-800/50">
+                  <tr className="border-b border-slate-800">
+                    <SortableResizableHeader label="Tipo" sortKey="type" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
+                    <SortableResizableHeader label="Marca" sortKey="brand" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['brand']} onResize={(x, w) => handleResize('brand', x, w)} />
+                    <SortableResizableHeader label="Modelo" sortKey="model" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="200px" width={columnWidths['model']} onResize={(x, w) => handleResize('model', x, w)} />
+                    <SortableResizableHeader label="Total" sortKey="count" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="100px" width={columnWidths['count']} onResize={(x, w) => handleResize('count', x, w)} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
@@ -1027,17 +1135,17 @@ const Reports = () => {
                     <p className={`text-lg font-bold ${financialSummary.criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{financialSummary.criticalCount}</p>
                   </div>
                 </div>
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-800 text-[10px] uppercase font-black tracking-widest border-b border-slate-700">
-                    <tr>
-                      <th className="px-6 py-4">Ativo</th>
-                      <th className="px-6 py-4">Tipo/Marca</th>
-                      <th className="px-6 py-4 text-right">Aquisição</th>
-                      <th className="px-6 py-4 text-right">Manutenção</th>
-                      <th className="px-6 py-4 text-right">LCC Total</th>
-                      <th className="px-6 py-4 text-center">Índice LCC</th>
-                      <th className="px-6 py-4 text-center">Idade</th>
-                      <th className="px-6 py-4 text-center">Status</th>
+                <table className="w-full text-sm text-left table-fixed">
+                  <thead className="bg-slate-800/50">
+                    <tr className="border-b border-slate-800">
+                      <SortableResizableHeader label="Ativo" sortKey="model" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="200px" width={columnWidths['model']} onResize={(x, w) => handleResize('model', x, w)} />
+                      <SortableResizableHeader label="Tipo/Marca" sortKey="type" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
+                      <SortableResizableHeader label="Aquisição" sortKey="purchaseCost" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="120px" width={columnWidths['purchaseCost']} onResize={(x, w) => handleResize('purchaseCost', x, w)} />
+                      <SortableResizableHeader label="Manutenção" sortKey="totalMaint" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="120px" width={columnWidths['totalMaint']} onResize={(x, w) => handleResize('totalMaint', x, w)} />
+                      <SortableResizableHeader label="LCC Total" sortKey="lcc" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="120px" width={columnWidths['lcc']} onResize={(x, w) => handleResize('lcc', x, w)} />
+                      <SortableResizableHeader label="Índice LCC" sortKey="ratio" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="100px" width={columnWidths['ratio']} onResize={(x, w) => handleResize('ratio', x, w)} />
+                      <SortableResizableHeader label="Idade" sortKey="age" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="80px" width={columnWidths['age']} onResize={(x, w) => handleResize('age', x, w)} />
+                      <SortableResizableHeader label="Status" sortKey="status" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">

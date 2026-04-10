@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { SortableResizableHeader } from './SortableResizableHeader';
 
 interface Consumable {
     Id: string;
@@ -42,6 +43,41 @@ const Consumables = () => {
         quantity: 1,
         notes: ''
     });
+
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('consumables_widths');
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    useEffect(() => {
+        localStorage.setItem('consumables_widths', JSON.stringify(columnWidths));
+    }, [columnWidths]);
+
+    const handleResize = (colId: string, startX: number, startWidth: number) => {
+        const onMouseMove = (e: MouseEvent) => {
+            const delta = e.clientX - startX;
+            setColumnWidths(prev => ({
+                ...prev,
+                [colId]: Math.max(startWidth + delta, 50)
+            }));
+        };
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     const fetchConsumables = async () => {
         try {
@@ -175,7 +211,33 @@ const Consumables = () => {
         setIsLogsModalOpen(true);
     };
 
-    const filteredConsumables = consumables.filter(c => 
+    const sortedConsumables = React.useMemo(() => {
+        let sortableItems = [...consumables];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                const aValue = a[sortConfig.key as keyof Consumable];
+                const bValue = b[sortConfig.key as keyof Consumable];
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            sortableItems.sort((a, b) => a.Name.localeCompare(b.Name));
+        }
+        return sortableItems;
+    }, [consumables, sortConfig]);
+
+    const filteredConsumables = sortedConsumables.filter(c => 
         c.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.Category.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -244,15 +306,15 @@ const Consumables = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-950/50 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
-                                <th className="p-4 font-medium">Item</th>
-                                <th className="p-4 font-medium">Estoque Atual</th>
-                                <th className="p-4 font-medium">Mínimo</th>
-                                <th className="p-4 font-medium">Consumo Médio (30d)</th>
-                                <th className="p-4 font-medium">Duração Estimada</th>
-                                <th className="p-4 font-medium text-right">Ações</th>
+                    <table className="w-full text-left table-fixed border-collapse">
+                        <thead className="bg-slate-950/50 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <SortableResizableHeader label="Item" sortKey="Name" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['Name']} onResize={(x, w) => handleResize('Name', x, w)} />
+                                <SortableResizableHeader label="Estoque Atual" sortKey="CurrentStock" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['CurrentStock']} onResize={(x, w) => handleResize('CurrentStock', x, w)} />
+                                <SortableResizableHeader label="Mínimo" sortKey="MinStock" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['MinStock']} onResize={(x, w) => handleResize('MinStock', x, w)} />
+                                <SortableResizableHeader label="Consumo Médio (30d)" sortKey="AvgDailyConsumption" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['AvgDailyConsumption']} onResize={(x, w) => handleResize('AvgDailyConsumption', x, w)} />
+                                <SortableResizableHeader label="Duração Estimada" sortKey="EstimatedDaysLeft" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['EstimatedDaysLeft']} onResize={(x, w) => handleResize('EstimatedDaysLeft', x, w)} />
+                                <th className="p-4 font-medium text-right" style={{ width: '180px' }}>Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">

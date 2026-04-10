@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown } from 'lucide-react';
+import { SortableResizableHeader } from './SortableResizableHeader';
 import { normalizeString } from '../utils/stringUtils';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
@@ -395,45 +396,15 @@ const AccountManager = () => {
  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden transition-colors">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left table-fixed min-w-[1100px]">
- <thead className="text-[10px] uppercase bg-slate-800/50 font-black tracking-widest border-b border-slate-800">
+ <thead className="bg-slate-800/50">
  <tr>
- {visibleColumns.includes('name') && (
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['name'] || '180px' }} onClick={() => handleSort('name')}>
- <div className="flex items-center gap-1">Nome / Adicional {sortConfig?.key === 'name' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('name', e.clientX, columnWidths['name'] || 180)} />
- </th>
- )}
- {visibleColumns.includes('login') && (
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['login'] || '200px' }} onClick={() => handleSort('login')}>
- <div className="flex items-center gap-1">Login / E-mail / Acesso {sortConfig?.key === 'login' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('login', e.clientX, columnWidths['login'] || 200)} />
- </th>
- )}
- {visibleColumns.includes('password') && (
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['password'] || '150px' }} onClick={() => handleSort('password')}>
- <div className="flex items-center gap-1">Senha {sortConfig?.key === 'password' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('password', e.clientX, columnWidths['password'] || 150)} />
- </th>
- )}
- {visibleColumns.includes('accessUrl') && (
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['accessUrl'] || '220px' }} onClick={() => handleSort('accessUrl')}>
- <div className="flex items-center gap-1">Endereço de Acesso / URL {sortConfig?.key === 'accessUrl' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('accessUrl', e.clientX, columnWidths['accessUrl'] || 220)} />
- </th>
- )}
- {visibleColumns.includes('link') && (
- <th className="px-6 py-4 relative cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['link'] || '200px' }} onClick={() => handleSort('link')}>
- <div className="flex items-center gap-1">Vínculos {sortConfig?.key === 'link' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('link', e.clientX, columnWidths['link'] || 200)} />
- </th>
- )}
- {visibleColumns.includes('status') && (
- <th className="px-6 py-4 relative text-center cursor-pointer hover:bg-slate-700/50 transition-colors"style={{ width: columnWidths['status'] || '110px' }} onClick={() => handleSort('status')}>
- <div className="flex items-center justify-center gap-1">Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</div>
- <Resizer onMouseDown={(e) => handleResize('status', e.clientX, columnWidths['status'] || 110)} />
- </th>
- )}
- <th className="px-6 py-4 text-right"style={{ width: '120px' }}>Ações</th>
+ {visibleColumns.includes('name') && <SortableResizableHeader label="Nome / Adicional" sortKey="name" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['name']} onResize={(x, w) => handleResize('name', x, w)} />}
+ {visibleColumns.includes('login') && <SortableResizableHeader label="Login / E-mail / Acesso" sortKey="login" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['login']} onResize={(x, w) => handleResize('login', x, w)} />}
+ {visibleColumns.includes('password') && <SortableResizableHeader label="Senha" sortKey="password" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['password']} onResize={(x, w) => handleResize('password', x, w)} />}
+ {visibleColumns.includes('accessUrl') && <SortableResizableHeader label="Endereço de Acesso / URL" sortKey="accessUrl" currentSort={sortConfig} requestSort={handleSort} minWidth="220px" width={columnWidths['accessUrl']} onResize={(x, w) => handleResize('accessUrl', x, w)} />}
+ {visibleColumns.includes('link') && <SortableResizableHeader label="Vínculos" sortKey="link" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['link']} onResize={(x, w) => handleResize('link', x, w)} />}
+ {visibleColumns.includes('status') && <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="110px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />}
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-800">

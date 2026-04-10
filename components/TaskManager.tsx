@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
- Plus, Search, Filter, ClipboardList, Clock, 
- AlertCircle, CheckCircle2, XCircle, MoreVertical,
- Calendar, User, Tag, ChevronDown, ArrowUpDown,
- Repeat, Paperclip, Trash2, ExternalLink, FileText,
- Smartphone, Bell, Wrench, ShieldCheck, CheckSquare,
- Download, FileSpreadsheet, FileJson, Check
+  Plus, Search, Filter, ClipboardList, Clock, 
+  AlertCircle, CheckCircle2, XCircle, MoreVertical,
+  Calendar, User, Tag, ChevronDown, ArrowUpDown,
+  Repeat, Paperclip, Trash2, ExternalLink, FileText,
+  Smartphone, Bell, Wrench, ShieldCheck, CheckSquare,
+  Download, FileSpreadsheet, FileJson, Check, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -16,6 +16,7 @@ import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceC
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { SortableResizableHeader } from './SortableResizableHeader';
 
 interface TaskManagerProps {
  tasks: Task[];
@@ -46,6 +47,41 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  const [bulkActionType, setBulkActionType] = useState<'status' | 'assignee' | null>(null);
  const [bulkValue, setBulkValue] = useState('');
 
+ const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+ const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+ const saved = localStorage.getItem('task_manager_widths');
+ return saved ? JSON.parse(saved) : {};
+ });
+
+ React.useEffect(() => {
+ localStorage.setItem('task_manager_widths', JSON.stringify(columnWidths));
+ }, [columnWidths]);
+
+ const handleResize = (colId: string, startX: number, startWidth: number) => {
+ const onMouseMove = (e: MouseEvent) => {
+ const delta = e.clientX - startX;
+ setColumnWidths(prev => ({
+ ...prev,
+ [colId]: Math.max(startWidth + delta, 50)
+ }));
+ };
+ const onMouseUp = () => {
+ document.removeEventListener('mousemove', onMouseMove);
+ document.removeEventListener('mouseup', onMouseUp);
+ };
+ document.addEventListener('mousemove', onMouseMove);
+ document.addEventListener('mouseup', onMouseUp);
+ };
+
+ const handleSort = (key: string) => {
+ let direction: 'asc' | 'desc' = 'asc';
+ if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+ direction = 'desc';
+ }
+ setSortConfig({ key, direction });
+ };
+
  const [newTask, setNewTask] = useState<Partial<Task>>({
  title: '',
  description: '',
@@ -69,7 +105,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }, [tasks, selectedTaskId]);
 
  const filteredTasks = useMemo(() => {
- return tasks.filter(t => {
+ let filtered = tasks.filter(t => {
  if (!t) return false;
  const matchesSearch = (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
  (t.description || '').toLowerCase().includes(search.toLowerCase());
@@ -85,12 +121,40 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  const matchesType = typeFilter === 'All' || t.type === typeFilter;
  return matchesSearch && matchesTab && matchesType;
- }).sort((a, b) => {
+ });
+
+ if (sortConfig !== null) {
+ filtered.sort((a, b) => {
+ let aValue: any = a[sortConfig.key as keyof Task];
+ let bValue: any = b[sortConfig.key as keyof Task];
+
+ if (sortConfig.key === 'assignedTo') {
+ aValue = systemUsers.find(u => u.id === a.assignedTo)?.name || a.assignedTo || 'Geral';
+ bValue = systemUsers.find(u => u.id === b.assignedTo)?.name || b.assignedTo || 'Geral';
+ }
+
+ if (aValue === null || aValue === undefined) return 1;
+ if (bValue === null || bValue === undefined) return -1;
+
+ if (typeof aValue === 'string' && typeof bValue === 'string') {
+ return sortConfig.direction === 'asc' 
+ ? aValue.localeCompare(bValue) 
+ : bValue.localeCompare(aValue);
+ }
+
+ if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+ if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+ return 0;
+ });
+ } else {
+ filtered.sort((a, b) => {
  if (!a.dueDate) return 1;
  if (!b.dueDate) return -1;
  return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
  });
- }, [tasks, search, activeTab, typeFilter]);
+ }
+ return filtered;
+ }, [tasks, search, activeTab, typeFilter, sortConfig, systemUsers]);
 
  const getDeviceName = (deviceId?: string) => {
  if (!deviceId) return 'N/A';
@@ -338,9 +402,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  {/* Lista de Tarefas */}
  <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
  <div className="overflow-x-auto">
- <table className="w-full text-left border-collapse">
- <thead>
- <tr className="bg-slate-800/50 border-b border-slate-800">
+ <table className="w-full text-left border-collapse table-fixed">
+ <thead className="bg-slate-800/50">
+ <tr className="border-b border-slate-800">
  <th className="px-6 py-4 w-10">
  <input 
  type="checkbox"
@@ -349,12 +413,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  onChange={toggleSelectAll}
  />
  </th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Tarefa</th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Tipo</th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Status</th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Responsável</th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Prazo</th>
- <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider">Ações</th>
+ <SortableResizableHeader label="Tarefa" sortKey="title" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['title']} onResize={(x, w) => handleResize('title', x, w)} />
+ <SortableResizableHeader label="Tipo" sortKey="type" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
+ <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
+ <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
+ <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '100px' }}>Ações</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
