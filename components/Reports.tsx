@@ -291,6 +291,7 @@ const Reports = () => {
     devices.forEach(d => {
       const model = models.find(m => m.id === d.modelId);
       if (!model) return;
+      if (selectedAssetTypes.length > 0 && !selectedAssetTypes.includes(model.typeId)) return;
       const brand = brands.find(b => b.id === model.brandId);
       const type = assetTypes.find(t => t.id === model.typeId);
       
@@ -312,7 +313,7 @@ const Reports = () => {
       normalizeString(item.brand).includes(searchNormalized) ||
       normalizeString(item.model).includes(searchNormalized)
     ).sort((a, b) => a.type.localeCompare(b.type) || a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model));
-  }, [devices, models, brands, assetTypes, searchTerm]);
+  }, [devices, models, brands, assetTypes, searchTerm, selectedAssetTypes]);
 
   const handlePrint = () => {
     window.print();
@@ -433,7 +434,7 @@ const Reports = () => {
                 </p>
               </div>
               <div className="flex items-center gap-3 w-full md:w-auto">
-                {activeTab === 'USERS' && (
+                {(activeTab === 'USERS' || activeTab === 'ASSETS') && (
                   <>
                     <div className="relative" ref={assetTypeRef}>
                       <button onClick={() => setIsAssetTypeSelectorOpen(!isAssetTypeSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-bold text-sm transition-all">
@@ -456,27 +457,29 @@ const Reports = () => {
                         </div>
                       )}
                     </div>
-                    <div className="relative" ref={columnRef}>
-                      <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-bold text-sm transition-all">
-                        <SlidersHorizontal size={16} /> <span className="hidden md:inline">Colunas</span>
-                      </button>
-                      {isColumnSelectorOpen && (
-                        <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
-                          <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase">Exibir Colunas</span>
-                            <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
+                    {activeTab === 'USERS' && (
+                      <div className="relative" ref={columnRef}>
+                        <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-bold text-sm transition-all">
+                          <SlidersHorizontal size={16} /> <span className="hidden md:inline">Colunas</span>
+                        </button>
+                        {isColumnSelectorOpen && (
+                          <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
+                            <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase">Exibir Colunas</span>
+                              <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
+                            </div>
+                            <div className="p-2 space-y-1">
+                              {COLUMN_OPTIONS.map(col => (
+                                <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/30 text-blue-400' : ' hover:bg-slate-700'}`}>
+                                  {col.label}
+                                  {visibleColumns.includes(col.id) && <Check size={14}/>}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <div className="p-2 space-y-1">
-                            {COLUMN_OPTIONS.map(col => (
-                              <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/30 text-blue-400' : ' hover:bg-slate-700'}`}>
-                                {col.label}
-                                {visibleColumns.includes(col.id) && <Check size={14}/>}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
                 <div className="flex bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">

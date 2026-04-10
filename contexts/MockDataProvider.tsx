@@ -37,7 +37,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
  const [tasks, setTasks] = useState<Task[]>([]);
  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
- const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([]);
+ const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([
+ { id: '1', consumableId: '1', consumableName: 'Mouse Logitech', type: 'IN', quantity: 10, date: new Date().toISOString(), adminUser: 'Admin', notes: 'Entrada de estoque' },
+ { id: '2', consumableId: '1', consumableName: 'Mouse Logitech', type: 'OUT', quantity: 2, date: new Date().toISOString(), adminUser: 'Admin', notes: 'Entrega para TI' },
+ { id: '3', consumableId: '2', consumableName: 'Teclado Dell', type: 'IN', quantity: 5, date: new Date().toISOString(), adminUser: 'Admin' },
+ { id: '4', consumableId: '2', consumableName: 'Teclado Dell', type: 'OUT', quantity: 1, date: new Date().toISOString(), adminUser: 'Admin', notes: 'Troca de periférico' }
+ ]);
 
  const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 

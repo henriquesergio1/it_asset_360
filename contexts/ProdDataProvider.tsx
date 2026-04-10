@@ -19,6 +19,18 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  return res.json();
  };
 
+ const normalizeKeys = (obj: any): any => {
+ if (Array.isArray(obj)) return obj.map(normalizeKeys);
+ if (obj !== null && typeof obj === 'object') {
+ return Object.keys(obj).reduce((acc, key) => {
+ const normalizedKey = key.charAt(0).toLowerCase() + key.slice(1);
+ acc[normalizedKey] = normalizeKeys(obj[key]);
+ return acc;
+ }, {} as any);
+ }
+ return obj;
+ };
+
  const { data: bootstrapData, isLoading: isBootstrapLoading, error: bootstrapError } = useQuery({
  queryKey: ['bootstrap'],
  queryFn: async () => {
@@ -58,7 +70,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  queryKey: ['consumableTransactions'],
  queryFn: async () => {
  const res = await fetch(`${API_URL}/api/consumables/transactions`);
- return safeJson(res, '/api/consumables/transactions');
+ const data = await safeJson(res, '/api/consumables/transactions');
+ return normalizeKeys(data);
  },
  refetchInterval: 60000,
  });
