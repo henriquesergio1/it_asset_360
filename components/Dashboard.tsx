@@ -12,13 +12,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { TaskDashboardWidget } from './TaskDashboardWidget';
 import { TaskDetailModal } from './TaskDetailModal';
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend }: any) => (
+const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, children }: any) => (
   <div 
-    className={`bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-300 group ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
+    className={`bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
     onClick={onClick}
   >
-    <div className="flex items-start justify-between mb-4">
-      <div className={`p-3 rounded-xl ${color} bg-opacity-20 text-white shadow-lg`}>
+    <div className="flex items-start justify-between mb-4 z-10">
+      <div className={`p-3 rounded-xl ${color} bg-opacity-20 text-white shadow-lg group-hover:scale-110 transition-transform`}>
         <Icon className="w-6 h-6" />
       </div>
       {trend && (
@@ -28,24 +28,39 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend }:
         </div>
       )}
     </div>
-    <div>
+    <div className="z-10">
       <p className="text-xs font-black uppercase tracking-widest mb-1 text-slate-500">{title}</p>
       <div className="flex items-baseline gap-2">
         <h3 className="text-3xl font-black text-slate-100 tracking-tight">{value}</h3>
       </div>
       {subtitle && <p className="text-[10px] mt-2 text-slate-400 font-medium italic">{subtitle}</p>}
     </div>
+    
+    {children && (
+      <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20 flex flex-col">
+        <div className="flex items-center gap-2 mb-4">
+          <Icon className={`w-4 h-4 ${color.replace('bg-', 'text-')}`} />
+          <h4 className="text-sm font-black uppercase tracking-widest text-slate-100">{title} Detalhes</h4>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+          {children}
+        </div>
+      </div>
+    )}
+    
+    {/* Background glow effect */}
+    <div className={`absolute -bottom-10 -right-10 w-32 h-32 ${color.replace('bg-', 'bg-').replace('-600', '-600/10')} rounded-full blur-2xl transition-all duration-500 group-hover:scale-150 opacity-0 group-hover:opacity-100`}></div>
   </div>
 );
 
 const Dashboard = () => {
   const { 
-    devices, users, accounts, sectors, maintenances, models, brands, 
+    devices, users, accounts, sectors, maintenances, models, brands, assetTypes,
     refreshData, expedienteAlerts, fetchExpedienteAlerts, saveExpedienteOverride, 
     tasks, updateTask, systemUsers, consumables 
   } = useData();
   const { isAdmin } = useAuth();
-  const [isTermsExpanded, setIsTermsExpanded] = useState(false);
+  const [isTermsExpanded, setIsTermsExpanded] = useState(true);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
   const [isTasksExpanded, setIsTasksExpanded] = useState(true);
   const [isConsumablesExpanded, setIsConsumablesExpanded] = useState(true);
@@ -96,6 +111,44 @@ const Dashboard = () => {
       return a.nome.localeCompare(b.nome);
     });
   }, [expedienteAlerts, users]);
+
+  // Agrupamento de Dispositivos por Tipo
+  const devicesByType = useMemo(() => {
+    const summary: Record<string, { total: number, available: number, inUse: number }> = {};
+    devices.forEach(d => {
+      const model = models.find(m => m.id === d.modelId);
+      const type = assetTypes.find(t => t.id === model?.typeId);
+      const typeName = type?.name || 'Outros';
+      
+      if (!summary[typeName]) {
+        summary[typeName] = { total: 0, available: 0, inUse: 0 };
+      }
+      summary[typeName].total++;
+      if (d.status === DeviceStatus.AVAILABLE) summary[typeName].available++;
+      if (d.status === DeviceStatus.IN_USE) summary[typeName].inUse++;
+    });
+    return Object.entries(summary).sort((a, b) => b[1].total - a[1].total);
+  }, [devices, models, assetTypes]);
+
+  // Agrupamento de Colaboradores por Setor
+  const usersBySector = useMemo(() => {
+    const summary: Record<string, number> = {};
+    users.filter(u => u.active).forEach(u => {
+      const sector = sectors.find(s => s.id === u.sectorId);
+      const sectorName = sector?.name || 'Sem Setor';
+      summary[sectorName] = (summary[sectorName] || 0) + 1;
+    });
+    return Object.entries(summary).sort((a, b) => b[1] - a[1]);
+  }, [users, sectors]);
+
+  // Agrupamento de Licenças por Tipo
+  const accountsByType = useMemo(() => {
+    const summary: Record<string, number> = {};
+    accounts.filter(a => a.status === 'Ativo').forEach(a => {
+      summary[a.type] = (summary[a.type] || 0) + 1;
+    });
+    return Object.entries(summary).sort((a, b) => b[1] - a[1]);
+  }, [accounts]);
 
   const handleResolveManual = async () => {
     if (!resolvingTerm || !resolveReason.trim()) return;
@@ -149,7 +202,23 @@ const Dashboard = () => {
           color="bg-blue-600"
           subtitle={`${availableDevices} disponíveis para entrega`}
           onClick={() => navigate('/devices')}
-        />
+        >
+          <div className="space-y-3">
+            {devicesByType.map(([type, stats]) => (
+              <div key={type} className="flex flex-col gap-1 border-b border-slate-800/50 pb-2 last:border-0">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-200">{type}</span>
+                  <span className="text-slate-400">{stats.total} total</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-medium">
+                  <span className="text-emerald-400">{stats.available} disp.</span>
+                  <span className="text-blue-400">{stats.inUse} em uso</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </StatCard>
+        
         <StatCard 
           title="Colaboradores"
           value={users.filter(u => u.active).length}
@@ -157,7 +226,17 @@ const Dashboard = () => {
           color="bg-emerald-600"
           subtitle={`${users.length} cadastrados no total`}
           onClick={() => navigate('/users')}
-        />
+        >
+          <div className="space-y-2">
+            {usersBySector.map(([sector, count]) => (
+              <div key={sector} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
+                <span className="font-bold text-slate-300 truncate pr-2">{sector}</span>
+                <span className="text-emerald-400 font-black bg-emerald-900/30 px-2 py-0.5 rounded">{count}</span>
+              </div>
+            ))}
+          </div>
+        </StatCard>
+
         <StatCard 
           title="Licenças & Contas"
           value={accounts.length}
@@ -165,7 +244,17 @@ const Dashboard = () => {
           color="bg-indigo-600"
           subtitle={`${accounts.filter(a => a.status === 'Ativo').length} contas ativas`}
           onClick={() => navigate('/accounts')}
-        />
+        >
+          <div className="space-y-2">
+            {accountsByType.map(([type, count]) => (
+              <div key={type} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
+                <span className="font-bold text-slate-300">{type}</span>
+                <span className="text-indigo-400 font-black bg-indigo-900/30 px-2 py-0.5 rounded">{count}</span>
+              </div>
+            ))}
+          </div>
+        </StatCard>
+
         <StatCard 
           title="Em Manutenção"
           value={maintenanceDevices}
@@ -190,7 +279,62 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {/* Alerta de Consumíveis */}
+              {/* 1º Alerta de Expediente ERP */}
+              {filteredExpedienteAlerts.length > 0 && (
+                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-red-500/30">
+                  <div className="p-4 flex items-center justify-between bg-red-500/5 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-500/20 text-red-400 rounded-lg">
+                        <Clock size={18} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-100">Alertas de Expediente (ERP)</h3>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{filteredExpedienteAlerts.length} divergências detectadas</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)} className="text-slate-500 hover:text-slate-300">
+                      {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                  </div>
+                  {isExpedienteExpanded && (
+                    <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                      {filteredExpedienteAlerts.map(alert => {
+                        const now = new Date();
+                        const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
+                        return (
+                          <div key={alert.codigo} className={`flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-800/50 group transition-all ${hasActiveOverride ? 'opacity-50 grayscale' : 'hover:border-red-500/30'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
+                                {alert.nome.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-200">{alert.nome}</p>
+                                <p className="text-[10px] text-slate-500 uppercase font-black">Cód: {alert.codigo} | CPF: {alert.cpf}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setEditingExpediente({
+                                  codigo: alert.codigo,
+                                  nome: alert.nome,
+                                  observation: alert.observation || '',
+                                  reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
+                                })}
+                                className="p-2 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 rounded-lg transition-all"
+                                title="Observação / Reativação"
+                              >
+                                <FileText size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2º Alerta de Consumíveis */}
               {consumableAlerts.length > 0 && (
                 <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-red-500/30">
                   <div className="p-4 flex items-center justify-between bg-red-500/5 border-b border-slate-800">
@@ -231,7 +375,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {/* Alerta de Termos Pendentes */}
+              {/* 3º Alerta de Termos Pendentes */}
               {pendingTerms.length > 0 && (
                 <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-orange-500/30">
                   <div className="p-4 flex items-center justify-between bg-orange-500/5 border-b border-slate-800">
@@ -283,61 +427,6 @@ const Dashboard = () => {
                           Ver mais {pendingTerms.length - 5} pendências
                         </button>
                       )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Alerta de Expediente ERP */}
-              {filteredExpedienteAlerts.length > 0 && (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-red-500/30">
-                  <div className="p-4 flex items-center justify-between bg-red-500/5 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/20 text-red-400 rounded-lg">
-                        <Clock size={18} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-100">Alertas de Expediente (ERP)</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{filteredExpedienteAlerts.length} divergências detectadas</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)} className="text-slate-500 hover:text-slate-300">
-                      {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
-                  {isExpedienteExpanded && (
-                    <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                      {filteredExpedienteAlerts.map(alert => {
-                        const now = new Date();
-                        const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
-                        return (
-                          <div key={alert.codigo} className={`flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-800/50 group transition-all ${hasActiveOverride ? 'opacity-50 grayscale' : 'hover:border-red-500/30'}`}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
-                                {alert.nome.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-200">{alert.nome}</p>
-                                <p className="text-[10px] text-slate-500 uppercase font-black">Cód: {alert.codigo} | CPF: {alert.cpf}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setEditingExpediente({
-                                  codigo: alert.codigo,
-                                  nome: alert.nome,
-                                  observation: alert.observation || '',
-                                  reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
-                                })}
-                                className="p-2 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 rounded-lg transition-all"
-                                title="Observação / Reativação"
-                              >
-                                <FileText size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   )}
                 </div>

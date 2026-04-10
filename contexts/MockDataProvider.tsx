@@ -37,11 +37,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const [accounts, setAccounts] = useState<SoftwareAccount[]>([]);
  const [tasks, setTasks] = useState<Task[]>([]);
  const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
-  const [consumables, setConsumables] = useState<Consumable[]>([
-    { id: '1', name: 'Mouse Logitech', unit: 'UN', currentStock: 8, minStock: 5, category: 'Periféricos' },
-    { id: '2', name: 'Teclado Dell', unit: 'UN', currentStock: 4, minStock: 10, category: 'Periféricos' },
-    { id: '3', name: 'Cabo HDMI 2m', unit: 'UN', currentStock: 0, minStock: 2, category: 'Cabos' }
-  ]);
+ const [consumables, setConsumables] = useState<Consumable[]>([
+   { id: '1', name: 'Mouse Logitech', unit: 'UN', currentStock: 8, minStock: 5, category: 'Periféricos' },
+   { id: '2', name: 'Teclado Dell', unit: 'UN', currentStock: 4, minStock: 10, category: 'Periféricos' },
+   { id: '3', name: 'Cabo HDMI 2m', unit: 'UN', currentStock: 0, minStock: 2, category: 'Cabos' }
+ ]);
  const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([
  { id: '1', consumableId: '1', consumableName: 'Mouse Logitech', type: 'IN', quantity: 10, date: new Date().toISOString(), adminUser: 'Admin', notes: 'Entrada de estoque' },
  { id: '2', consumableId: '1', consumableName: 'Mouse Logitech', type: 'OUT', quantity: 2, date: new Date().toISOString(), adminUser: 'Admin', notes: 'Entrega para TI' },
@@ -256,7 +256,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const value: DataContextType = {
  devices, sims, users, loading: false, error: null, systemUsers, settings, isReadOnly,
  models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
- externalDbConfig, expedienteAlerts, consumableTransactions,
+ externalDbConfig, expedienteAlerts, consumables, consumableTransactions,
  fetchData: async (silent?: boolean) => { console.log("[Mock] Sync skipped."); },
  refreshData: async () => { console.log("[Mock] Data refreshed."); },
  fetchConsumableTransactions: async () => { return consumableTransactions; },
