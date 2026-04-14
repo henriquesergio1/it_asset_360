@@ -12,7 +12,7 @@ const Reports = () => {
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
   const [showVagos, setShowVagos] = useState(true);
-  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode' | 'pulsusId', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<{ key: 'name' | 'sector' | 'sectorCode' | 'email' | 'lines' | 'pulsusId', direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   // Filtros de Data para Consumíveis
   const [startDate, setStartDate] = useState(() => {
@@ -74,7 +74,7 @@ const Reports = () => {
     { id: 'pulsusId', label: 'ID Pulsus' }
   ];
 
-  const requestSort = (key: 'name' | 'sector' | 'sectorCode' | 'pulsusId') => {
+  const requestSort = (key: 'name' | 'sector' | 'sectorCode' | 'email' | 'lines' | 'pulsusId') => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -279,6 +279,16 @@ const Reports = () => {
         return sortConfig.direction === 'asc' 
           ? a.pulsusId.localeCompare(b.pulsusId)
           : b.pulsusId.localeCompare(a.pulsusId);
+      }
+      if (sortConfig.key === 'email') {
+        return sortConfig.direction === 'asc' 
+          ? a.email.localeCompare(b.email)
+          : b.email.localeCompare(a.email);
+      }
+      if (sortConfig.key === 'lines') {
+        return sortConfig.direction === 'asc' 
+          ? a.lines.localeCompare(b.lines)
+          : b.lines.localeCompare(a.lines);
       }
       return 0;
     });
@@ -876,8 +886,12 @@ const Reports = () => {
                     {visibleColumns.includes('sectorCode') && (
                       <SortableResizableHeader label="Cód. Setor" sortKey="sectorCode" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['sectorCode']} onResize={(x, w) => handleResize('sectorCode', x, w)} />
                     )}
-                    {visibleColumns.includes('email') && <th className="px-6 py-4 text-[10px] uppercase font-black tracking-widest text-slate-400">E-mail</th>}
-                    {visibleColumns.includes('lines') && <th className="px-6 py-4 text-[10px] uppercase font-black tracking-widest text-slate-400">Linha(s)</th>}
+                    {visibleColumns.includes('email') && (
+                      <SortableResizableHeader label="E-mail" sortKey="email" currentSort={sortConfig} requestSort={requestSort} minWidth="200px" width={columnWidths['email']} onResize={(x, w) => handleResize('email', x, w)} />
+                    )}
+                    {visibleColumns.includes('lines') && (
+                      <SortableResizableHeader label="Linha(s)" sortKey="lines" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['lines']} onResize={(x, w) => handleResize('lines', x, w)} />
+                    )}
                     {visibleColumns.includes('pulsusId') && (
                       <SortableResizableHeader label="ID Pulsus" sortKey="pulsusId" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['pulsusId']} onResize={(x, w) => handleResize('pulsusId', x, w)} />
                     )}
