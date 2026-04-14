@@ -313,48 +313,58 @@ const Dashboard = () => {
                           return (
                             <div key={alert.codigo} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-900/50 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
                               <div className="flex items-center justify-between">
-                                <div className="flex flex-1 items-center gap-3">
+                                <div className="flex items-center gap-3 flex-1">
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
                                     {alert.nome.charAt(0)}
                                   </div>
-                                  <div className="flex flex-col">
-                                    <p className="text-sm font-bold text-slate-200">{alert.nome}</p>
-                                    <p className="text-[10px] uppercase font-black tracking-tighter text-slate-400">Cód: {alert.codigo} | CPF: {alert.cpf}</p>
+                                  <div className="flex-1 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-slate-200 truncate max-w-[150px]">{alert.nome}</p>
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
+                                        {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => setEditingExpediente({
+                                          codigo: alert.codigo,
+                                          nome: alert.nome,
+                                          observation: alert.observation || '',
+                                          reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
+                                        })}
+                                        className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                        title="Adicionar Observação/Reativação"
+                                      >
+                                        <FileText size={16} />
+                                      </button>
+                                      {localUser && (
+                                        <Link 
+                                          to={`/users?userId=${localUser.id}`}
+                                          className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                          title="Ver Colaborador Local"
+                                        >
+                                          <ArrowRight size={16} />
+                                        </Link>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex flex-col gap-1 mt-1">
-                                <p className={`text-[10px] font-bold uppercase tracking-widest ${hasActiveOverride ? 'text-amber-400' : 'text-red-400'}`}>
-                                  {hasActiveOverride ? 'Desativado Temporariamente' : 'Expediente Falso'}
-                                </p>
-                                <div className="flex items-center justify-between mt-2">
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => setEditingExpediente({
-                                        codigo: alert.codigo,
-                                        nome: alert.nome,
-                                        observation: alert.observation || '',
-                                        reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
-                                      })}
-                                      className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
-                                      title="Adicionar Observação/Reativação"
-                                    >
-                                      <FileText size={16} />
-                                    </button>
-                                    {localUser && (
-                                      <Link 
-                                        to={`/users?userId=${localUser.id}`}
-                                        className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
-                                        title="Ver Colaborador Local"
-                                      >
-                                        <ArrowRight size={16} />
-                                      </Link>
-                                    )}
-                                  </div>
-                                </div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
+                                <span className="uppercase tracking-tighter">Cód: {alert.codigo}</span>
+                                <span className="text-slate-600">|</span>
+                                <span className="uppercase tracking-tighter">CPF: {alert.cpf}</span>
+                                {localUser && (
+                                  <>
+                                    <span className="text-slate-600">|</span>
+                                    <span className="uppercase tracking-tighter truncate max-w-[150px]">
+                                      {sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                               {hasActiveOverride && (
-                                <div className="mt-2 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30">
+                                <div className="mt-1 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
                                   <span className="font-bold">Motivo:</span> {alert.observation} <br/>
                                   <span className="font-bold">Reativação:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
                                 </div>
@@ -396,19 +406,30 @@ const Dashboard = () => {
                       
                       <div className={`space-y-3 transition-all duration-300 ${isConsumablesExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
                         {consumableAlerts.map(item => (
-                          <div key={item.id} className="bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex items-center justify-between group hover:border-amber-700 transition-all">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-2 h-2 rounded-full ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-200">{item.name}</p>
-                                <p className="text-[10px] text-slate-500 uppercase font-black">Mínimo: {item.minStock} {item.unit}</p>
+                          <div key={item.id} className="bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex flex-col gap-2 group hover:border-amber-700 transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className={`w-2 h-2 rounded-full shrink-0 ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                                <div className="flex-1 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-bold text-slate-200 truncate max-w-[180px]">{item.name}</p>
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
+                                      {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                                      {item.currentStock} {item.unit}
+                                    </p>
+                                    <Link to="/consumables" className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Repor Estoque">
+                                      <ArrowRight size={16} />
+                                    </Link>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
-                                {item.currentStock} {item.unit}
-                              </p>
-                              <Link to="/consumables" className="text-[9px] font-black text-blue-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Repor</Link>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-5">
+                              <span className="uppercase tracking-tighter">Estoque Mínimo: {item.minStock} {item.unit}</span>
                             </div>
                           </div>
                         ))}
@@ -448,35 +469,41 @@ const Dashboard = () => {
                         {pendingTerms.slice(0, 5).map(({term, user}) => {
                           return (
                             <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-orange-900/30 flex flex-col gap-2 group hover:border-orange-700 transition-all">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-orange-400">
-                                  {user.fullName.charAt(0)}
-                                </div>
-                                <div className="flex flex-col">
-                                  <p className="text-sm font-bold text-slate-200">{user.fullName}</p>
-                                  <p className="text-[10px] uppercase font-black tracking-tighter text-slate-400">
-                                    {term.assetDetails.split('|')[0]}
-                                  </p>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-orange-400">
+                                    {user.fullName.charAt(0)}
+                                  </div>
+                                  <div className="flex-1 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-slate-200 truncate max-w-[150px]">{user.fullName}</p>
+                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest">
+                                        Pendente
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <button 
+                                        onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
+                                        className="p-1.5 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                        title="Resolver sem termo (Contingência)"
+                                      >
+                                        <AlertCircle size={16} />
+                                      </button>
+                                      <Link 
+                                        to={`/users?userId=${user.id}&tab=terms`}
+                                        className="p-1.5 hover:bg-orange-900/40 text-slate-400 hover:text-orange-400 rounded-lg transition-colors"
+                                        title="Ver detalhes do termo e colaborador"
+                                      >
+                                        <FileText size={16} />
+                                      </Link>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between mt-2">
-                                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-500">{new Date(term.date).toLocaleDateString('pt-BR')}</p>
-                                <div className="flex items-center gap-1">
-                                  <button 
-                                    onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
-                                    className="p-1.5 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
-                                    title="Resolver sem termo (Contingência)"
-                                  >
-                                    <AlertCircle size={16} />
-                                  </button>
-                                  <Link 
-                                    to={`/users?userId=${user.id}&tab=terms`}
-                                    className="p-1.5 hover:bg-orange-900/40 text-slate-400 hover:text-orange-400 rounded-lg transition-colors"
-                                    title="Ver detalhes do termo e colaborador"
-                                  >
-                                    <FileText size={16} />
-                                  </Link>
-                                </div>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
+                                <span className="uppercase tracking-tighter truncate max-w-[200px]">{term.assetDetails.split('|')[0]}</span>
+                                <span className="text-slate-600">|</span>
+                                <span className="uppercase tracking-tighter">Data: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
                             </div>
                           );
