@@ -317,14 +317,14 @@ const Dashboard = () => {
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
                                     {alert.nome.charAt(0)}
                                   </div>
-                                  <div className="flex-1 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-bold text-slate-200 truncate max-w-[150px]">{alert.nome}</p>
-                                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
+                                  <div className="flex-1 flex items-center justify-between min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
                                         {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 shrink-0">
                                       <button
                                         onClick={() => setEditingExpediente({
                                           codigo: alert.codigo,
@@ -350,23 +350,23 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11 w-full">
                                 {localUser ? (
                                   <>
-                                    <span className="uppercase tracking-tighter truncate max-w-[150px]">
+                                    <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '150px'}} title={sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}>
                                       {sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}
                                     </span>
-                                    <span className="text-slate-600">|</span>
+                                    <span className="text-slate-600 shrink-0">|</span>
                                   </>
                                 ) : (
                                   <>
-                                    <span className="uppercase tracking-tighter">Sem Setor</span>
-                                    <span className="text-slate-600">|</span>
+                                    <span className="uppercase tracking-tighter shrink-0">Sem Setor</span>
+                                    <span className="text-slate-600 shrink-0">|</span>
                                   </>
                                 )}
-                                <span className="uppercase tracking-tighter">Cód: {alert.codigo}</span>
-                                <span className="text-slate-600">|</span>
-                                <span className="uppercase tracking-tighter">CPF: {alert.cpf}</span>
+                                <span className="uppercase tracking-tighter shrink-0">Cód: {alert.codigo}</span>
+                                <span className="text-slate-600 shrink-0">|</span>
+                                <span className="uppercase tracking-tighter shrink-0">CPF: {alert.cpf}</span>
                               </div>
                               {hasActiveOverride && (
                                 <div className="mt-1 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
@@ -415,14 +415,14 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 flex-1">
                                 <div className={`w-2 h-2 rounded-full shrink-0 ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                                <div className="flex-1 flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-sm font-bold text-slate-200 truncate max-w-[180px]">{item.name}</p>
-                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
+                                <div className="flex-1 flex items-center justify-between min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-slate-200 truncate" title={item.name}>{item.name}</p>
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
                                       {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-3 shrink-0">
                                     <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
                                       {item.currentStock} {item.unit}
                                     </p>
@@ -479,14 +479,14 @@ const Dashboard = () => {
                                   <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-orange-400">
                                     {user.fullName.charAt(0)}
                                   </div>
-                                  <div className="flex-1 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-bold text-slate-200 truncate max-w-[150px]">{user.fullName}</p>
-                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest">
+                                  <div className="flex-1 flex items-center justify-between min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
+                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0">
                                         Pendente
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-1 shrink-0">
                                       <button 
                                         onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
                                         className="p-1.5 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
@@ -505,15 +505,15 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
-                                <span className="uppercase tracking-tighter truncate max-w-[120px]">
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11 w-full">
+                                <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '120px'}} title={sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}>
                                   {sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}
                                 </span>
-                                <span className="text-slate-600">|</span>
-                                <span className="uppercase tracking-tighter">Cód: {user.internalCode || 'N/A'}</span>
-                                <span className="text-slate-600">|</span>
-                                <span className="uppercase tracking-tighter truncate max-w-[250px]">{term.assetDetails}</span>
-                                <span className="text-slate-600">|</span>
+                                <span className="text-slate-600 shrink-0">|</span>
+                                <span className="uppercase tracking-tighter shrink-0">Cód: {user.internalCode || 'N/A'}</span>
+                                <span className="text-slate-600 shrink-0">|</span>
+                                <span className="uppercase tracking-tighter truncate flex-1" title={term.assetDetails}>{term.assetDetails}</span>
+                                <span className="text-slate-600 shrink-0">|</span>
                                 <span className="uppercase tracking-tighter shrink-0">Data: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
                             </div>
