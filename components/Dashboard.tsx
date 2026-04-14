@@ -351,17 +351,22 @@ const Dashboard = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
-                                <span className="uppercase tracking-tighter">Cód: {alert.codigo}</span>
-                                <span className="text-slate-600">|</span>
-                                <span className="uppercase tracking-tighter">CPF: {alert.cpf}</span>
-                                {localUser && (
+                                {localUser ? (
                                   <>
-                                    <span className="text-slate-600">|</span>
                                     <span className="uppercase tracking-tighter truncate max-w-[150px]">
                                       {sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}
                                     </span>
+                                    <span className="text-slate-600">|</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="uppercase tracking-tighter">Sem Setor</span>
+                                    <span className="text-slate-600">|</span>
                                   </>
                                 )}
+                                <span className="uppercase tracking-tighter">Cód: {alert.codigo}</span>
+                                <span className="text-slate-600">|</span>
+                                <span className="uppercase tracking-tighter">CPF: {alert.cpf}</span>
                               </div>
                               {hasActiveOverride && (
                                 <div className="mt-1 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
@@ -501,9 +506,15 @@ const Dashboard = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11">
-                                <span className="uppercase tracking-tighter truncate max-w-[200px]">{term.assetDetails.split('|')[0]}</span>
+                                <span className="uppercase tracking-tighter truncate max-w-[120px]">
+                                  {sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}
+                                </span>
                                 <span className="text-slate-600">|</span>
-                                <span className="uppercase tracking-tighter">Data: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
+                                <span className="uppercase tracking-tighter">Cód: {user.internalCode || 'N/A'}</span>
+                                <span className="text-slate-600">|</span>
+                                <span className="uppercase tracking-tighter truncate max-w-[250px]">{term.assetDetails}</span>
+                                <span className="text-slate-600">|</span>
+                                <span className="uppercase tracking-tighter shrink-0">Data: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
                             </div>
                           );
