@@ -266,174 +266,9 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Alerts & Critical Info */}
+        {/* Left Column: Main Content */}
         <div className="lg:col-span-8 space-y-8">
           
-          {/* Alertas Críticos Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest flex items-center gap-2">
-                <AlertTriangle className="text-amber-500" size={20} />
-                Alertas do Sistema
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {/* 1º Alerta de Expediente ERP */}
-              {filteredExpedienteAlerts.length > 0 && (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-red-500/30">
-                  <div className="p-4 flex items-center justify-between bg-red-500/5 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/20 text-red-400 rounded-lg">
-                        <Clock size={18} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-100">Alertas de Expediente (ERP)</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{filteredExpedienteAlerts.length} divergências detectadas</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)} className="text-slate-500 hover:text-slate-300">
-                      {isExpedienteExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
-                  {isExpedienteExpanded && (
-                    <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                      {filteredExpedienteAlerts.map(alert => {
-                        const now = new Date();
-                        const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
-                        return (
-                          <div key={alert.codigo} className={`flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-800/50 group transition-all ${hasActiveOverride ? 'opacity-50 grayscale' : 'hover:border-red-500/30'}`}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
-                                {alert.nome.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-200">{alert.nome}</p>
-                                <p className="text-[10px] text-slate-500 uppercase font-black">Cód: {alert.codigo} | CPF: {alert.cpf}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setEditingExpediente({
-                                  codigo: alert.codigo,
-                                  nome: alert.nome,
-                                  observation: alert.observation || '',
-                                  reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
-                                })}
-                                className="p-2 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 rounded-lg transition-all"
-                                title="Observação / Reativação"
-                              >
-                                <FileText size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 2º Alerta de Consumíveis */}
-              {consumableAlerts.length > 0 && (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-red-500/30">
-                  <div className="p-4 flex items-center justify-between bg-red-500/5 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-500/20 text-red-400 rounded-lg">
-                        <Package size={18} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-100">Estoque Crítico / Baixo</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{consumableAlerts.length} itens precisam de reposição</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsConsumablesExpanded(!isConsumablesExpanded)} className="text-slate-500 hover:text-slate-300">
-                      {isConsumablesExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
-                  {isConsumablesExpanded && (
-                    <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                      {consumableAlerts.map(item => (
-                        <div key={item.id} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-800/50 group hover:border-red-500/30 transition-all">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-200">{item.name}</p>
-                              <p className="text-[10px] text-slate-500 uppercase font-black">Mínimo: {item.minStock} {item.unit}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
-                              {item.currentStock} {item.unit}
-                            </p>
-                            <Link to="/consumables" className="text-[9px] font-black text-blue-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Repor</Link>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 3º Alerta de Termos Pendentes */}
-              {pendingTerms.length > 0 && (
-                <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden transition-all hover:border-orange-500/30">
-                  <div className="p-4 flex items-center justify-between bg-orange-500/5 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-orange-500/20 text-orange-400 rounded-lg">
-                        <FileWarning size={18} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-100">Termos Pendentes</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">{pendingTerms.length} colaboradores sem assinatura</p>
-                      </div>
-                    </div>
-                    <button onClick={() => setIsTermsExpanded(!isTermsExpanded)} className="text-slate-500 hover:text-slate-300">
-                      {isTermsExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
-                  {isTermsExpanded && (
-                    <div className="p-4 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                      {pendingTerms.slice(0, 5).map(({term, user}) => (
-                        <div key={term.id} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-800/50 group hover:border-orange-500/30 transition-all">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
-                              {user.fullName.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-200">{user.fullName}</p>
-                              <p className="text-[10px] text-slate-500 uppercase font-black">{term.assetDetails.split('|')[0]}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
-                              className="p-2 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-all"
-                              title="Resolver Manualmente"
-                            >
-                              <AlertCircle size={16} />
-                            </button>
-                            <Link 
-                              to={`/users?userId=${user.id}&tab=terms`}
-                              className="p-2 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 rounded-lg transition-all"
-                            >
-                              <ChevronRight size={16} />
-                            </Link>
-                          </div>
-                        </div>
-                      ))}
-                      {pendingTerms.length > 5 && (
-                        <button onClick={() => navigate('/reports?tab=USERS')} className="w-full py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
-                          Ver mais {pendingTerms.length - 5} pendências
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Quick Actions / Shortcuts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-lg shadow-blue-900/20 text-white relative overflow-hidden group">
@@ -466,38 +301,274 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Right Column: Tasks Widget */}
+        {/* Right Column: Alerts Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl flex flex-col h-full min-h-[600px]">
-            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
-                  <ClipboardList size={20} />
-                </div>
-                <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest">Tarefas</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest flex items-center gap-2">
+              <AlertTriangle className="text-amber-500" size={20} />
+              Alertas do Sistema
+            </h2>
+          </div>
+
+          {/* Gestão de Tarefas em Destaque - Formato Alerta */}
+          <div className="bg-slate-900 border-l-4 border-l-blue-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-900/30 text-blue-400 rounded-lg shrink-0">
+                <ClipboardList size={20} />
               </div>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-[10px] font-black uppercase">
-                {tasks.filter(t => t.status !== TaskStatus.COMPLETED).length} Ativas
-              </span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-              <TaskDashboardWidget 
-                tasks={tasks} 
-                onViewAll={() => navigate('/tasks')}
-                onTaskClick={(task) => setSelectedTask(task)}
-                systemUsers={systemUsers}
-                currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
-              />
-            </div>
-            <div className="p-4 border-t border-slate-800">
-              <button 
-                onClick={() => navigate('/tasks')}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                Gerenciar Todas <ArrowRight size={14} />
-              </button>
+              <div className="flex-1 overflow-hidden">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                    Tarefas Pendentes
+                    <span className="bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                      {tasks.filter(t => t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS).length} Ativas
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => navigate('/tasks')}
+                      className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors mr-1"
+                    >
+                      Ver Todas
+                    </button>
+                    <button 
+                      onClick={() => setIsTasksExpanded(!isTasksExpanded)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {isTasksExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400 mb-3">
+                  Acompanhamento de manutenções e pendências operacionais.
+                </p>
+                
+                <div className={`transition-all duration-300 ${isTasksExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
+                  <TaskDashboardWidget 
+                    tasks={tasks} 
+                    onViewAll={() => navigate('/tasks')}
+                    onTaskClick={(task) => setSelectedTask(task)}
+                    systemUsers={systemUsers}
+                    currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
+                  />
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Alerta de Validação de Expediente (ERP) */}
+          {filteredExpedienteAlerts.length > 0 && (
+            <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
+                  <Clock size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-bold text-slate-100">
+                      Alertas de Expediente
+                      <span className="ml-2 bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                        {filteredExpedienteAlerts.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {isExpedienteExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Colaboradores com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
+                    {filteredExpedienteAlerts.map((alert) => {
+                      const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
+                      const now = new Date();
+                      const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
+                      
+                      return (
+                        <div key={alert.codigo} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-900/50 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-1 items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
+                                {alert.nome.charAt(0)}
+                              </div>
+                              <div className="flex flex-col">
+                                <p className="text-sm font-bold text-slate-200">{alert.nome}</p>
+                                <p className="text-[10px] uppercase font-black tracking-tighter text-slate-400">Cód: {alert.codigo}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1 mt-1">
+                            <p className={`text-[10px] font-bold uppercase tracking-widest ${hasActiveOverride ? 'text-amber-400' : 'text-red-400'}`}>
+                              {hasActiveOverride ? 'Desativado Temporariamente' : 'Expediente Falso'}
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setEditingExpediente({
+                                    codigo: alert.codigo,
+                                    nome: alert.nome,
+                                    observation: alert.observation || '',
+                                    reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
+                                  })}
+                                  className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                  title="Adicionar Observação/Reativação"
+                                >
+                                  <FileText size={16} />
+                                </button>
+                                {localUser && (
+                                  <Link 
+                                    to={`/users?userId=${localUser.id}`}
+                                    className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                    title="Ver Colaborador Local"
+                                  >
+                                    <ArrowRight size={16} />
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {hasActiveOverride && (
+                            <div className="mt-2 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30">
+                              <span className="font-bold">Motivo:</span> {alert.observation} <br/>
+                              <span className="font-bold">Reativação:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alerta de Consumíveis */}
+          {consumableAlerts.length > 0 && (
+            <div className="bg-slate-900 border-l-4 border-l-amber-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-900/30 text-amber-400 rounded-lg shrink-0">
+                  <Package size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-bold text-slate-100">
+                      Estoque Crítico
+                      <span className="ml-2 bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                        {consumableAlerts.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsConsumablesExpanded(!isConsumablesExpanded)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {isConsumablesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Itens que atingiram o estoque mínimo e precisam de reposição.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isConsumablesExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
+                    {consumableAlerts.map(item => (
+                      <div key={item.id} className="bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex items-center justify-between group hover:border-amber-700 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-200">{item.name}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-black">Mínimo: {item.minStock} {item.unit}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                            {item.currentStock} {item.unit}
+                          </p>
+                          <Link to="/consumables" className="text-[9px] font-black text-blue-400 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Repor</Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Alerta de Termos Pendentes */}
+          {pendingTerms.length > 0 && (
+            <div className="bg-slate-900 border-l-4 border-l-orange-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
+                  <FileWarning size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-bold text-slate-100">
+                      Termos Pendentes
+                      <span className="ml-2 bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                        {pendingTerms.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsTermsExpanded(!isTermsExpanded)}
+                      className="text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Colaboradores com dispositivos sem termo assinado.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
+                    {pendingTerms.slice(0, 5).map(({term, user}) => {
+                      return (
+                        <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-orange-900/30 flex flex-col gap-2 group hover:border-orange-700 transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-orange-400">
+                              {user.fullName.charAt(0)}
+                            </div>
+                            <div className="flex flex-col">
+                              <p className="text-sm font-bold text-slate-200">{user.fullName}</p>
+                              <p className="text-[10px] uppercase font-black tracking-tighter text-slate-400">
+                                {term.assetDetails.split('|')[0]}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-[10px] font-bold uppercase tracking-tight text-slate-500">{new Date(term.date).toLocaleDateString('pt-BR')}</p>
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
+                                className="p-1.5 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                title="Resolver sem termo (Contingência)"
+                              >
+                                <AlertCircle size={16} />
+                              </button>
+                              <Link 
+                                to={`/users?userId=${user.id}&tab=terms`}
+                                className="p-1.5 hover:bg-orange-900/40 text-slate-400 hover:text-orange-400 rounded-lg transition-colors"
+                                title="Ver detalhes do termo e colaborador"
+                              >
+                                <FileText size={16} />
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {pendingTerms.length > 5 && (
+                      <button onClick={() => navigate('/reports?tab=USERS')} className="w-full py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
+                        Ver mais {pendingTerms.length - 5} pendências
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -150,7 +150,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-slate-950">
+        <main className={`flex-1 overflow-auto ${location.pathname === '/' ? 'bg-slate-900' : 'bg-slate-950'}`}>
           <div className="max-w-[1850px] mx-auto w-full p-6">
             {children}
           </div>
