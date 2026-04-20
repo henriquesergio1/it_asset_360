@@ -7,7 +7,7 @@ import {
   ExternalLink, Power, History, Shield, Smartphone, 
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, 
   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
-  Save, Eye, FileUp, Building2
+  Save, Eye, FileUp, Building2, Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -84,7 +84,7 @@ const UserManager: React.FC = () => {
   } = useData();
 
   const getUserAssetsFixed = (userId: string) => {
-    const userDevices = devices.filter(d => d.currentUserId === userId);
+    const userDevices = devices.filter(d => d.currentUserId === userId || (d.additionalUserIds || []).includes(userId));
     const allUserSims = sims.filter(s => s.currentUserId === userId);
     return { userDevices, allUserSims };
   };
@@ -112,7 +112,7 @@ const UserManager: React.FC = () => {
   };
 
   const getUserAssetsEnrich = (userId: string) => {
-    const userDevices = devices.filter(d => d.currentUserId === userId);
+    const userDevices = devices.filter(d => d.currentUserId === userId || (d.additionalUserIds || []).includes(userId));
     const allUserSims = sims.filter(s => s.currentUserId === userId);
     return { userDevices, allUserSims };
   };
@@ -559,13 +559,22 @@ const UserManager: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
+                        const isSharedResponsible = d.additionalUserIds?.includes(editingId || '');
                         return (
                           <div key={d.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all">
-                            <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0">
+                            <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
                               <Smartphone className="text-emerald-500" size={24}/>
+                              {isSharedResponsible && (
+                                <div className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 p-0.5 rounded-full" title="Ativo Compartilhado">
+                                  <Users size={10}/>
+                                </div>
+                              )}
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{m?.name || 'Aparelho'}</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{m?.name || 'Aparelho'}</div>
+                                {isSharedResponsible && <span className="text-[8px] font-black bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
+                              </div>
                               <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
                               <div className="text-[10px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
                             </div>

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
@@ -118,6 +118,7 @@ const Operations = () => {
  const [syncAssetData, setSyncAssetData] = useState(true);
  // NOVO: Flag para inativar usuário no desligamento
  const [inactivateAfterReturn, setInactivateAfterReturn] = useState(false);
+ const [returningUserId, setReturningUserId] = useState('');
  const [isProcessed, setIsProcessed] = useState(false);
  const [isExecuting, setIsExecuting] = useState(false);
  
@@ -127,6 +128,34 @@ const Operations = () => {
  const [condition, setCondition] = useState('Perfeito');
  const [damageDescription, setDamageDescription] = useState('');
  const [evidenceFiles, setEvidenceFiles] = useState<string[]>([]);
+
+ const selectedDevice = useMemo(() => 
+   assetType === 'Device' ? devices.find(d => d.id === selectedAssetId) : null,
+   [devices, selectedAssetId, assetType]
+ );
+
+ const isSharedAsset = useMemo(() => {
+   if (!selectedDevice) return false;
+   const model = models.find(m => m.id === selectedDevice.modelId);
+   const type = assetTypes.find(t => t.id === model?.typeId);
+   return type?.allowMultipleUsers || false;
+ }, [selectedDevice, models, assetTypes]);
+
+ const holders = useMemo(() => {
+   if (!selectedDevice) return [];
+   const ids = [selectedDevice.currentUserId, ...(selectedDevice.additionalUserIds || [])].filter(Boolean) as string[];
+   return users.filter(u => ids.includes(u.id));
+ }, [selectedDevice, users]);
+
+ useEffect(() => {
+   if (activeTab === 'CHECKIN' && assetType === 'Device' && selectedAssetId) {
+     if (holders.length > 1) {
+       setReturningUserId('');
+     } else {
+       setReturningUserId(holders[0]?.id || '');
+     }
+   }
+ }, [selectedAssetId, activeTab, assetType, holders]);
 
  const [lastOperation, setLastOperation] = useState<{
  userId: string;
@@ -172,23 +201,28 @@ const Operations = () => {
  ? (assetType === 'Device' 
  ? availableDevices.map(d => {
  const model = models.find(m => m.id === d.modelId);
+ const type = assetTypes.find(t => t.id === model?.typeId);
  const chip = sims.find(s => s.id === d.linkedSimId);
+ const isShared = type?.allowMultipleUsers;
  return { 
  value: d.id, 
  label:`${d.imei ?`[IMEI: ${d.imei}]`: ''}${model?.name || 'Ativo'}${d.assetTag ?`- ${d.assetTag}`: ''}`, 
- subLabel:`S/N: ${d.serialNumber}${chip ?`• Linha: ${chip.phoneNumber}`: ''}`
+ subLabel:`S/N: ${d.serialNumber}${chip ?`• Linha: ${chip.phoneNumber}`: ''}${isShared ? ' • COMPARTILHÁVEL' : ''}`
  };
  }) 
  : availableSims.map(s => ({ value: s.id, label:`${s.phoneNumber} - ${s.operator}`, subLabel:`ICCID: ${s.iccid}`})))
  : (assetType === 'Device' 
- ? inUseDevices.map(d => {
+ ? (devices.filter(d => d.status === DeviceStatus.IN_USE || d.currentUserId)).map(d => {
  const model = models.find(m => m.id === d.modelId);
  const user = users.find(u => u.id === d.currentUserId);
  const chip = sims.find(s => s.id === d.linkedSimId);
+ const type = assetTypes.find(t => t.id === model?.typeId);
+ const isShared = type?.allowMultipleUsers;
+ const additionalCount = d.additionalUserIds?.length || 0;
  return { 
  value: d.id, 
  label:`${d.imei ?`[IMEI: ${d.imei}]`: ''}${model?.name || 'Ativo'}${d.assetTag ?`- ${d.assetTag}`: ''}`, 
- subLabel:`S/N: ${d.serialNumber}${chip ?`• Linha: ${chip.phoneNumber}`: ''} • Com: ${user?.fullName || 'Usuário'}`
+ subLabel:`S/N: ${d.serialNumber}${chip ?`• Linha: ${chip.phoneNumber}`: ''} • Com: ${user?.fullName || 'Usuário'}${additionalCount > 0 ? ` +${additionalCount} outros` : ''}${isShared ? ' (COMPARTILHADO)' : ''}`
  };
  }) 
  : inUseSims.map(s => ({ value: s.id, label:`${s.phoneNumber} - ${s.operator}`, subLabel:`ICCID: ${s.iccid}`})))
@@ -198,8 +232,8 @@ const Operations = () => {
  .sort((a,b) => a.label.localeCompare(b.label));
 
  const handleExecute = async () => {
- if (!selectedAssetId || (activeTab === 'CHECKOUT' && !selectedUserId)) {
- alert('Por favor, selecione o ativo e o colaborador.');
+ if (!selectedAssetId || (activeTab === 'CHECKOUT' && !selectedUserId) || (activeTab === 'CHECKIN' && assetType === 'Device' && holders.length > 0 && !returningUserId)) {
+ alert('Por favor, preencha todos os campos obrigatórios.');
  return;
  }
 
@@ -211,7 +245,7 @@ const Operations = () => {
  
  if (activeTab === 'CHECKIN') {
  const found = assetType === 'Device' ? devices.find(d => d.id === selectedAssetId) : sims.find(s => s.id === selectedAssetId);
- currentUserId = found?.currentUserId || '';
+ currentUserId = returningUserId || found?.currentUserId || '';
  }
 
  try {
@@ -236,8 +270,8 @@ const Operations = () => {
 
  await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
  } else {
- // Pass the inactivation flag to the return process
- await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFiles);
+ // Pass the inactivation flag and the returning user to the return process
+ await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFiles, false, '', returningUserId);
  }
 
  setLastOperation({ 
@@ -435,10 +469,41 @@ const Operations = () => {
 
  {activeTab === 'CHECKIN' && selectedAssetId && (
  <div className="space-y-8 animate-fade-in">
+ {assetType === 'Device' && holders.length > 1 && (
+ <div className="space-y-6">
+ <div className="flex items-center gap-4">
+ <div className="h-10 w-10 bg-orange-600 rounded-full flex items-center justify-center text-white font-black">2</div>
+ <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Quem está devolvendo?</h3>
+ </div>
+ <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
+ Como este é um ativo compartilhado, selecione qual colaborador está realizando a devolução:
+ </p>
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ {holders.map(u => (
+ <button 
+ key={u.id}
+ onClick={() => setReturningUserId(u.id)}
+ className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-800 border-slate-700 hover:border-slate-600'}`}
+ >
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center ${returningUserId === u.id ? ' bg-orange-900/40 text-orange-400' : ' bg-slate-700 '}`}>
+ <UserIcon size={20}/>
+ </div>
+ <div className="text-left overflow-hidden">
+ <div className="text-[10px] font-black uppercase truncate">{u.fullName}</div>
+ <div className="text-[9px] font-mono opacity-60 truncate">{u.email}</div>
+ </div>
+ {returningUserId === u.id && <CheckSquare size={18} className="ml-auto shrink-0"/>}
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
  {assetType === 'Device' && (
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">2</div>
+ <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">
+ {holders.length > 1 ? '3' : '2'}
+ </div>
  <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Conferência de Devolução</h3>
  </div>
  <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
@@ -468,7 +533,7 @@ const Operations = () => {
  <div className="space-y-4 pt-4 border-t border-slate-800">
  <div className="flex items-center gap-4">
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-orange-600`}>
- {assetType === 'Device' ? '3' : '2'}
+ {assetType === 'Device' ? (holders.length > 1 ? '4' : '3') : '2'}
  </div>
  <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Fluxo de Desligamento</h3>
  </div>
@@ -500,7 +565,7 @@ const Operations = () => {
  <div className="space-y-6">
  <div className="flex items-center gap-4">
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>
- {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? '4' : '3')}
+ {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? (holders.length > 1 ? '5' : '4') : '3')}
  </div>
  <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Observações Adicionais</h3>
  </div>
@@ -517,7 +582,7 @@ const Operations = () => {
  <div className="space-y-6 pt-6 border-t border-slate-800">
  <div className="flex items-center gap-4">
  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-red-600">
- {assetType === 'Device' ? '5' : '4'}
+ {assetType === 'Device' ? (holders.length > 1 ? '6' : '5') : '4'}
  </div>
  <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Condição e Avarias</h3>
  </div>

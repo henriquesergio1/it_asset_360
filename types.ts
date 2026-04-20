@@ -43,6 +43,7 @@ export interface AssetType {
   id: string;
   name: string;
   customFieldIds?: string[]; 
+  allowMultipleUsers?: boolean;
 }
 
 export interface DeviceBrand {
@@ -98,6 +99,7 @@ export interface Device {
   status: DeviceStatus;
   previousStatus?: DeviceStatus;
   currentUserId?: string | null;
+  additionalUserIds?: string[];
   internalCode?: string; 
   
   imei?: string;         

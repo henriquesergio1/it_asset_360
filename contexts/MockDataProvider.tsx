@@ -427,135 +427,172 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  },
 
  assignAsset: (assetType, assetId, userId, notes, adminName, accessories) => {
- const user = users.find(u => u.id === userId);
- if (assetType === 'Device') {
- const old = devices.find(d => d.id === assetId);
- setDevices(prev => prev.map(d => d.id === assetId ? { 
- ...d, 
- status: DeviceStatus.IN_USE, 
- currentUserId: userId,
- accessories: accessories
- } : d));
- 
- const termId = Math.random().toString(36).substr(2, 9);
- const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
- const newTerm: Term = {
- id: termId,
- userId: userId,
- type: 'ENTREGA',
- assetDetails:`[TAG: ${old?.assetTag}] ${modelName}`,
- date: new Date().toISOString(),
- fileUrl: ''
- };
- setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
- logAction(ActionType.CHECKOUT, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, old, { 
- status: DeviceStatus.IN_USE, 
- currentUserId: userId,
- userName: user?.fullName || 'Desconhecido'
- });
- } else {
- const old = sims.find(s => s.id === assetId);
- setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
- 
- const termId = Math.random().toString(36).substr(2, 9);
- const newTerm: Term = {
- id: termId,
- userId: userId,
- type: 'ENTREGA',
- assetDetails:`[CHIP: ${old?.phoneNumber}]`,
- date: new Date().toISOString(),
- fileUrl: ''
- };
- setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
- 
- logAction(ActionType.CHECKOUT, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { 
- status: DeviceStatus.IN_USE, 
- currentUserId: userId,
- userName: user?.fullName || 'Desconhecido'
- });
- }
+  const user = users.find(u => u.id === userId);
+  if (assetType === 'Device') {
+    const old = devices.find(d => d.id === assetId);
+    const model = models.find(m => m.id === old?.modelId);
+    const type = assetTypes.find(t => t.id === model?.typeId);
+    const isShared = type?.allowMultipleUsers;
+
+    setDevices(prev => prev.map(d => {
+      if (d.id === assetId) {
+        if (isShared) {
+          if (!d.currentUserId) {
+            return { ...d, status: DeviceStatus.IN_USE, currentUserId: userId, accessories: accessories || d.accessories };
+          } else {
+            const currentAdditional = d.additionalUserIds || [];
+            if (d.currentUserId !== userId && !currentAdditional.includes(userId)) {
+              return { ...d, status: DeviceStatus.IN_USE, additionalUserIds: [...currentAdditional, userId], accessories: accessories || d.accessories };
+            }
+          }
+        } else {
+          return { ...d, status: DeviceStatus.IN_USE, currentUserId: userId, additionalUserIds: [], accessories: accessories || d.accessories };
+        }
+      }
+      return d;
+    }));
+
+    const termId = Math.random().toString(36).substr(2, 9);
+    const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
+    const newTerm: Term = {
+      id: termId,
+      userId: userId,
+      type: 'ENTREGA',
+      assetDetails: `[TAG: ${old?.assetTag}] ${modelName}${isShared ? ' (COMPARTILHADO)' : ''}`,
+      date: new Date().toISOString(),
+      fileUrl: ''
+    };
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+    logAction(ActionType.CHECKOUT, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, old, { 
+      status: DeviceStatus.IN_USE, 
+      currentUserId: userId,
+      userName: user?.fullName || 'Desconhecido',
+      isSharedAssignment: isShared
+    });
+  } else {
+    const old = sims.find(s => s.id === assetId);
+    setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
+    
+    const termId = Math.random().toString(36).substr(2, 9);
+    const newTerm: Term = {
+      id: termId,
+      userId: userId,
+      type: 'ENTREGA',
+      assetDetails: `[CHIP: ${old?.phoneNumber}]`,
+      date: new Date().toISOString(),
+      fileUrl: ''
+    };
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, terms: [...(u.terms || []), newTerm] } : u));
+    
+    logAction(ActionType.CHECKOUT, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, old, { 
+      status: DeviceStatus.IN_USE, 
+      currentUserId: userId,
+      userName: user?.fullName || 'Desconhecido'
+    });
+  }
  },
- returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFiles) => {
- if (assetType === 'Device') {
- const old = devices.find(d => d.id === assetId);
- const oldUserId = old?.currentUserId;
- const oldUser = users.find(u => u.id === oldUserId);
- 
- if (old && old.linkedSimId) {
- setSims(prev => prev.map(s => s.id === old.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
- }
+ returnAsset: (assetType, assetId, notes, adminName, checklist, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason, returningUserId) => {
+  if (assetType === 'Device') {
+    const old = devices.find(d => d.id === assetId);
+    const actualReturningUserId = returningUserId || old?.currentUserId;
+    if (!actualReturningUserId) return;
+    const actualReturningUser = users.find(u => u.id === actualReturningUserId);
+    
+    let wasFullyReturned = false;
 
- setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null } : d));
- 
- if (oldUserId) {
- const termId = Math.random().toString(36).substr(2, 9);
- const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
- const newTerm: Term = {
- id: termId,
- userId: oldUserId,
- type: 'DEVOLUCAO',
- assetDetails:`[TAG: ${old?.assetTag}] ${modelName}`,
- date: new Date().toISOString(),
- fileUrl: '',
- condition: condition || 'Perfeito',
- damageDescription: damageDescription,
- evidenceFiles: evidenceFiles,
- notes: notes
- };
- 
- setUsers(prev => prev.map(u => u.id === oldUserId ? { 
- ...u, 
- active: inactivateUser ? false : u.active,
- terms: [...(u.terms || []), newTerm] 
- } : u));
+    setDevices(prev => prev.map(d => {
+      if (d.id === assetId) {
+        const isPrimary = d.currentUserId === actualReturningUserId;
+        const isAdditional = (d.additionalUserIds || []).includes(actualReturningUserId);
 
- if (inactivateUser) {
- logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
- }
- }
- logAction(ActionType.CHECKIN, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, {
- status: DeviceStatus.IN_USE,
- currentUserId: oldUserId,
- userName: oldUser?.fullName || 'Desconhecido'
- }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
- } else {
- const old = sims.find(s => s.id === assetId);
- const oldUserId = old?.currentUserId;
- const oldUser = users.find(u => u.id === oldUserId);
+        if (isPrimary) {
+          const nextUser = (d.additionalUserIds || [])[0];
+          const remaining = (d.additionalUserIds || []).slice(1);
+          if (nextUser) {
+            return { ...d, currentUserId: nextUser, additionalUserIds: remaining };
+          } else {
+            wasFullyReturned = true;
+            return { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null, additionalUserIds: [] };
+          }
+        } else if (isAdditional) {
+          return { ...d, additionalUserIds: (d.additionalUserIds || []).filter(uid => uid !== actualReturningUserId) };
+        }
+      }
+      return d;
+    }));
 
- setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
- 
- if (oldUserId) {
- const termId = Math.random().toString(36).substr(2, 9);
- const newTerm: Term = {
- id: termId,
- userId: oldUserId,
- type: 'DEVOLUCAO',
- assetDetails:`[CHIP: ${old?.phoneNumber}]`,
- date: new Date().toISOString(),
- fileUrl: '',
- condition: condition || 'Perfeito',
- damageDescription: damageDescription,
- evidenceFiles: evidenceFiles,
- notes: notes
- };
+    if (wasFullyReturned && old?.linkedSimId) {
+      setSims(prev => prev.map(s => s.id === old.linkedSimId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+    }
+    
+    const termId = Math.random().toString(36).substr(2, 9);
+    const modelName = models.find(m => m.id === old?.modelId)?.name || 'Dispositivo';
+    const newTerm: Term = {
+      id: termId,
+      userId: actualReturningUserId,
+      type: 'DEVOLUCAO',
+      assetDetails: `[TAG: ${old?.assetTag}] ${modelName}`,
+      date: new Date().toISOString(),
+      fileUrl: '',
+      condition: condition || 'Perfeito',
+      damageDescription: damageDescription,
+      evidenceFiles: evidenceFiles,
+      notes: notes
+    };
+    
+    setUsers(prev => prev.map(u => u.id === actualReturningUserId ? { 
+      ...u, 
+      active: inactivateUser ? false : u.active,
+      terms: [...(u.terms || []), newTerm] 
+    } : u));
 
- setUsers(prev => prev.map(u => u.id === oldUserId ? { 
- ...u, 
- active: inactivateUser ? false : u.active,
- terms: [...(u.terms || []), newTerm] 
- } : u));
+    if (inactivateUser) {
+      logAction(ActionType.INACTIVATE, 'User', actualReturningUserId, actualReturningUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
+    }
 
- if (inactivateUser) {
- logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
- }
- }
- logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {
- status: DeviceStatus.IN_USE,
- currentUserId: oldUserId,
- userName: oldUser?.fullName || 'Desconhecido'
- }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
- }
+    logAction(ActionType.CHECKIN, 'Device', assetId, old?.assetTag || 'Ativo', adminName, notes, undefined, {
+      status: DeviceStatus.IN_USE,
+      currentUserId: actualReturningUserId,
+      userName: actualReturningUser?.fullName || 'Desconhecido'
+    }, { status: wasFullyReturned ? DeviceStatus.AVAILABLE : DeviceStatus.IN_USE, currentUserId: wasFullyReturned ? null : 'Múltiplos' });
+  } else {
+    const old = sims.find(s => s.id === assetId);
+    const oldUserId = old?.currentUserId;
+    const oldUser = users.find(u => u.id === oldUserId);
+
+    setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+    
+    if (oldUserId) {
+      const termId = Math.random().toString(36).substr(2, 9);
+      const newTerm: Term = {
+        id: termId,
+        userId: oldUserId,
+        type: 'DEVOLUCAO',
+        assetDetails: `[CHIP: ${old?.phoneNumber}]`,
+        date: new Date().toISOString(),
+        fileUrl: '',
+        condition: condition || 'Perfeito',
+        damageDescription: damageDescription,
+        evidenceFiles: evidenceFiles,
+        notes: notes
+      };
+
+      setUsers(prev => prev.map(u => u.id === oldUserId ? { 
+        ...u, 
+        active: inactivateUser ? false : u.active,
+        terms: [...(u.terms || []), newTerm] 
+      } : u));
+
+      if (inactivateUser) {
+        logAction(ActionType.INACTIVATE, 'User', oldUserId, oldUser?.fullName || 'Desconhecido', adminName, 'Inativado automaticamente durante a devolução (Desligamento)');
+      }
+    }
+    logAction(ActionType.CHECKIN, 'Sim', assetId, old?.phoneNumber || 'Chip', adminName, notes, undefined, {
+      status: DeviceStatus.IN_USE,
+      currentUserId: oldUserId,
+      userName: oldUser?.fullName || 'Desconhecido'
+    }, { status: DeviceStatus.AVAILABLE, currentUserId: null });
+  }
  },
  updateTermFile: (tid, uid, furl, adm) => { 
  setUsers(prev => prev.map(u => u.id === uid ? {

@@ -27,7 +27,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  const [modelSearchTerm, setModelSearchTerm] = useState('');
 
  // Edit State
- const [editingType, setEditingType] = useState<Partial<AssetType>>({ name: '', customFieldIds: [] });
+ const [editingType, setEditingType] = useState<Partial<AssetType>>({ name: '', customFieldIds: [], allowMultipleUsers: false });
  const [editingBrand, setEditingBrand] = useState<Partial<DeviceBrand>>({ name: '' });
  const [editingAccessory, setEditingAccessory] = useState<Partial<AccessoryType>>({ name: '' });
  const [modelForm, setModelForm] = useState<Partial<DeviceModel>>({ imageUrl: '' });
@@ -58,10 +58,15 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  updateAssetType(editingType as AssetType, adminName);
  showToast("Tipo de ativo atualizado!","success");
  } else {
- addAssetType({ id: Math.random().toString(36).substr(2, 9), name: editingType.name.trim(), customFieldIds: editingType.customFieldIds || [] }, adminName);
+ addAssetType({ 
+   id: Math.random().toString(36).substr(2, 9), 
+   name: editingType.name.trim(), 
+   customFieldIds: editingType.customFieldIds || [],
+   allowMultipleUsers: !!editingType.allowMultipleUsers
+ }, adminName);
  showToast("Tipo de ativo criado!","success");
  }
- setEditingType({ name: '', customFieldIds: [] });
+ setEditingType({ name: '', customFieldIds: [], allowMultipleUsers: false });
  } catch (error) {
  showToast("Erro ao salvar tipo de ativo.","error");
  }
@@ -326,9 +331,20 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <h4 className="text-xl font-bold text-slate-100 mb-4">Tipos de Equipamento</h4>
  <form onSubmit={handleTypeSubmit} className="bg-blue-900/20 p-6 rounded-2xl border border-blue-900/40 mb-6 transition-colors">
  <h5 className="font-black text-blue-300 mb-4 uppercase text-xs tracking-widest">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
- <div className="flex gap-3 mb-6">
+ <div className="flex gap-3 mb-4">
  <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-800 text-slate-100 transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
  <button type="submit"className="bg-blue-500 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">Salvar</button>
+ </div>
+ 
+ <div className="flex items-center gap-2 mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700">
+  <input 
+  type="checkbox" 
+  id="allowMultipleUsers"
+  checked={!!editingType.allowMultipleUsers} 
+  onChange={e => setEditingType({...editingType, allowMultipleUsers: e.target.checked})}
+  className="h-4 w-4 rounded bg-slate-900 border-slate-700 text-blue-500 focus:ring-blue-500"
+  />
+  <label htmlFor="allowMultipleUsers" className="text-xs font-bold text-slate-300 cursor-pointer">Permitir vinculação a múltiplos colaboradores simultaneamente (Compartilhado)</label>
  </div>
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

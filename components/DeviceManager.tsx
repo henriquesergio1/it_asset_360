@@ -984,8 +984,9 @@ const DeviceManager = () => {
       onSelectAll={handleSelectAllToggle}
       selectedIds={selectedIds}
       renderRow={(d) => {
-        const { model, brand } = getModelDetails(d.modelId);
+        const { model, brand, type } = getModelDetails(d.modelId);
         const user = users.find(u => u.id === d.currentUserId);
+        const additionalUsers = (d.additionalUserIds || []).map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
         const isRet = d.status === DeviceStatus.RETIRED;
         const linkedSim = sims.find(s => s.id === d.linkedSimId);
         const sector = sectors.find(s => s.id === d.sectorId);
@@ -1009,7 +1010,14 @@ const DeviceManager = () => {
                   {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" referrerPolicy="no-referrer" /> : <ImageIcon className="text-slate-300" size={16}/>}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-bold text-slate-100 text-xs group-hover:text-blue-400 transition-colors uppercase tracking-tight">{model?.name}</div>
+                  <div className="font-bold text-slate-100 text-xs group-hover:text-blue-400 transition-colors uppercase tracking-tight flex items-center gap-1.5">
+                    {model?.name}
+                    {type?.allowMultipleUsers && (
+                      <span className="bg-amber-900/40 text-amber-400 text-[8px] px-1.5 py-0.5 rounded border border-amber-800/50 flex items-center gap-1" title="Dispositivo Compartilhado">
+                        <Users size={8}/> COMPARTILHADO
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col">
                     <div className="text-[9px] font-black uppercase tracking-tighter text-slate-500">{brand?.name}</div>
                     <div className="text-[8px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
@@ -1026,7 +1034,27 @@ const DeviceManager = () => {
             {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[10px] text-slate-500">-</span>}</td>)}
             {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[9px] text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
             <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-900/20 text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-900/20 text-rose-400 border-rose-800/50' : ' bg-blue-900/20 text-blue-400 border-blue-800/50'}`}>{d.status}</span></td>
-            <td className="px-6 py-4">{user ? (<div className="flex flex-col" onClick={(e) => e.stopPropagation()}><span className="text-xs font-bold text-blue-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span><span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter">{user.internalCode || d.internalCode || 'S/ Cód'}</span></div>) : <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}</td>
+            <td className="px-6 py-4">
+              {user ? (
+                <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-blue-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
+                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter whitespace-nowrap">({user.internalCode || d.internalCode || 'S/ Cód'})</span>
+                  </div>
+                  
+                  {additionalUsers.length > 0 && (
+                    <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-1 mt-1">
+                      {additionalUsers.map(au => (
+                        <div key={au.id} className="flex items-center gap-2">
+                          <span className="text-[10px] font-medium text-slate-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${au.id}`)}>{au.fullName}</span>
+                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">(ADICIONAL)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}
+            </td>
             <td className="px-6 py-4 text-right truncate">
               <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                 {(d.status === DeviceStatus.AVAILABLE || d.status === DeviceStatus.IN_USE) && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-orange-400 hover:bg-orange-900/30 rounded-xl transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>)}
