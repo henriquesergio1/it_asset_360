@@ -87,7 +87,7 @@ const DB_SCHEMAS = {
     SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50), LicenseKey NVARCHAR(MAX), LicenseClient NVARCHAR(255), LicenseExpires DATETIME)`,
     Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX))`,
+    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX), AllowMultipleUsers BIT DEFAULT 0)`,
     MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileBinary VARBINARY(MAX), IsManual BIT DEFAULT 0, ResolutionReason NVARCHAR(MAX))`,
@@ -293,6 +293,13 @@ async function initializeDatabase() {
                     if (checkNotes.recordset.length === 0) {
                         console.log('- Adicionando coluna Notes em Terms...');
                         await pool.request().query('ALTER TABLE Terms ADD Notes NVARCHAR(MAX) NULL');
+                    }
+                }
+                if (table === 'AssetTypes') {
+                    const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
+                    if (checkAllow.recordset.length === 0) {
+                        console.log(`- Coluna AllowMultipleUsers não encontrada em AssetTypes. Adicionando...`);
+                        await pool.request().query('ALTER TABLE AssetTypes ADD AllowMultipleUsers BIT DEFAULT 0');
                     }
                 }
                 if (table === 'Tasks') {

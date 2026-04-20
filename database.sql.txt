@@ -1,8 +1,8 @@
 -- IT Asset 360 - Script Completo de Banco de Dados (SQL Server)
--- Versão: 2.20.4
--- Este script contém todas as tabelas necessárias para o funcionamento inicial do sistema.
+-- Versão: 3.22.1
+-- Este script contém todas as tabelas necessárias para o funcionamento inicial do sistema atualizado.
 
--- Tabela de Dispositivos
+-- Tabela de Dispositivos (Devices)
 CREATE TABLE Devices (
     Id NVARCHAR(255) PRIMARY KEY,
     AssetTag NVARCHAR(255) UNIQUE,
@@ -21,7 +21,8 @@ CREATE TABLE Devices (
     PurchaseCost FLOAT,
     InvoiceNumber NVARCHAR(255),
     Supplier NVARCHAR(255),
-    PurchaseInvoiceUrl NVARCHAR(MAX),
+    PurchaseInvoiceBinary VARBINARY(MAX),
+    DeviceImageBinary VARBINARY(MAX),
     CustomData NVARCHAR(MAX)
 );
 
@@ -36,7 +37,7 @@ CREATE TABLE SimCards (
     PlanDetails NVARCHAR(MAX)
 );
 
--- Tabela de Colaboradores
+-- Tabela de Colaboradores (Users)
 CREATE TABLE Users (
     Id NVARCHAR(255) PRIMARY KEY,
     FullName NVARCHAR(255),
@@ -48,11 +49,13 @@ CREATE TABLE Users (
     SectorId NVARCHAR(255),
     InternalCode NVARCHAR(255),
     Active BIT,
+    Status NVARCHAR(50) DEFAULT 'Ativo',
+    OnLeaveUntil DATETIME NULL,
     HasPendingIssues BIT,
     PendingIssuesNote NVARCHAR(MAX)
 );
 
--- Tabela de Logs de Auditoria
+-- Tabela de Logs de Auditoria (AuditLogs)
 CREATE TABLE AuditLogs (
     Id NVARCHAR(255) PRIMARY KEY,
     AssetId NVARCHAR(255),
@@ -67,127 +70,131 @@ CREATE TABLE AuditLogs (
     NewData NVARCHAR(MAX)
 );
 
--- Tabela de Usuários do Sistema (Administradores/Operadores)
+-- Tabela de Usuários do Sistema (SystemUsers)
 CREATE TABLE SystemUsers (
-    Id NVARCHAR(255) PRIMARY KEY,
-    Name NVARCHAR(255),
-    Email NVARCHAR(255) UNIQUE,
-    Password NVARCHAR(255),
+    Id NVARCHAR(255) PRIMARY KEY, 
+    Name NVARCHAR(255), 
+    Email NVARCHAR(255) UNIQUE, 
+    Password NVARCHAR(255), 
     Role NVARCHAR(50)
 );
 
--- Tabela de Configurações do Sistema
+-- Tabela de Configurações do Sistema (SystemSettings)
 CREATE TABLE SystemSettings (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    AppName NVARCHAR(255),
-    LogoUrl NVARCHAR(MAX),
-    Cnpj NVARCHAR(50),
-    TermTemplate NVARCHAR(MAX),
-    AccentColor NVARCHAR(50),
-    LicenseKey NVARCHAR(MAX),
-    LicenseClient NVARCHAR(255),
+    Id INT PRIMARY KEY IDENTITY(1,1), 
+    AppName NVARCHAR(255), 
+    LogoUrl NVARCHAR(MAX), 
+    Cnpj NVARCHAR(50), 
+    TermTemplate NVARCHAR(MAX), 
+    AccentColor NVARCHAR(50) DEFAULT '#2563eb', 
+    LicenseKey NVARCHAR(MAX), 
+    LicenseClient NVARCHAR(255), 
     LicenseExpires DATETIME
 );
 
--- Tabela de Modelos de Ativos
+-- Tabela de Modelos (Models)
 CREATE TABLE Models (
-    Id NVARCHAR(255) PRIMARY KEY,
-    Name NVARCHAR(255),
-    BrandId NVARCHAR(255),
-    TypeId NVARCHAR(255),
-    ImageUrl NVARCHAR(MAX)
+    Id NVARCHAR(255) PRIMARY KEY, 
+    Name NVARCHAR(255), 
+    BrandId NVARCHAR(255), 
+    TypeId NVARCHAR(255), 
+    ImageBinary VARBINARY(MAX)
 );
 
--- Tabela de Marcas
+-- Tabela de Marcas (Brands)
 CREATE TABLE Brands (
-    Id NVARCHAR(255) PRIMARY KEY,
+    Id NVARCHAR(255) PRIMARY KEY, 
     Name NVARCHAR(255) UNIQUE
 );
 
--- Tabela de Tipos de Ativos
+-- Tabela de Tipos de Ativos (AssetTypes)
 CREATE TABLE AssetTypes (
-    Id NVARCHAR(255) PRIMARY KEY,
-    Name NVARCHAR(255) UNIQUE,
-    CustomFieldIds NVARCHAR(MAX)
+    Id NVARCHAR(255) PRIMARY KEY, 
+    Name NVARCHAR(255) UNIQUE, 
+    CustomFieldIds NVARCHAR(MAX),
+    AllowMultipleUsers BIT DEFAULT 0
 );
 
--- Tabela de Registros de Manutenção
+-- Tabela de Manutenção (MaintenanceRecords)
 CREATE TABLE MaintenanceRecords (
-    Id NVARCHAR(255) PRIMARY KEY,
-    DeviceId NVARCHAR(255),
-    Description NVARCHAR(MAX),
-    Cost FLOAT,
-    Date DATETIME,
-    Type NVARCHAR(100),
-    Provider NVARCHAR(255),
-    InvoiceUrl NVARCHAR(MAX)
+    Id NVARCHAR(255) PRIMARY KEY, 
+    DeviceId NVARCHAR(255), 
+    Description NVARCHAR(MAX), 
+    Cost FLOAT, 
+    Date DATETIME, 
+    Type NVARCHAR(100), 
+    Provider NVARCHAR(255), 
+    InvoiceBinary VARBINARY(MAX)
 );
 
--- Tabela de Setores/Cargos
+-- Tabela de Setores (Sectors)
 CREATE TABLE Sectors (
-    Id NVARCHAR(255) PRIMARY KEY,
+    Id NVARCHAR(255) PRIMARY KEY, 
     Name NVARCHAR(255) UNIQUE
 );
 
--- Tabela de Termos de Responsabilidade
+-- Tabela de Termos (Terms)
 CREATE TABLE Terms (
-    Id NVARCHAR(255) PRIMARY KEY,
-    UserId NVARCHAR(255),
-    Type NVARCHAR(50),
-    AssetDetails NVARCHAR(MAX),
-    Date DATETIME,
-    FileUrl NVARCHAR(MAX)
+    Id NVARCHAR(255) PRIMARY KEY, 
+    UserId NVARCHAR(255), 
+    Type NVARCHAR(50), 
+    AssetDetails NVARCHAR(MAX), 
+    Date DATETIME, 
+    FileBinary VARBINARY(MAX), 
+    IsManual BIT DEFAULT 0, 
+    ResolutionReason NVARCHAR(MAX),
+    EvidenceBinary VARBINARY(MAX) NULL,
+    Condition NVARCHAR(50) NULL,
+    DamageDescription NVARCHAR(MAX) NULL,
+    Evidence2Binary VARBINARY(MAX) NULL,
+    Evidence3Binary VARBINARY(MAX) NULL,
+    Notes NVARCHAR(MAX) NULL
 );
 
--- Tabela de Tipos de Acessórios
+-- Tabela de Tipos de Acessórios (AccessoryTypes)
 CREATE TABLE AccessoryTypes (
-    Id NVARCHAR(255) PRIMARY KEY,
+    Id NVARCHAR(255) PRIMARY KEY, 
     Name NVARCHAR(255) UNIQUE
 );
 
--- Tabela de Acessórios Vinculados a Dispositivos
+-- Tabela de Acessórios (DeviceAccessories)
 CREATE TABLE DeviceAccessories (
-    Id NVARCHAR(255) PRIMARY KEY,
-    DeviceId NVARCHAR(255),
-    AccessoryTypeId NVARCHAR(255),
+    Id NVARCHAR(255) PRIMARY KEY, 
+    DeviceId NVARCHAR(255), 
+    AccessoryTypeId NVARCHAR(255), 
     Name NVARCHAR(255)
 );
 
--- Tabela de Campos Personalizados
+-- Tabela de Campos Personalizados (CustomFields)
 CREATE TABLE CustomFields (
-    Id NVARCHAR(255) PRIMARY KEY,
+    Id NVARCHAR(255) PRIMARY KEY, 
     Name NVARCHAR(255) UNIQUE
 );
 
--- Tabela de Contas e Licenças de Software
+-- Tabela de Contas e Softwares (SoftwareAccounts)
 CREATE TABLE SoftwareAccounts (
-    Id NVARCHAR(255) PRIMARY KEY,
-    Name NVARCHAR(255),
-    Type NVARCHAR(100),
-    Login NVARCHAR(255),
-    Password NVARCHAR(255),
-    AccessUrl NVARCHAR(MAX),
-    Status NVARCHAR(50),
-    UserId NVARCHAR(255),
-    DeviceId NVARCHAR(255),
-    SectorId NVARCHAR(255),
+    Id NVARCHAR(255) PRIMARY KEY, 
+    Name NVARCHAR(255), 
+    Type NVARCHAR(100), 
+    Login NVARCHAR(255), 
+    Password NVARCHAR(255), 
+    AccessUrl NVARCHAR(MAX), 
+    Status NVARCHAR(50), 
+    UserIds NVARCHAR(MAX), 
+    DeviceIds NVARCHAR(MAX), 
+    SectorId NVARCHAR(255), 
     Notes NVARCHAR(MAX)
 );
 
--- Tabela de Configuração de Banco de Dados Externo (ERP)
-CREATE TABLE ExternalDbConfig (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Technology NVARCHAR(50),
-    Host NVARCHAR(255),
-    Port INT,
-    Username NVARCHAR(255),
-    Password NVARCHAR(255),
-    DatabaseName NVARCHAR(255),
-    SelectionQuery NVARCHAR(MAX),
-    LastSync DATETIME
+-- Tabela de Overrides de Expediente
+CREATE TABLE ExpedienteOverrides (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Codigo NVARCHAR(255) UNIQUE,
+    Observation NVARCHAR(MAX),
+    ReactivationDate DATETIME NULL
 );
 
--- Tabela de Gestão de Tarefas
+-- Gestão de Tarefas (Tasks)
 CREATE TABLE Tasks (
     Id NVARCHAR(255) PRIMARY KEY,
     Title NVARCHAR(255),
@@ -207,7 +214,7 @@ CREATE TABLE Tasks (
     MaintenanceItems NVARCHAR(MAX)
 );
 
--- Tabela de Histórico de Tarefas (Auditoria Imutável)
+-- Histórico de Tarefas (TaskLogs)
 CREATE TABLE TaskLogs (
     Id NVARCHAR(255) PRIMARY KEY,
     TaskId NVARCHAR(255),
@@ -217,9 +224,64 @@ CREATE TABLE TaskLogs (
     Notes NVARCHAR(MAX)
 );
 
--- Populando dados iniciais essenciais
-INSERT INTO SystemSettings (AppName, LogoUrl) VALUES ('IT Asset 360', '');
-INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server');
+-- Configuração de DB Externo
+CREATE TABLE ExternalDbConfig (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    Technology NVARCHAR(50),
+    Host NVARCHAR(255),
+    Port INT,
+    Username NVARCHAR(255),
+    Password NVARCHAR(255),
+    DatabaseName NVARCHAR(255),
+    SelectionQuery NVARCHAR(MAX),
+    LastSync DATETIME
+);
 
-PRINT 'Banco de dados inicializado com sucesso.';
+-- Insumos (Consumables)
+CREATE TABLE Consumables (
+    Id NVARCHAR(255) PRIMARY KEY,
+    Name NVARCHAR(255) NOT NULL,
+    Category NVARCHAR(100) NOT NULL,
+    CurrentStock INT DEFAULT 0,
+    MinStock INT DEFAULT 0,
+    Unit NVARCHAR(50) NOT NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
 
+-- Transações de Insumos (ConsumableTransactions)
+CREATE TABLE ConsumableTransactions (
+    Id NVARCHAR(255) PRIMARY KEY,
+    ConsumableId NVARCHAR(255) FOREIGN KEY REFERENCES Consumables(Id) ON DELETE CASCADE,
+    Type NVARCHAR(50) NOT NULL,
+    Quantity INT NOT NULL,
+    Date DATETIME DEFAULT GETDATE(),
+    AdminUser NVARCHAR(255),
+    Notes NVARCHAR(MAX)
+);
+
+-- Índices Recomendados
+CREATE INDEX IX_Devices_Status ON Devices (Status);
+CREATE INDEX IX_Devices_ModelId ON Devices (ModelId);
+CREATE INDEX IX_Devices_CurrentUserId ON Devices (CurrentUserId);
+CREATE INDEX IX_Devices_SectorId ON Devices (SectorId);
+CREATE INDEX IX_Devices_LinkedSimId ON Devices (LinkedSimId);
+CREATE INDEX IX_Tasks_Status ON Tasks (Status);
+CREATE INDEX IX_Tasks_AssignedTo ON Tasks (AssignedTo);
+CREATE INDEX IX_Tasks_DeviceId ON Tasks (DeviceId);
+CREATE INDEX IX_Users_Active ON Users (Active);
+CREATE INDEX IX_Users_SectorId ON Users (SectorId);
+CREATE INDEX IX_SimCards_Status ON SimCards (Status);
+CREATE INDEX IX_SimCards_Operator ON SimCards (Operator);
+
+-- Dados Iniciais
+IF NOT EXISTS (SELECT 1 FROM SystemSettings)
+BEGIN
+    INSERT INTO SystemSettings (AppName, LogoUrl, AccentColor) VALUES ('IT Asset 360', '', '#2563eb');
+END
+
+IF NOT EXISTS (SELECT 1 FROM ExternalDbConfig)
+BEGIN
+    INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server');
+END
+
+PRINT 'Banco de dados sincronizado e atualizado com sucesso.';
