@@ -144,7 +144,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  </thead>
  <tbody className="divide-y divide-slate-800">
  {diffs.map((d, i) => (
- <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/50 bg-slate-900">
+ <tr key={i} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:border-l-blue-500 hover:bg-slate-800/60 bg-slate-900">
  <td className="px-4 py-3 font-bold text-slate-300">{d.field}</td>
  <td className="px-4 py-3 text-red-400 bg-red-50/30 bg-red-900/10 line-through decoration-red-300 decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
  <td className="px-4 py-3 text-emerald-400 bg-emerald-50/30 bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
@@ -366,7 +366,7 @@ const AdminPanel = () => {
  </thead>
  <tbody className="divide-y divide-slate-800">
  {systemUsers.map(u => (
- <tr key={u.id} className="border-b border-slate-800/50 hover:bg-slate-50/50 hover:bg-slate-800/50 bg-slate-900 transition-colors">
+ <tr key={u.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
  <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
  <td className="px-6 py-4 font-medium">{u.email}</td>
  <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
@@ -627,7 +627,7 @@ const AdminPanel = () => {
  ) : filteredLogs.length === 0 ? (
  <tr><td colSpan={5} className="px-6 py-8 text-center">Nenhum log encontrado.</td></tr>
  ) : filteredLogs.map((log: AuditLog) => (
- <tr key={log.id} className="border-b border-slate-800/50 hover:bg-blue-50/20 hover:bg-blue-900/20 transition-colors bg-slate-900">
+ <tr key={log.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
  <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</td>
  <td className="px-6 py-4 font-bold text-slate-100">{log.adminUser}</td>
  <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">{log.action}</span></td>

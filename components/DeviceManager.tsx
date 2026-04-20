@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, Download, FileSpreadsheet, FileJson } from 'lucide-react';
 import { SortableResizableHeader } from './SortableResizableHeader';
+import { DataTable, Column } from './DataTable';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
@@ -437,7 +438,30 @@ const DeviceManager = () => {
  const [filterNoInvoice, setFilterNoInvoice] = useState(false);
  const [filterAssetType, setFilterAssetType] = useState<string>('');
 
- const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const deviceColumns: Column<Device>[] = [
+    { key: 'modelId', label: 'Foto/Modelo', minWidth: '200px', sortable: true },
+    ...(visibleColumns.includes('assetTag') ? [{ key: 'assetTag', label: 'Patrimônio', minWidth: '120px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('imei') ? [{ key: 'imei', label: 'IMEI', minWidth: '150px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('serial') ? [{ key: 'serialNumber', label: 'S/N', minWidth: '120px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('sectorCode') ? [{ key: 'sectorId', label: 'Cód. Setor', minWidth: '100px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('sectorName') ? [{ key: 'sectorId', label: 'Cargo / Função', minWidth: '150px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('pulsusId') ? [{ key: 'pulsusId', label: 'Pulsus ID', minWidth: '100px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('linkedSim') ? [{ key: 'linkedSimId', label: 'Chip', minWidth: '150px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('purchaseInfo') ? [{ key: 'purchaseDate', label: 'Aquisição', minWidth: '120px', sortable: true } as Column<Device>] : []),
+    { key: 'status', label: 'Status', minWidth: '120px', sortable: true },
+    { key: 'currentUserId', label: 'Responsável Atual', minWidth: '180px', sortable: true },
+    { key: 'actions', label: 'Ações', minWidth: '150px', sortable: false }
+  ];
+
+  const handleSelectAllToggle = () => {
+    if (selectedIds.length === paginatedDevices.length && paginatedDevices.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedDevices.map(d => d.id));
+    }
+  };
  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
  const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'RESPONSIBLE' | 'SECTOR' | null>(null);
  const [bulkValue, setBulkValue] = useState<string>('');
@@ -949,81 +973,79 @@ const DeviceManager = () => {
  </div>
  </div>
 
- <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
- <div className="overflow-x-auto">
- <table className="w-full text-sm text-left min-w-[1200px] table-fixed">
- <thead className="bg-slate-800/50">
- <tr>
- <th className="px-6 py-4 w-12 border-b border-slate-700">
- <input 
- type="checkbox"
- checked={selectedIds.length === paginatedDevices.length && paginatedDevices.length > 0}
- onChange={handleSelectAll}
- className="h-4 w-4 rounded focus:ring-indigo-500"
- />
- </th>
- <SortableResizableHeader label="Foto/Modelo" sortKey="modelId" currentSort={sortConfig} requestSort={requestSort} minWidth="200px" width={columnWidths['modelId']} onResize={(x, w) => handleResize('modelId', x, w)} />
- {visibleColumns.includes('assetTag') && <SortableResizableHeader label="Patrimônio" sortKey="assetTag" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['assetTag']} onResize={(x, w) => handleResize('assetTag', x, w)} />}
- {visibleColumns.includes('imei') && <SortableResizableHeader label="IMEI" sortKey="imei" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['imei']} onResize={(x, w) => handleResize('imei', x, w)} />}
- {visibleColumns.includes('serial') && <SortableResizableHeader label="S/N" sortKey="serialNumber" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['serialNumber']} onResize={(x, w) => handleResize('serialNumber', x, w)} />}
- {visibleColumns.includes('sectorCode') && <SortableResizableHeader label="Cód. Setor" sortKey="sectorId" currentSort={sortConfig} requestSort={requestSort} minWidth="100px" width={columnWidths['sectorId']} onResize={(x, w) => handleResize('sectorId', x, w)} />}
- {visibleColumns.includes('sectorName') && <SortableResizableHeader label="Cargo / Função" sortKey="sectorId" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['sectorId']} onResize={(x, w) => handleResize('sectorId', x, w)} />}
- {visibleColumns.includes('pulsusId') && <SortableResizableHeader label="Pulsus ID" sortKey="pulsusId" currentSort={sortConfig} requestSort={requestSort} minWidth="100px" width={columnWidths['pulsusId']} onResize={(x, w) => handleResize('pulsusId', x, w)} />}
- {visibleColumns.includes('linkedSim') && <SortableResizableHeader label="Chip" sortKey="linkedSimId" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['linkedSimId']} onResize={(x, w) => handleResize('linkedSimId', x, w)} />}
- {visibleColumns.includes('purchaseInfo') && <SortableResizableHeader label="Aquisição" sortKey="purchaseDate" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['purchaseDate']} onResize={(x, w) => handleResize('purchaseDate', x, w)} />}
- <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={requestSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
- <SortableResizableHeader label="Responsável Atual" sortKey="currentUserId" currentSort={sortConfig} requestSort={requestSort} minWidth="180px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '150px' }}>Ações</th>
- </tr>
- </thead>
- <tbody>
- {paginatedDevices.map(d => {
- const { model, brand } = getModelDetails(d.modelId);
- const user = users.find(u => u.id === d.currentUserId);
- const isRet = d.status === DeviceStatus.RETIRED;
- const linkedSim = sims.find(s => s.id === d.linkedSimId);
- const sector = sectors.find(s => s.id === d.sectorId);
- return (
- <tr key={d.id} onClick={() => handleOpenModal(d, true)} className={`border-b border-slate-800/50 transition-colors cursor-pointer ${isRet ? 'opacity-60 grayscale hover:bg-slate-800/40' : 'hover:bg-blue-50/30 hover:bg-slate-800/40 bg-slate-900'} ${selectedIds.includes(d.id) ? 'bg-indigo-50/50 bg-indigo-900/20' : ''}`}>
- <td className="px-6 py-4"onClick={(e) => e.stopPropagation()}>
- <input 
- type="checkbox"
- checked={selectedIds.includes(d.id)}
- onChange={() => handleSelectOne(d.id)}
- className="h-4 w-4 rounded focus:ring-indigo-500"
- />
- </td>
- <td className="px-6 py-4 truncate">
- <div className="flex items-center gap-3">
- <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 shadow-inner shrink-0">
- {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo"/> : <ImageIcon className="text-slate-300" size={16}/>}
- </div>
- <div className="min-w-0">
- <div className="font-bold text-slate-100 truncate text-xs">{model?.name}</div>
- <div className="flex flex-col">
- <div className="text-[9px] font-black uppercase tracking-tighter text-slate-400">{brand?.name}</div>
- <div className="text-[8px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
- </div>
- </div>
- </div>
- </td>
- {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300"><TagIcon size={12} className=""/> {d.assetTag || '---'}</div></td>)}
- {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] truncate">{d.imei || '---'}</td>)}
- {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[9px] truncate">{d.serialNumber || '---'}</td>)}
- {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold uppercase tracking-widest bg-slate-800 px-2.5 py-1 rounded-full">{d.internalCode || '---'}</span></td>)}
- {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold bg-slate-800 px-2.5 py-1 rounded-full">{sector?.name || '---'}</span></td>)}
- {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-900/30 px-2.5 py-1 rounded-full">{d.pulsusId}</span>) : <span className="text-[10px] text-slate-200">-</span>}</td>)}
- {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[10px] text-slate-200">-</span>}</td>)}
- {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[9px]">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
- <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/30 text-emerald-400' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-900/30 text-amber-400' : d.status === DeviceStatus.RETIRED ? ' bg-rose-900/30 text-rose-400' : ' bg-blue-900/30 text-blue-400'}`}>{d.status}</span></td>
- <td className="px-6 py-4 truncate">{user ? (<div className="flex flex-col"onClick={(e) => e.stopPropagation()}><span className="text-xs font-bold text-blue-400 underline cursor-pointer"onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span><span className="text-[9px] font-black uppercase">{user.internalCode || d.internalCode || 'S/ Cód'}</span></div>) : <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter italic">Livre no Estoque</span>}</td>
- <td className="px-6 py-4 text-right truncate"><div className="flex items-center justify-end gap-1"onClick={(e) => e.stopPropagation()}>{(d.status === DeviceStatus.AVAILABLE || d.status === DeviceStatus.IN_USE) && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 hover:bg-orange-900/30 rounded-lg transition-all"title="Enviar para Manutenção"><Wrench size={16}/></button>)}{d.status === DeviceStatus.MAINTENANCE && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 hover:bg-green-900/30 rounded-lg transition-all"title="Concluir Manutenção"><CheckCircle size={16}/></button>)}{d.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} target="_blank"rel="noopener noreferrer"className="p-1.5 text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-all"title="Abrir MDM Pulsus"><ShieldCheck size={16}/></a>)}{isRet ? (<button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-1.5 text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-all"title="Restaurar Ativo"><RotateCcw size={16}/></button>) : (<><button onClick={() => handleOpenModal(d, false)} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all"title="Editar"><Edit2 size={16}/></button><button onClick={() => handleDeleteAttempt(d)} className="p-1.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-all"title="Descartar"><Trash2 size={16}/></button></>)}</div></td>
- </tr>
- )
- })}
- </tbody>
- </table>
- </div>
+  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl ring-1 ring-white/5">
+    <DataTable
+      columns={deviceColumns}
+      data={paginatedDevices}
+      sortConfig={sortConfig}
+      requestSort={requestSort}
+      columnWidths={columnWidths}
+      onResize={handleResize}
+      onSelectAll={handleSelectAllToggle}
+      selectedIds={selectedIds}
+      renderRow={(d) => {
+        const { model, brand } = getModelDetails(d.modelId);
+        const user = users.find(u => u.id === d.currentUserId);
+        const isRet = d.status === DeviceStatus.RETIRED;
+        const linkedSim = sims.find(s => s.id === d.linkedSimId);
+        const sector = sectors.find(s => s.id === d.sectorId);
+        return (
+          <tr 
+            key={d.id} 
+            onClick={() => handleOpenModal(d, true)} 
+            className={`border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900 ${isRet ? 'opacity-60 grayscale' : ''} ${selectedIds.includes(d.id) ? 'bg-blue-900/20 border-l-blue-500 text-blue-100' : ''}`}
+          >
+            <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+              <input 
+                type="checkbox"
+                checked={selectedIds.includes(d.id)}
+                onChange={() => handleSelectOne(d.id)}
+                className="h-4 w-4 rounded focus:ring-indigo-500 border-slate-700 bg-slate-800"
+              />
+            </td>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 shadow-inner shrink-0 ring-1 ring-white/5">
+                  {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" referrerPolicy="no-referrer" /> : <ImageIcon className="text-slate-300" size={16}/>}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-slate-100 text-xs group-hover:text-blue-400 transition-colors uppercase tracking-tight">{model?.name}</div>
+                  <div className="flex flex-col">
+                    <div className="text-[9px] font-black uppercase tracking-tighter text-slate-500">{brand?.name}</div>
+                    <div className="text-[8px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
+                  </div>
+                </div>
+              </div>
+            </td>
+            {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300"><TagIcon size={12} className="text-slate-500"/> {d.assetTag || '---'}</div></td>)}
+            {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] truncate text-slate-400">{d.imei || '---'}</td>)}
+            {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[9px] truncate text-slate-400">{d.serialNumber || '---'}</td>)}
+            {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold uppercase tracking-widest bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{d.internalCode || '---'}</span></td>)}
+            {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{sector?.name || '---'}</span></td>)}
+            {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-900/30 px-2.5 py-1 rounded-full border border-blue-800/30">{d.pulsusId}</span>) : <span className="text-[10px] text-slate-500">-</span>}</td>)}
+            {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[10px] text-slate-500">-</span>}</td>)}
+            {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[9px] text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
+            <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-900/20 text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-900/20 text-rose-400 border-rose-800/50' : ' bg-blue-900/20 text-blue-400 border-blue-800/50'}`}>{d.status}</span></td>
+            <td className="px-6 py-4">{user ? (<div className="flex flex-col" onClick={(e) => e.stopPropagation()}><span className="text-xs font-bold text-blue-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span><span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter">{user.internalCode || d.internalCode || 'S/ Cód'}</span></div>) : <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}</td>
+            <td className="px-6 py-4 text-right truncate">
+              <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                {(d.status === DeviceStatus.AVAILABLE || d.status === DeviceStatus.IN_USE) && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-orange-400 hover:bg-orange-900/30 rounded-xl transition-all" title="Enviar para Manutenção"><Wrench size={16}/></button>)}
+                {d.status === DeviceStatus.MAINTENANCE && (<button onClick={() => toggleMaintenanceStatus(d)} className="p-1.5 text-green-400 hover:bg-green-900/30 rounded-xl transition-all" title="Concluir Manutenção"><CheckCircle size={16}/></button>)}
+                {d.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${d.pulsusId}`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-indigo-400 hover:bg-indigo-900/30 rounded-xl transition-all" title="Abrir MDM Pulsus"><ShieldCheck size={16}/></a>)}
+                {isRet ? (
+                  <button onClick={() => { setRestoreTargetId(d.id); setRestoreReason(''); setIsRestoreModalOpen(true); }} className="p-1.5 text-indigo-400 hover:bg-indigo-900/30 rounded-xl transition-all" title="Restaurar Ativo"><RotateCcw size={16}/></button>
+                ) : (
+                  <>
+                    <button onClick={() => handleOpenModal(d, false)} className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-xl transition-all" title="Editar"><Edit2 size={16}/></button>
+                    <button onClick={() => handleDeleteAttempt(d)} className="p-1.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all" title="Descartar"><Trash2 size={16}/></button>
+                  </>
+                )}
+              </div>
+            </td>
+          </tr>
+        );
+      }}
+    />
  <div className="bg-slate-900 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors">
  <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold uppercase tracking-widest">Exibir:</span><select className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-300 outline-none focus:ring-2 focus:ring-blue-500 transition-all"value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold uppercase tracking-widest">Total: {totalItems} ativos</p></div>
  {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : ' text-blue-400 hover:bg-blue-900/30'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-blue-300 bg-blue-900/40 px-3 py-1.5 rounded-lg">{currentPage}</span><span className="text-xs font-bold uppercase mx-1">de</span><span className="text-xs font-black text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : ' text-blue-400 hover:bg-blue-900/30'}`}><ChevronRight size={18}/></button></div>)}

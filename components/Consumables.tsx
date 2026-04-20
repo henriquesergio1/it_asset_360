@@ -326,7 +326,7 @@ const Consumables = () => {
                                 filteredConsumables.map(c => {
                                     const isLowStock = c.CurrentStock <= c.MinStock;
                                     return (
-                                        <tr key={c.Id} className="hover:bg-slate-800/20 transition-colors">
+                                        <tr key={c.Id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
                                             <td className="p-4">
                                                 <div className="font-medium text-slate-200">{c.Name}</div>
                                                 <div className="text-xs text-slate-500">{c.Category}</div>

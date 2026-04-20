@@ -900,7 +900,7 @@ const Reports = () => {
                 <tbody className="divide-y divide-slate-800/50">
                   {reportData.length > 0 ? (
                     reportData.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/50">
+                      <tr key={item.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-blue-900/30 text-blue-400 flex items-center justify-center font-bold text-xs">
@@ -1044,7 +1044,7 @@ const Reports = () => {
                     <tbody className="divide-y divide-slate-800/50">
                       {consumablesReportData.length > 0 ? (
                         consumablesReportData.map(t => (
-                          <tr key={t.id} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/50">
+                          <tr key={t.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
                             <td className="px-6 py-4 text-xs">
                               {new Date(t.date).toLocaleString('pt-BR')}
                             </td>
@@ -1096,7 +1096,7 @@ const Reports = () => {
                 <tbody className="divide-y divide-slate-800/50">
                   {assetsSummaryData.length > 0 ? (
                     assetsSummaryData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/50 transition-colors border-b border-slate-800/50">
+                      <tr key={idx} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
                         <td className="px-6 py-4">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-xs font-medium">
                             <Tag size={12} />
@@ -1165,7 +1165,7 @@ const Reports = () => {
                   <tbody className="divide-y divide-slate-800">
                     {financialReportData.length > 0 ? (
                       financialReportData.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-800/50 transition-colors">
+                        <tr key={item.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-100">{item.model}</span>

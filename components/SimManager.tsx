@@ -253,7 +253,7 @@ const SimManager = () => {
  {filteredSims.map((sim) => {
  const assignedUser = users.find(u => u.id === sim.currentUserId);
  return (
- <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-blue-900/20 transition-colors cursor-pointer group">
+ <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer group">
  <td className="px-6 py-4 font-bold text-slate-100 truncate">{sim.phoneNumber}</td>
  <td className="px-6 py-4 truncate">
  <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold uppercase tracking-wider">{sim.operator}</span>

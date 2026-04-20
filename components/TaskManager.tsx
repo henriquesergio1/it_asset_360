@@ -426,7 +426,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  filteredTasks.map((task) => (
  <tr 
  key={task.id} 
- className={`hover:bg-slate-800/30 transition-colors cursor-pointer group border-b border-slate-800/50 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-50/50 bg-indigo-900/10' : ' bg-slate-900'}`}
+ className={`border-b border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 border-slate-800/50 ${selectedTasksIds.includes(task.id) ? 'bg-blue-900/20 border-l-blue-500' : ' bg-slate-900'}`}
  onClick={() => setSelectedTaskId(task.id)}
  >
  <td className="px-6 py-4"onClick={(e) => e.stopPropagation()}>
