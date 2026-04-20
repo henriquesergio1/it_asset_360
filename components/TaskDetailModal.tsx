@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Task, TaskLog, TaskStatus, SystemUser, TaskType, MaintenanceType, Device, DeviceModel } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 
 interface TaskDetailModalProps {
  task: Task;
@@ -472,7 +473,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <Clock size={14} /> Criada em {new Date(task.createdAt).toLocaleDateString('pt-BR')}
  </span>
  <span className="text-slate-500">•</span>
- <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+ <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
  task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/30 text-blue-400' :
  task.status === TaskStatus.PENDING ? ' bg-amber-900/30 text-amber-400' :
@@ -538,7 +539,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {(task.instructions || (task.manualAttachments && task.manualAttachments.length > 0)) && (
  <button 
  onClick={handlePrintManual}
- className="text-[10px] font-bold hover:text-slate-700 hover:text-slate-200 uppercase tracking-widest flex items-center gap-1 transition-colors"
+ className="text-[11px] font-bold hover:text-slate-700 hover:text-slate-200 uppercase tracking-widest flex items-center gap-1 transition-colors"
  >
  <Printer size={12} /> Imprimir
  </button>
@@ -550,7 +551,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  setTempManualAttachments(task.manualAttachments || []);
  setIsEditingInstructions(true);
  }}
- className="text-[10px] font-bold text-indigo-400 hover:underline uppercase tracking-widest"
+ className="text-[11px] font-bold text-indigo-400 hover:underline uppercase tracking-widest"
  >
  Editar Manual
  </button>
@@ -569,10 +570,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  
  <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700">
  <div className="flex items-center justify-between mb-2">
- <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+ <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
  </h4>
- <label className="cursor-pointer text-[10px] font-bold text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
+ <label className="cursor-pointer text-[11px] font-bold text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
  <Plus size={12} /> Adicionar
  <input type="file"className="hidden"accept="application/pdf,image/*"onChange={handleManualAttachmentUpload} />
  </label>
@@ -775,7 +776,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {editIsRecurring && (
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-[10px] font-bold uppercase tracking-widest mb-1">Padrão</label>
+ <label className="block text-[11px] font-bold uppercase tracking-widest mb-1">Padrão</label>
  <select 
  value={editRecurrenceConfig.type}
  onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, type: e.target.value as any })}
@@ -788,7 +789,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  {editRecurrenceConfig.type === 'Mensal (Dia Fixo)' && (
  <div>
- <label className="block text-[10px] font-bold uppercase tracking-widest mb-1">Dia do Mês</label>
+ <label className="block text-[11px] font-bold uppercase tracking-widest mb-1">Dia do Mês</label>
  <input 
  type="number"min="1"max="31"
  value={editRecurrenceConfig.dayOfMonth || ''}
@@ -799,7 +800,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  )}
  {editRecurrenceConfig.type === 'Intervalo de Meses' && (
  <div>
- <label className="block text-[10px] font-bold uppercase tracking-widest mb-1">A cada X meses</label>
+ <label className="block text-[11px] font-bold uppercase tracking-widest mb-1">A cada X meses</label>
  <input 
  type="number"min="1"
  value={editRecurrenceConfig.intervalMonths || ''}
@@ -993,7 +994,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  placeholder="Adicionar dispositivo..."
  value={searchTerm}
  onChange={(e) => setSearchTerm(e.target.value)}
- className="bg-transparent text-[10px] font-bold outline-none w-32 text-slate-100"
+ className="bg-transparent text-[11px] font-bold outline-none w-32 text-slate-100"
  />
  </div>
  {searchTerm && (
@@ -1008,7 +1009,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <button 
  key={device.id}
  onClick={() => handleAddDeviceToMaintenance(device)}
- className="w-full text-left p-2 hover:bg-slate-700 text-[10px] font-bold border-b border-slate-700 last:border-0"
+ className="w-full text-left p-2 hover:bg-slate-700 text-[11px] font-bold border-b border-slate-700 last:border-0"
  >
  {getDeviceName(device.id)}
  </button>
@@ -1028,14 +1029,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {!task.maintenanceItems && !isEditingGeneral ? (
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Dispositivo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Dispositivo</label>
  <div className="text-xs font-bold text-slate-200 truncate">
  {getDeviceName(task.deviceId)}
  </div>
  </div>
  
  <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Tipo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Tipo</label>
  <div className="text-xs font-bold text-slate-200">
  {task.maintenanceType === MaintenanceType.PREVENTIVE ? 'Preventiva' : 
  task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
@@ -1043,7 +1044,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  
  <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Custo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Custo</label>
  <div className="text-xs font-bold text-slate-200 flex items-center gap-1">
  <DollarSign size={12} /> {task.maintenanceCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
  </div>
@@ -1051,7 +1052,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  ) : (
  <div className="space-y-3">
- <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest px-1">
+ <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-widest px-1">
  <span>Checklist de Dispositivos</span>
  <span>{(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).filter(i => i.status === 'Concluído').length} / {(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).length} concluídos</span>
  </div>
@@ -1071,7 +1072,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  <div>
  <div className="text-xs font-bold text-slate-200">{getDeviceName(item.deviceId)}</div>
- <div className="text-[10px] font-medium">Patrimônio: {item.assetTag}</div>
+ <div className="text-[11px] font-medium">Patrimônio: {item.assetTag}</div>
  </div>
  </div>
  <div className="flex items-center gap-3">
@@ -1086,13 +1087,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <>
  {item.status === 'Concluído' ? (
  <div className="text-right">
- <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Concluído</div>
+ <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Concluído</div>
  <div className="text-[10px]">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
  </div>
  ) : item.status === 'Em Andamento' ? (
  <div className="flex items-center gap-2">
  <div className="text-right mr-2">
- <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Em Andamento</div>
+ <div className="text-[11px] font-bold text-blue-400 uppercase tracking-widest">Em Andamento</div>
  </div>
  <button 
  onClick={() => {
@@ -1102,7 +1103,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  setInvoiceFile(null);
  }}
  disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED || (completingItemId === item.deviceId)}
- className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+ className="px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
  >
  Finalizar
  </button>
@@ -1111,7 +1112,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <button 
  onClick={() => handleStartItem(item.deviceId)}
  disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
- className="px-3 py-1.5 text-white text-[10px] font-bold rounded-lg transition-colors disabled:opacity-50"
+ className="px-3 py-1.5 text-white text-[11px] font-bold rounded-lg transition-colors disabled:opacity-50"
  >
  Iniciar
  </button>
@@ -1130,7 +1131,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  >
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <div>
- <label className="block text-[10px] font-bold uppercase tracking-widest mb-1">Custo Final (R$)</label>
+ <label className="block text-[11px] font-bold uppercase tracking-widest mb-1">Custo Final (R$)</label>
  <input 
  type="number"
  step="0.01"
@@ -1140,8 +1141,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  />
  </div>
  <div>
- <label className="block text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Nota Fiscal</label>
- <label className="cursor-pointer flex items-center justify-center gap-2 p-2 bg-slate-800 border border-emerald-900/30 rounded-xl text-[10px] font-bold text-emerald-400 hover:bg-emerald-900/40 transition-all">
+ <label className="block text-[11px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Nota Fiscal</label>
+ <label className="cursor-pointer flex items-center justify-center gap-2 p-2 bg-slate-800 border border-emerald-900/30 rounded-xl text-[11px] font-bold text-emerald-400 hover:bg-emerald-900/40 transition-all">
  <Paperclip size={12} />
  {invoiceFile ? 'Anexo Pronto' : 'Anexar PDF/IMG'}
  <input type="file"className="hidden"accept="application/pdf,image/*"onChange={handleInvoiceUpload} />
@@ -1149,7 +1150,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  </div>
  <div>
- <label className="block text-[10px] font-bold uppercase tracking-widest mb-1">Observações / Nota</label>
+ <label className="block text-[11px] font-bold uppercase tracking-widest mb-1">Observações / Nota</label>
  <textarea 
  value={itemNote}
  onChange={(e) => setItemNote(e.target.value)}
@@ -1160,14 +1161,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="flex justify-end gap-2">
  <button 
  onClick={() => setCompletingItemId(null)}
- className="px-3 py-1.5 text-[10px] font-bold hover:text-slate-700 hover:text-slate-200"
+ className="px-3 py-1.5 text-[11px] font-bold hover:text-slate-700 hover:text-slate-200"
  >
  Cancelar
  </button>
  <button 
  onClick={handleCompleteItem}
  disabled={updating}
- className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-all disabled:opacity-50"
+ className="px-4 py-1.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all disabled:opacity-50"
  >
  {updating ? 'Salvando...' : 'Confirmar Conclusão'}
  </button>
@@ -1209,8 +1210,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  idx === 0 ? 'bg-indigo-600 bg-indigo-500 scale-110' : 'bg-slate-300 bg-slate-600'
  }`} />
  <div className="text-xs font-bold text-slate-100">{log.action}</div>
- <div className="text-[10px] flex items-center gap-1 mt-0.5">
- <User size={10} /> {log.adminUser} • {log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data inválida'}
+ <div className="text-[11px] flex items-center gap-1 mt-0.5">
+ <User size={UI_ICON_SIZE_SMALL} /> {log.adminUser} • {log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data inválida'}
  </div>
  {log.notes && (
  <div className="mt-2 p-2 bg-slate-800 rounded-lg border border-slate-700 text-[11px] italic whitespace-pre-wrap">

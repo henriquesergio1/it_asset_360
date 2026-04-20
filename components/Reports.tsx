@@ -694,7 +694,7 @@ const Reports = () => {
                       {isAssetTypeSelectorOpen && (
                         <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
                           <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase">Filtrar por Tipo</span>
+                            <span className="text-[11px] font-black uppercase">Filtrar por Tipo</span>
                             <button onClick={() => setIsAssetTypeSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
                           </div>
                           <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
@@ -716,7 +716,7 @@ const Reports = () => {
                         {isColumnSelectorOpen && (
                           <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
                             <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-                              <span className="text-[10px] font-black uppercase">Exibir Colunas</span>
+                              <span className="text-[11px] font-black uppercase">Exibir Colunas</span>
                               <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
                             </div>
                             <div className="p-2 space-y-1">
@@ -785,7 +785,7 @@ const Reports = () => {
               {activeTab === 'CONSUMABLES' && (
                 <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
                   <div className="flex-1 flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-slate-400 ml-2">De:</span>
+                    <span className="text-[11px] font-black uppercase text-slate-400 ml-2">De:</span>
                     <input 
                       type="date" 
                       value={startDate}
@@ -794,7 +794,7 @@ const Reports = () => {
                     />
                   </div>
                   <div className="flex-1 flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-slate-400">Até:</span>
+                    <span className="text-[11px] font-black uppercase text-slate-400">Até:</span>
                     <input 
                       type="date" 
                       value={endDate}
@@ -823,7 +823,7 @@ const Reports = () => {
                     {isSectorSelectorOpen && (
                       <div className="absolute left-0 mt-2 w-full bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
                         <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-                          <span className="text-[10px] font-black uppercase">Filtrar por Setor</span>
+                          <span className="text-[11px] font-black uppercase">Filtrar por Setor</span>
                           <button onClick={() => setIsSectorSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
                         </div>
                         <div className="p-2 space-y-1 max-h-60 overflow-y-auto">
@@ -851,7 +851,7 @@ const Reports = () => {
                           checked={showOnlyWithLine} 
                           onChange={(e) => setShowOnlyWithLine(e.target.checked)} 
                         />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">
                           Com linha
                         </span>
                       </label>
@@ -863,7 +863,7 @@ const Reports = () => {
                           checked={showVagos} 
                           onChange={(e) => setShowVagos(e.target.checked)} 
                         />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                        <span className="text-[11px] font-bold uppercase tracking-wider">
                           Vagos
                         </span>
                       </label>
@@ -970,23 +970,23 @@ const Reports = () => {
                 {/* Resumo de Consumíveis */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total de Movimentações</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Total de Movimentações</p>
                     <p className="text-2xl font-bold text-slate-100">{consumablesReportData.length}</p>
                   </div>
                   <div className="bg-emerald-900/10 p-4 rounded-2xl border border-emerald-900/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Total Recebido (Entradas)</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Total Recebido (Entradas)</p>
                     <p className="text-2xl font-bold text-emerald-400">
                       {consumablesReportData.filter(t => t.type === 'IN').reduce((acc, t) => acc + t.quantity, 0)}
                     </p>
                   </div>
                   <div className="bg-rose-900/10 p-4 rounded-2xl border border-rose-900/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-1">Total Utilizado (Saídas)</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-rose-400 mb-1">Total Utilizado (Saídas)</p>
                     <p className="text-2xl font-bold text-rose-400">
                       {consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}
                     </p>
                   </div>
                   <div className="bg-blue-900/10 p-4 rounded-2xl border border-blue-900/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1">Saldo do Período</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-blue-400 mb-1">Saldo do Período</p>
                     <p className="text-2xl font-bold text-blue-400">
                       {consumablesReportData.reduce((acc, t) => acc + (t.type === 'IN' ? t.quantity : -t.quantity), 0)}
                     </p>
@@ -1006,7 +1006,7 @@ const Reports = () => {
                             {item.net > 0 ? '+' : ''}{item.net}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-tighter">
+                        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase tracking-tighter">
                           <div className="flex flex-col">
                             <span className="text-slate-500">Entradas</span>
                             <span className="text-emerald-400">+{item.totalIn}</span>
@@ -1052,7 +1052,7 @@ const Reports = () => {
                               {t.consumableName}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
                                 {t.type === 'IN' ? 'Entrada' : 'Saída'}
                               </span>
                             </td>
@@ -1133,19 +1133,19 @@ const Reports = () => {
               <div className="overflow-x-auto">
                 <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-800/20 border-b border-slate-800">
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Aquisição</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Aquisição</p>
                     <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalPurchase)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Manutenção</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Manutenção</p>
                     <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalMaint)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">LCC Global (TCO)</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">LCC Global (TCO)</p>
                     <p className="text-lg font-bold text-blue-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalLCC)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Alertas Críticos</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Alertas Críticos</p>
                     <p className={`text-lg font-bold ${financialSummary.criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{financialSummary.criticalCount}</p>
                   </div>
                 </div>
@@ -1169,13 +1169,13 @@ const Reports = () => {
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-100">{item.model}</span>
-                              <span className="text-[10px] text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="text-slate-300">{item.type}</span>
-                              <span className="text-[10px] text-slate-500 uppercase">{item.brand}</span>
+                              <span className="text-[11px] text-slate-500 uppercase">{item.brand}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.purchaseCost)}</td>
@@ -1197,7 +1197,7 @@ const Reports = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
                               item.status === 'Disponível' ? 'bg-emerald-900/30 text-emerald-400' :
                               item.status === 'Em Uso' ? 'bg-blue-900/30 text-blue-400' :
                               'bg-amber-900/30 text-amber-400'

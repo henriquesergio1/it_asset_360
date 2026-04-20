@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardList, Clock } from 'lucide-react';
+import { UI_ICON_SIZE_SMALL } from '../constants';
 import { Task, TaskStatus, SystemUser } from '../types';
 
 interface TaskDashboardWidgetProps {
@@ -35,7 +36,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
       {pendingTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-4">
           <ClipboardList size={20} strokeWidth={1.5} className="mb-1 text-slate-600"/>
-          <p className="text-[10px] text-slate-500">Nenhuma tarefa pendente</p>
+          <p className="text-[11px] text-slate-500">Nenhuma tarefa pendente</p>
         </div>
       ) : (
         pendingTasks.slice(0, 5).map(task => (
@@ -56,7 +57,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                 <p className="text-sm font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
                   {task.title}
                 </p>
-                <p className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter w-fit md:mt-0 ${
+                <p className={`text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter w-fit md:mt-0 ${
                   task.type === 'Manutenção' ? 'bg-blue-900/30 text-blue-400' :
                   task.type === 'Envio de Arquivo' ? 'bg-purple-900/30 text-purple-400' :
                   'bg-slate-800 text-slate-400'
@@ -66,12 +67,12 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
               </div>
             </div>
             <div className="flex items-center gap-x-4 shrink-0">
-              <div className={`text-[10px] flex items-center gap-1 font-bold ${
+              <div className={`text-[11px] flex items-center gap-1 font-bold ${
                 task.isOverdue ? 'text-red-500' : 
                 task.isNearDue ? 'text-amber-500' : 
                 'text-slate-500'
               }`}>
-                <Clock size={10} />
+                <Clock size={UI_ICON_SIZE_SMALL} />
                 {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
               </div>
               <div className={`w-2 h-2 rounded-full ${
@@ -86,7 +87,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
       {pendingTasks.length > 5 && (
         <button 
           onClick={onViewAll}
-          className="w-full py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:bg-slate-900 rounded-lg transition-all"
+          className="w-full py-1.5 text-[11px] font-black uppercase tracking-widest text-indigo-400 hover:bg-slate-900 rounded-lg transition-all"
         >
           Ver mais {pendingTasks.length - 5} tarefas
         </button>

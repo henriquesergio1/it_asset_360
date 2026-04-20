@@ -63,7 +63,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  {selectedOption ? (
  <>
  <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-100'}`}>{selectedOption.label}</span>
- {selectedOption.subLabel && <span className={`text-[10px] truncate font-mono uppercase tracking-tighter ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
+ {selectedOption.subLabel && <span className={`text-[11px] truncate font-mono uppercase tracking-tighter ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
  </>
  ) : (
  <span className="text-sm">{placeholder}</span>
@@ -94,7 +94,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  className={`px-4 py-3 cursor-pointer hover:bg-blue-900/30 border-b border-slate-700 last:border-0 ${value === opt.value ? 'bg-blue-900/20' : ''}`}
  >
  <div className="font-bold text-slate-100 text-sm">{opt.label}</div>
- {opt.subLabel && <div className="text-[10px] font-mono uppercase mt-0.5">{opt.subLabel}</div>}
+ {opt.subLabel && <div className="text-[11px] font-mono uppercase mt-0.5">{opt.subLabel}</div>}
  </div>
  )) : (
  <div className="px-4 py-8 text-center text-xs italic">Nenhum resultado encontrado.</div>
@@ -403,11 +403,11 @@ const Operations = () => {
  <div className="flex gap-4">
  <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Smartphone size={32}/>
- <span className="font-black uppercase text-[10px] tracking-widest">Dispositivo / Equipamento</span>
+ <span className="font-black uppercase text-[11px] tracking-widest">Dispositivo / Equipamento</span>
  </button>
  <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Cpu size={32}/>
- <span className="font-black uppercase text-[10px] tracking-widest">Chip SIM Card</span>
+ <span className="font-black uppercase text-[11px] tracking-widest">Chip SIM Card</span>
  </button>
  </div>
 
@@ -458,7 +458,7 @@ const Operations = () => {
  <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-white' : ' bg-slate-700 text-slate-300 '}`}>
  {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
  </div>
- <span className="text-[10px] font-black uppercase truncate">{acc.name}</span>
+ <span className="text-[11px] font-black uppercase truncate">{acc.name}</span>
  </button>
  ))}
  </div>
@@ -489,8 +489,8 @@ const Operations = () => {
  <UserIcon size={20}/>
  </div>
  <div className="text-left overflow-hidden">
- <div className="text-[10px] font-black uppercase truncate">{u.fullName}</div>
- <div className="text-[9px] font-mono opacity-60 truncate">{u.email}</div>
+ <div className="text-[11px] font-black uppercase truncate">{u.fullName}</div>
+ <div className="text-[11px] font-mono opacity-60 truncate">{u.email}</div>
  </div>
  {returningUserId === u.id && <CheckSquare size={18} className="ml-auto shrink-0"/>}
  </button>
@@ -520,7 +520,7 @@ const Operations = () => {
  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-900/50 text-orange-400' : ' bg-slate-700 '}`}>
  {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
  </div>
- <span className="text-[10px] font-black uppercase text-left">{item}</span>
+ <span className="text-[11px] font-black uppercase text-left">{item}</span>
  </div>
  {checklist[item] ? <CheckSquare size={20} className="text-orange-400"/> : <X size={20} />}
  </button>
@@ -553,7 +553,7 @@ const Operations = () => {
  </span>
  {inactivateAfterReturn && <CheckSquare size={20} className=""/>}
  </div>
- <p className="text-[10px] font-bold uppercase mt-1 leading-relaxed">
+ <p className="text-[11px] font-bold uppercase mt-1 leading-relaxed">
  Ao finalizar, o sistema inativará o cadastro do colaborador automaticamente após a devolução.
  </p>
  </div>

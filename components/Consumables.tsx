@@ -3,6 +3,7 @@ import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, Arrow
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { SortableResizableHeader } from './SortableResizableHeader';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER, UI_BUTTON_WARNING } from '../constants';
 
 interface Consumable {
     Id: string;
@@ -395,35 +396,35 @@ const Consumables = () => {
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome / Descrição</label>
+                                <label className={UI_LABEL_SMALL}>Nome / Descrição</label>
                                 <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner HP 85A" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Categoria</label>
+                                    <label className={UI_LABEL_SMALL}>Categoria</label>
                                     <input required type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Unidade</label>
+                                    <label className={UI_LABEL_SMALL}>Unidade</label>
                                     <input required type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Unidade, Rolo" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estoque Mínimo</label>
+                                    <label className={UI_LABEL_SMALL}>Estoque Mínimo</label>
                                     <input required type="number" min="0" value={formData.minStock} onChange={e => setFormData({...formData, minStock: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" />
                                 </div>
                                 {!editingConsumable && (
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estoque Inicial</label>
+                                        <label className={UI_LABEL_SMALL}>Estoque Inicial</label>
                                         <input required type="number" min="0" value={formData.currentStock} onChange={e => setFormData({...formData, currentStock: parseInt(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" />
                                     </div>
                                 )}
                             </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-400 hover:text-slate-200 font-medium">Cancelar</button>
-                                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold shadow-lg shadow-blue-900/20 transition-all">Salvar</button>
-                            </div>
+<div className="pt-4 flex justify-end gap-3">
+ <button type="button" onClick={() => setIsModalOpen(false)} className={`px-4 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-sm`}>Cancelar</button>
+ <button type="submit" className={`px-6 py-2 rounded-xl ${UI_BUTTON_PRIMARY}`}>Salvar</button>
+ </div>
                         </form>
                     </div>
                 </div>
@@ -446,9 +447,8 @@ const Consumables = () => {
                                 <p className="font-bold text-slate-200">{transactionConsumable.Name}</p>
                                 <p className="text-xs text-slate-500 mt-1">Estoque atual: {transactionConsumable.CurrentStock} {transactionConsumable.Unit}</p>
                             </div>
-                            
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quantidade</label>
+                              <div>
+                                <label className={UI_LABEL_SMALL}>Quantidade</label>
                                 <input 
                                     required 
                                     type="number" 
@@ -463,7 +463,7 @@ const Consumables = () => {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Observações (Opcional)</label>
+                                <label className={UI_LABEL_SMALL}>Observações (Opcional)</label>
                                 <input 
                                     type="text" 
                                     value={transactionData.notes} 
@@ -472,16 +472,16 @@ const Consumables = () => {
                                     placeholder={transactionType === 'IN' ? "Ex: Nota Fiscal 1234" : "Ex: Impressora RH"} 
                                 />
                             </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsTransactionModalOpen(false)} className="px-4 py-2 text-slate-400 hover:text-slate-200 font-medium">Cancelar</button>
-                                <button 
-                                    type="submit" 
-                                    disabled={transactionType === 'OUT' && transactionData.quantity > transactionConsumable.CurrentStock}
-                                    className={`px-6 py-2 rounded-xl font-bold shadow-lg transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed ${transactionType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/20'}`}
-                                >
-                                    Confirmar
-                                </button>
-                            </div>
+<div className="pt-4 flex justify-end gap-3">
+ <button type="button" onClick={() => setIsTransactionModalOpen(false)} className={`px-4 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-sm`}>Cancelar</button>
+ <button 
+ type="submit" 
+ disabled={transactionType === 'OUT' && transactionData.quantity > (transactionConsumable?.CurrentStock || 0)}
+ className={`px-6 py-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed ${transactionType === 'IN' ? UI_BUTTON_SUCCESS : UI_BUTTON_WARNING}`}
+ >
+ Confirmar
+ </button>
+ </div>
                         </form>
                     </div>
                 </div>
@@ -517,7 +517,7 @@ const Consumables = () => {
                                                     <p className="font-bold text-slate-100">
                                                         {t.type === 'IN' ? 'Entrada' : 'Saída'} de {t.quantity} {selectedConsumableForLogs.Unit}
                                                     </p>
-                                                    <span className="text-[10px] font-medium text-slate-500 whitespace-nowrap">
+                                                    <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
                                                         {new Date(t.date).toLocaleString('pt-BR')}
                                                     </span>
                                                 </div>
@@ -537,14 +537,14 @@ const Consumables = () => {
                             </div>
                         </div>
 
-                        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end">
-                            <button 
-                                onClick={() => setIsLogsModalOpen(false)}
-                                className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold transition-all"
-                            >
-                                Fechar
-                            </button>
-                        </div>
+<div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+ <button 
+ onClick={() => setIsLogsModalOpen(false)}
+ className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY}`}
+ >
+ Fechar
+ </button>
+ </div>
                     </div>
                 </div>
             )}

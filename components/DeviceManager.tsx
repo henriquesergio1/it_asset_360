@@ -11,6 +11,7 @@ import { DataTable, Column } from './DataTable';
 import ModelSettings from './ModelSettings';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { APP_VERSION, UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER, UI_BUTTON_WARNING } from '../constants';
 
 interface Option {
  value: string;
@@ -65,7 +66,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  {selectedOption ? (
  <>
  <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-100'}`}>{selectedOption.label}</span>
- {selectedOption.subLabel && <span className={`text-[10px] truncate font-mono uppercase ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
+ {selectedOption.subLabel && <span className={`text-[11px] truncate font-mono uppercase ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
  </>
  ) : (
  <span className="text-sm">{placeholder}</span>
@@ -102,7 +103,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  className={`px-4 py-3 cursor-pointer hover:bg-blue-900/20 border-b border-slate-700 last:border-0 ${value === opt.value ? 'bg-blue-900/30' : ''}`}
  >
  <div className="font-bold text-slate-100 text-sm">{opt.label}</div>
- {opt.subLabel && <div className="text-[10px] font-mono uppercase">{opt.subLabel}</div>}
+ {opt.subLabel && <div className="text-[11px] font-mono uppercase">{opt.subLabel}</div>}
  </div>
  )) : (
  <div className="px-4 py-8 text-center text-xs italic">Nenhum resultado.</div>
@@ -203,7 +204,7 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
  <span className="bg-red-900/20 text-red-400 px-1.5 py-0.5 rounded border border-red-900/30 line-through opacity-70">
  {resolveValue(rawKey, cleanOld)}
  </span>
- <ArrowRight size={10} className="text-slate-300"/>
+ <ArrowRight size={UI_ICON_SIZE_SMALL} className="text-slate-300"/>
  <span className="bg-emerald-900/30 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-900/40 font-bold">
  {resolveValue(rawKey, cleanNew)}
  </span>
@@ -222,7 +223,7 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
  <span className="uppercase text-[10px]">{label}:</span>
  {foundUser ? (
  <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-400 hover:underline cursor-pointer bg-blue-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 text-[10px] font-bold">
- <Users size={10}/> {trimmedName}
+ <Users size={UI_ICON_SIZE_SMALL}/> {trimmedName}
  </span>
  ) : <span className="text-slate-200">{trimmedName}</span>}
  </div>
@@ -273,7 +274,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
 
  return (
  <div className="space-y-6 animate-fade-in">
- <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-4">
+ <h4 className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2 mb-4">
  <ShieldCheck size={14}/> Cadeia de Custódia (Rastreabilidade Total)
  </h4>
  
@@ -299,14 +300,14 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
  <div key={log.id} className="relative pl-10">
  <div className={`absolute -left-[11px] top-0 h-5 w-5 rounded-full border-4 border-white border-slate-950 flex items-center justify-center 
  ${log.action === ActionType.CHECKOUT ? '' : ''}`}>
- {log.action === ActionType.CHECKOUT ? <UserCheck size={10} className="text-white"/> : <UserX size={10} className=""/>}
+ {log.action === ActionType.CHECKOUT ? <UserCheck size={UI_ICON_SIZE_SMALL} className="text-white"/> : <UserX size={UI_ICON_SIZE_SMALL} className=""/>}
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 hover:border-blue-200 hover:border-blue-800 transition-all">
  <div className="flex justify-between items-start mb-2">
- <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${log.action === ActionType.CHECKOUT ? ' bg-blue-900/30 text-blue-400' : ' bg-orange-900/30 text-orange-400'}`}>
+ <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${log.action === ActionType.CHECKOUT ? ' bg-blue-900/30 text-blue-400' : ' bg-orange-900/30 text-orange-400'}`}>
  {log.action === ActionType.CHECKOUT ? 'RECEBEU' : 'DEVOLVEU'}
  </span>
- <span className="text-[10px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</span>
+ <span className="text-[11px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</span>
  </div>
  <p className="font-bold text-slate-100 text-sm flex items-center gap-2">
  <Users size={14} className=""/> 
@@ -328,7 +329,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
  
  <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 flex items-start gap-3">
  <Info size={18} className="shrink-0"/>
- <p className="text-[10px] text-blue-300 font-medium leading-relaxed uppercase">
+ <p className="text-[11px] text-blue-300 font-medium leading-relaxed uppercase">
  Esta linha do tempo exibe a rastreabilidade completa do ativo. Cada entrada representa uma transferência de responsabilidade jurídica registrada no sistema.
  </p>
  </div>
@@ -914,7 +915,7 @@ const DeviceManager = () => {
  <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
  {isColumnSelectorOpen && (
  <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
- <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span className="text-[10px] font-black uppercase">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button></div>
+ <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span className="text-[11px] font-black uppercase">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button></div>
  <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/30 text-blue-400' : ' hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
  </div>
  )}
@@ -932,7 +933,7 @@ const DeviceManager = () => {
 
  <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
  {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
- <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
+ <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
  ))}
  </div>
 
@@ -942,7 +943,7 @@ const DeviceManager = () => {
  <input type="text"placeholder="Pesquisar por modelo, tag, IMEI, S/N, responsável..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-slate-900 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
  </div>
  <div className="flex items-center justify-end gap-4 bg-slate-900 p-2 rounded-xl">
- <span className="text-[10px] font-black uppercase tracking-widest">Filtros:</span>
+ <span className="text-[11px] font-black uppercase tracking-widest">Filtros:</span>
  
  <select 
  value={filterAssetType} 
@@ -1019,41 +1020,41 @@ const DeviceManager = () => {
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <div className="text-[9px] font-black uppercase tracking-tighter text-slate-500">{brand?.name}</div>
-                    <div className="text-[8px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
+                    <div className="text-[11px] font-black uppercase tracking-tighter text-slate-500">{brand?.name}</div>
+                    <div className="text-[11px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
                   </div>
                 </div>
               </div>
             </td>
-            {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-300"><TagIcon size={12} className="text-slate-500"/> {d.assetTag || '---'}</div></td>)}
-            {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[9px] truncate text-slate-400">{d.imei || '---'}</td>)}
-            {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[9px] truncate text-slate-400">{d.serialNumber || '---'}</td>)}
-            {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold uppercase tracking-widest bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{d.internalCode || '---'}</span></td>)}
-            {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{sector?.name || '---'}</span></td>)}
-            {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[10px] font-mono font-bold text-blue-400 bg-blue-900/30 px-2.5 py-1 rounded-full border border-blue-800/30">{d.pulsusId}</span>) : <span className="text-[10px] text-slate-500">-</span>}</td>)}
-            {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[10px] text-slate-500">-</span>}</td>)}
-            {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[9px] text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
-            <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-900/20 text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-900/20 text-rose-400 border-rose-800/50' : ' bg-blue-900/20 text-blue-400 border-blue-800/50'}`}>{d.status}</span></td>
+            {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-xs font-bold text-slate-300"><TagIcon size={12} className="text-slate-500"/> {d.assetTag || '---'}</div></td>)}
+            {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[11px] truncate text-slate-400">{d.imei || '---'}</td>)}
+            {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[11px] truncate text-slate-400">{d.serialNumber || '---'}</td>)}
+            {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold uppercase tracking-widest bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{d.internalCode || '---'}</span></td>)}
+            {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-full border border-slate-700/50">{sector?.name || '---'}</span></td>)}
+            {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[11px] font-mono font-bold text-blue-400 bg-blue-900/30 px-2.5 py-1 rounded-full border border-blue-800/30">{d.pulsusId}</span>) : <span className="text-[11px] text-slate-500">-</span>}</td>)}
+            {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest bg-indigo-900/30 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[11px] text-slate-500">-</span>}</td>)}
+            {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[11px] font-bold text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[11px] text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
+            <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-900/20 text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-900/20 text-rose-400 border-rose-800/50' : ' bg-blue-900/20 text-blue-400 border-blue-800/50'}`}>{d.status}</span></td>
             <td className="px-6 py-4">
               {user ? (
                 <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-blue-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
-                    <span className="text-[9px] font-black uppercase text-slate-500 tracking-tighter whitespace-nowrap">({user.internalCode || d.internalCode || 'S/ Cód'})</span>
+                    <span className="text-[11px] font-black uppercase text-slate-500 tracking-tighter whitespace-nowrap">({user.internalCode || d.internalCode || 'S/ Cód'})</span>
                   </div>
                   
                   {additionalUsers.length > 0 && (
                     <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-1 mt-1">
                       {additionalUsers.map(au => (
                         <div key={au.id} className="flex items-center gap-2">
-                          <span className="text-[10px] font-medium text-slate-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${au.id}`)}>{au.fullName}</span>
-                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-tighter">(ADICIONAL)</span>
+                          <span className="text-[11px] font-medium text-slate-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${au.id}`)}>{au.fullName}</span>
+                          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-tighter">(ADICIONAL)</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-              ) : <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}
+              ) : <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}
             </td>
             <td className="px-6 py-4 text-right truncate">
               <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1082,7 +1083,7 @@ const DeviceManager = () => {
 
  {isModalOpen && (
  <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
- <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800"><div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><div className="flex flex-col"><div className="flex items-center gap-3"><h3 className="text-lg font-black text-white uppercase tracking-tighter leading-tight">{editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}</h3></div>{editingId && <span className="text-[10px] font-bold uppercase tracking-widest">ID: {editingId}</span>}</div><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div><div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800"><div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><div className="flex flex-col"><div className="flex items-center gap-3"><span className="text-[11px] font-black uppercase tracking-widest leading-tight">{editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}</span></div>{editingId && <span className="text-[11px] font-bold uppercase tracking-widest">ID: {editingId}</span>}</div><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div><div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
  <button type="button"onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Geral</button>
  <button type="button"onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>
  Financeiro 
@@ -1093,9 +1094,9 @@ const DeviceManager = () => {
  <button type="button"onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Cadeia de Custódia</button>
  <button type="button"onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Auditoria</button>
  </div>
- <form id="devForm"onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden"><div className="flex-1 overflow-y-auto p-8 bg-slate-900">{activeTab === 'GENERAL' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-8">{isViewOnly && (<div className="md:col-span-2 bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 flex items-center gap-3"><Info className="text-blue-400"size={20}/><p className="text-xs font-bold text-blue-200">Modo de visualização. Clique no botão azul"Habilitar Edição"abaixo para editar os dados.</p></div>)}{editingId && (<div className="md:col-span-2 bg-slate-800/40 p-5 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-between"><div className="flex items-center gap-4"><div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center text-blue-50 border border-slate-800"><Users size={24}/></div><div><span className="text-[10px] font-black uppercase tracking-widest">Responsável Atual</span><p className="text-sm font-black text-slate-100">{formData.currentUserId ? users.find(u => u.id === formData.currentUserId)?.fullName : 'LIVRE NO ESTOQUE'}</p></div></div>{formData.currentUserId && (<button type="button"onClick={() => navigate(`/users?userId=${formData.currentUserId}`)} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[10px] font-black uppercase text-blue-400 hover:bg-blue-900/30 transition-all flex items-center gap-2">Ver Perfil <ChevronRight size={14}/></button>)}</div>)}<div className="md:col-span-2 space-y-4">
+ <form id="devForm"onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden"><div className="flex-1 overflow-y-auto p-8 bg-slate-900">{activeTab === 'GENERAL' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-8">{isViewOnly && (<div className="md:col-span-2 bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 flex items-center gap-3"><Info className="text-blue-400"size={20}/><p className="text-xs font-bold text-blue-200">Modo de visualização. Clique no botão azul"Habilitar Edição"abaixo para editar os dados.</p></div>)}{editingId && (<div className="md:col-span-2 bg-slate-800/40 p-5 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-between"><div className="flex items-center gap-4"><div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center text-blue-50 border border-slate-800"><Users size={24}/></div><div><span className="text-[11px] font-black uppercase tracking-widest">Responsável Atual</span><p className="text-sm font-black text-slate-100">{formData.currentUserId ? users.find(u => u.id === formData.currentUserId)?.fullName : 'LIVRE NO ESTOQUE'}</p></div></div>{formData.currentUserId && (<button type="button"onClick={() => navigate(`/users?userId=${formData.currentUserId}`)} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-black uppercase text-blue-400 hover:bg-blue-900/30 transition-all flex items-center gap-2">Ver Perfil <ChevronRight size={14}/></button>)}</div>)}<div className="md:col-span-2 space-y-4">
  <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-800 shadow-inner transition-colors">
- <label className="block text-[10px] font-black uppercase mb-2 tracking-[0.2em] ml-1">Catálogo de Modelos (A-Z)</label>
+ <label className={UI_LABEL_SMALL}>Catálogo de Modelos (A-Z)</label>
  <SearchableDropdown 
  disabled={isViewOnly} 
  options={modelOptions} 
@@ -1105,8 +1106,8 @@ const DeviceManager = () => {
  icon={<Smartphone size={18}/>}
  />
  </div>
-</div><div className="space-y-4"><div className="bg-blue-900/20 p-6 rounded-2xl border border-blue-900/40 relative transition-colors"><label className="block text-[10px] font-black uppercase text-blue-400 mb-3 tracking-widest">Identificação Principal</label><div className="flex bg-blue-100/50 bg-blue-900/40 p-1 rounded-lg mb-4"><button type="button"onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? ' bg-slate-800 text-blue-400 ' : 'text-blue-400 hover:text-blue-50 hover:text-blue-400'}`}>Patrimônio</button><button type="button"onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[10px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? ' bg-slate-800 text-blue-400 ' : 'text-blue-400 hover:text-blue-50 hover:text-blue-400'}`}>IMEI</button></div>{idType === 'TAG' ? (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase().trim()})} placeholder="TI-XXXX"/>) : (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value.trim()})} placeholder="000.000..."/>)}</div><div className="bg-indigo-900/20 p-4 rounded-2xl border border-indigo-900/40 transition-colors"><label className="block text-[10px] font-black uppercase text-indigo-400 mb-2 ml-1 tracking-widest">Chip / SIM Card Vinculado</label><SearchableDropdown disabled={isViewOnly} options={simOptions} value={formData.linkedSimId || ''} onChange={val => setFormData({...formData, linkedSimId: val || null})} placeholder="Pesquisar chip..."icon={<Cpu size={18}/>}/><p className="text-[9px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p></div></div><div className="space-y-4"><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Estado Global</label><select disabled={isViewOnly || formData.status === DeviceStatus.IN_USE} className={`w-full border-2 rounded-xl p-3 text-sm font-black focus:border-blue-500 outline-none transition-colors ${formData.status === DeviceStatus.IN_USE ? ' bg-blue-900/20 text-blue-400' : ' bg-slate-800 border-slate-800 text-slate-100'}`} value={formData.status || ''} onChange={e => setFormData({...formData, status: e.target.value as DeviceStatus})}>{Object.values(DeviceStatus).map(s => (<option key={s} value={s} disabled={s === DeviceStatus.IN_USE && formData.status !== DeviceStatus.IN_USE}>{s}</option>))}</select></div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Serial Number</label><input required disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase().trim()})} placeholder="S/N"/></div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Código Setor</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value.trim()})} placeholder="S-001..."/></div><div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Cargo / Função</label>
+</div><div className="space-y-4"><div className="bg-blue-900/20 p-6 rounded-2xl border border-blue-900/40 relative transition-colors"><label className="block text-[11px] font-black uppercase text-blue-400 mb-3 tracking-widest">Identificação Principal</label><div className="flex bg-blue-100/50 bg-blue-900/40 p-1 rounded-lg mb-4"><button type="button"onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? ' bg-slate-800 text-blue-400 ' : 'text-blue-400 hover:text-blue-50 hover:text-blue-400'}`}>Patrimônio</button><button type="button"onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? ' bg-slate-800 text-blue-400 ' : 'text-blue-400 hover:text-blue-50 hover:text-blue-400'}`}>IMEI</button></div>{idType === 'TAG' ? (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase().trim()})} placeholder="TI-XXXX"/>) : (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value.trim()})} placeholder="000.000..."/>)}</div><div className="bg-indigo-900/20 p-4 rounded-2xl border border-indigo-900/40 transition-colors"><label className="block text-[11px] font-black uppercase text-indigo-400 mb-2 ml-1 tracking-widest">Chip / SIM Card Vinculado</label><SearchableDropdown disabled={isViewOnly} options={simOptions} value={formData.linkedSimId || ''} onChange={val => setFormData({...formData, linkedSimId: val || null})} placeholder="Pesquisar chip..."icon={<Cpu size={18}/>}/><p className="text-[11px] text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p></div></div><div className="space-y-4"><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Estado Global</label><select disabled={isViewOnly || formData.status === DeviceStatus.IN_USE} className={`w-full border-2 rounded-xl p-3 text-sm font-black focus:border-blue-500 outline-none transition-colors ${formData.status === DeviceStatus.IN_USE ? ' bg-blue-900/20 text-blue-400' : ' bg-slate-800 border-slate-800 text-slate-100'}`} value={formData.status || ''} onChange={e => setFormData({...formData, status: e.target.value as DeviceStatus})}>{Object.values(DeviceStatus).map(s => (<option key={s} value={s} disabled={s === DeviceStatus.IN_USE && formData.status !== DeviceStatus.IN_USE}>{s}</option>))}</select></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Serial Number</label><input required disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase().trim()})} placeholder="S/N"/></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Código Setor</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value.trim()})} placeholder="S-001..."/></div><div>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Cargo / Função</label>
  <SearchableDropdown 
  disabled={isViewOnly} 
  options={sectorOptions} 
@@ -1121,24 +1122,24 @@ const DeviceManager = () => {
  {/* LCC Dashboard Section */}
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="bg-slate-900 bg-black p-5 rounded-2xl border border-white/10">
- <span className="text-[9px] font-black uppercase tracking-[0.2em]">LCC (Custo Ciclo Vida)</span>
+ <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-70">LCC (Custo Ciclo Vida)</span>
  <div className="flex items-baseline gap-2 mt-1">
  <span className="text-2xl font-black text-white">R$ {formatCurrencyBR(lccValue)}</span>
  </div>
  <div className="mt-3 space-y-1 border-t border-white/5 pt-3">
- <div className="flex justify-between text-[10px] font-bold">
- <span className="uppercase tracking-tighter">Aquisição:</span>
+ <div className="flex justify-between text-[11px] font-bold">
+ <span className="uppercase tracking-tighter opacity-50">Aquisição:</span>
  <span className="text-slate-300">R$ {formatCurrencyBR(purchaseCost)}</span>
  </div>
- <div className="flex justify-between text-[10px] font-bold">
- <span className="uppercase tracking-tighter">Manutenção:</span>
- <span className="">R$ {formatCurrencyBR(totalMaintenanceCost)}</span>
+ <div className="flex justify-between text-[11px] font-bold">
+ <span className="uppercase tracking-tighter opacity-50">Manutenção:</span>
+ <span className="text-slate-100">R$ {formatCurrencyBR(totalMaintenanceCost)}</span>
  </div>
  </div>
  </div>
  <div className={`p-5 rounded-2xl border transition-all ${maintenanceRatio >= 0.6 ? ' bg-red-900/20 border-red-900/40' : ' bg-slate-800 border-slate-700'}`}>
  <div className="flex justify-between items-start">
- <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-red-400' : ''}`}>Índice de Manutenção</span>
+ <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-red-500' : ' text-slate-500'}`}>Índice de Manutenção</span>
  {maintenanceRatio >= 0.6 && <AlertTriangle size={16} className="animate-pulse"/>}
  </div>
  <div className="flex items-baseline gap-2 mt-1">
@@ -1147,22 +1148,22 @@ const DeviceManager = () => {
  <div className="w-full bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
  <div className={`h-full transition-all duration-1000 ${maintenanceRatio >= 0.6 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width:`${Math.min(maintenanceRatio * 100, 100)}%`}}></div>
  </div>
- {maintenanceRatio >= 0.6 && <p className="text-[9px] text-red-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Gastos excedem 60% do valor do ativo!</p>}
+ {maintenanceRatio >= 0.6 && <p className="text-[11px] text-red-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Gastos excedem 60% do valor do ativo!</p>}
  </div>
  <div className={`p-5 rounded-2xl border transition-all ${deviceAgeYears >= 5 ? ' bg-orange-900/20 border-orange-900/40' : ' bg-slate-800 border-slate-700'}`}>
  <div className="flex justify-between items-start">
- <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 5 ? ' text-orange-400' : ''}`}>Tempo de Uso</span>
+ <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 5 ? ' text-orange-500' : ' text-slate-500'}`}>Tempo de Uso</span>
  {deviceAgeYears >= 5 && <RefreshCw size={16} className="animate-spin-slow"/>}
  </div>
  <div className="flex items-baseline gap-2 mt-1">
  <span className={`text-2xl font-black ${deviceAgeYears >= 5 ? ' text-orange-400' : ' text-slate-100'}`}>{deviceAgeYears.toFixed(1)} Anos</span>
  </div>
  <p className="text-[10px] mt-2 font-medium italic">Ciclo de vida recomendado: 5 anos.</p>
- {deviceAgeYears >= 5 && <p className="text-[9px] text-orange-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Ativo atingiu fim do ciclo de vida!</p>}
+ {deviceAgeYears >= 5 && <p className="text-[11px] text-orange-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Ativo atingiu fim do ciclo de vida!</p>}
  </div>
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-xs font-black text-slate-100 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className="block text-[10px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Box size={12}/> Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-800 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-slate-900 rounded-2xl border-2 border-slate-800 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-400"><FileCode size={64}/><span className="text-[10px] font-black uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-800 border-2 border-emerald-900/40 text-emerald-400 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-emerald-900/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-slate-900 rounded-full flex items-center justify-center text-slate-200 mb-4 border-2 border-slate-800"><Paperclip size={32}/></div><h5 className="font-black text-slate-100 uppercase tracking-tighter">Anexo da Nota Fiscal</h5><p className="text-xs mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-[11px] font-black text-slate-100 uppercase tracking-widest border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[11px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[11px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[11px] font-black uppercase mb-1 flex items-center gap-2 tracking-widest"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className={UI_LABEL_SMALL}>Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100 transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-800 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-slate-900 rounded-2xl border-2 border-slate-800 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-400"><FileCode size={64}/><span className="text-[11px] font-black uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-800 border-2 border-emerald-900/40 text-emerald-400 py-3 rounded-xl text-[11px] font-black uppercase hover:bg-emerald-900/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-slate-900 rounded-full flex items-center justify-center text-slate-200 mb-4 border-2 border-slate-800"><Paperclip size={32}/></div><h5 className="font-black text-slate-100 uppercase tracking-tighter">Anexo da Nota Fiscal</h5><p className="text-[11px] mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo
                     <input type="file" className="hidden" onChange={handleNFFileChange} accept="application/pdf,image/*"/>
                   </label>
                 )}
@@ -1181,11 +1182,11 @@ const DeviceManager = () => {
               <div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400">
                 <Wrench size={16}/>
               </div>
-              <h5 className="text-[10px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
+              <h5 className="text-[11px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-3">
-                <label className="block text-[10px] font-bold text-orange-400 mb-1">Descrição</label>
+                <label className="block text-[11px] font-bold text-orange-400 mb-1">Descrição</label>
                 <input 
                   placeholder="Ex: Troca de tela..."
                   className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
@@ -1194,7 +1195,7 @@ const DeviceManager = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-orange-400 mb-1">Custo (R$)</label>
+                <label className="block text-[11px] font-bold text-orange-400 mb-1">Custo (R$)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
                   <input 
@@ -1206,7 +1207,7 @@ const DeviceManager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-orange-400 mb-1">Data</label>
+                <label className="block text-[11px] font-bold text-orange-400 mb-1">Data</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
                   <input 
@@ -1218,12 +1219,12 @@ const DeviceManager = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-orange-400 mb-1">Anexo</label>
+                <label className="block text-[11px] font-bold text-orange-400 mb-1">Anexo</label>
                 <label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
                   <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
                     {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
                   </div>
-                  <span className="text-[10px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
+                  <span className="text-[11px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
                   <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*"/>
                 </label>
               </div>
@@ -1241,7 +1242,7 @@ const DeviceManager = () => {
           </div>
         )}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
+          <h4 className="text-[11px] font-black uppercase tracking-widest flex items-center gap-2"><History size={12}/> Histórico</h4>
           <div className="grid grid-cols-1 gap-3">
             {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
               <div key={m.id} className="flex justify-between items-center p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-orange-200 transition-all group">
@@ -1286,7 +1287,7 @@ const DeviceManager = () => {
     )}
     {activeTab === 'LICENSES' && (
       <div className="space-y-4 animate-fade-in">
-        <h4 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4>
+        <h4 className="text-[11px] font-black uppercase tracking-widest mb-4 flex items-center gap-2"><Globe size={14}/> Licenças Vinculadas</h4>
         <div className="grid grid-cols-1 gap-3">
           {deviceAccounts.length > 0 ? deviceAccounts.map(acc => (
             <div key={acc.id} className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
@@ -1296,7 +1297,7 @@ const DeviceManager = () => {
                 </div>
                 <div>
                   <p className="font-bold text-slate-100 text-sm">{acc.name}</p>
-                  <p className="text-[10px] font-black uppercase tracking-tighter">{acc.login}</p>
+                  <p className="text-[11px] font-black uppercase tracking-tighter">{acc.login}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1305,7 +1306,7 @@ const DeviceManager = () => {
                     <ExternalLink size={16}/>
                   </button>
                 )}
-                <div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold min-w-[80px] text-center text-slate-300">
+                <div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[11px] font-bold min-w-[80px] text-center text-slate-300">
                   {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                 </div>
                 <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-400 hover:text-white">
@@ -1343,11 +1344,11 @@ const DeviceManager = () => {
  </div>
 
  <div className="bg-slate-950 px-8 py-5 flex justify-end gap-3 border-t border-slate-800 shrink-0 transition-colors">
- <button type="button"onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl bg-slate-800 border-2 border-slate-700 font-black text-[10px] uppercase transition-all tracking-widest">Fechar</button>
+ <button type="button" onClick={() => setIsModalOpen(false)} className={`px-8 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Fechar</button>
  {isViewOnly ? (
- <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-10 py-3 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}><Edit2 size={16}/> Habilitar Edição</button>
+ <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-10 py-3 rounded-2xl flex items-center gap-2 ${isReadOnly ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : UI_BUTTON_PRIMARY}`}><Edit2 size={16}/> Habilitar Edição</button>
  ) : (
- <button type="submit" form="devForm" disabled={isReadOnly} className={`px-10 py-3 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>Salvar Alterações</button>
+ <button type="submit" form="devForm" disabled={isReadOnly} className={`px-10 py-3 rounded-2xl flex items-center gap-2 ${isReadOnly ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : UI_BUTTON_SUCCESS}`}>Salvar Alterações</button>
  )}
  </div>
  </form>
@@ -1355,9 +1356,9 @@ const DeviceManager = () => {
  </div>
  )}
 
- {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-blue-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800"><Save size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest disabled:opacity-50 transition-all">Salvar</button></div></div></div></div>)}
- {isDeleteModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-sm overflow-hidden border border-red-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-red-800"><AlertTriangle size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:ring-red-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Motivo..."value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 disabled:opacity-50 transition-all">Confirmar</button></div></div></div></div>)}
- {isRestoreModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-indigo-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-indigo-800"><RotateCcw size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Motivo..."value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700 transition-all">Restaurar</button></div></div></div></div>)}
+ {isReasonModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-blue-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800"><Save size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirmar Alterações?</h3><p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Salvar</button></div></div></div></div>)}
+ {isDeleteModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-sm overflow-hidden border border-red-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-red-800"><AlertTriangle size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:ring-red-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Motivo..."value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_DANGER}`}>Confirmar</button></div></div></div></div>)}
+ {isRestoreModalOpen && (<div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-indigo-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-indigo-800"><RotateCcw size={32} /></div><h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Motivo..."value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SUCCESS}`}>Restaurar</button></div></div></div></div>)}
 
  {isBulkModalOpen && (
  <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1374,7 +1375,7 @@ const DeviceManager = () => {
  <div className="space-y-4 mb-6">
  {bulkActionType === 'STATUS' && (
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Status</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Status</label>
  <select 
  className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm font-black bg-slate-800 text-slate-100 outline-none focus:border-indigo-500 transition-all"
  value={bulkValue}
@@ -1387,7 +1388,7 @@ const DeviceManager = () => {
  )}
  {bulkActionType === 'RESPONSIBLE' && (
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Responsável</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Responsável</label>
  <SearchableDropdown 
  options={users.map(u => ({ value: u.id, label: u.fullName, subLabel: u.internalCode }))}
  value={bulkValue}
@@ -1399,7 +1400,7 @@ const DeviceManager = () => {
  )}
  {bulkActionType === 'SECTOR' && (
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Setor/Cargo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Novo Setor/Cargo</label>
  <SearchableDropdown 
  options={sectorOptions}
  value={bulkValue}
@@ -1412,8 +1413,8 @@ const DeviceManager = () => {
  </div>
 
  <div className="flex gap-4">
- <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors hover:bg-slate-700">Cancelar</button>
- <button onClick={handleBulkUpdate} disabled={!bulkValue} className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-700 disabled:opacity-50 transition-all">Aplicar</button>
+ <button onClick={() => setIsBulkModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Cancelar</button>
+ <button onClick={handleBulkUpdate} disabled={!bulkValue} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Aplicar</button>
  </div>
  </div>
  </div>

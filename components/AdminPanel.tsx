@@ -8,6 +8,7 @@ import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '..
 import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 
 const FIELD_LABELS: Record<string, string> = {
  sectorId: 'Setor/Cargo',
@@ -53,7 +54,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  }, [logId, getLogDetail, onClose, showToast]);
 
  const resolveFriendlyValue = (key: string, val: any): any => {
- if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-300 italic text-[10px]">vazio</span>;
+ if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-300 italic text-[11px]">vazio</span>;
  
  if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
  try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
@@ -76,15 +77,15 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  <div className="flex flex-col gap-1">
  {Object.entries(data).map(([fieldId, fieldVal]: [string, any]) => {
  const fieldName = customFields.find(f => f.id === fieldId)?.name || fieldId;
- return <div key={fieldId} className="text-[10px]"><span className="font-bold opacity-60">{fieldName}:</span> {String(fieldVal || 'vazio')}</div>;
+ return <div key={fieldId} className="text-[11px]"><span className="font-bold opacity-60">{fieldName}:</span> {String(fieldVal || 'vazio')}</div>;
  })}
  </div>
  );
- } catch (e) { return <span className="text-[10px] font-mono break-all">{JSON.stringify(val)}</span>; }
+ } catch (e) { return <span className="text-[11px] font-mono break-all">{JSON.stringify(val)}</span>; }
  }
 
  if (typeof val === 'boolean') return val ? 'Sim' : 'Não';
- if (typeof val === 'object') return <span className="text-[10px] font-mono break-all">{JSON.stringify(val)}</span>;
+ if (typeof val === 'object') return <span className="text-[11px] font-mono break-all">{JSON.stringify(val)}</span>;
  
  return String(val);
  };
@@ -121,25 +122,25 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0">
  <div>
  <h3 className="text-lg font-black text-white uppercase tracking-tighter">Detalhes da Auditoria</h3>
- <p className="text-[10px] font-bold uppercase tracking-widest">{log.action} em {new Date(log.timestamp).toLocaleString()}</p>
+ <p className="text-[11px] font-bold uppercase tracking-widest">{log.action} em {new Date(log.timestamp).toLocaleString()}</p>
  </div>
  <button onClick={onClose} className="hover:text-white transition-colors"><X size={24}/></button>
  </div>
  <div className="p-8 overflow-y-auto bg-slate-900">
  <div className="mb-6 grid grid-cols-2 gap-4">
  <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
- <span className="block text-[10px] font-black uppercase mb-1">Realizado por</span>
+ <span className="block text-[11px] font-black uppercase mb-1">Realizado por</span>
  <span className="font-bold text-slate-100 text-sm">{log.adminUser}</span>
  </div>
  <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
- <span className="block text-[10px] font-black uppercase mb-1">Item Afetado</span>
+ <span className="block text-[11px] font-black uppercase mb-1">Item Afetado</span>
  <span className="font-bold text-slate-100 text-sm">[{log.assetType}] {log.targetName}</span>
  </div>
  </div>
  {diffs.length > 0 ? (
  <div className="border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
  <table className="w-full text-xs text-left">
- <thead className="bg-slate-800 text-[10px] uppercase font-black border-b border-slate-700">
+ <thead className="bg-slate-800 text-[11px] uppercase font-black border-b border-slate-700">
  <tr><th className="px-4 py-3">Campo</th><th className="px-4 py-3">Valor Anterior</th><th className="px-4 py-3">Novo Valor</th></tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -162,7 +163,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  )}
  </div>
  <div className="bg-slate-950 px-8 py-5 border-t border-slate-800 flex justify-end shrink-0 transition-colors">
- <button onClick={onClose} className="px-8 py-3 bg-slate-800 bg-slate-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-black hover:bg-slate-600 transition-all">Fechar</button>
+ <button onClick={onClose} className="px-8 py-3 bg-slate-800 bg-slate-700 text-white rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-black hover:bg-slate-600 transition-all">Fechar</button>
  </div>
  </div>
  </div>
@@ -343,13 +344,13 @@ const AdminPanel = () => {
  </div>
 
  <div className="flex border-b border-slate-800 overflow-x-auto bg-slate-900 px-2 pt-2 rounded-t-xl transition-colors">
- <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
- <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
- <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
- <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
- <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
- <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
- <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
+ <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
+ <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
+ <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
+ <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
+ <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
+ <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
+ <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
  </div>
 
  <div className="p-1 animate-fade-in">
@@ -361,7 +362,7 @@ const AdminPanel = () => {
  </div>
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left">
- <thead className="bg-slate-800 text-[10px] font-black uppercase tracking-widest">
+ <thead className="bg-slate-800 text-[11px] font-black uppercase tracking-widest">
  <tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">E-mail</th><th className="px-6 py-4">Perfil</th><th className="px-6 py-4 text-right">Ações</th></tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -369,7 +370,7 @@ const AdminPanel = () => {
  <tr key={u.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
  <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
  <td className="px-6 py-4 font-medium">{u.email}</td>
- <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
+ <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
  <td className="px-6 py-4 text-right">
  <div className="flex justify-end gap-2">
  <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
@@ -390,15 +391,15 @@ const AdminPanel = () => {
  <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-4"><Layout size={20} className=""/> Personalização do App</h3>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Nome da Aplicação</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome da Aplicação</label>
  <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">CNPJ da Empresa</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">CNPJ da Empresa</label>
  <input className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-mono"value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">URL do Logotipo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">URL do Logotipo</label>
  <div className="flex gap-4 items-center">
  <input className="flex-1 border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 text-sm"value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
  {settingsForm.logoUrl && <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain rounded border p-1"alt="Logo Preview"/>}
@@ -441,7 +442,7 @@ const AdminPanel = () => {
  </div>
  </div>
  </div>
- <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-900/30 text-[10px] text-blue-300 font-bold uppercase tracking-widest">
+ <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-900/30 text-[11px] text-blue-300 font-bold uppercase tracking-widest">
  Variáveis Disponíveis: {'{NOME_EMPRESA}, {CNPJ}, {NOME_COLABORADOR}, {CPF}, {RG}'}
  </div>
  <div className="flex justify-end pt-4 border-t border-slate-800">
@@ -465,17 +466,17 @@ const AdminPanel = () => {
  <div className={`p-8 rounded-3xl border-2 transition-all ${licenseStatus?.status === 'ACTIVE' ? 'bg-emerald-900/10 border-emerald-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
  <div className="space-y-6">
  <div>
- <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Situação</p>
+ <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Situação</p>
  <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'}`}>
  {licenseStatus?.status === 'ACTIVE' ? 'ATIVA' : 'EXPIRADA / INVÁLIDA'}
  </p>
  </div>
  <div>
- <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cliente</p>
+ <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Cliente</p>
  <p className="text-lg font-bold text-slate-100">{licenseStatus?.client || '---'}</p>
  </div>
  <div>
- <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Vencimento</p>
+ <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Vencimento</p>
  <p className="text-lg font-bold text-slate-100">
  {licenseStatus?.expiresAt ? new Date(licenseStatus.expiresAt).toLocaleDateString('pt-BR') : '---'}
  </p>
@@ -544,21 +545,21 @@ const AdminPanel = () => {
 
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Tecnologia</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
  <select className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
  <option value="SQL Server">SQL Server</option>
  </select>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
  <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Porta</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
  <input required type="number"className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Usuário</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário</label>
  <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
  </div>
  <div>
@@ -581,11 +582,11 @@ const AdminPanel = () => {
  />
  </div>
  <div className="md:col-span-3">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
  <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
  </div>
  <div className="md:col-span-3">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Query SQL de Seleção</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL de Seleção</label>
  <div className="relative">
  <FileCode className="absolute left-3 top-3 text-slate-300"size={18}/>
  <textarea 
@@ -596,7 +597,7 @@ const AdminPanel = () => {
  placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
  />
  </div>
- <p className="text-[10px] mt-2 italic">A query deve retornar obrigatoriamente as colunas: <span className="font-bold">Codigo, Nome, CPF, RG, PIS, ValidaExpediente</span>.</p>
+ <p className="text-[11px] mt-2 italic">A query deve retornar obrigatoriamente as colunas: <span className="font-bold">Codigo, Nome, CPF, RG, PIS, ValidaExpediente</span>.</p>
  </div>
  </div>
  </form>
@@ -612,13 +613,13 @@ const AdminPanel = () => {
  </div>
  <div className="bg-blue-900/20 border rounded-2xl px-6 py-3 flex items-center gap-3">
  <Activity size={20} className=""/>
- <div className="text-[10px] font-black uppercase text-blue-400">Auditoria: {totalLogs} eventos</div>
+ <div className="text-[11px] font-black uppercase text-blue-400">Auditoria: {totalLogs} eventos</div>
  </div>
  </div>
  <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left">
- <thead className="text-[10px] font-black uppercase bg-slate-800 border-b tracking-widest">
+ <thead className="text-[11px] font-black uppercase bg-slate-800 border-b tracking-widest">
  <tr><th className="px-6 py-4">Data/Hora</th><th className="px-6 py-4">Operador</th><th className="px-6 py-4">Ação</th><th className="px-6 py-4">Item Afetado</th><th className="px-6 py-4 text-right">Ações</th></tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -630,10 +631,10 @@ const AdminPanel = () => {
  <tr key={log.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
  <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</td>
  <td className="px-6 py-4 font-bold text-slate-100">{log.adminUser}</td>
- <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">{log.action}</span></td>
+ <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">{log.action}</span></td>
  <td className="px-6 py-4 font-bold text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
  <td className="px-6 py-4 text-right">
- <button onClick={() => setSelectedLogId(log.id)} className="text-[10px] font-black uppercase tracking-widest bg-slate-800 border border-blue-900/50 text-blue-400 px-3 py-1.5 rounded-xl hover:text-white hover:text-white transition-all">Detalhes</button>
+ <button onClick={() => setSelectedLogId(log.id)} className={`px-3 py-1.5 rounded-xl ${UI_BUTTON_SECONDARY} text-[11px]`}>Detalhes</button>
  </td>
  </tr>
  ))}
@@ -674,11 +675,11 @@ const AdminPanel = () => {
  <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
  <div className="space-y-4">
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Nome Completo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome Completo</label>
  <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})}/>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">E-mail de Acesso</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">E-mail de Acesso</label>
  <div className="relative">
  <Mail className="absolute left-3 top-3 text-slate-300"size={18}/>
  <input required type="email"className="w-full border-2 border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})}/>
@@ -692,7 +693,7 @@ const AdminPanel = () => {
  </div>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Nível de Acesso</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nível de Acesso</label>
  <select className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
  <option value={SystemRole.OPERATOR}>Operador (Leitura/Escrita)</option>
  <option value={SystemRole.ADMIN}>Administrador (Total)</option>
@@ -700,8 +701,8 @@ const AdminPanel = () => {
  </div>
  </div>
  <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
- <button type="button"onClick={() => setIsModalOpen(false)} className="px-6 py-2 text-xs font-black uppercase hover:text-slate-600 hover:bg-slate-800 rounded-xl transition-colors">Cancelar</button>
- <button type="submit"className="text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all">Salvar Operador</button>
+ <button type="button" onClick={() => setIsModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>
+ <button type="submit" className={`px-8 py-3 rounded-xl ${UI_BUTTON_PRIMARY} text-xs uppercase`}>Salvar Operador</button>
  </div>
  </form>
  </div>

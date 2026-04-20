@@ -16,6 +16,7 @@ import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceC
 import { TaskDetailModal } from './TaskDetailModal';
 import { useToast } from '../contexts/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { SortableResizableHeader } from './SortableResizableHeader';
 
 interface TaskManagerProps {
@@ -418,7 +419,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
  <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
  <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '100px' }}>Ações</th>
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-black tracking-widest text-slate-400" style={{ width: '100px' }}>Ações</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -446,8 +447,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  {task.description}
  </span>
  {task.type === TaskType.MAINTENANCE && task.deviceId && (
- <span className="text-[10px] font-medium mt-1 flex items-center gap-1">
- <Smartphone size={10} /> {getDeviceName(task.deviceId)}
+ <span className="text-[11px] font-medium mt-1 flex items-center gap-1">
+ <Smartphone size={UI_ICON_SIZE_SMALL} /> {getDeviceName(task.deviceId)}
  </span>
  )}
  </div>
@@ -466,7 +467,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </td>
  <td className="px-6 py-4">
- <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+ <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
  task.status === TaskStatus.PENDING ? ' bg-amber-900/30 text-amber-400' :
  task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/30 text-blue-400' :
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
@@ -479,7 +480,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </td>
  <td className="px-6 py-4">
  <div className="flex items-center gap-2">
- <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold">
+ <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-[11px] font-bold">
  {task.assignedTo?.charAt(0) || '?'}
  </div>
  <span className="text-xs text-slate-300">
@@ -583,10 +584,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  
  <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
  <div className="flex items-center justify-between mb-2">
- <h4 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+ <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
  </h4>
- <label className="cursor-pointer text-[10px] font-bold text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
+ <label className="cursor-pointer text-[11px] font-bold text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
  <Plus size={12} /> Adicionar
  <input type="file"className="hidden"accept="application/pdf,image/*"onChange={handleManualAttachmentUpload} />
  </label>
@@ -601,7 +602,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  ) : (
  <div className="flex flex-col items-center">
  <FileText size={20} />
- <span className="text-[9px] mt-1 font-bold">PDF</span>
+ <span className="text-[11px] mt-1 font-bold">PDF</span>
  </div>
  )}
  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
@@ -636,8 +637,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  ) : (
  <div className="text-center py-4 border-2 border-dashed border-slate-700 rounded-xl">
- <p className="text-[10px] font-bold uppercase tracking-wider">Nenhum anexo</p>
- <p className="text-[9px] mt-1">PDFs ou Imagens (Máx 5MB)</p>
+ <p className="text-[11px] font-bold uppercase tracking-wider">Nenhum anexo</p>
+ <p className="text-[11px] mt-1">PDFs ou Imagens (Máx 5MB)</p>
  </div>
  )}
  </div>
@@ -695,7 +696,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <div className="flex items-center justify-between mb-2">
  <div className="flex items-center gap-2 text-amber-400">
  <Wrench size={16} />
- <h4 className="text-xs font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
+ <h4 className="text-sm font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
  </div>
  <div className="flex items-center gap-2">
  <label className="flex items-center gap-1.5 cursor-pointer">
@@ -708,7 +709,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }}
  className="w-3.5 h-3.5 rounded focus:ring-amber-500"
  />
- <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Manutenção em Lote</span>
+ <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Manutenção em Lote</span>
  </label>
  </div>
  </div>
@@ -716,7 +717,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  {!isBatchMaintenance ? (
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Dispositivo Único</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Dispositivo Único</label>
  <select 
  required={newTask.type === TaskType.MAINTENANCE && !isBatchMaintenance}
  value={newTask.deviceId || ''}
@@ -735,7 +736,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <div className="md:col-span-2 space-y-3">
  <div className="flex items-center gap-3">
  <div className="flex-1">
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Filtrar por Tipo</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Filtrar por Tipo</label>
  <select 
  value={assetTypeFilter}
  onChange={(e) => {
@@ -761,7 +762,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <button 
  type="button"
  onClick={() => setSelectedDeviceIds([])}
- className="text-[10px] font-bold hover:underline uppercase tracking-wider"
+ className="text-[11px] font-bold hover:underline uppercase tracking-wider"
  >
  Limpar Seleção
  </button>
@@ -793,14 +794,14 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  ))
  }
  </div>
- <p className="text-[10px] font-bold uppercase tracking-wider">
+ <p className="text-[11px] font-bold uppercase tracking-wider">
  {selectedDeviceIds.length} dispositivo(s) selecionado(s)
  </p>
  </div>
  )}
  
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Tipo de Manutenção</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Tipo de Manutenção</label>
  <select 
  value={newTask.maintenanceType}
  onChange={(e) => setNewTask({...newTask, maintenanceType: e.target.value as any})}
@@ -813,7 +814,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
 
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Custo Estimado (R$)</label>
+ <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Custo Estimado (R$)</label>
  <input 
  type="number"
  step="0.01"
@@ -843,7 +844,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <div className="col-span-2 p-4 bg-indigo-900/20 rounded-2xl border border-indigo-900/40 space-y-4">
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Padrão de Recorrência</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Padrão de Recorrência</label>
  <select 
  value={newTask.recurrenceConfig?.type}
  onChange={(e) => setNewTask({
@@ -868,7 +869,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  {newTask.recurrenceConfig?.type === RecurrenceType.MONTHLY_DAY && (
  <div>
- <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia do Mês</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia do Mês</label>
  <input 
  type="number"min="1"max="31"
  value={newTask.recurrenceConfig.dayOfMonth || ''}
@@ -882,7 +883,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  {newTask.recurrenceConfig?.type === RecurrenceType.MONTHLY_WEEKDAY && (
  <>
  <div>
- <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Semana</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Semana</label>
  <select 
  value={newTask.recurrenceConfig.weekOfMonth || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, weekOfMonth: parseInt(e.target.value)}})}
@@ -897,7 +898,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </select>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia da Semana</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia da Semana</label>
  <select 
  value={newTask.recurrenceConfig.dayOfWeek || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, dayOfWeek: parseInt(e.target.value)}})}
@@ -918,7 +919,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  {newTask.recurrenceConfig?.type === RecurrenceType.INTERVAL_MONTHS && (
  <div>
- <label className="block text-[10px] font-black uppercase text-indigo-400 mb-1 tracking-widest">A cada X meses</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">A cada X meses</label>
  <input 
  type="number"min="1"
  value={newTask.recurrenceConfig.intervalMonths || ''}

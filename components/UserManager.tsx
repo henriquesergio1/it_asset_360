@@ -15,6 +15,7 @@ import { useData } from '../contexts/DataContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString } from '../utils/stringUtils';
 import { DataTable, Column } from './DataTable';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 
 const UserManager: React.FC = () => {
   const queryClient = useQueryClient();
@@ -333,7 +334,7 @@ const UserManager: React.FC = () => {
         {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
           <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 ' : 'border-transparent hover:text-slate-300'}`}>
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
-            <span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[10px]">
+            <span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">
               {users.filter(u => {
                 if (mode === 'ACTIVE') return u.active && (!u.status || u.status === UserStatus.ACTIVE);
                 if (mode === 'INACTIVE') return !u.active;
@@ -343,7 +344,7 @@ const UserManager: React.FC = () => {
             </span>
           </button>
         ))}
-        <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[10px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
+        <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
       </div>
 
       <div className="relative">
@@ -371,13 +372,13 @@ const UserManager: React.FC = () => {
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setBulkActionType('STATUS'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all"
                 >
                   Alterar Status
                 </button>
                 <button 
                   onClick={() => { setBulkActionType('SECTOR'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all"
                 >
                   Alterar Setor
                 </button>
@@ -426,37 +427,37 @@ const UserManager: React.FC = () => {
                     <div className="min-w-0">
                       <div className="font-bold text-slate-100 text-xs">{u.fullName}</div>
                       {u.status === UserStatus.ON_LEAVE && (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400 mr-1">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400 mr-1">
                           Afastado
                         </span>
                       )}
                       {hasPending && (
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-900/30 text-amber-400 animate-pulse">
+                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-900/30 text-amber-400 animate-pulse">
                           Pendente
                         </span>
                       )}
                     </div>
                   </div>
                 </td>
-                {visibleColumns.includes('email') && <td className="px-6 py-4 truncate text-[11px]">{u.email}</td>}
-                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-[11px] truncate">{u.cpf}</td>}
-                {visibleColumns.includes('rg') && <td className="px-6 py-4 font-mono text-[11px] truncate">{u.rg || '---'}</td>}
+                {visibleColumns.includes('email') && <td className="px-6 py-4 truncate text-xs">{u.email}</td>}
+                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-xs truncate">{u.cpf}</td>}
+                {visibleColumns.includes('rg') && <td className="px-6 py-4 font-mono text-xs truncate">{u.rg || '---'}</td>}
                 {visibleColumns.includes('sector') && (
                   <td className="px-6 py-4 truncate">
-                    <span className="text-[10px] font-bold bg-slate-800 px-2.5 py-1 rounded-full">
+                    <span className="text-[11px] font-bold bg-slate-800 px-2.5 py-1 rounded-full">
                       {sector?.name || 'Não Informado'}
                     </span>
                   </td>
                 )}
                 {visibleColumns.includes('assetsCount') && (
                   <td className="px-6 py-4 text-center truncate">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${u.assetsCount > 0 ? ' bg-blue-900/30 text-blue-400' : ' bg-slate-800 text-slate-400'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${u.assetsCount > 0 ? ' bg-blue-900/30 text-blue-400' : ' bg-slate-800 text-slate-400'}`}>
                       {u.assetsCount}
                     </span>
                   </td>
                 )}
-                {visibleColumns.includes('activeSims') && <td className="px-6 py-4 truncate text-[10px] font-mono">{u.activeSims}</td>}
-                {visibleColumns.includes('devicesInfo') && <td className="px-6 py-4 truncate text-[10px] font-medium">{u.devicesInfo}</td>}
+                {visibleColumns.includes('activeSims') && <td className="px-6 py-4 truncate text-[11px] font-mono">{u.activeSims}</td>}
+                {visibleColumns.includes('devicesInfo') && <td className="px-6 py-4 truncate text-[11px] font-medium">{u.devicesInfo}</td>}
                 <td className="px-6 py-4 text-right truncate">
                   <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                     <button 
@@ -518,9 +519,9 @@ const UserManager: React.FC = () => {
 
             <div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
               <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Dados Cadastrais</button>
-              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{(userDevices.length + userSims.length)}</span></button>
-              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{userAccounts.length}</span></button>
-              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[10px] font-bold">{currentUserTerms.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
+              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
               <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Histórico</button>
             </div>
 
@@ -535,34 +536,34 @@ const UserManager: React.FC = () => {
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Nome Completo</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Nome Completo</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">CPF</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">CPF</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">RG</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">RG</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">PIS / PASEP</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">PIS / PASEP</label>
                       <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="Somente números" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">E-mail Corporativo</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">E-mail Corporativo</label>
                       <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value?.trim() || ''})} />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Cargo / Setor Atual</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Cargo / Setor Atual</label>
                       <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                         <option value="">Selecione um cargo...</option>
                         {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Status do Colaborador</label>
+                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Status do Colaborador</label>
                       <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.status || UserStatus.ACTIVE} onChange={e => setFormData({...formData, status: e.target.value as any})}>
                         <option value={UserStatus.ACTIVE}>Ativo</option>
                         <option value={UserStatus.ON_LEAVE}>Afastado (INSS/Licença)</option>
@@ -574,7 +575,7 @@ const UserManager: React.FC = () => {
               {activeTab === 'ASSETS' && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
@@ -585,17 +586,17 @@ const UserManager: React.FC = () => {
                               <Smartphone className="text-emerald-500" size={24}/>
                               {isSharedResponsible && (
                                 <div className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 p-0.5 rounded-full" title="Ativo Compartilhado">
-                                  <Users size={10}/>
+                                  <Users size={UI_ICON_SIZE_SMALL}/>
                                 </div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
                                 <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{m?.name || 'Aparelho'}</div>
-                                {isSharedResponsible && <span className="text-[8px] font-black bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
+                                {isSharedResponsible && <span className="text-[11px] font-black bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
                               </div>
-                              <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
-                              <div className="text-[10px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
+                              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
+                              <div className="text-[11px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
                             </div>
                           </div>
                         );
@@ -604,7 +605,7 @@ const UserManager: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userSims.map(sim => (
                         <div key={sim.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all">
@@ -613,8 +614,8 @@ const UserManager: React.FC = () => {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase">{sim.assetTag ? `Sim Card: ${sim.assetTag}` : 'Sim Card S/N'}</div>
-                            <div className="mt-1"><span className="text-[9px] font-black bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
+                            <div className="text-[11px] font-bold text-slate-500 uppercase">{sim.assetTag ? `Sim Card: ${sim.assetTag}` : 'Sim Card S/N'}</div>
+                            <div className="mt-1"><span className="text-[11px] font-black bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
                           </div>
                         </div>
                       ))}
@@ -639,8 +640,8 @@ const UserManager: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-6">
                            <div className="text-right">
-                              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
-                              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
+                              <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
+                              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
                            </div>
                            <button className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800">
                              <ExternalLink size={16} />
@@ -669,12 +670,12 @@ const UserManager: React.FC = () => {
                           </div>
                           <div>
                             <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2 mt-1">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')} <span className="h-1 w-1 bg-slate-700 rounded-full"/> ID: {term.id.slice(0,8).toUpperCase()}</div>
+                            <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2 mt-1">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')} <span className="h-1 w-1 bg-slate-700 rounded-full"/> ID: {term.id.slice(0,8).toUpperCase()}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
                            <div className="text-right">
-                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${term.fileUrl || term.hasFile ? 'bg-emerald-900/30 text-emerald-400' : 'bg-orange-900/30 text-orange-400'}`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
+                              <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${term.fileUrl || term.hasFile ? 'bg-emerald-900/30 text-emerald-400' : 'bg-orange-900/30 text-orange-400'}`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
                            </div>
                            <div className="flex gap-2">
                              <button onClick={() => {setEditingTerm(term); setTermEditData({status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), notes: term.notes || '', evidenceFiles: term.evidenceFiles || []});}} className="p-2 bg-slate-900 text-blue-400 rounded-lg hover:bg-blue-900/20 transition-all border border-slate-800">
@@ -704,16 +705,16 @@ const UserManager: React.FC = () => {
             <div className="bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-t border-white/5">
               <div className="flex gap-3">
                 {!isViewOnly && (
-                  <button onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[10px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
+                  <button onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
                 )}
                 {isViewOnly && (
-                  <button onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-400 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-900/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
+                  <button onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-900/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
                 )}
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[10px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
+                <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
                 {!isViewOnly && (
-                  <button type="submit" form="userForm" className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"><Save size={16}/> Salvar Alterações</button>
+                  <button type="submit" form="userForm" className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"><Save size={16}/> Salvar Alterações</button>
                 )}
               </div>
             </div>
@@ -727,15 +728,15 @@ const UserManager: React.FC = () => {
             <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
               <div>
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter">Gerenciar Termo</h3>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
               </div>
               <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X size={20}/></button>
             </div>
 
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-800 hover:border-slate-700'}`}><Clock size={20}/><span className="text-[10px] font-black uppercase tracking-widest">Pendente</span></button>
-                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-400' : 'border-slate-800 hover:border-slate-700'}`}><CheckCircle2 size={20}/><span className="text-[10px] font-black uppercase tracking-widest">Assinado</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-800 hover:border-slate-700'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-400' : 'border-slate-800 hover:border-slate-700'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
               </div>
 
               <div>
@@ -770,8 +771,8 @@ const UserManager: React.FC = () => {
             </div>
 
             <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-colors">Cancelar</button>
-              <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest text-white transition-all">Salvar Alterações</button>
+              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-colors">Cancelar</button>
+              <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white transition-all">Salvar Alterações</button>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { DeviceStatus, AccountType, Task, TaskStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { TaskDashboardWidget } from './TaskDashboardWidget';
 import { TaskDetailModal } from './TaskDetailModal';
 
@@ -33,7 +34,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
       <div className="flex items-baseline gap-2">
         <h3 className="text-3xl font-black text-slate-100 tracking-tight">{value}</h3>
       </div>
-      {subtitle && <p className="text-[10px] mt-2 text-slate-400 font-medium italic">{subtitle}</p>}
+      {subtitle && <p className="text-[11px] mt-2 text-slate-400 font-medium italic">{subtitle}</p>}
     </div>
     
     {children && (
@@ -210,7 +211,7 @@ const Dashboard = () => {
                   <span className="font-bold text-slate-200">{type}</span>
                   <span className="text-slate-400">{stats.total} total</span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-medium">
+                <div className="flex justify-between items-center text-[11px] font-medium">
                   <span className="text-emerald-400">{stats.available} disp.</span>
                   <span className="text-blue-400">{stats.inUse} em uso</span>
                 </div>
@@ -290,7 +291,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-100">
                           Alertas de Expediente
-                          <span className="ml-2 bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                          <span className="ml-2 bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {filteredExpedienteAlerts.length}
                           </span>
                         </h3>
@@ -301,7 +302,7 @@ const Dashboard = () => {
                           {isExpedienteExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mb-3">
+                      <p className="text-xs text-slate-400 mb-3">
                         Colaboradores com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
                       </p>
                       
@@ -320,7 +321,7 @@ const Dashboard = () => {
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
-                                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
+                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
                                         {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
                                       </span>
                                     </div>
@@ -350,7 +351,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11 w-full">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
                                 {localUser ? (
                                   <>
                                     <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '150px'}} title={sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}>
@@ -369,7 +370,7 @@ const Dashboard = () => {
                                 <span className="uppercase tracking-tighter shrink-0">CPF: {alert.cpf}</span>
                               </div>
                               {hasActiveOverride && (
-                                <div className="mt-1 text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
+                                <div className="mt-1 text-[11px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
                                   <span className="font-bold">Motivo:</span> {alert.observation} <br/>
                                   <span className="font-bold">Reativação:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
                                 </div>
@@ -394,7 +395,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-100">
                           Estoque Crítico
-                          <span className="ml-2 bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                          <span className="ml-2 bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {consumableAlerts.length}
                           </span>
                         </h3>
@@ -405,7 +406,7 @@ const Dashboard = () => {
                           {isConsumablesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mb-3">
+                      <p className="text-xs text-slate-400 mb-3">
                         Itens que atingiram o estoque mínimo e precisam de reposição.
                       </p>
                       
@@ -418,7 +419,7 @@ const Dashboard = () => {
                                 <div className="flex-1 flex items-center justify-between min-w-0">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <p className="text-sm font-bold text-slate-200 truncate" title={item.name}>{item.name}</p>
-                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
                                       {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
                                     </span>
                                   </div>
@@ -433,7 +434,7 @@ const Dashboard = () => {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-5">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-5">
                               <span className="uppercase tracking-tighter">Estoque Mínimo: {item.minStock} {item.unit}</span>
                             </div>
                           </div>
@@ -455,7 +456,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-100">
                           Termos Pendentes
-                          <span className="ml-2 bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">
+                          <span className="ml-2 bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {pendingTerms.length}
                           </span>
                         </h3>
@@ -466,7 +467,7 @@ const Dashboard = () => {
                           {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mb-3">
+                      <p className="text-xs text-slate-400 mb-3">
                         Colaboradores com dispositivos sem termo assinado.
                       </p>
                       
@@ -482,7 +483,7 @@ const Dashboard = () => {
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
-                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest shrink-0">
+                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0">
                                         Pendente
                                       </span>
                                     </div>
@@ -505,7 +506,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium pl-11 w-full">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
                                 <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '120px'}} title={sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}>
                                   {sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}
                                 </span>
@@ -520,7 +521,7 @@ const Dashboard = () => {
                           );
                         })}
                         {pendingTerms.length > 5 && (
-                          <button onClick={() => navigate('/reports?tab=USERS')} className="w-full py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
+                          <button onClick={() => navigate('/reports?tab=USERS')} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}
@@ -540,7 +541,7 @@ const Dashboard = () => {
                 <p className="text-sm text-blue-100 mb-6 opacity-80">Atribua um dispositivo ou acessório a um colaborador agora.</p>
                 <button 
                   onClick={() => navigate('/operations')}
-                  className="bg-white text-blue-700 px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95"
+                  className={`px-6 py-2 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-white/10 ${UI_BUTTON_SECONDARY} !bg-white !text-blue-700 !border-white hover:!bg-blue-50`}
                 >
                   Iniciar Checkout
                 </button>
@@ -554,7 +555,7 @@ const Dashboard = () => {
                 <p className="text-sm text-slate-400 mb-6 font-medium">Acesse dados financeiros, consumo e inventário completo.</p>
                 <button 
                   onClick={() => navigate('/reports')}
-                  className="bg-slate-700 text-white px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-600 transition-all active:scale-95 border border-slate-600"
+                  className={`px-6 py-2 rounded-xl text-sm transition-all active:scale-95 ${UI_BUTTON_SECONDARY}`}
                 >
                   Ver Relatórios
                 </button>
@@ -574,7 +575,7 @@ const Dashboard = () => {
                 </div>
                 <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest">Tarefas</h2>
               </div>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-[10px] font-black uppercase">
+              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-[11px] font-black uppercase">
                 {tasks.filter(t => t.status !== TaskStatus.COMPLETED).length} Ativas
               </span>
             </div>
@@ -590,7 +591,7 @@ const Dashboard = () => {
             <div className="p-4 border-t border-slate-800">
               <button 
                 onClick={() => navigate('/tasks')}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
+                className={`w-full py-3 ${UI_BUTTON_SECONDARY} text-xs rounded-xl transition-all flex items-center justify-center gap-2`}
               >
                 Gerenciar Todas <ArrowRight size={14} />
               </button>
@@ -609,7 +610,7 @@ const Dashboard = () => {
               Esta ação será registrada nos logs de auditoria.
             </p>
             <div className="mb-6">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo da Resolução</label>
+              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo da Resolução</label>
               <textarea
                 rows={4}
                 className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
@@ -667,7 +668,7 @@ const Dashboard = () => {
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo / Observação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo / Observação</label>
                 <textarea 
                   className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 placeholder-slate-600"
                   rows={3}
@@ -677,7 +678,7 @@ const Dashboard = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Data para Reativação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Data para Reativação</label>
                 <input 
                   type="date"
                   className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100"

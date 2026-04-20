@@ -70,12 +70,12 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
             <ShieldAlert size={18} className="animate-pulse" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
               <span className="text-xs font-black uppercase tracking-widest">Sistema em Modo Consulta</span>
-              <span className="text-[10px] opacity-90 font-medium">Sua licença expirou ou não foi localizada. Ações de escrita estão desabilitadas.</span>
+              <span className="text-[11px] opacity-90 font-medium">Sua licença expirou ou não foi localizada. Ações de escrita estão desabilitadas.</span>
             </div>
           </div>
           <button 
             onClick={() => setShowModal(true)}
-            className="bg-white text-amber-700 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-amber-50 transition-colors shadow-sm"
+            className="bg-white text-amber-700 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-amber-50 transition-colors shadow-sm"
           >
             Ativar Agora
           </button>
@@ -98,7 +98,7 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
             <div className="p-8">
               <form onSubmit={handleUpdate} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2 ml-1">Chave de Ativação (JWT)</label>
+                  <label className="block text-[11px] font-black uppercase text-slate-500 tracking-widest mb-2 ml-1">Chave de Ativação (JWT)</label>
                   <textarea
                     className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 text-slate-100 text-sm focus:border-blue-500 outline-none transition-all min-h-[120px] resize-none font-mono"
                     placeholder="Cole aqui seu token de licença..."
@@ -121,14 +121,14 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase text-[11px] tracking-widest py-4 rounded-2xl transition-all"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdating || !licenseKey.trim()}
-                    className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
+                    className="flex-[2] bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-black uppercase text-[11px] tracking-widest py-4 rounded-2xl shadow-lg shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
                   >
                     {isUpdating ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
                     {isUpdating ? 'Validando...' : 'Ativar'}

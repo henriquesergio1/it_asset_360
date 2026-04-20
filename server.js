@@ -531,7 +531,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires FROM SystemSettings"),
-            pool.request().query("SELECT * FROM Models"), 
+            pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
@@ -541,7 +541,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
-            pool.request().query("SELECT * FROM TaskLogs"),
+            pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables")
         ]);
 
@@ -555,7 +555,7 @@ app.get('/api/bootstrap', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes), systemUsers: sysUsersRes.recordset,
             settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' }, 
-            models: format(modelsRes).map(m => ({ ...m, imageUrl: getBase64FromBuffer(m.imageBinary) })), 
+            models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
@@ -854,6 +854,11 @@ const isBase64 = (str) => {
     return str.startsWith('data:') && str.includes(';base64,');
 };
 
+const isInternalUrl = (str) => {
+    if (!str || typeof str !== 'string') return false;
+    return str.includes('/api/') || (str.startsWith('http') && !str.startsWith('data:'));
+};
+
 const getBufferFromBase64 = (str) => {
     if (!isBase64(str)) return null;
     const base64Data = str.split(';base64,').pop();
@@ -933,6 +938,8 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                         request.input(dbKey, sql.VarBinary, buffer);
                         columns.push(dbKey);
                         values.push('@' + dbKey);
+                    } else if (isInternalUrl(val)) {
+                        continue;
                     } else {
                         request.input(dbKey, sql.VarBinary, null);
                         columns.push(dbKey);
@@ -988,6 +995,8 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                         const buffer = getBufferFromBase64(val);
                         request.input(dbKey, sql.VarBinary, buffer);
                         sets.push(`${dbKey}=@${dbKey}`);
+                    } else if (isInternalUrl(val)) {
+                        continue;
                     } else {
                         request.input(dbKey, sql.VarBinary, null);
                         sets.push(`${dbKey}=@${dbKey}`);
@@ -1945,6 +1954,27 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             }
 
             res.json({ status: 'ACTIVE', client: license.client, expiresAt });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.get('/api/models/:id/image', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('id', sql.NVarChar, req.params.id)
+                .query("SELECT ImageBinary FROM Models WHERE Id = @id");
+            
+            const row = result.recordset[0];
+            if (!row || !row.ImageBinary) {
+                return res.status(404).send('Imagem não encontrada');
+            }
+
+            // Define Cache-Control para 30 dias (cache do navegador)
+            res.set('Cache-Control', 'public, max-age=2592000');
+            res.set('Content-Type', 'image/png'); // Tenta PNG por padrão ou detecta se necessário
+            res.send(row.ImageBinary);
         } catch (err) {
             res.status(500).send(err.message);
         }

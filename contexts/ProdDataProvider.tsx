@@ -107,7 +107,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
  const systemUsers = bootstrapData?.systemUsers || [];
  const settings = bootstrapData?.settings || { appName: 'IT Asset', logoUrl: '' };
- const models = bootstrapData?.models || [];
+ const models = (bootstrapData?.models || []).map((m: any) => ({
+  ...m,
+  imageUrl: `${API_URL}/api/models/${m.id}/image`
+ }));
  const brands = bootstrapData?.brands || [];
  const assetTypes = bootstrapData?.assetTypes || [];
  const sectors = bootstrapData?.sectors || [];

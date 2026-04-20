@@ -34,7 +34,7 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
 
   return (
     <th 
-      className="p-0 border-b border-slate-700 bg-slate-800 text-[10px] uppercase font-black tracking-widest text-slate-400 group align-middle relative"
+      className="p-0 border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-black tracking-widest text-slate-400 group align-middle relative"
       style={{ width: width ? `${width}px` : undefined, minWidth }}
     >
       <div className="flex items-center h-full min-h-[48px]">

@@ -202,21 +202,21 @@ const SimManager = () => {
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">Total de Linhas</span>
+ <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-1">Total de Linhas</span>
  <p className="text-3xl font-black text-slate-100">{total}</p>
  </div>
  <div className="h-10 w-10 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400"><Signal size={20}/></div>
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-1">Disponíveis</span>
+ <span className="text-[11px] font-black text-green-400 uppercase tracking-widest block mb-1">Disponíveis</span>
  <p className="text-3xl font-black text-slate-100">{available}</p>
  </div>
  <div className="h-10 w-10 bg-green-900/30 rounded-full flex items-center justify-center text-green-400"><Wifi size={20}/></div>
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-1">Em Uso</span>
+ <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-1">Em Uso</span>
  <p className="text-3xl font-black text-slate-100">{inUse}</p>
  </div>
  <div className="h-10 w-10 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400"><Smartphone size={20}/></div>
@@ -246,7 +246,7 @@ const SimManager = () => {
  <SortableResizableHeader label="ICCID" sortKey="iccid" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['iccid']} onResize={(x, w) => handleResize('iccid', x, w)} />
  <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
  <SortableResizableHeader label="Usuário" sortKey="currentUserId" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[10px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
  </tr>
  </thead>
  <tbody>
@@ -254,13 +254,13 @@ const SimManager = () => {
  const assignedUser = users.find(u => u.id === sim.currentUserId);
  return (
  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="bg-slate-900 border-b border-slate-800/50 hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer group">
- <td className="px-6 py-4 font-bold text-slate-100 truncate">{sim.phoneNumber}</td>
+ <td className="px-6 py-4 font-bold text-slate-100 truncate text-xs">{sim.phoneNumber}</td>
  <td className="px-6 py-4 truncate">
- <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[10px] font-bold uppercase tracking-wider">{sim.operator}</span>
+ <span className="px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 text-[11px] font-bold uppercase tracking-wider">{sim.operator}</span>
  </td>
  <td className="px-6 py-4 font-mono text-xs font-bold truncate">{sim.iccid}</td>
  <td className="px-6 py-4 text-center truncate">
- <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${sim.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/30 text-emerald-400' : ' bg-blue-900/30 text-blue-400'}`}>
+ <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${sim.status === DeviceStatus.AVAILABLE ? ' bg-emerald-900/30 text-emerald-400' : ' bg-blue-900/30 text-blue-400'}`}>
  {sim.status}
  </span>
  </td>
@@ -275,7 +275,7 @@ const SimManager = () => {
  >
  {assignedUser.fullName}
  </span>
- ) : <span className="font-bold text-[10px] uppercase tracking-wider italic">Disponível</span>}
+ ) : <span className="font-bold text-[11px] uppercase tracking-wider italic text-slate-500">Disponível</span>}
  </td>
  <td className="px-6 py-4 text-right"onClick={(e) => e.stopPropagation()}>
  <div className="flex items-center justify-end gap-2">
@@ -313,11 +313,11 @@ const SimManager = () => {
  )}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Número da Linha</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Número da Linha</label>
  <input disabled={isViewOnly} required type="text"placeholder="(00) 00000-0000"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
  </div>
  <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Operadora</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Operadora</label>
  <select disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
  <option value="Vivo">Vivo</option>
  <option value="Claro">Claro</option>
@@ -328,11 +328,11 @@ const SimManager = () => {
  </select>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ICCID (20 dígitos)</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">ICCID (20 dígitos)</label>
  <input disabled={isViewOnly} required type="text"placeholder="8955..."className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-mono transition-colors"value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value.trim()})}/>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Detalhes do Plano</label>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Detalhes do Plano</label>
  <input disabled={isViewOnly} type="text"placeholder="Ex: 50GB Mensal Corporativo"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 transition-colors"value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
  </div>
  </div>
@@ -363,8 +363,8 @@ const SimManager = () => {
  </div>
  <textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-900/20 focus:border-blue-700 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea>
  <div className="flex gap-4">
- <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-colors">Voltar</button>
- <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 disabled:opacity-50 transition-all">Salvar Alterações</button>
+ <button onClick={() => setIsReasonModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-colors">Voltar</button>
+ <button onClick={confirmEdit} disabled={!editReason.trim()} className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-blue-700 disabled:opacity-50 transition-all">Salvar Alterações</button>
  </div>
  </div>
  </div>
@@ -383,8 +383,8 @@ const SimManager = () => {
  </div>
  <textarea className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:ring-red-900/20 focus:border-red-300 focus:border-red-700 outline-none mb-6 transition-all bg-slate-800 text-slate-100"rows={3} placeholder="Ex: Chip extraviado, linha cancelada..."value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea>
  <div className="flex gap-4">
- <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-slate-700 transition-colors">Manter</button>
- <button onClick={handleConfirmDelete} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 bg-red-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 hover:bg-red-600 transition-all disabled:opacity-50">Confirmar</button>
+ <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-3 bg-slate-800 rounded-2xl font-black uppercase text-[11px] tracking-widest border border-slate-700 transition-colors">Manter</button>
+ <button onClick={handleConfirmDelete} disabled={!deleteReason.trim()} className="flex-1 py-3 bg-red-600 bg-red-500 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-red-700 hover:bg-red-600 transition-all disabled:opacity-50">Confirmar</button>
  </div>
  </div>
  </div>
