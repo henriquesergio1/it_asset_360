@@ -32,7 +32,14 @@ const UserManager: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('user_manager_widths');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('user_manager_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
   const [isEditingTerm, setIsEditingTerm] = useState(false);
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [termEditData, setTermEditData] = useState<{
@@ -99,8 +106,20 @@ const UserManager: React.FC = () => {
     return user?.terms || [];
   }, [users, editingId]);
 
-  const handleResize = (id: string, _: number, width: number) => {
-    setColumnWidths(prev => ({ ...prev, [id]: width }));
+  const handleResize = (colId: string, startX: number, startWidth: number) => {
+    const onMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX;
+      setColumnWidths(prev => ({ 
+        ...prev, 
+        [colId]: Math.max(startWidth + delta, 50) 
+      }));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   const handleSort = (key: string) => {
