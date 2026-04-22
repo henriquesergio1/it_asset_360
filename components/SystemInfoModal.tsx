@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.27.9',
+    date: 'Hoje',
+    title: 'Correção de Infra Docker',
+    changes: [
+      'Infra: Porta da API agora é dinâmica (process.env.PORT), permitindo execução correta em containers (PORT 5000/5001).',
+      'Infra: Ajuste de porta sincronizado com docker-compose e nginx.conf.',
+      'Fix: Removido hardcode de porta 3000 que causava falha no proxy reverso do Nginx.'
+    ]
+  },
+  {
     version: '3.27.8',
     date: 'Hoje',
     title: 'Estabilidade e Fallback Mock',
