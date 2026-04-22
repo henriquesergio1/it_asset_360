@@ -43,7 +43,8 @@ const DB_SCHEMAS = {
         Supplier NVARCHAR(255),
         PurchaseInvoiceBinary VARBINARY(MAX),
         DeviceImageBinary VARBINARY(MAX),
-        CustomData NVARCHAR(MAX)
+        CustomData NVARCHAR(MAX),
+        AdditionalUserIds NVARCHAR(MAX)
     )`,
     SimCards: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -68,7 +69,16 @@ const DB_SCHEMAS = {
         Status NVARCHAR(50) DEFAULT 'Ativo',
         OnLeaveUntil DATETIME NULL,
         HasPendingIssues BIT,
-        PendingIssuesNote NVARCHAR(MAX)
+        PendingIssuesNote NVARCHAR(MAX),
+        Gender NVARCHAR(50),
+        BirthDate DATETIME,
+        Phone NVARCHAR(50),
+        PersonalPhone NVARCHAR(50),
+        City NVARCHAR(255),
+        State NVARCHAR(50),
+        ZipCode NVARCHAR(20),
+        HireDate DATETIME,
+        Notes NVARCHAR(MAX)
     )`,
     AuditLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -204,6 +214,12 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Devices ADD DeviceImageBinary VARBINARY(MAX) NULL');
                     }
 
+                    const checkShared = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'AdditionalUserIds'`);
+                    if (checkShared.recordset.length === 0) {
+                        console.log(`- Coluna AdditionalUserIds não encontrada em Devices. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Devices ADD AdditionalUserIds NVARCHAR(MAX) NULL');
+                    }
+
                     // Cleanup legacy columns
                     const checkLegacy = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'PurchaseInvoiceUrl'`);
                     if (checkLegacy.recordset.length > 0) {
@@ -237,6 +253,31 @@ async function initializeDatabase() {
                     if (checkLeave.recordset.length === 0) {
                         console.log(`- Coluna OnLeaveUntil não encontrada em Users. Adicionando...`);
                         await pool.request().query("ALTER TABLE Users ADD OnLeaveUntil DATETIME NULL");
+                    }
+
+                    // v3.26.4 - Novos campos de colaboradores
+                    const checkCols = await pool.request().query(`
+                        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = 'Users' AND COLUMN_NAME IN ('Gender', 'BirthDate', 'Phone', 'PersonalPhone', 'City', 'State', 'ZipCode', 'HireDate', 'Notes')
+                    `);
+                    const existingCols = checkCols.recordset.map(r => r.COLUMN_NAME);
+                    const colsToAdd = [
+                        { name: 'Gender', type: 'NVARCHAR(50)' },
+                        { name: 'BirthDate', type: 'DATETIME' },
+                        { name: 'Phone', type: 'NVARCHAR(50)' },
+                        { name: 'PersonalPhone', type: 'NVARCHAR(50)' },
+                        { name: 'City', type: 'NVARCHAR(255)' },
+                        { name: 'State', type: 'NVARCHAR(50)' },
+                        { name: 'ZipCode', type: 'NVARCHAR(20)' },
+                        { name: 'HireDate', type: 'DATETIME' },
+                        { name: 'Notes', type: 'NVARCHAR(MAX)' }
+                    ];
+
+                    for (const col of colsToAdd) {
+                        if (!existingCols.includes(col.name)) {
+                            console.log(`- Adicionando coluna ${col.name} em Users...`);
+                            await pool.request().query(`ALTER TABLE Users ADD ${col.name} ${col.type} NULL`);
+                        }
                     }
                 }
                 if (table === 'Models') {

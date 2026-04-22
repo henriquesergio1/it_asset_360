@@ -8,6 +8,38 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.26.6',
+    date: 'Hoje',
+    title: 'Restauração de Interface: Tailwind v4 Nativo',
+    changes: [
+      'UI: Restauração completa dos estilos sistêmicos usando o novo motor do Tailwind v4.',
+      'Configuração: Migração do arquivo de configuração JS para declarações nativas no CSS (@theme).',
+      'Performance: CSS agora é processado de forma mais eficiente pelo motor JIT v4.',
+      'Estabilização: Removidos arquivos de configuração legados que causavam conflitos no build.'
+    ]
+  },
+    {
+    version: '3.26.5',
+    date: 'Hoje',
+    title: 'Correção de Build: Transição Tailwind v4',
+    changes: [
+      'Build: Atualização do plugin PostCSS para @tailwindcss/postcss para compatibilidade com v4.',
+      'Sistemas: Correção do erro interno do Vite durante o processamento de estilos.',
+      'Sincronização: Versão 3.26.5 aplicada globalmente.'
+    ]
+  },
+    {
+    version: '3.26.4',
+    date: 'Hoje',
+    title: 'Correção de Esquema e Integridade de Dados',
+    changes: [
+      'Banco de Dados: Adição de colunas faltantes em Usuários (Dados Pessoais) e Dispositivos (Compartilhamento).',
+      'Migração: Implementada rotina de auto-migração para bancos de dados existentes.',
+      'Sistemas: Remoção de dependências legadas de CDN no frontend para maior estabilidade.',
+      'Estabilidade: Resolvido erro 500 no salvamento de Colaboradores e Ativos.'
+    ]
+  },
+    {
     version: '3.26.3',
     date: 'Hoje',
     title: 'Correção Crítica: Edição de Usuários',
