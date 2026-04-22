@@ -69,7 +69,8 @@ const SimManager = () => {
  setIsViewOnly(viewOnly);
  if (sim) {
  setEditingId(sim.id);
- setFormData(sim);
+ const { currentUserName, deviceName, ...validData } = sim as any;
+      setFormData(validData);
  } else {
  setEditingId(null);
  setFormData({ status: DeviceStatus.AVAILABLE, operator: 'Vivo', planDetails: '' });

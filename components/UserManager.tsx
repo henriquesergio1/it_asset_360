@@ -199,7 +199,12 @@ const UserManager: React.FC = () => {
   const handleOpenModal = (u: User | null = null, view: boolean = false) => {
     if (u) {
       setEditingId(u.id);
-      setFormData(u);
+      // Garantir que não estamos enviando campos calculados/virtuais da tabela para o formData
+      const { 
+        assetsCount, activeSims, devicesInfo, terms,
+        ...validData 
+      } = u as any;
+      setFormData(validData);
       setIsViewOnly(view);
     } else {
       setEditingId(null);

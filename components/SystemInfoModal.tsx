@@ -8,8 +8,20 @@ interface SystemInfoModalProps {
 }
 
 const versions = [
- {
- version: '3.5.7',
+  {
+    version: '3.26.7',
+    date: 'Hoje',
+    title: 'Correção Crítica: Cadastro e Edição de Colaboradores/Ativos',
+    changes: [
+      'Backend: Correção de Erro 500 ao atualizar colaboradores e dispositivos (campos virtuais ignorados no CRUD).',
+      'Frontend: Refatoração da abertura de modais para limpeza de dados calculados antes do envio à API.',
+      'Banco de Dados: Garantida a presença de todos os novos campos de perfil (Gênero, Nascimento, Endereço, etc).',
+      'Segurança: Melhoria na sanitização das chaves enviadas às rotas genéricas de banco de dados.',
+      'Versão: Atualizado para v3.26.7.'
+    ]
+  },
+  {
+    version: '3.5.7',
  date: '27/03/2026',
  title: 'Revisão Global do Tema Escuro - Final',
  changes: [

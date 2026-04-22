@@ -946,7 +946,12 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
 // ... (código das rotas movido para dentro de startServer)
 
-    const IGexternal_CRUD_KEYS = ['accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId'];
+    const IGexternal_CRUD_KEYS = [
+        'accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 
+        'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId',
+        'assetsCount', 'activeSims', 'devicesInfo', 'sectorName', 'userName',
+        'modelName', 'brandName', 'typeName', 'currentUserName', 'linkedSimNumber'
+    ];
 
     const crud = (table, route, assetType) => {
     app.post(`/api/${route}`, async (req, res) => {

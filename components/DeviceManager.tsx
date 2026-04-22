@@ -794,7 +794,9 @@ const DeviceManager = () => {
  setActiveTab('GENERAL');
  const isRetired = device?.status === DeviceStatus.RETIRED;
  setIsViewOnly(isRetired || viewOnly);
- if (device) { setEditingId(device.id); setFormData({ ...device, customData: device.customData || {} }); setIdType(device.imei && !device.assetTag ? 'IMEI' : 'TAG'); } 
+ if (device) { setEditingId(device.id); const { modelName, brandName, typeName, sectorName, currentUserName, linkedSimNumber, ...validData } = device as any;
+      setFormData({ ...validData, customData: device.customData || {} }); 
+      setIdType(device.imei && !device.assetTag ? 'IMEI' : 'TAG'); } 
  else { setEditingId(null); setFormData({ status: DeviceStatus.AVAILABLE, purchaseDate: new Date().toISOString().split('T')[0], purchaseCost: 0, customData: {}, linkedSimId: null }); setIdType('TAG'); }
  setIsModalOpen(true);
  };
