@@ -415,7 +415,11 @@ const UserManager: React.FC = () => {
 
   const handleDownloadTerm = (term: Term) => {
     if (term.fileUrl || term.hasFile) {
-      const url = term.fileUrl || '#';
+      const url = term.fileUrl;
+      if (!url || url === '#') {
+        alert("O arquivo não está mais disponível ou ainda não foi sincronizado.");
+        return;
+      }
       if (url.startsWith('data:')) {
         // Usa fetch para converter o base64 para Blob e fazer um download seguro
         fetch(url)
@@ -427,12 +431,20 @@ const UserManager: React.FC = () => {
             link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
+            setTimeout(() => {
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(blobUrl);
+            }, 100);
           })
           .catch(err => {
-            console.error("Erro ao gerar download", err);
-            window.open(url, '_blank');
+            console.error("Erro ao gerar download via blob", err);
+            // Fallback direto
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
           });
       } else {
         window.open(url, '_blank');
@@ -441,26 +453,40 @@ const UserManager: React.FC = () => {
       const user = users.find(u => u.id === editingId);
       if (!user) return;
       
-      // Reconstrói informações do item baseado em assetDetails
+      // Reconstrói informações do item
       const isSim = term.assetDetails.includes('[CHIP:');
-      let asset: any;
+      let asset: any = null;
+      let modelData: any = null;
       let modelName = term.assetDetails;
 
       if (isSim) {
         const phoneMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
-        asset = {
+        const phone = phoneMatch ? phoneMatch[1] : '';
+        const realSim = sims.find(s => s.phoneNumber === phone);
+        
+        asset = realSim || {
           operator: 'Operadora',
           iccid: 'N/A',
-          phoneNumber: phoneMatch ? phoneMatch[1] : 'Chip SIM'
+          phoneNumber: phone || 'Chip SIM'
         };
         modelName = 'Chip / SIM Card';
       } else {
         const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
-        asset = {
-          serialNumber: 'Consulte sistema',
-          assetTag: tagMatch ? tagMatch[1] : 'S/N',
-        };
-        modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
+        const tag = tagMatch ? tagMatch[1] : '';
+        const realDevice = devices.find(d => d.assetTag === tag);
+        
+        if (realDevice) {
+           asset = realDevice;
+           modelData = models.find(m => m.id === realDevice.modelId);
+        } else {
+           asset = {
+             serialNumber: 'S/N (Não Localizado)',
+             assetTag: tag || 'S/N',
+             imei: '',
+             accessories: []
+           };
+           modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
+        }
       }
       
       const sector = sectors.find(s => s.id === user.sectorId);
@@ -469,10 +495,13 @@ const UserManager: React.FC = () => {
         user,
         asset,
         settings,
-        model: { name: modelName } as any,
+        model: modelData || { name: modelName },
         actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
         sectorName: sector?.name,
-        notes: term.notes
+        notes: term.notes,
+        condition: term.condition,
+        damageDescription: term.damageDescription,
+        evidenceFiles: term.evidenceFiles
       });
     }
   };
@@ -986,7 +1015,7 @@ const UserManager: React.FC = () => {
                              </button>
                              <button 
                                type="button"
-                               onClick={() => handleDownloadTerm(term)}
+                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
                                className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
                                title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
                              >
