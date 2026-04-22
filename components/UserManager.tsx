@@ -16,6 +16,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString, phoneticEncode } from '../utils/stringUtils';
+import { DataTable, Column } from './DataTable';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
@@ -91,6 +92,22 @@ const UserManager: React.FC = () => {
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
+  const { 
+    users, 
+    sectors, 
+    models, 
+    devices, 
+    sims, 
+    accounts,
+    addUser,
+    updateUser: updateUserData,
+    toggleUserActive,
+    isReadOnly,
+    settings
+  } = useData();
+  const { showToast } = useToast();
+  const { user: authUser } = useAuth();
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const userId = params.get('userId');
@@ -163,22 +180,6 @@ const UserManager: React.FC = () => {
       exportToPDF(headers, rows, fileName, 'Relatório de Colaboradores');
     }
   };
-
-  const { 
-    users, 
-    sectors, 
-    models, 
-    devices, 
-    sims, 
-    accounts,
-    addUser,
-    updateUser: updateUserData,
-    toggleUserActive,
-    isReadOnly,
-    settings
-  } = useData();
-  const { showToast } = useToast();
-  const { user: authUser } = useAuth();
 
   const getUserAssetsFixed = (userId: string) => {
     const userDevices = devices.filter(d => d.currentUserId === userId || (d.additionalUserIds || []).includes(userId));

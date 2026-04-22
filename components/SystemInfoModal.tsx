@@ -9,6 +9,24 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.29.2',
+    date: 'Hoje',
+    title: 'Correção de Dependência Ausente',
+    changes: [
+      'Fix: Restaurada importação do componente DataTable em UserManager.',
+      'Sinc: Alinhamento de versão global.'
+    ]
+  },
+  {
+    version: '3.29.1',
+    date: 'Hoje',
+    title: 'Correção de Inicialização Crítica',
+    changes: [
+      'Fix: Corrigida ordem de declaração dos hooks em UserManager para evitar erro de referência (TDZ).',
+      'UX: Sincronização de versionamento em todo o sistema.'
+    ]
+  },
+  {
     version: '3.29.0',
     date: 'Hoje',
     title: 'Restauração de Funcionalidades Críticas',
