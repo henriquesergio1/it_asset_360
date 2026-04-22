@@ -415,7 +415,17 @@ const UserManager: React.FC = () => {
 
   const handleDownloadTerm = (term: Term) => {
     if (term.fileUrl || term.hasFile) {
-      window.open(term.fileUrl || '#', '_blank');
+      const url = term.fileUrl || '#';
+      if (url.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        window.open(url, '_blank');
+      }
     } else {
       const user = users.find(u => u.id === editingId);
       if (!user) return;
@@ -425,7 +435,7 @@ const UserManager: React.FC = () => {
       const asset = device || sim;
       
       if (asset) {
-        const model = models.find(m => m.id === (asset as Device).modelId);
+        const model = models.find(m => m.id === (asset as any).modelId);
         const sector = sectors.find(s => s.id === user.sectorId);
         
         generateAndPrintTerm({
@@ -433,7 +443,7 @@ const UserManager: React.FC = () => {
           asset,
           settings,
           model,
-          actionType: term.type,
+          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
           sectorName: sector?.name,
           notes: term.notes
         });
@@ -934,6 +944,7 @@ const UserManager: React.FC = () => {
                            </div>
                            <div className="flex gap-2">
                              <button 
+                               type="button"
                                onClick={() => {
                                  setEditingTerm(term); 
                                  setTermEditData({
@@ -948,6 +959,7 @@ const UserManager: React.FC = () => {
                                <Edit2 size={16} />
                              </button>
                              <button 
+                               type="button"
                                onClick={() => handleDownloadTerm(term)}
                                className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
                                title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
@@ -962,6 +974,7 @@ const UserManager: React.FC = () => {
                                </label>
                              ) : (
                                <button 
+                                 type="button"
                                  onClick={() => handleDeleteTermFile(term.id)}
                                  className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
                                  title="Excluir/Alterar"
@@ -987,14 +1000,14 @@ const UserManager: React.FC = () => {
             <div className="bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-t border-white/5">
               <div className="flex gap-3">
                 {!isViewOnly && (
-                  <button onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
                 )}
                 {isViewOnly && (
-                  <button onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-900/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-900/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
                 )}
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
                 {!isViewOnly && (
                   <button type="submit" form="userForm" className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"><Save size={16}/> Salvar Alterações</button>
                 )}

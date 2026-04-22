@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.29.3',
+    date: 'Hoje',
+    title: 'Correção de Download e Navegação',
+    changes: [
+      'Fix: Adicionado type="button" aos botões de termos para evitar recarregamento da página.',
+      'Fix: Melhorada a lógica de download de termos assinados (Base64) para forçar o download.',
+      'Fix: Corrigida geração de PDF de termos pendentes.'
+    ]
+  },
+  {
     version: '3.29.2',
     date: 'Hoje',
     title: 'Correção de Dependência Ausente',
