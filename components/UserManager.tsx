@@ -404,23 +404,23 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
-        <div>
-          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
-            <UserIcon className="text-emerald-500" size={28} />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2 truncate">
+            <UserIcon className="text-emerald-500 shrink-0" size={24} />
             Gestão de Colaboradores
           </h2>
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Total de {users.length} profissionais mapeados no ecossistema</p>
+          <p className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Total de {users.length} profissionais mapeados no ecossistema</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
-            <button onClick={() => handleExport('csv')} className="p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
-            <button onClick={() => handleExport('excel')} className="p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
-            <button onClick={() => handleExport('pdf')} className="p-2.5 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
+        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner shrink-0">
+            <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
           </div>
 
-          <div className="relative" ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+          <div className="relative shrink-0" ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
@@ -444,7 +444,7 @@ const UserManager: React.FC = () => {
           <button 
             disabled={isReadOnly}
             onClick={() => handleOpenModal()} 
-            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border-b-4 border-b-emerald-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border-b-4 border-b-emerald-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <Plus size={18} /> Novo Colaborador
           </button>

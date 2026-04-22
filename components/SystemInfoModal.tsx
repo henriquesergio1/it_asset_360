@@ -9,6 +9,28 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.28.1',
+    date: 'Hoje',
+    title: 'Correção de Layout Crítico',
+    changes: [
+      'UI: Forçada a permanência dos botões em linha única (flex-nowrap).',
+      'UI: Título da página agora é flexível (flex-1) e trunca para dar prioridade aos botões de ação.',
+      'UI: Ajuste dos pontos de interrupção (breakpoints) para melhor suporte em notebooks de 13/14 polegadas.',
+      'UI: Refinamento de paddings internos para eliminar espaços mortos.'
+    ]
+  },
+  {
+    version: '3.28.0',
+    date: 'Hoje',
+    title: 'Melhoria de UI Responsiva',
+    changes: [
+      'UI: Ajuste na escala tipográfica e espaçamentos dos cabeçalhos para evitar quebra de linha em resoluções menores.',
+      'UI: Botões de ação agora possuem paddings e tamanhos de fonte adaptativos.',
+      'UX: Títulos de seção agora utilizam truncamento inteligente e tamanhos dinâmicos.',
+      'Fix: Otimização de containers flexíveis para melhor aproveitamento de espaço em tablets.'
+    ]
+  },
+  {
     version: '3.27.9',
     date: 'Hoje',
     title: 'Correção de Infra Docker',

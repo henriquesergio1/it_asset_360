@@ -887,42 +887,42 @@ const DeviceManager = () => {
 
  return (
     <div className="space-y-6 relative pb-20 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
-        <div>
-          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
-            <Smartphone className="text-blue-500" size={28} />
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2 truncate">
+            <Smartphone className="text-blue-500 shrink-0" size={24} />
             Inventário de Dispositivos / Ativos
           </h2>
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Relação completa de máquinas, coletores e celulares</p>
+          <p className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Relação completa de máquinas, coletores e celulares</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+        <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner shrink-0">
             <button 
               onClick={() => handleExport('csv')} 
-              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              className="p-2 sm:p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
               title="Exportar CSV"
             >
-              <FileText size={UI_ICON_SIZE_BASE}/>
+              <FileText size={18}/>
             </button>
             <button 
               onClick={() => handleExport('excel')} 
-              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              className="p-2 sm:p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
               title="Exportar Excel"
             >
-              <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
+              <FileSpreadsheet size={18}/>
             </button>
             <button 
               onClick={() => handleExport('pdf')} 
-              className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              className="p-2 sm:p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-blue-400"
               title="Exportar PDF"
             >
-              <Download size={UI_ICON_SIZE_BASE}/>
+              <Download size={18}/>
             </button>
           </div>
 
-          <div className="relative" ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
-              <SlidersHorizontal size={UI_ICON_SIZE_BASE} /> Colunas
+          <div className="relative shrink-0" ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
+              <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
@@ -942,16 +942,16 @@ const DeviceManager = () => {
             )}
           </div>
 
-          <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
-            <Settings size={UI_ICON_SIZE_BASE} /> Catálogo
+          <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0">
+            <Settings size={18} /> Catálogo
           </button>
 
           <button 
             disabled={isReadOnly}
             onClick={() => handleOpenModal()} 
-            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap shrink-0 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <Plus size={UI_ICON_SIZE_BASE} /> Novo Ativo
+            <Plus size={18} /> Novo Ativo
           </button>
         </div>
       </div>
