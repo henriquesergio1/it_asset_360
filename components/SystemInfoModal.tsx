@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.29.4',
+    date: 'Hoje',
+    title: 'Estabilização de Geração de Termos',
+    changes: [
+      'Fix: Remapeado a geração de termos pendentes.',
+      'Fix: Otimizado o download de Base64 para contornar o React Router usando URL.createObjectURL e fetch().'
+    ]
+  },
+  {
     version: '3.29.3',
     date: 'Hoje',
     title: 'Correção de Download e Navegação',

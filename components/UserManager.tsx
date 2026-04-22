@@ -417,12 +417,23 @@ const UserManager: React.FC = () => {
     if (term.fileUrl || term.hasFile) {
       const url = term.fileUrl || '#';
       if (url.startsWith('data:')) {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Usa fetch para converter o base64 para Blob e fazer um download seguro
+        fetch(url)
+          .then(res => res.blob())
+          .then(blob => {
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+          })
+          .catch(err => {
+            console.error("Erro ao gerar download", err);
+            window.open(url, '_blank');
+          });
       } else {
         window.open(url, '_blank');
       }
@@ -430,24 +441,39 @@ const UserManager: React.FC = () => {
       const user = users.find(u => u.id === editingId);
       if (!user) return;
       
-      const device = devices.find(d => d.id === term.assetId);
-      const sim = sims.find(s => s.id === term.assetId);
-      const asset = device || sim;
-      
-      if (asset) {
-        const model = models.find(m => m.id === (asset as any).modelId);
-        const sector = sectors.find(s => s.id === user.sectorId);
-        
-        generateAndPrintTerm({
-          user,
-          asset,
-          settings,
-          model,
-          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
-          sectorName: sector?.name,
-          notes: term.notes
-        });
+      // Reconstrói informações do item baseado em assetDetails
+      const isSim = term.assetDetails.includes('[CHIP:');
+      let asset: any;
+      let modelName = term.assetDetails;
+
+      if (isSim) {
+        const phoneMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
+        asset = {
+          operator: 'Operadora',
+          iccid: 'N/A',
+          phoneNumber: phoneMatch ? phoneMatch[1] : 'Chip SIM'
+        };
+        modelName = 'Chip / SIM Card';
+      } else {
+        const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
+        asset = {
+          serialNumber: 'Consulte sistema',
+          assetTag: tagMatch ? tagMatch[1] : 'S/N',
+        };
+        modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
       }
+      
+      const sector = sectors.find(s => s.id === user.sectorId);
+      
+      generateAndPrintTerm({
+        user,
+        asset,
+        settings,
+        model: { name: modelName } as any,
+        actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
+        sectorName: sector?.name,
+        notes: term.notes
+      });
     }
   };
 
