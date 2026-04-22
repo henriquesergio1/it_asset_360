@@ -550,10 +550,15 @@ async function startServer() {
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.27.7', 
+        version: '3.27.8', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// Mock/Empty endpoint to avoid 404
+app.get('/api/dashboard/expediente-alerts', (req, res) => {
+    res.json([]);
 });
 
 const format = (set, jsonKeys = []) => set.recordset.map(row => {
@@ -2121,5 +2126,16 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     });
 }
 
-// Inicia o processo
-initializeDatabase().then(startServer);
+// Inicia o processo com fallback caso o banco falhe
+async function boot() {
+    try {
+        await initializeDatabase();
+        console.log("✅ Banco de dados inicializado com sucesso.");
+    } catch (e) {
+        console.error("❌ Falha crítica na inicialização do banco de dados:", e.message);
+        console.log("⚠️ Iniciando servidor em modo degradado (sem banco).");
+    }
+    startServer();
+}
+
+boot();

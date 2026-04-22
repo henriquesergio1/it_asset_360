@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.27.8',
+    date: 'Hoje',
+    title: 'Estabilidade e Fallback Mock',
+    changes: [
+      'Engine: Servidor Express agora inicializa mesmo com falha no banco de dados (fallback preventivo).',
+      'Engine: DataProvider agora força redetecção de ambiente para evitar travamento em modo Production sem API.',
+      'API: Adicionado endpoint ausente para alertas de expediente.',
+      'Fix: Correção de 404 em diversos endpoints auxiliares.'
+    ]
+  },
+  {
     version: '3.27.7',
     date: 'Hoje',
     title: 'Correção Crítica: API em Produção',

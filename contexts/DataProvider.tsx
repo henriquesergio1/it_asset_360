@@ -5,10 +5,7 @@ import { Loader2, Globe } from 'lucide-react';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  // Estado para armazenar o modo detectado: null (pendente), 'prod' (SQL Server) ou 'mock' (Teste)
- const [mode, setMode] = useState<'prod' | 'mock' | null>(() => {
- // Prioriza o que o usuário escolheu anteriormente ou o que está no localStorage para evitar o delay do ping no refresh
- return (localStorage.getItem('app_mode') as 'prod' | 'mock') || null;
- });
+  const [mode, setMode] = useState<'prod' | 'mock' | null>(null);
 
  useEffect(() => {
  // Se o modo já estiver definido via localStorage, não bloqueamos o carregamento com o ping
