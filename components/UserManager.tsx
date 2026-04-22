@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
+import { useToast } from '../contexts/ToastContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString } from '../utils/stringUtils';
 import { DataTable, Column } from './DataTable';
@@ -26,6 +27,9 @@ const UserManager: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [editReason, setEditReason] = useState('');
+  const adminName = 'Admin';
   const [activeTab, setActiveTab] = useState<'DATA' | 'ASSETS' | 'LICENSES' | 'TERMS' | 'LOGS'>('DATA');
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkActionType, setBulkActionType] = useState<'STATUS' | 'SECTOR'>('STATUS');
@@ -90,6 +94,7 @@ const UserManager: React.FC = () => {
     toggleUserActive,
     isReadOnly
   } = useData();
+  const { showToast } = useToast();
 
   const getUserAssetsFixed = (userId: string) => {
     const userDevices = devices.filter(d => d.currentUserId === userId || (d.additionalUserIds || []).includes(userId));
@@ -246,11 +251,28 @@ const UserManager: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      updateUserData({ id: editingId, ...formData } as User, 'Admin');
-      setIsModalOpen(false);
+      setEditReason('');
+      setIsReasonModalOpen(true);
     } else {
-      addUser({ ...formData, id: Math.random().toString(36).substr(2, 9) } as User, 'Admin');
+      try {
+        addUser({ ...formData, id: Math.random().toString(36).substr(2, 9) } as User, adminName);
+        setIsModalOpen(false);
+        showToast('Colaborador cadastrado com sucesso!', 'success');
+      } catch (err) {
+        showToast('Erro ao cadastrar colaborador.', 'error');
+      }
+    }
+  };
+
+  const confirmUserUpdate = () => {
+    if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
+    try {
+      updateUserData({ id: editingId, ...formData } as User, adminName, editReason);
+      setIsReasonModalOpen(false);
       setIsModalOpen(false);
+      showToast('Dados do colaborador atualizados!', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar colaborador.', 'error');
     }
   };
 
@@ -780,6 +802,33 @@ const UserManager: React.FC = () => {
             <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3 justify-end">
               <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-colors">Cancelar</button>
               <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white transition-all">Salvar Alterações</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isReasonModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-900/40">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="h-16 w-16 bg-blue-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800">
+                  <Save size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-100 uppercase tracking-tight">Confirmar Alterações?</h3>
+                <p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p>
+              </div>
+              <textarea 
+                className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"
+                rows={3}
+                placeholder="Descreva o que foi alterado..."
+                value={editReason}
+                onChange={(e) => setEditReason(e.target.value)}
+              ></textarea>
+              <div className="flex gap-4">
+                <button onClick={() => setIsReasonModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Voltar</button>
+                <button onClick={confirmUserUpdate} disabled={!editReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Salvar</button>
+              </div>
             </div>
           </div>
         </div>

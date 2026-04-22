@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.26.8',
+    date: 'Hoje',
+    title: 'Restauração de Fluxos de Auditoria e Feedback',
+    changes: [
+      'Auditoria: Restaurada a obrigatoriedade do motivo de alteração na edição de colaboradores.',
+      'UX/UI: Reativadas as notificações (Toasts) de sucesso no canto inferior direito para todas as operações CRUD.',
+      'UX/UI: Padronização do componente de justificativa entre os módulos de Usuários e Dispositivos.',
+      'Sincronização global para v3.26.8.'
+    ]
+  },
+  {
     version: '3.26.7',
     date: 'Hoje',
     title: 'Correção Crítica: Cadastro e Edição de Colaboradores/Ativos',
