@@ -521,7 +521,7 @@ const Dashboard = () => {
                           );
                         })}
                         {pendingTerms.length > 5 && (
-                          <button onClick={() => navigate('/reports?tab=USERS')} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
+                          <button onClick={() => navigate('/users?showPendingOnly=true')} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}

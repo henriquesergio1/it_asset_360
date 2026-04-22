@@ -13,15 +13,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString, phoneticEncode } from '../utils/stringUtils';
-import { DataTable, Column } from './DataTable';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { generateAndPrintTerm } from '../utils/termGenerator';
 import { useRef } from 'react';
 
 const UserManager: React.FC = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'INACTIVE' | 'ON_LEAVE'>('ACTIVE');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,6 +91,27 @@ const UserManager: React.FC = () => {
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get('userId');
+    const tabParam = params.get('tab');
+    const showPending = params.get('showPendingOnly');
+
+    if (showPending === 'true') {
+      setShowPendingOnly(true);
+    }
+
+    if (userId && users.length > 0) {
+      const u = users.find(user => user.id === userId);
+      if (u) {
+        handleOpenModal(u, true);
+        if (tabParam === 'terms') {
+          setActiveTab('TERMS');
+        }
+      }
+    }
+  }, [location.search, users]);
+
   const COLUMN_OPTIONS = [
     { id: 'email', label: 'E-mail' },
     { id: 'cpf', label: 'CPF' },
@@ -149,9 +174,11 @@ const UserManager: React.FC = () => {
     addUser,
     updateUser: updateUserData,
     toggleUserActive,
-    isReadOnly
+    isReadOnly,
+    settings
   } = useData();
   const { showToast } = useToast();
+  const { user: authUser } = useAuth();
 
   const getUserAssetsFixed = (userId: string) => {
     const userDevices = devices.filter(d => d.currentUserId === userId || (d.additionalUserIds || []).includes(userId));
@@ -372,8 +399,73 @@ const UserManager: React.FC = () => {
 
   const handleSaveTermEdit = () => {
     if (editingTerm) {
-      // Aqui integraria com API de atualização de termos
+      const user = users.find(u => u.id === editingId);
+      if (user) {
+        const updatedTerms = user.terms.map(t => 
+          t.id === editingTerm.id 
+            ? { ...t, notes: termEditData.notes, evidenceFiles: termEditData.evidenceFiles } 
+            : t
+        );
+        updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Atualização de notas/evidências do termo');
+      }
       setEditingTerm(null);
+    }
+  };
+
+  const handleDownloadTerm = (term: Term) => {
+    if (term.fileUrl || term.hasFile) {
+      window.open(term.fileUrl || '#', '_blank');
+    } else {
+      const user = users.find(u => u.id === editingId);
+      if (!user) return;
+      
+      const device = devices.find(d => d.id === term.assetId);
+      const sim = sims.find(s => s.id === term.assetId);
+      const asset = device || sim;
+      
+      if (asset) {
+        const model = models.find(m => m.id === (asset as Device).modelId);
+        const sector = sectors.find(s => s.id === user.sectorId);
+        
+        generateAndPrintTerm({
+          user,
+          asset,
+          settings,
+          model,
+          actionType: term.type,
+          sectorName: sector?.name,
+          notes: term.notes
+        });
+      }
+    }
+  };
+
+  const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editingId) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const user = users.find(u => u.id === editingId);
+        if (user) {
+          const updatedTerms = user.terms.map(t => 
+            t.id === termId ? { ...t, fileUrl: event.target?.result as string, hasFile: true, updatedAt: new Date().toISOString() } : t
+          );
+          updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Upload de termo assinado');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteTermFile = (termId: string) => {
+    if (editingId && window.confirm('Deseja realmente remover o arquivo deste termo? Esta ação permitirá o reenvio.')) {
+      const user = users.find(u => u.id === editingId);
+      if (user) {
+        const updatedTerms = user.terms.map(t => 
+          t.id === termId ? { ...t, fileUrl: undefined, hasFile: false, updatedAt: new Date().toISOString() } : t
+        );
+        updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Remoção de arquivo do termo para reenvio');
+      }
     }
   };
 
@@ -735,8 +827,12 @@ const UserManager: React.FC = () => {
                         const m = models.find(mod => mod.id === d.modelId);
                         const isSharedResponsible = d.additionalUserIds?.includes(editingId || '');
                         return (
-                          <div key={d.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all">
-                            <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
+                          <div 
+                            key={d.id} 
+                            onClick={() => navigate(`/devices?id=${d.id}`)}
+                            className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
+                          >
+                              <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
                               <Smartphone className="text-emerald-500" size={24}/>
                               {isSharedResponsible && (
                                 <div className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 p-0.5 rounded-full" title="Ativo Compartilhado">
@@ -762,7 +858,11 @@ const UserManager: React.FC = () => {
                     <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userSims.map(sim => (
-                        <div key={sim.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all">
+                        <div 
+                          key={sim.id} 
+                          onClick={() => navigate(`/devices?id=${sim.id}`)}
+                          className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
+                        >
                           <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-900/30 shrink-0">
                             <Phone className="text-blue-500" size={24}/>
                           </div>
@@ -832,15 +932,42 @@ const UserManager: React.FC = () => {
                               <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${term.fileUrl || term.hasFile ? 'bg-emerald-900/30 text-emerald-400' : 'bg-orange-900/30 text-orange-400'}`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
                            </div>
                            <div className="flex gap-2">
-                             <button onClick={() => {setEditingTerm(term); setTermEditData({status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), notes: term.notes || '', evidenceFiles: term.evidenceFiles || []});}} className="p-2 bg-slate-900 text-blue-400 rounded-lg hover:bg-blue-900/20 transition-all border border-slate-800">
+                             <button 
+                               onClick={() => {
+                                 setEditingTerm(term); 
+                                 setTermEditData({
+                                   status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), 
+                                   notes: term.notes || '', 
+                                   evidenceFiles: term.evidenceFiles || []
+                                 });
+                               }} 
+                               disabled={term.fileUrl || term.hasFile}
+                               className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
+                             >
                                <Edit2 size={16} />
                              </button>
-                             <button className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800">
+                             <button 
+                               onClick={() => handleDownloadTerm(term)}
+                               className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
+                               title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
+                             >
                                <Download size={16} />
                              </button>
-                             <button className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800">
-                               <Share2 size={16} />
-                             </button>
+                             
+                             {!(term.fileUrl || term.hasFile) ? (
+                               <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
+                                 <Upload size={16} />
+                                 <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
+                               </label>
+                             ) : (
+                               <button 
+                                 onClick={() => handleDeleteTermFile(term.id)}
+                                 className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
+                                 title="Excluir/Alterar"
+                               >
+                                 <Trash2 size={16} />
+                               </button>
+                             )}
                            </div>
                         </div>
                       </div>

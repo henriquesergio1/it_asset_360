@@ -9,6 +9,19 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.29.0',
+    date: 'Hoje',
+    title: 'Restauração de Funcionalidades Críticas',
+    changes: [
+      'UserManager: Restaurada a navegação dos ativos (dispositivos/chips) diretamente para o cadastro.',
+      'UserManager: Corrigida a gestão de termos (Download, Upload e funcionalidade de Excluir/Alterar).',
+      'UserManager: Botão de edição de termo agora restrito apenas a termos pendentes.',
+      'Dashboard: Corrigido link de detalhes do termo para abrir a aba correta do colaborador.',
+      'Dashboard: Botão "Ver mais pendências" agora filtra corretamente na tela de Colaboradores.',
+      'Nav: Implementada navegação via parâmetros de URL (userId, tab, showPendingOnly).'
+    ]
+  },
+  {
     version: '3.28.1',
     date: 'Hoje',
     title: 'Correção de Layout Crítico',
