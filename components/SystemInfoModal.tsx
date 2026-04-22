@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.27.7',
+    date: 'Hoje',
+    title: 'Correção Crítica: API em Produção',
+    changes: [
+      'Fix: Correção de roteamento de API no servidor Express para ambientes de produção.',
+      'Fix: Ajuste de conectividade e remoção de portas fixas nas requisições do frontend.',
+      'Versão: Sincronização global para v3.27.7.'
+    ]
+  },
+  {
     version: '3.27.6',
     date: 'Hoje',
     title: 'Filtro Fonético de Colaboradores',

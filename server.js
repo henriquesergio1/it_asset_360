@@ -538,11 +538,19 @@ async function startServer() {
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
 
+    // Middleware de depuração para logs de API em produção
+    app.use((req, res, next) => {
+        if (req.url.startsWith('/api')) {
+            console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+        }
+        next();
+    });
+
     // --- HEALTH CHECK ---
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
-        version: '3.27.6', 
+        version: '3.27.7', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
@@ -2090,8 +2098,20 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     } else {
         const path = require("path");
         const distPath = path.join(process.cwd(), "build");
-        app.use(express.static(distPath));
-        app.get("*", (req, res) => {
+        
+        // Servir arquivos estáticos APENAS se não for uma rota de API
+        app.use((req, res, next) => {
+            if (!req.url.startsWith('/api')) {
+                return express.static(distPath)(req, res, next);
+            }
+            next();
+        });
+
+        // Rota coringa para SPA (deve vir depois de todas as rotas de API)
+        app.get("*", (req, res, next) => {
+            if (req.url.startsWith('/api')) {
+                return next(); // Passa para o tratador de erro 404 de API se chegar aqui
+            }
             res.sendFile(path.join(distPath, "index.html"));
         });
     }
