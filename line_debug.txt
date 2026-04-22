@@ -1,0 +1,1 @@
+ <div><h1 className="text-2xl font-bold text-slate-100">Inventário de Dispositivos</h1><p className="text-sm">Gestão centralizada de ativos.</p></div>

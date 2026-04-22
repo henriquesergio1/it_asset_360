@@ -886,54 +886,108 @@ const DeviceManager = () => {
  const isFinancialOk = formData.invoiceNumber && (formData.purchaseInvoiceUrl || formData.hasInvoice);
 
  return (
- <div className="space-y-6 relative pb-20">
- <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
- <div><h1 className="text-2xl font-bold text-slate-100">Inventário de Dispositivos</h1><p className="text-sm">Gestão centralizada de ativos.</p></div>
- <div className="flex gap-2">
- <div className="flex bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
- <button 
- onClick={() => handleExport('csv')} 
- className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
- title="Exportar CSV"
- >
- <FileText size={18}/>
- </button>
- <button 
- onClick={() => handleExport('excel')} 
- className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
- title="Exportar Excel"
- >
- <FileSpreadsheet size={18}/>
- </button>
- <button 
- onClick={() => handleExport('pdf')} 
- className="p-2.5 hover:bg-slate-800 transition-colors"
- title="Exportar PDF"
- >
- <Download size={18}/>
- </button>
- </div>
- <div className="relative"ref={columnRef}>
- <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-semibold transition-all"><SlidersHorizontal size={18} /> Colunas</button>
- {isColumnSelectorOpen && (
- <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
- <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span className="text-[11px] font-black uppercase">Exibir Colunas</span><button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button></div>
- <div className="p-2 space-y-1">{COLUMN_OPTIONS.map(col => (<button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/30 text-blue-400' : ' hover:bg-slate-700'}`}>{col.label}{visibleColumns.includes(col.id) && <Check size={14}/>}</button>))}</div>
- </div>
- )}
- </div>
- <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-slate-800 font-semibold transition-all"><Settings size={18} /> Catálogo</button>
-   <button 
-    onClick={() => !isReadOnly && handleOpenModal()} 
-    disabled={isReadOnly}
-    className={`px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95 ${isReadOnly ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50' : 'text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-900/20'}`}
-  >
-    <Plus size={18} /> Novo Ativo
-  </button>
- </div>
- </div>
+    <div className="space-y-6 relative pb-20 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
+        <div>
+          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+            <Smartphone className="text-blue-500" size={28} />
+            Inventário de Dispositivos / Ativos
+          </h2>
+          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Relação completa de máquinas, coletores e celulares</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+            <button 
+              onClick={() => handleExport('csv')} 
+              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              title="Exportar CSV"
+            >
+              <FileText size={UI_ICON_SIZE_BASE}/>
+            </button>
+            <button 
+              onClick={() => handleExport('excel')} 
+              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              title="Exportar Excel"
+            >
+              <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
+            </button>
+            <button 
+              onClick={() => handleExport('pdf')} 
+              className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-blue-400"
+              title="Exportar PDF"
+            >
+              <Download size={UI_ICON_SIZE_BASE}/>
+            </button>
+          </div>
 
- <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
+          <div className="relative" ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+              <SlidersHorizontal size={UI_ICON_SIZE_BASE} /> Colunas
+            </button>
+            {isColumnSelectorOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
+                </div>
+                <div className="p-2 space-y-1 bg-slate-900/50">
+                  {COLUMN_OPTIONS.map(col => (
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/20 text-blue-400' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                      {col.label}
+                      {visibleColumns.includes(col.id) && <Check size={14}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button onClick={() => setIsModelSettingsOpen(true)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+            <Settings size={UI_ICON_SIZE_BASE} /> Catálogo
+          </button>
+
+          <button 
+            disabled={isReadOnly}
+            onClick={() => handleOpenModal()} 
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Plus size={UI_ICON_SIZE_BASE} /> Novo Ativo
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
+            <p className="text-2xl font-black text-slate-100">{devices.length}</p>
+          </div>
+          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Disponíveis</span>
+            <p className="text-2xl font-black text-slate-100">{devices.filter(d => d.status === DeviceStatus.AVAILABLE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Em Uso</span>
+            <p className="text-2xl font-black text-slate-100">{devices.filter(d => d.status === DeviceStatus.IN_USE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Users size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenção</span>
+            <p className="text-2xl font-black text-slate-100">{devices.filter(d => d.status === DeviceStatus.MAINTENANCE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
+        </div>
+      </div>
+
+      <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors shadow-inner">
  {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
  <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
  ))}
@@ -976,7 +1030,7 @@ const DeviceManager = () => {
  </div>
  </div>
 
-  <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-xl ring-1 ring-white/5">
+  <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
     <DataTable
       columns={deviceColumns}
       data={paginatedDevices}

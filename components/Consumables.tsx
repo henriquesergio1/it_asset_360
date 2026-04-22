@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText, ArrowUp, ArrowDown } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText, ArrowUp, ArrowDown, Download, FileSpreadsheet, SlidersHorizontal, CheckCircle, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { SortableResizableHeader } from './SortableResizableHeader';
-import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER, UI_BUTTON_WARNING } from '../constants';
+import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER, UI_BUTTON_WARNING, UI_ICON_SIZE_BASE } from '../constants';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { normalizeString } from '../utils/stringUtils';
+import { useRef } from 'react';
 
 interface Consumable {
     Id: string;
@@ -30,6 +33,30 @@ const Consumables = () => {
     const [transactionConsumable, setTransactionConsumable] = useState<Consumable | null>(null);
     const [selectedConsumableForLogs, setSelectedConsumableForLogs] = useState<Consumable | null>(null);
     const [transactionType, setTransactionType] = useState<'IN' | 'OUT'>('IN');
+    const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+    const columnRef = useRef<HTMLDivElement>(null);
+
+    const COLUMN_OPTIONS = [
+        { id: 'Name', label: 'Item' },
+        { id: 'Category', label: 'Categoria' },
+        { id: 'CurrentStock', label: 'Estoque Atual' },
+        { id: 'MinStock', label: 'Mínimo' },
+        { id: 'AvgDailyConsumption', label: 'Consumo Médio' },
+        { id: 'EstimatedDaysLeft', label: 'Duração Estimada' }
+    ];
+
+    const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+        const saved = localStorage.getItem('consumables_columns');
+        return saved ? JSON.parse(saved) : COLUMN_OPTIONS.map(c => c.id);
+    });
+
+    useEffect(() => {
+        localStorage.setItem('consumables_columns', JSON.stringify(visibleColumns));
+    }, [visibleColumns]);
+
+    const toggleColumn = (id: string) => {
+        setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+    };
 
     // Form states
     const [formData, setFormData] = useState({
@@ -212,6 +239,36 @@ const Consumables = () => {
         setIsLogsModalOpen(true);
     };
 
+    const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+        const dataToExport = filteredConsumables.map(c => {
+            const row: any = {};
+            if (visibleColumns.includes('Name')) row['Item'] = c.Name;
+            if (visibleColumns.includes('Category')) row['Categoria'] = c.Category;
+            if (visibleColumns.includes('CurrentStock')) row['Estoque Atual'] = `${c.CurrentStock} ${c.Unit}`;
+            if (visibleColumns.includes('MinStock')) row['Mínimo'] = `${c.MinStock} ${c.Unit}`;
+            if (visibleColumns.includes('AvgDailyConsumption')) row['Consumo Médio'] = c.AvgDailyConsumption.toFixed(2);
+            if (visibleColumns.includes('EstimatedDaysLeft')) row['Duração Estimada'] = c.EstimatedDaysLeft !== null ? `${c.EstimatedDaysLeft} dias` : 'N/A';
+            return row;
+        });
+
+        const filename = `relatorio_consumiveis_${new Date().toISOString().split('T')[0]}`;
+
+        if (format === 'csv') exportToCSV(dataToExport, filename);
+        else if (format === 'excel') exportToExcel(dataToExport, filename);
+        else if (format === 'pdf') {
+            const headers = ['Item', 'Categoria', 'Estoque Atual', 'Mínimo', 'Consumo Médio', 'Duração Estimada'];
+            const rows = dataToExport.map(r => [
+                r['Item'] || '---',
+                r['Categoria'] || '---',
+                r['Estoque Atual'] || '---',
+                r['Mínimo'] || '---',
+                r['Consumo Médio'] || '---',
+                r['Duração Estimada'] || '---'
+            ]);
+            exportToPDF(headers, rows, filename, 'Relatório de Consumíveis');
+        }
+    };
+
     const sortedConsumables = React.useMemo(() => {
         let sortableItems = [...consumables];
         if (sortConfig !== null) {
@@ -238,62 +295,121 @@ const Consumables = () => {
         return sortableItems;
     }, [consumables, sortConfig]);
 
-    const filteredConsumables = sortedConsumables.filter(c => 
-        c.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.Category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredConsumables = sortedConsumables.filter(c => {
+        const term = normalizeString(searchTerm);
+        return normalizeString(c.Name).includes(term) ||
+               normalizeString(c.Category).includes(term);
+    });
 
     const lowStockItems = consumables.filter(c => c.CurrentStock <= c.MinStock);
 
     if (loading) return <div className="p-8 text-center text-slate-400">Carregando consumíveis...</div>;
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-6 animate-fade-in relative pb-20">
+            {/* NOVO CABEÇALHO PADRONIZADO */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-                        <Package className="text-blue-500" /> Gestão de Consumíveis
-                    </h1>
-                    <p className="text-sm text-slate-400 mt-1">Controle de estoque, toners, etiquetas e insumos.</p>
+                    <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                        <Package className="text-blue-500" size={28} />
+                        Gestão de Consumíveis / Insumos
+                    </h2>
+                    <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de estoque, toners, etiquetas e insumos técnicos</p>
                 </div>
-                <button 
-                    onClick={openNewModal}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
-                >
-                    <Plus size={18} /> Novo Item
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+                        <button 
+                            onClick={() => handleExport('csv')} 
+                            className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+                            title="Exportar CSV"
+                        >
+                            <FileText size={UI_ICON_SIZE_BASE}/>
+                        </button>
+                        <button 
+                            onClick={() => handleExport('excel')} 
+                            className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-blue-400"
+                            title="Exportar Excel"
+                        >
+                            <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
+                        </button>
+                        <button 
+                            onClick={() => handleExport('pdf')} 
+                            className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-blue-400"
+                            title="Exportar PDF"
+                        >
+                            <Download size={UI_ICON_SIZE_BASE}/>
+                        </button>
+                    </div>
+
+                    <div className="relative" ref={columnRef}>
+                        <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+                            <SlidersHorizontal size={UI_ICON_SIZE_BASE} /> Colunas
+                        </button>
+                        {isColumnSelectorOpen && (
+                            <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                                    <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
+                                </div>
+                                <div className="p-2 space-y-1 bg-slate-900/50">
+                                    {COLUMN_OPTIONS.map(col => (
+                                        <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-900/20 text-blue-400' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                                            {col.label}
+                                            {visibleColumns.includes(col.id) && <Check size={14}/>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <button 
+                        onClick={openNewModal}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/40 border-b-4 border-b-blue-800 active:border-b-0 active:translate-y-[2px]"
+                    >
+                        <Plus size={UI_ICON_SIZE_BASE} /> Novo Item
+                    </button>
+                </div>
             </div>
 
-            {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm font-medium text-slate-400">Total de Itens</p>
-                            <p className="text-3xl font-bold text-slate-100 mt-2">{consumables.length}</p>
-                        </div>
-                        <div className="p-3 bg-blue-900/30 rounded-xl">
-                            <Package className="text-blue-400" size={24} />
-                        </div>
+            {/* Dashboard Cards PADRONIZADOS */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Itens</span>
+                        <p className="text-2xl font-black text-slate-100">{consumables.length}</p>
                     </div>
+                    <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-sm font-medium text-slate-400">Estoque Crítico</p>
-                            <p className="text-3xl font-bold text-red-400 mt-2">{lowStockItems.length}</p>
-                        </div>
-                        <div className="p-3 bg-red-900/30 rounded-xl">
-                            <AlertTriangle className="text-red-400" size={24} />
-                        </div>
+                <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Estoque Crítico</span>
+                        <p className="text-2xl font-black text-slate-100">{lowStockItems.length}</p>
                     </div>
+                    <div className="h-12 w-12 bg-red-900/20 rounded-2xl flex items-center justify-center text-red-400 border border-red-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+                </div>
+
+                <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
+                        <p className="text-2xl font-black text-slate-100">{consumableTransactions.length}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
+                </div>
+
+                <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+                    <div>
+                        <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Categorias</span>
+                        <p className="text-2xl font-black text-slate-100">{new Set(consumables.map(c => c.Category)).size}</p>
+                    </div>
+                    <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><FileText size={24}/></div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/5">
+                <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-950/20">
                     <div className="relative w-full sm:w-96">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                         <input 
@@ -301,78 +417,86 @@ const Consumables = () => {
                             placeholder="Buscar por nome ou categoria..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
+                            className="pl-10 w-full border-none rounded-xl py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-slate-950 transition-colors text-sm"
                         />
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto shadow-inner">
                     <table className="w-full text-left table-fixed border-collapse">
-                        <thead className="bg-slate-950/50 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                        <thead className="bg-slate-950/80 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-800">
                             <tr>
-                                <SortableResizableHeader label="Item" sortKey="Name" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['Name']} onResize={(x, w) => handleResize('Name', x, w)} />
-                                <SortableResizableHeader label="Estoque Atual" sortKey="CurrentStock" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['CurrentStock']} onResize={(x, w) => handleResize('CurrentStock', x, w)} />
-                                <SortableResizableHeader label="Mínimo" sortKey="MinStock" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['MinStock']} onResize={(x, w) => handleResize('MinStock', x, w)} />
-                                <SortableResizableHeader label="Consumo Médio (30d)" sortKey="AvgDailyConsumption" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['AvgDailyConsumption']} onResize={(x, w) => handleResize('AvgDailyConsumption', x, w)} />
-                                <SortableResizableHeader label="Duração Estimada" sortKey="EstimatedDaysLeft" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['EstimatedDaysLeft']} onResize={(x, w) => handleResize('EstimatedDaysLeft', x, w)} />
-                                <th className="p-4 font-medium text-right" style={{ width: '180px' }}>Ações</th>
+                                {visibleColumns.includes('Name') && <SortableResizableHeader label="Item" sortKey="Name" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['Name']} onResize={(x, w) => handleResize('Name', x, w)} />}
+                                {visibleColumns.includes('CurrentStock') && <SortableResizableHeader label="Estoque Atual" sortKey="CurrentStock" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['CurrentStock']} onResize={(x, w) => handleResize('CurrentStock', x, w)} />}
+                                {visibleColumns.includes('MinStock') && <SortableResizableHeader label="Mínimo" sortKey="MinStock" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['MinStock']} onResize={(x, w) => handleResize('MinStock', x, w)} />}
+                                {visibleColumns.includes('AvgDailyConsumption') && <SortableResizableHeader label="Consumo Médio (30d)" sortKey="AvgDailyConsumption" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['AvgDailyConsumption']} onResize={(x, w) => handleResize('AvgDailyConsumption', x, w)} />}
+                                {visibleColumns.includes('EstimatedDaysLeft') && <SortableResizableHeader label="Duração Estimada" sortKey="EstimatedDaysLeft" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['EstimatedDaysLeft']} onResize={(x, w) => handleResize('EstimatedDaysLeft', x, w)} />}
+                                <th className="p-4 font-black text-right" style={{ width: '180px' }}>Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800/50">
+                        <tbody className="divide-y divide-slate-800/30 bg-slate-900/50">
                             {filteredConsumables.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="p-8 text-center text-slate-500">Nenhum consumível encontrado.</td>
+                                    <td colSpan={visibleColumns.length + 1} className="p-12 text-center text-slate-500 font-bold italic">Nenhum consumível encontrado.</td>
                                 </tr>
                             ) : (
                                 filteredConsumables.map(c => {
                                     const isLowStock = c.CurrentStock <= c.MinStock;
                                     return (
-                                        <tr key={c.Id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
-                                            <td className="p-4">
-                                                <div className="font-medium text-slate-200">{c.Name}</div>
-                                                <div className="text-xs text-slate-500">{c.Category}</div>
-                                            </td>
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`font-bold text-lg ${isLowStock ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                        {c.CurrentStock}
-                                                    </span>
-                                                    <span className="text-xs text-slate-500">{c.Unit}</span>
-                                                    {isLowStock && <span title="Estoque Crítico"><AlertTriangle size={14} className="text-red-400" /></span>}
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-slate-400">{c.MinStock} {c.Unit}</td>
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-2 text-slate-300">
-                                                    <TrendingDown size={14} className="text-amber-500" />
-                                                    {c.AvgDailyConsumption > 0 ? `${c.AvgDailyConsumption.toFixed(2)} / dia` : 'Sem dados'}
-                                                </div>
-                                            </td>
-                                            <td className="p-4">
-                                                {c.EstimatedDaysLeft !== null ? (
-                                                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${c.EstimatedDaysLeft <= 7 ? 'bg-red-900/30 text-red-400' : 'bg-emerald-900/30 text-emerald-400'}`}>
-                                                        ~ {c.EstimatedDaysLeft} dias
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-slate-500 text-xs">Indeterminado</span>
-                                                )}
-                                            </td>
+                                        <tr key={c.Id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer group">
+                                            {visibleColumns.includes('Name') && (
+                                                <td className="p-4">
+                                                    <div className="font-bold text-slate-100 uppercase tracking-tight group-hover:text-blue-400 transition-colors">{c.Name}</div>
+                                                    <div className="text-[10px] font-black uppercase text-slate-500 tracking-wider bg-slate-950/50 w-fit px-2 py-0.5 rounded mt-1">{c.Category}</div>
+                                                </td>
+                                            )}
+                                            {visibleColumns.includes('CurrentStock') && (
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`font-black text-lg ${isLowStock ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                            {c.CurrentStock}
+                                                        </span>
+                                                        <span className="text-[10px] font-black uppercase text-slate-500">{c.Unit}</span>
+                                                        {isLowStock && <div className="bg-red-900/20 p-1 rounded border border-red-800/30" title="Estoque Crítico"><AlertTriangle size={14} className="text-red-400 animate-pulse" /></div>}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {visibleColumns.includes('MinStock') && <td className="p-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{c.MinStock} {c.Unit}</td>}
+                                            {visibleColumns.includes('AvgDailyConsumption') && (
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-300">
+                                                        <TrendingDown size={14} className="text-amber-500" />
+                                                        {c.AvgDailyConsumption > 0 ? `${c.AvgDailyConsumption.toFixed(2)} / dia` : 'Sem dados'}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {visibleColumns.includes('EstimatedDaysLeft') && (
+                                                <td className="p-4">
+                                                    {c.EstimatedDaysLeft !== null ? (
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${c.EstimatedDaysLeft <= 7 ? 'bg-red-900/20 text-red-400 border-red-800/30' : 'bg-emerald-900/20 text-emerald-400 border-emerald-800/30'}`}>
+                                                            ~ {c.EstimatedDaysLeft} dias
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-600 text-[10px] font-black uppercase tracking-widest">Indeterminado</span>
+                                                    )}
+                                                </td>
+                                            )}
                                             <td className="p-4 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button onClick={() => openTransactionModal(c, 'IN')} className="p-2 bg-emerald-900/20 text-emerald-400 hover:bg-emerald-900/40 rounded-lg transition-colors" title="Adicionar Estoque (Compra)">
-                                                        <ArrowUpRight size={16} />
+                                                <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => openTransactionModal(c, 'IN')} className="p-2 bg-emerald-900/20 text-emerald-400 hover:bg-emerald-700 hover:text-white rounded-xl transition-all border border-emerald-800/30" title="Adicionar Estoque (Compra)">
+                                                        <ArrowUp size={16} />
                                                     </button>
-                                                    <button onClick={() => openTransactionModal(c, 'OUT')} className="p-2 bg-amber-900/20 text-amber-400 hover:bg-amber-900/40 rounded-lg transition-colors" title="Registrar Uso (Saída)">
-                                                        <ArrowDownRight size={16} />
+                                                    <button onClick={() => openTransactionModal(c, 'OUT')} className="p-2 bg-amber-900/20 text-amber-400 hover:bg-amber-700 hover:text-white rounded-xl transition-all border border-amber-800/30" title="Registrar Uso (Saída)">
+                                                        <ArrowDown size={16} />
                                                     </button>
                                                     <div className="w-px h-6 bg-slate-800 mx-1"></div>
-                                                    <button onClick={() => openEditModal(c)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors" title="Editar">
+                                                    <button onClick={() => openEditModal(c)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-xl transition-all" title="Editar">
                                                         <Edit size={16} />
                                                     </button>
-                                                    <button onClick={() => openLogsModal(c)} className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-900/20 rounded-lg transition-colors" title="Ver Histórico">
+                                                    <button onClick={() => openLogsModal(c)} className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-900/20 rounded-xl transition-all" title="Ver Histórico">
                                                         <History size={16} />
                                                     </button>
-                                                    <button onClick={() => handleDelete(c.Id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Excluir">
+                                                    <button onClick={() => handleDelete(c.Id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded-xl transition-all" title="Excluir">
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>

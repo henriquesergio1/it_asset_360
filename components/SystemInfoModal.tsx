@@ -9,6 +9,68 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.27.6',
+    date: 'Hoje',
+    title: 'Filtro Fonético de Colaboradores',
+    changes: [
+      'UI: Implementação de busca fonética inteligente no módulo de colaboradores (ex: Wanderley encontrará Vanderlei).',
+      'UI: Suporte a variações fonéticas PT-BR como PH/F, CH/X, W/V e letras dobradas.',
+      'Versão: Sincronização global para v3.27.6.'
+    ]
+  },
+  {
+    version: '3.27.5',
+    date: 'Hoje',
+    title: 'Melhorias na Pesquisa Inteligente',
+    changes: [
+      'UI: Pesquisa de colaboradores agora ignora acentos e maiúsculas (ex: pesquisar Sérgio encontrará Sergio).',
+      'UI: Implementação de busca insensível a acentos no módulo de Consumíveis.',
+      'Versão: Sincronização global para v3.27.5.'
+    ]
+  },
+  {
+    version: '3.27.4',
+    date: 'Hoje',
+    title: 'Resiliência de Inicialização e Preview',
+    changes: [
+      'Infra: Servidor Express agora é resiliente a falhas de conexão com o banco de dados MSSQL, permitindo a execução do frontend com dados mock sem travamentos.',
+      'Infra: Remoção de process.exit(1) em falhas de DB para garantir disponibilidade do Preview.',
+      'Versão: Sincronização global para v3.27.4.'
+    ]
+  },
+  {
+    version: '3.27.3',
+    date: 'Hoje',
+    title: 'Correções de Infraestrutura e Interface',
+    changes: [
+      'Infra: Integração do servidor Express com Vite (Middleware Mode) para resolver erros de proxy e conexão ECONNREFUSED.',
+      'Bug: Correção de ReferenceError no módulo de Chips SIM.',
+      'UI: Alteração da paleta de cores secundária de Rosa para Azul no módulo de Relatórios.',
+      'Versão: Sincronização global para v3.27.3.'
+    ]
+  },
+  {
+    version: '3.27.2',
+    date: '22/04/2026',
+    title: 'Padronização Visual Final & Versionamento',
+    changes: [
+      'UI: Unificação total do layout de cabeçalhos e cards de resumo em todos os módulos (Dispositivos, Consumíveis, Tarefas e Relatórios).',
+      'UI: Reposicionamento de widgets de indicadores no módulo de Relatórios para alinhar com o padrão sistêmico.',
+      'Versão: Sincronização global para v3.27.2.'
+    ]
+  },
+  {
+    version: '3.27.1',
+    date: 'Hoje',
+    title: 'Padronização Global de Cabeçalhos e Relatórios',
+    changes: [
+      'UI: Extensão da padronização de cabeçalhos para Dispositivos, Consumíveis, Tarefas e Relatórios.',
+      'UI: Unificação de ícones, tipografia e cards de resumo em todos os módulos.',
+      'Funcionalidade: Adição de exportação (CSV/Excel/PDF) e seletor de colunas nos módulos restantes.',
+      'Versão: Sincronização global para v3.27.1.'
+    ]
+  },
+  {
     version: '3.26.8',
     date: 'Hoje',
     title: 'Restauração de Fluxos de Auditoria e Feedback',

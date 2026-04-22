@@ -7,16 +7,18 @@ import {
   ExternalLink, Power, History, Shield, Smartphone, 
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, 
   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
-  Save, Eye, FileUp, Building2, Users
+  Save, Eye, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
-import { normalizeString } from '../utils/stringUtils';
+import { normalizeString, phoneticEncode } from '../utils/stringUtils';
 import { DataTable, Column } from './DataTable';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { useRef } from 'react';
 
 const UserManager: React.FC = () => {
   const queryClient = useQueryClient();
@@ -78,9 +80,64 @@ const UserManager: React.FC = () => {
     active: true
   });
 
-  const [visibleColumns] = useState<string[]>([
-    'email', 'cpf', 'rg', 'sector', 'assetsCount', 'activeSims', 'devicesInfo'
-  ]);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem('user_manager_columns');
+    return saved ? JSON.parse(saved) : ['email', 'cpf', 'rg', 'sector', 'assetsCount', 'activeSims', 'devicesInfo'];
+  });
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const columnRef = useRef<HTMLDivElement>(null);
+
+  const COLUMN_OPTIONS = [
+    { id: 'email', label: 'E-mail' },
+    { id: 'cpf', label: 'CPF' },
+    { id: 'rg', label: 'RG' },
+    { id: 'sector', label: 'Setor' },
+    { id: 'assetsCount', label: 'Total Ativos' },
+    { id: 'activeSims', label: 'Chips SIM' },
+    { id: 'devicesInfo', label: 'Info Dispositivos' }
+  ];
+
+  useEffect(() => {
+    localStorage.setItem('user_manager_columns', JSON.stringify(visibleColumns));
+  }, [visibleColumns]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (columnRef.current && !columnRef.current.contains(e.target as Node)) setIsColumnSelectorOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    const exportData = filteredUsers.map(u => {
+      const sector = sectors.find(s => s.id === u.sectorId);
+      const { userDevices, allUserSims } = getUserAssetsEnrich(u.id);
+      return {
+        'Nome': u.fullName,
+        'E-mail': u.email || '---',
+        'CPF': u.cpf || '---',
+        'Setor': sector?.name || '---',
+        'Status': u.active ? (u.status || 'Ativo') : 'Inativo',
+        'Ativos': userDevices.length + allUserSims.length,
+        'Chips': allUserSims.map(s => s.phoneNumber).join(', ') || '---'
+      };
+    });
+
+    const fileName = `colaboradores_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') exportToCSV(exportData, fileName);
+    if (format === 'excel') exportToExcel(exportData, fileName);
+    if (format === 'pdf') {
+      const headers = ['Nome', 'E-mail', 'Setor', 'Status', 'Ativos'];
+      const rows = exportData.map(d => [d.Nome, d['E-mail'], d.Setor, d.Status, d.Ativos.toString()]);
+      exportToPDF(headers, rows, fileName, 'Relatório de Colaboradores');
+    }
+  };
 
   const { 
     users, 
@@ -157,15 +214,24 @@ const UserManager: React.FC = () => {
     }
 
     if (searchTerm) {
-      const low = searchTerm.toLowerCase();
+      const term = normalizeString(searchTerm);
+      const phoneticTerm = phoneticEncode(searchTerm);
       result = result.filter(u => {
         const sector = sectors.find(s => s.id === u.sectorId);
-        return u.fullName.toLowerCase().includes(low) ||
-          u.email.toLowerCase().includes(low) ||
+        
+        // Busca Normalizada (Acentos/Case)
+        const matchesNormal = normalizeString(u.fullName).includes(term) ||
+          normalizeString(u.email).includes(term) ||
+          (sector && normalizeString(sector.name).includes(term));
+
+        // Busca Fonética (W/V, PH/F, etc)
+        const matchesPhonetic = phoneticEncode(u.fullName).includes(phoneticTerm);
+
+        return matchesNormal ||
+          matchesPhonetic ||
           u.cpf.includes(searchTerm) ||
           (u.rg && u.rg.includes(searchTerm)) ||
-          (u.pis && u.pis.includes(searchTerm)) ||
-          (sector && sector.name.toLowerCase().includes(low));
+          (u.pis && u.pis.includes(searchTerm));
       });
     }
 
@@ -338,23 +404,82 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
         <div>
-          <h2 className="text-xl font-semibold text-white uppercase tracking-tight flex items-center gap-2">
-            <UserIcon className="text-emerald-500" size={24} />
+          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+            <UserIcon className="text-emerald-500" size={28} />
             Gestão de Colaboradores
           </h2>
-          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1">Total de {users.length} profissionais cadastrados</p>
+          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Total de {users.length} profissionais mapeados no ecossistema</p>
         </div>
-          <div className="flex items-center gap-3">
-            <button 
-              disabled={isReadOnly}
-              onClick={() => handleOpenModal()} 
-              className={`bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 shadow-lg shadow-emerald-900/20 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Plus size={18} /> Novo Colaborador
-            </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+            <button onClick={() => handleExport('csv')} className="p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-2.5 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
           </div>
+
+          <div className="relative" ref={columnRef}>
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+              <SlidersHorizontal size={18} /> Colunas
+            </button>
+            {isColumnSelectorOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
+                </div>
+                <div className="p-2 space-y-1 bg-slate-900/50">
+                  {COLUMN_OPTIONS.map(col => (
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-900/20 text-emerald-400' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                      {col.label}
+                      {visibleColumns.includes(col.id) && <Check size={14}/>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button 
+            disabled={isReadOnly}
+            onClick={() => handleOpenModal()} 
+            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border-b-4 border-b-emerald-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Plus size={18} /> Novo Colaborador
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group">
+          <div>
+            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos</span>
+            <p className="text-2xl font-black text-slate-100">{users.filter(u => u.active && (!u.status || u.status === UserStatus.ACTIVE)).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group">
+          <div>
+            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Afastados</span>
+            <p className="text-2xl font-black text-slate-100">{users.filter(u => u.active && u.status === UserStatus.ON_LEAVE).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-slate-500/30 group">
+          <div>
+            <span className="text-[11px] font-black text-slate-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Inativos</span>
+            <p className="text-2xl font-black text-slate-100">{users.filter(u => !u.active).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-slate-800/40 rounded-2xl flex items-center justify-center text-slate-400 border border-slate-700/30 group-hover:scale-110 transition-transform"><Briefcase size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-orange-500/30 group">
+          <div>
+            <span className="text-[11px] font-black text-orange-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Termos Pend.</span>
+            <p className="text-2xl font-black text-slate-100">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-400 border border-orange-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+        </div>
       </div>
 
       <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
@@ -418,7 +543,7 @@ const UserManager: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <DataTable
           columns={columns}
           data={enrichedUsers}

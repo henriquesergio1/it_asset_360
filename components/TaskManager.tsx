@@ -18,6 +18,7 @@ import { useToast } from '../contexts/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { SortableResizableHeader } from './SortableResizableHeader';
+import { normalizeString } from '../utils/stringUtils';
 
 interface TaskManagerProps {
  tasks: Task[];
@@ -309,230 +310,272 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  maintenanceCost: 0
  });
  } catch (err) {
- console.error('Erro ao criar tarefa:', err);
- }
- };
+      console.error('Erro ao criar tarefa:', err);
+    }
+  };
 
- return (
- <div className="space-y-6 pb-20">
- {/* Header Section */}
- <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
- <div>
- <h1 className="text-3xl font-bold text-slate-100 tracking-tight">Gestão de Tarefas</h1>
- <p className="mt-1">Acompanhe e gerencie as rotinas do setor IT.</p>
- </div>
- <div className="flex items-center gap-3">
- <div className="flex bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
- <button 
- onClick={() => handleExport('csv')}
- className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
- title="Exportar CSV"
- >
- <FileText size={18} />
- </button>
- <button 
- onClick={() => handleExport('excel')}
- className="p-2.5 hover:bg-slate-800 border-r border-slate-800 transition-colors"
- title="Exportar Excel"
- >
- <FileSpreadsheet size={18} />
- </button>
- <button 
- onClick={() => handleExport('pdf')}
- className="p-2.5 hover:bg-slate-800 transition-colors"
- title="Exportar PDF"
- >
- <Download size={18} />
- </button>
- </div>
- <button 
- onClick={() => setIsAdding(true)}
- className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-indigo-200 shadow-none"
- >
- <Plus size={20} /> Nova Tarefa
- </button>
- </div>
- </div>
+  return (
+    <div className="space-y-6 pb-20 animate-fade-in relative">
+      {/* CABEÇALHO PADRONIZADO */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
+        <div>
+          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+            <ClipboardList className="text-indigo-500" size={28} />
+            Gestão de Tarefas e Rotinas IT
+          </h2>
+          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+            <button 
+              onClick={() => handleExport('csv')} 
+              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              title="Exportar CSV"
+            >
+              <FileText size={UI_ICON_SIZE_BASE}/>
+            </button>
+            <button 
+              onClick={() => handleExport('excel')} 
+              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              title="Exportar Excel"
+            >
+              <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
+            </button>
+            <button 
+              onClick={() => handleExport('pdf')} 
+              className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              title="Exportar PDF"
+            >
+              <Download size={UI_ICON_SIZE_BASE}/>
+            </button>
+          </div>
 
- {/* Filtros e Busca */}
- <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-6 transition-all">
- <div className="flex flex-col md:flex-row md:items-center gap-4">
- <div className="relative flex-1">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2"size={18} />
- <input
- type="text"
- placeholder="Buscar tarefas por título ou descrição..."
- className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-100"
- value={search}
- onChange={(e) => setSearch(e.target.value)}
- />
- </div>
- 
- <div className="flex flex-wrap items-center gap-3">
- <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
- {(['Ativas', 'Concluídas', 'Canceladas'] as const).map((tab) => (
- <button
- key={tab}
- onClick={() => setActiveTab(tab)}
- className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
- activeTab === tab 
- ? ' bg-slate-700 text-blue-400 ' 
- : ' '
- }`}
- >
- {tab}
- </button>
- ))}
- </div>
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-900/40 border-b-4 border-b-indigo-800 active:border-b-0 active:translate-y-[2px]"
+          >
+            <Plus size={UI_ICON_SIZE_BASE} /> Nova Tarefa
+          </button>
+        </div>
+      </div>
 
- <select
- className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-white text-sm"
- value={typeFilter}
- onChange={(e) => setTypeFilter(e.target.value as any)}
- >
- <option value="All">Todos os Tipos</option>
- <option value={TaskType.REMINDER}>Lembretes</option>
- <option value={TaskType.MAINTENANCE}>Manutenções</option>
- <option value={TaskType.AUDIT}>Auditorias</option>
- <option value={TaskType.OTHER}>Outros</option>
- </select>
- </div>
- </div>
- </div>
+      {/* DASHBOARD CARDS PADRONIZADOS */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Tarefas Ativas</span>
+            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><CheckSquare size={24}/></div>
+        </div>
 
- {/* Lista de Tarefas */}
- <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
- <div className="overflow-x-auto">
- <table className="w-full text-left border-collapse table-fixed">
- <thead className="bg-slate-800/50">
- <tr className="border-b border-slate-800">
- <th className="px-6 py-4 w-10">
- <input 
- type="checkbox"
- className="w-4 h-4 rounded focus:ring-indigo-500"
- checked={filteredTasks.length > 0 && selectedTasksIds.length === filteredTasks.length}
- onChange={toggleSelectAll}
- />
- </th>
- <SortableResizableHeader label="Tarefa" sortKey="title" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['title']} onResize={(x, w) => handleResize('title', x, w)} />
- <SortableResizableHeader label="Tipo" sortKey="type" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
- <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
- <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
- <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-bold tracking-wider text-slate-400/80" style={{ width: '100px' }}>Ações</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-slate-800">
- {filteredTasks.length > 0 ? (
- filteredTasks.map((task) => (
- <tr 
- key={task.id} 
- className={`border-b border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 border-slate-800/50 ${selectedTasksIds.includes(task.id) ? 'bg-blue-900/20 border-l-blue-500' : ' bg-slate-900'}`}
- onClick={() => setSelectedTaskId(task.id)}
- >
- <td className="px-6 py-4"onClick={(e) => e.stopPropagation()}>
- <input 
- type="checkbox"
- className="w-4 h-4 rounded focus:ring-indigo-500"
- checked={selectedTasksIds.includes(task.id)}
- onChange={() => toggleSelectTask(task.id)}
- />
- </td>
- <td className="px-6 py-4">
- <div className="flex flex-col">
- <span className="text-sm font-bold text-white group-hover:text-blue-600 group-hover:text-blue-400 transition-colors">
- {task.title}
- </span>
- <span className="text-xs line-clamp-1">
- {task.description}
- </span>
- {task.type === TaskType.MAINTENANCE && task.deviceId && (
- <span className="text-[11px] font-medium mt-1 flex items-center gap-1">
- <Smartphone size={UI_ICON_SIZE_SMALL} /> {getDeviceName(task.deviceId)}
- </span>
- )}
- </div>
- </td>
- <td className="px-6 py-4">
- <div className="flex items-center gap-2">
- {task.type === TaskType.REMINDER && <Bell size={14} className=""/>}
- {task.type === TaskType.MAINTENANCE && <Wrench size={14} className=""/>}
- {task.type === TaskType.AUDIT && <ShieldCheck size={14} className=""/>}
- {task.type === TaskType.OTHER && <Tag size={14} className=""/>}
- <span className="text-xs font-medium text-slate-300">
- {task.type === TaskType.REMINDER ? 'Lembrete' :
- task.type === TaskType.MAINTENANCE ? 'Manutenção' :
- task.type === TaskType.AUDIT ? 'Auditoria' : 'Outro'}
- </span>
- </div>
- </td>
- <td className="px-6 py-4">
- <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
- task.status === TaskStatus.PENDING ? ' bg-amber-900/30 text-amber-400' :
- task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/30 text-blue-400' :
- task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/30 text-emerald-400' :
- ' bg-rose-900/30 text-rose-400'
- }`}>
- {task.status === TaskStatus.PENDING ? 'Pendente' :
- task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
- task.status === TaskStatus.COMPLETED ? 'Concluída' : 'Cancelada'}
- </span>
- </td>
- <td className="px-6 py-4">
- <div className="flex items-center gap-2">
- <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-[11px] font-bold">
- {task.assignedTo?.charAt(0) || '?'}
- </div>
- <span className="text-xs text-slate-300">
- {task.assignedTo ? systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo : 'Geral'}
- </span>
- </div>
- </td>
- <td className="px-6 py-4">
- {task.hasDueDate ? (
- <div className={`flex items-center gap-1.5 text-xs font-medium ${
- task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' text-rose-400' :
- task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' text-amber-400' :
- ' '
- }`}>
- <Calendar size={14} />
- {new Date(task.dueDate!).toLocaleDateString('pt-BR')}
- {task.isOverdue && task.status !== TaskStatus.COMPLETED && (
- <AlertCircle size={12} className="animate-pulse"/>
- )}
- </div>
- ) : (
- <span className="text-xs italic">Sem prazo</span>
- )}
- </td>
- <td className="px-6 py-4">
- <button 
- className="p-2 hover:text-blue-400 transition-colors"
- onClick={(e) => {
- e.stopPropagation();
- setSelectedTaskId(task.id);
- }}
- >
- <ExternalLink size={16} />
- </button>
- </td>
- </tr>
- ))
- ) : (
- <tr>
- <td colSpan={6} className="px-6 py-12 text-center">
- <div className="flex flex-col items-center justify-center">
- <CheckSquare size={48} className="mb-4 opacity-20"/>
- <p className="text-lg font-medium">Nenhuma tarefa encontrada</p>
- <p className="text-sm">Tente ajustar seus filtros ou busca.</p>
- </div>
- </td>
- </tr>
- )}
- </tbody>
- </table>
- </div>
- </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Lembretes</span>
+            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.type === TaskType.REMINDER && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Bell size={24}/></div>
+        </div>
+
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenções</span>
+            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.type === TaskType.MAINTENANCE && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
+        </div>
+
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Atrasadas</span>
+            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.isOverdue && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
+          </div>
+          <div className="h-12 w-12 bg-red-900/20 rounded-2xl flex items-center justify-center text-red-400 border border-red-800/30 group-hover:scale-110 transition-transform"><AlertCircle size={24}/></div>
+        </div>
+      </div>
+
+      {/* Filtros e Busca Padronizados */}
+      <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl ring-1 ring-white/5">
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={20} />
+            <input
+              type="text"
+              placeholder="Buscar tarefas por título ou descrição..."
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-200 text-sm shadow-inner"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+              {(['Ativas', 'Concluídas', 'Canceladas'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    activeTab === tab 
+                    ? ' bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 ' 
+                    : ' text-slate-500 hover:text-slate-300 '
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <select
+              className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-[11px] font-black uppercase tracking-widest shadow-inner cursor-pointer hover:bg-slate-800"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+            >
+              <option value="All">Todos os Tipos</option>
+              <option value={TaskType.REMINDER}>Lembretes</option>
+              <option value={TaskType.MAINTENANCE}>Manutenções</option>
+              <option value={TaskType.AUDIT}>Auditorias</option>
+              <option value={TaskType.OTHER}>Outros</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Tarefas Padronizada */}
+      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
+        <div className="overflow-x-auto shadow-inner">
+          <table className="w-full text-left border-collapse table-fixed">
+            <thead>
+              <tr className="bg-slate-950/80 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-800">
+                <th className="px-6 py-5 w-12 text-center">
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                    checked={filteredTasks.length > 0 && selectedTasksIds.length === filteredTasks.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <SortableResizableHeader label="Tarefa" sortKey="title" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['title']} onResize={(x, w) => handleResize('title', x, w)} />
+                <SortableResizableHeader label="Tipo" sortKey="type" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
+                <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
+                <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
+                <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
+                <th className="px-6 py-5 text-right font-black" style={{ width: '100px' }}>Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/30 bg-slate-900/50">
+          {filteredTasks.length > 0 ? (
+            filteredTasks.map((task) => (
+              <tr 
+                key={task.id} 
+                className={`group border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-indigo-500 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-900/10 border-l-indigo-500' : ' '}`}
+                onClick={() => setSelectedTaskId(task.id)}
+              >
+                <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                    checked={selectedTasksIds.includes(task.id)}
+                    onChange={() => toggleSelectTask(task.id)}
+                  />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-100 tracking-tight group-hover:text-indigo-400 transition-colors">
+                      {task.title}
+                    </span>
+                    <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                      {task.description}
+                    </span>
+                    {task.type === TaskType.MAINTENANCE && task.deviceId && (
+                      <span className="text-[10px] font-black uppercase text-indigo-400/80 mt-1.5 flex items-center gap-1 bg-indigo-950/30 w-fit px-2 py-0.5 rounded">
+                        <Smartphone size={10} /> {getDeviceName(task.deviceId)}
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-slate-950 rounded-lg border border-slate-800/50">
+                      {task.type === TaskType.REMINDER && <Bell size={14} className="text-amber-400"/>}
+                      {task.type === TaskType.MAINTENANCE && <Wrench size={14} className="text-blue-400"/>}
+                      {task.type === TaskType.AUDIT && <ShieldCheck size={14} className="text-emerald-400"/>}
+                      {task.type === TaskType.OTHER && <Tag size={14} className="text-slate-400"/>}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {task.type === TaskType.REMINDER ? 'Lembrete' :
+                       task.type === TaskType.MAINTENANCE ? 'Manutenção' :
+                       task.type === TaskType.AUDIT ? 'Auditoria' : 'Outro'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                    task.status === TaskStatus.PENDING ? ' bg-amber-900/20 text-amber-400 border-amber-800/30' :
+                    task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/20 text-blue-400 border-blue-800/30' :
+                    task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/30' :
+                    ' bg-rose-900/20 text-rose-400 border-rose-800/30'
+                  }`}>
+                    {task.status === TaskStatus.PENDING ? 'Pendente' :
+                     task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
+                     task.status === TaskStatus.COMPLETED ? 'Concluída' : 'Cancelada'}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black text-indigo-400 uppercase tracking-widest shadow-inner">
+                      {task.assignedTo?.charAt(0) || '?'}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-300">
+                      {task.assignedTo ? systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo : 'Setor IT'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  {task.hasDueDate ? (
+                    <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                      task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' bg-red-900/20 text-red-400 border-red-800/30 animate-pulse' :
+                      task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' bg-amber-900/20 text-amber-400 border-amber-800/30' :
+                      ' bg-slate-950 text-slate-500 border-slate-800'
+                    }`}>
+                      <Calendar size={12} />
+                      {new Date(task.dueDate!).toLocaleDateString('pt-BR')}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Sem prazo</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button 
+                    className="p-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-800/50 shadow-inner group/btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTaskId(task.id);
+                    }}
+                  >
+                    <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={7} className="px-6 py-20 text-center">
+                <div className="flex flex-col items-center justify-center space-y-4 opacity-50">
+                  <div className="p-6 bg-slate-900 rounded-full border-2 border-dashed border-slate-800">
+                    <CheckSquare size={48} className="text-slate-700"/>
+                  </div>
+                  <div>
+                    <p className="text-lg font-black uppercase tracking-widest text-slate-600">Nenhuma tarefa encontrada</p>
+                    <p className="text-xs text-slate-700 font-bold uppercase tracking-wider">Ajuste seus filtros para buscar novamente</p>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
  {/* Add Task Modal */}
  <AnimatePresence>

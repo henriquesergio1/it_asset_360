@@ -4,11 +4,12 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown, CreditCard, Key, ShieldCheck, UserCheck, Smartphone as DeviceIcon } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown, CreditCard, Key, ShieldCheck, UserCheck, Smartphone as DeviceIcon, FileSpreadsheet, Download } from 'lucide-react';
 import { SortableResizableHeader } from './SortableResizableHeader';
 import { DataTable, Column } from './DataTable';
 import { normalizeString } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 // --- SUB-COMPONENTE: SearchableDropdown ---
 interface Option {
@@ -193,6 +194,30 @@ const AccountManager = () => {
     setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
   };
 
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    const exportData = filteredAccounts.map(acc => {
+      const respUsers = (acc.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
+      const respDevices = (acc.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+      return {
+        'Nome': acc.name,
+        'Tipo': acc.type,
+        'Login': acc.login,
+        'Vínculo': `${respUsers} ${respDevices}`.trim() || '---',
+        'Status': acc.status
+      };
+    });
+
+    const fileName = `licencas_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') exportToCSV(exportData, fileName);
+    if (format === 'excel') exportToExcel(exportData, fileName);
+    if (format === 'pdf') {
+      const headers = ['Nome', 'Tipo', 'Login', 'Status'];
+      const rows = exportData.map(d => [d.Nome, d.Tipo, d.Login, d.Status]);
+      exportToPDF(headers, rows, fileName, 'Relatório de Licenças e Contas');
+    }
+  };
+
   const handleOpenModal = (account?: SoftwareAccount) => {
     if (account) {
       setEditingAccount(account);
@@ -331,26 +356,36 @@ const AccountManager = () => {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 animate-fade-in pb-20 relative">
+      {/* CABEÇALHO PADRONIZADO */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Licenças / Contas</h1>
-          <p className="text-sm text-slate-400 font-medium">Gestão padronizada de licenças, e-mails e URLs de acesso.</p>
+          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+            <ShieldCheck className="text-indigo-400" size={28} />
+            Gestão de Contas e Licenças
+          </h2>
+          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de credenciais e acessos corporativos</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+            <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-3 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-3 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar PDF"><Download size={18}/></button>
+          </div>
+
           <div className="relative" ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-900 border border-slate-800 text-slate-300 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-bold transition-all border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[10px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl">
-                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center">
-                  <span className="text-[11px] font-bold uppercase text-slate-400/80 tracking-wider">Exibir Colunas</span>
-                  <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X size={14}/></button>
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
                 </div>
-                <div className="p-2 space-y-1">
+                <div className="p-2 space-y-1 bg-slate-900/50">
                   {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${visibleColumns.includes(col.id) ? ' bg-indigo-900/30 text-indigo-400' : ' hover:bg-slate-800 text-slate-400'}`}>
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-indigo-900/20 text-indigo-400 ' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300 '}`}>
                       {col.label}
                       {visibleColumns.includes(col.id) && <Check size={14}/>}
                     </button>
@@ -359,28 +394,57 @@ const AccountManager = () => {
               </div>
             )}
           </div>
-          <button onClick={() => !isReadOnly && handleOpenModal()} disabled={isReadOnly} className={`bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 font-bold shadow-lg shadow-indigo-900/20 border-b-4 border-b-indigo-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
+
+          <button 
+            disabled={isReadOnly}
+            onClick={() => handleOpenModal()} 
+            className={`bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-900/40 border-b-4 border-b-indigo-800 active:border-b-0 active:translate-y-[2px] ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
             <Plus size={18} /> Nova Conta
           </button>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-slate-800 overflow-x-auto px-4 pt-2 bg-slate-900 rounded-t-2xl transition-colors">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Contas</span>
+            <p className="text-2xl font-black text-slate-100">{accounts.length}</p>
+          </div>
+          <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Shield size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativas</span>
+            <p className="text-2xl font-black text-slate-100">{accounts.filter(a => a.status === 'Ativo').length}</p>
+          </div>
+          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><UserCheck size={24}/></div>
+        </div>
+        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+          <div>
+            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Vínculos</span>
+            <p className="text-2xl font-black text-slate-100">{accounts.reduce((acc, a) => acc + (a.userIds?.length || 0) + (a.deviceIds?.length || 0), 0)}</p>
+          </div>
+          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Globe size={24}/></div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 border-b border-slate-800 overflow-x-auto p-1.5 bg-slate-950 rounded-2xl transition-colors shadow-inner mb-6">
         <button 
           onClick={() => setActiveFilter('ALL')} 
-          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === 'ALL' ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+          className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === 'ALL' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'}`}
         >
           Todas
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeFilter === 'ALL' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>{accounts.length}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-500'}`}>{accounts.length}</span>
         </button>
         {Object.values(AccountType).map(type => (
           <button 
             key={type} 
             onClick={() => setActiveFilter(type)} 
-            className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === type ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === type ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'}`}
           >
             {type}
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeFilter === type ? 'bg-indigo-900/50 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>{accounts.filter(a => a.type === type).length}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === type ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-500'}`}>{accounts.filter(a => a.type === type).length}</span>
           </button>
         ))}
       </div>
@@ -396,7 +460,7 @@ const AccountManager = () => {
         />
       </div>
 
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden transition-all shadow-xl">
+      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all">
         <DataTable
           columns={accountColumns}
           data={paginatedAccounts}
