@@ -8,6 +8,39 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.26.3',
+    date: 'Hoje',
+    title: 'Correção Crítica: Edição de Usuários',
+    changes: [
+      'Backend: Correção do erro 500 ao editar colaboradores (ignora ID no update).',
+      'Configuração: Adicionado suporte a VITE_API_URL para apontamento dinâmico do backend.',
+      'UI/UX: Ajustes de harmonia visual e suavização de tipografia no Gestor de Usuários.',
+      'Estabilidade: Logs de erro detalhados no servidor para monitoramento.'
+    ]
+  },
+    {
+    version: '3.26.2',
+    date: 'Hoje',
+    title: 'Limpeza de Tipografia e Refinamento de Painéis',
+    changes: [
+      'UI: Remoção final de estilos "font-black" residuais em Operações e Configurações.',
+      'Harmonia: Ajuste de títulos de seção e labels para o padrão Technical Dashboard.',
+      'UX: Suavização de botões de ação e abas em componentes de Gestão.',
+      'Sincronização: Versão 3.26.2 aplicada globalmente.'
+    ]
+  },
+    {
+    version: '3.26.1',
+    date: 'Hoje',
+    title: 'Harmonização Tipográfica e Suavização Visual',
+    changes: [
+      'UI: Suavização dos pesos de fonte (substituição de excessos de font-black por font-bold).',
+      'Harmonia: Ajuste de espaçamentos (tracking) e cores de labels (text-slate-500/80) para maior legibilidade.',
+      'UX: Redução de tamanhos de texto desproporcionais em títulos e modais de gerenciamento.',
+      'Sincronização: Atualização global para v3.26.1 em todas as telas.'
+    ]
+  },
+    {
     version: '3.9.7',
     date: 'Hoje',
     title: 'Auditoria Visual e Padronização',

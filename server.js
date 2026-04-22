@@ -956,7 +956,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
             await logAction(req.body.id, assetType, 'Criação', req.body._adminUser, tName, 'Item criado manualmente no sistema');
             res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error(`ERRO POST /api/${route}:`, err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.put(`/api/${route}/:id`, async (req, res) => {
@@ -971,6 +974,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const processedKeys = new Set();
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+
+                // v3.26.3: Ignora o ID para evitar violação de Primary Key
+                if (key.toLowerCase() === 'id') continue;
+
                 // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
                 if (key.endsWith('Binary')) continue;
 
@@ -1025,7 +1032,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             await logAction(req.params.id, assetType, 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body);
             res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error(`ERRO PUT /api/${route}/${req.params.id}:`, err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.delete(`/api/${route}/:id`, async (req, res) => {
@@ -1289,6 +1299,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
             for (let key in req.body) {
                 if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.toLowerCase() === 'id') continue;
                 if (key.endsWith('Binary')) continue;
 
                 const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
@@ -1354,7 +1365,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             await logAction(req.params.id, 'Device', 'Atualização', req.body._adminUser, tName, richNotes, null, prev, req.body);
             res.json({success: true});
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error(`ERRO PUT /api/devices/${req.params.id}:`, err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.delete('/api/devices/:id', async (req, res) => {

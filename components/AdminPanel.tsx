@@ -121,7 +121,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  <div className="bg-slate-900 rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[85vh] border border-slate-800">
  <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0">
  <div>
- <h3 className="text-lg font-black text-white uppercase tracking-tighter">Detalhes da Auditoria</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Detalhes da Auditoria</h3>
  <p className="text-[11px] font-bold uppercase tracking-widest">{log.action} em {new Date(log.timestamp).toLocaleString()}</p>
  </div>
  <button onClick={onClose} className="hover:text-white transition-colors"><X size={24}/></button>
@@ -129,18 +129,18 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  <div className="p-8 overflow-y-auto bg-slate-900">
  <div className="mb-6 grid grid-cols-2 gap-4">
  <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
- <span className="block text-[11px] font-black uppercase mb-1">Realizado por</span>
+ <span className="block text-[11px] font-bold uppercase mb-1">Realizado por</span>
  <span className="font-bold text-slate-100 text-sm">{log.adminUser}</span>
  </div>
  <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
- <span className="block text-[11px] font-black uppercase mb-1">Item Afetado</span>
+ <span className="block text-[11px] font-bold uppercase mb-1">Item Afetado</span>
  <span className="font-bold text-slate-100 text-sm">[{log.assetType}] {log.targetName}</span>
  </div>
  </div>
  {diffs.length > 0 ? (
  <div className="border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
  <table className="w-full text-xs text-left">
- <thead className="bg-slate-800 text-[11px] uppercase font-black border-b border-slate-700">
+ <thead className="bg-slate-800 text-[11px] uppercase font-bold border-b border-slate-700">
  <tr><th className="px-4 py-3">Campo</th><th className="px-4 py-3">Valor Anterior</th><th className="px-4 py-3">Novo Valor</th></tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -163,7 +163,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  )}
  </div>
  <div className="bg-slate-950 px-8 py-5 border-t border-slate-800 flex justify-end shrink-0 transition-colors">
- <button onClick={onClose} className="px-8 py-3 bg-slate-800 bg-slate-700 text-white rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-black hover:bg-slate-600 transition-all">Fechar</button>
+ <button onClick={onClose} className="px-8 py-3 bg-slate-800 bg-slate-700 text-white rounded-xl font-bold uppercase text-[11px] tracking-wider hover:bg-black hover:bg-slate-600 transition-all">Fechar</button>
  </div>
  </div>
  </div>

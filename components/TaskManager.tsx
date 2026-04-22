@@ -419,7 +419,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
  <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
  <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-black tracking-widest text-slate-400" style={{ width: '100px' }}>Ações</th>
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-bold tracking-wider text-slate-400/80" style={{ width: '100px' }}>Ações</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
@@ -554,7 +554,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  
  <div className="p-6 space-y-4 overflow-y-auto flex-1">
  <div>
- <label className="block text-xs font-bold uppercase tracking-wider mb-1">Título</label>
+ <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">Título</label>
  <input 
  required
  type="text"
@@ -565,7 +565,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  />
  </div>
  <div>
- <label className="block text-xs font-bold uppercase tracking-wider mb-1">Descrição</label>
+ <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">Descrição</label>
  <textarea 
  value={newTask.description}
  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
@@ -574,7 +574,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  />
  </div>
  <div>
- <label className="block text-xs font-bold uppercase tracking-wider mb-1">Manual / Passo a Passo (Instruções)</label>
+ <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">Manual / Passo a Passo (Instruções)</label>
  <textarea 
  value={newTask.instructions || ''}
  onChange={(e) => setNewTask({...newTask, instructions: e.target.value})}

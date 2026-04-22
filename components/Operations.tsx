@@ -359,14 +359,14 @@ const Operations = () => {
  <div className="h-24 w-24 bg-emerald-900/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
  <CheckCircle size={48} />
  </div>
- <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tight mb-2">Operação Realizada!</h2>
+ <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Operação Realizada!</h2>
  <p className="mb-10 font-medium">A movimentação foi registrada com sucesso no histórico de auditoria.</p>
  
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- <button onClick={handlePrint} className="flex items-center justify-center gap-3 text-white py-4 px-6 rounded-2xl font-black uppercase text-xs tracking-widest transition-all hover:scale-105 active:scale-95">
+ <button onClick={handlePrint} className="flex items-center justify-center gap-3 text-white py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:scale-105 active:scale-95">
  <Printer size={20}/> Imprimir Termo
  </button>
- <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-300 py-4 px-6 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-700 transition-all">
+ <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-700 transition-all">
  <ArrowLeft size={20}/> Nova Operação
  </button>
  </div>
@@ -378,17 +378,17 @@ const Operations = () => {
  <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
  <div className="flex justify-between items-end">
  <div>
- <h1 className="text-3xl font-black text-slate-100 tracking-tight">Painel de Operações</h1>
+ <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Painel de Operações</h1>
  <p className="font-medium">Gestão centralizada de Entregas e Devoluções.</p>
  </div>
  </div>
 
  <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800">
  <div className="flex bg-slate-950 p-2 gap-2 transition-colors border-b border-slate-800">
- <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-[0.2em] transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
+ <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKOUT' ? 'rotate-0' : 'rotate-180'}/> Entrega
  </button>
- <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-[0.2em] transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
+ <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKIN' ? 'rotate-180' : 'rotate-0'}/> Devolução
  </button>
  </div>
@@ -396,18 +396,18 @@ const Operations = () => {
  <div className="p-10 space-y-10">
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>1</div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">O que está sendo movimentado?</h3>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>1</div>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">O que está sendo movimentado?</h3>
  </div>
 
  <div className="flex gap-4">
  <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Smartphone size={32}/>
- <span className="font-black uppercase text-[11px] tracking-widest">Dispositivo / Equipamento</span>
+ <span className="font-bold uppercase text-[11px] tracking-wider">Dispositivo / Equipamento</span>
  </button>
  <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
  <Cpu size={32}/>
- <span className="font-black uppercase text-[11px] tracking-widest">Chip SIM Card</span>
+ <span className="font-bold uppercase text-[11px] tracking-wider">Chip SIM Card</span>
  </button>
  </div>
 
@@ -426,8 +426,8 @@ const Operations = () => {
  <div className="space-y-8 animate-fade-in">
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-black">2</div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Quem está recebendo?</h3>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold`}>2</div>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Quem está recebendo?</h3>
  </div>
  <SearchableDropdown 
  options={userOptions} 
@@ -445,8 +445,8 @@ const Operations = () => {
  {assetType === 'Device' && selectedAssetId && (
  <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-800">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-black">3</div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Acessórios Entregues</h3>
+ <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold">3</div>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Acessórios Entregues</h3>
  </div>
  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
  {accessoryTypes.map(acc => (
@@ -472,8 +472,8 @@ const Operations = () => {
  {assetType === 'Device' && holders.length > 1 && (
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 bg-orange-600 rounded-full flex items-center justify-center text-white font-black">2</div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Quem está devolvendo?</h3>
+ <div className="h-10 w-10 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Quem está devolvendo?</h3>
  </div>
  <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
  Como este é um ativo compartilhado, selecione qual colaborador está realizando a devolução:
@@ -489,7 +489,7 @@ const Operations = () => {
  <UserIcon size={20}/>
  </div>
  <div className="text-left overflow-hidden">
- <div className="text-[11px] font-black uppercase truncate">{u.fullName}</div>
+ <div className="text-[11px] font-bold uppercase truncate">{u.fullName}</div>
  <div className="text-[11px] font-mono opacity-60 truncate">{u.email}</div>
  </div>
  {returningUserId === u.id && <CheckSquare size={18} className="ml-auto shrink-0"/>}
@@ -501,10 +501,10 @@ const Operations = () => {
  {assetType === 'Device' && (
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-black">
+ <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold">
  {holders.length > 1 ? '3' : '2'}
  </div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Conferência de Devolução</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Conferência de Devolução</h3>
  </div>
  <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
  Marque os itens que foram devolvidos fisicamente pelo colaborador:
@@ -520,7 +520,7 @@ const Operations = () => {
  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-900/50 text-orange-400' : ' bg-slate-700 '}`}>
  {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
  </div>
- <span className="text-[11px] font-black uppercase text-left">{item}</span>
+ <span className="text-[11px] font-bold uppercase text-left">{item}</span>
  </div>
  {checklist[item] ? <CheckSquare size={20} className="text-orange-400"/> : <X size={20} />}
  </button>
@@ -532,10 +532,10 @@ const Operations = () => {
  {/* NOVO: OPÇÃO DE DESLIGAMENTO (INATIVAÇÃO AUTOMÁTICA) */}
  <div className="space-y-4 pt-4 border-t border-slate-800">
  <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-orange-600`}>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-orange-600`}>
  {assetType === 'Device' ? (holders.length > 1 ? '4' : '3') : '2'}
  </div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Fluxo de Desligamento</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Fluxo de Desligamento</h3>
  </div>
  <button 
  onClick={() => setInactivateAfterReturn(!inactivateAfterReturn)}
@@ -548,7 +548,7 @@ const Operations = () => {
  </div>
  <div className="flex-1">
  <div className="flex items-center justify-between">
- <span className={`font-black uppercase text-xs tracking-widest ${inactivateAfterReturn ? ' text-red-400' : ''}`}>
+ <span className={`font-bold uppercase text-[11px] tracking-wider ${inactivateAfterReturn ? ' text-red-400' : ''}`}>
  Marcar como Desligamento
  </span>
  {inactivateAfterReturn && <CheckSquare size={20} className=""/>}
@@ -564,10 +564,10 @@ const Operations = () => {
 
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-black ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>
  {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? (holders.length > 1 ? '5' : '4') : '3')}
  </div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Observações Adicionais</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Observações Adicionais</h3>
  </div>
  <textarea 
  className="w-full border-2 border-slate-800 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-700 outline-none transition-all shadow-inner bg-slate-800 text-slate-100 placeholder:text-slate-400 placeholder:text-slate-600"
@@ -581,10 +581,10 @@ const Operations = () => {
  {activeTab === 'CHECKIN' && (
  <div className="space-y-6 pt-6 border-t border-slate-800">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-black bg-red-600">
+ <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-red-600">
  {assetType === 'Device' ? (holders.length > 1 ? '6' : '5') : '4'}
  </div>
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Condição e Avarias</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">Condição e Avarias</h3>
  </div>
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -661,7 +661,7 @@ const Operations = () => {
  <button 
  onClick={handleExecute}
  disabled={isExecuting || !selectedAssetId || (activeTab === 'CHECKOUT' && !selectedUserId)}
- className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.3em] text-sm transition-all flex items-center justify-center gap-3 active:scale-95 ${activeTab === 'CHECKOUT' ? ' bg-blue-600 text-white hover:bg-blue-700 ' : 'bg-orange-600 text-white hover:bg-orange-700'} disabled:opacity-50 disabled:grayscale`}
+ className={`w-full py-5 rounded-2xl font-bold uppercase tracking-wider text-sm transition-all flex items-center justify-center gap-3 active:scale-95 ${activeTab === 'CHECKOUT' ? ' bg-blue-600 text-white hover:bg-blue-700 ' : 'bg-orange-600 text-white hover:bg-orange-700'} disabled:opacity-50 disabled:grayscale`}
  >
  {isExecuting ? <RefreshCw className="animate-spin"size={24}/> : (activeTab === 'CHECKOUT' ? <CheckCircle size={24}/> : <ArrowLeft size={24} className="rotate-180"/>)}
  {isExecuting ? 'PROCESSANDO...' : (activeTab === 'CHECKOUT' ? 'FINALIZAR ENTREGA' : 'FINALIZAR DEVOLUÇÃO')}

@@ -313,28 +313,28 @@ const UserManager: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors">
         <div>
-          <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
+          <h2 className="text-xl font-semibold text-white uppercase tracking-tight flex items-center gap-2">
             <UserIcon className="text-emerald-500" size={24} />
             Gestão de Colaboradores
           </h2>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Total de {users.length} profissionais cadastrados</p>
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1">Total de {users.length} profissionais cadastrados</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            disabled={isReadOnly}
-            onClick={() => handleOpenModal()} 
-            className={`bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-all active:scale-95 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus size={18} /> Novo Colaborador
-          </button>
-        </div>
+          <div className="flex items-center gap-3">
+            <button 
+              disabled={isReadOnly}
+              onClick={() => handleOpenModal()} 
+              className={`bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 shadow-lg shadow-emerald-900/20 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <Plus size={18} /> Novo Colaborador
+            </button>
+          </div>
       </div>
 
       <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
         {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
-          <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 ' : 'border-transparent hover:text-slate-300'}`}>
+          <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
-            <span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">
+            <span className="ml-2 bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">
               {users.filter(u => {
                 if (mode === 'ACTIVE') return u.active && (!u.status || u.status === UserStatus.ACTIVE);
                 if (mode === 'INACTIVE') return !u.active;
@@ -344,7 +344,7 @@ const UserManager: React.FC = () => {
             </span>
           </button>
         ))}
-        <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
+        <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
       </div>
 
       <div className="relative">
@@ -367,18 +367,18 @@ const UserManager: React.FC = () => {
             className="bg-emerald-600 text-white px-6 py-3 rounded-xl flex items-center justify-between sticky top-4 z-50"
           >
             <div className="flex items-center gap-4">
-              <span className="text-sm font-black uppercase tracking-widest">{selectedIds.length} Selecionados</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider">{selectedIds.length} Selecionados</span>
               <div className="h-6 w-px bg-white/20 mx-2"/>
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setBulkActionType('STATUS'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all"
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
                 >
                   Alterar Status
                 </button>
                 <button 
                   onClick={() => { setBulkActionType('SECTOR'); setIsBulkModalOpen(true); }}
-                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all"
+                  className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all"
                 >
                   Alterar Setor
                 </button>
@@ -421,21 +421,23 @@ const UserManager: React.FC = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
-                      <UserIcon size={18} />
+                    <div className="h-9 w-9 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
+                      <UserIcon size={18} className="text-slate-400" />
                     </div>
                     <div className="min-w-0">
-                      <div className="font-bold text-slate-100 text-xs">{u.fullName}</div>
-                      {u.status === UserStatus.ON_LEAVE && (
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400 mr-1">
-                          Afastado
-                        </span>
-                      )}
-                      {hasPending && (
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-900/30 text-amber-400 animate-pulse">
-                          Pendente
-                        </span>
-                      )}
+                      <div className="font-semibold text-slate-100 text-[13px]">{u.fullName}</div>
+                      <div className="flex gap-1 mt-0.5">
+                        {u.status === UserStatus.ON_LEAVE && (
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">
+                            Afastado
+                          </span>
+                        )}
+                        {hasPending && (
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-900/30 text-amber-400">
+                            Pendente
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -485,7 +487,7 @@ const UserManager: React.FC = () => {
         <div className="bg-slate-900 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest">Exibir:</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider">Exibir:</span>
               <select 
                 className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                 value={itemsPerPage} 
@@ -497,7 +499,7 @@ const UserManager: React.FC = () => {
                 <option value="ALL">Todos</option>
               </select>
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest">Total: {totalItems} colaboradores</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider">Total: {totalItems} colaboradores</p>
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -513,16 +515,16 @@ const UserManager: React.FC = () => {
         <div className="fixed inset-0 bg-slate-950/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800 transition-colors">
             <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3>
+              <h3 className="text-lg font-bold text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
             </div>
 
             <div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
-              <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Dados Cadastrais</button>
-              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
-              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
-              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
-              <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Histórico</button>
+              <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Dados Cadastrais</button>
+              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
+              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Histórico</button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 bg-slate-900 transition-colors">
@@ -536,34 +538,34 @@ const UserManager: React.FC = () => {
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Nome Completo</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Nome Completo</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">CPF</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">CPF</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">RG</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">RG</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">PIS / PASEP</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">PIS / PASEP</label>
                       <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="Somente números" />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">E-mail Corporativo</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">E-mail Corporativo</label>
                       <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value?.trim() || ''})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Cargo / Setor Atual</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Cargo / Setor Atual</label>
                       <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                         <option value="">Selecione um cargo...</option>
                         {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Status do Colaborador</label>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Status do Colaborador</label>
                       <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.status || UserStatus.ACTIVE} onChange={e => setFormData({...formData, status: e.target.value as any})}>
                         <option value={UserStatus.ACTIVE}>Ativo</option>
                         <option value={UserStatus.ON_LEAVE}>Afastado (INSS/Licença)</option>
@@ -575,7 +577,7 @@ const UserManager: React.FC = () => {
               {activeTab === 'ASSETS' && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
@@ -592,8 +594,8 @@ const UserManager: React.FC = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{m?.name || 'Aparelho'}</div>
-                                {isSharedResponsible && <span className="text-[11px] font-black bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
+                                <div className="text-[11px] font-bold text-slate-100 uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
+                                {isSharedResponsible && <span className="text-[11px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
                               </div>
                               <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
                               <div className="text-[11px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>

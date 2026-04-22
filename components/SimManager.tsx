@@ -202,22 +202,22 @@ const SimManager = () => {
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-1">Total de Linhas</span>
- <p className="text-3xl font-black text-slate-100">{total}</p>
+ <span className="text-[11px] font-bold text-blue-400/80 uppercase tracking-wider block mb-1">Total de Linhas</span>
+ <p className="text-2xl font-bold text-slate-100">{total}</p>
  </div>
  <div className="h-10 w-10 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400"><Signal size={20}/></div>
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[11px] font-black text-green-400 uppercase tracking-widest block mb-1">Disponíveis</span>
- <p className="text-3xl font-black text-slate-100">{available}</p>
+ <span className="text-[11px] font-bold text-green-400/80 uppercase tracking-wider block mb-1">Disponíveis</span>
+ <p className="text-2xl font-bold text-slate-100">{available}</p>
  </div>
  <div className="h-10 w-10 bg-green-900/30 rounded-full flex items-center justify-center text-green-400"><Wifi size={20}/></div>
  </div>
  <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-colors hover:shadow-md">
  <div>
- <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest block mb-1">Em Uso</span>
- <p className="text-3xl font-black text-slate-100">{inUse}</p>
+ <span className="text-[11px] font-bold text-blue-400/80 uppercase tracking-wider block mb-1">Em Uso</span>
+ <p className="text-2xl font-bold text-slate-100">{inUse}</p>
  </div>
  <div className="h-10 w-10 bg-blue-900/30 rounded-full flex items-center justify-center text-blue-400"><Smartphone size={20}/></div>
  </div>
@@ -246,7 +246,7 @@ const SimManager = () => {
  <SortableResizableHeader label="ICCID" sortKey="iccid" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['iccid']} onResize={(x, w) => handleResize('iccid', x, w)} />
  <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
  <SortableResizableHeader label="Usuário" sortKey="currentUserId" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />
- <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-black tracking-widest text-slate-400" style={{ width: '120px' }}>Ações</th>
+ <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-bold tracking-wider text-slate-400/80" style={{ width: '120px' }}>Ações</th>
  </tr>
  </thead>
  <tbody>
@@ -301,7 +301,7 @@ const SimManager = () => {
  <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
  <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-blue-900/40 transition-colors">
  <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
- <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? (isViewOnly ? 'Visualização do Chip' : 'Edição de Linha') : 'Novo Chip / SIM'}</h3>
+ <h3 className="text-lg font-bold text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Visualização do Chip' : 'Edição de Linha') : 'Novo Chip / SIM'}</h3>
  <button onClick={() => setIsModalOpen(false)} className="hover:text-white transition-colors"><X size={20}/></button>
  </div>
  <form onSubmit={handleSubmit} className="p-8 space-y-6">
@@ -313,11 +313,11 @@ const SimManager = () => {
  )}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Número da Linha</label>
+ <label className="block text-[11px] font-bold uppercase mb-1 ml-1 tracking-wider text-slate-500/80">Número da Linha</label>
  <input disabled={isViewOnly} required type="text"placeholder="(00) 00000-0000"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value.trim()})}/>
  </div>
  <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Operadora</label>
+ <label className="block text-[11px] font-bold uppercase mb-1 ml-1 tracking-wider text-slate-500/80">Operadora</label>
  <select disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-bold transition-colors"value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
  <option value="Vivo">Vivo</option>
  <option value="Claro">Claro</option>
@@ -328,23 +328,23 @@ const SimManager = () => {
  </select>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">ICCID (20 dígitos)</label>
+ <label className="block text-[11px] font-bold uppercase mb-1 ml-1 tracking-wider text-slate-500/80">ICCID (20 dígitos)</label>
  <input disabled={isViewOnly} required type="text"placeholder="8955..."className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 font-mono transition-colors"value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value.trim()})}/>
  </div>
  <div className="md:col-span-2">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Detalhes do Plano</label>
+ <label className="block text-[11px] font-bold uppercase mb-1 ml-1 tracking-wider text-slate-500/80">Detalhes do Plano</label>
  <input disabled={isViewOnly} type="text"placeholder="Ex: 50GB Mensal Corporativo"className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-100 transition-colors"value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
  </div>
  </div>
  
  <div className="flex justify-end gap-3 pt-6 border-t border-slate-800 transition-colors">
- <button type="button"onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-black uppercase hover:bg-slate-800 rounded-xl transition-all tracking-widest border border-slate-700">Fechar</button>
+ <button type="button"onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-xs font-bold uppercase hover:bg-slate-800 rounded-xl transition-all tracking-wider border border-slate-700">Fechar</button>
  {isViewOnly ? (
- <button type="button"onClick={(e) => { e.preventDefault(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.1em] transition-all flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
+ <button type="button"onClick={(e) => { e.preventDefault(); !isReadOnly && setIsViewOnly(false); }} disabled={isReadOnly} className={`px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}>
  <Edit2 size={16}/> Habilitar Edição
  </button>
  ) : (
- <button type="submit"className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-xs uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
+ <button type="submit"className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-xs uppercase tracking-wider transition-all hover:scale-105 active:scale-95">Salvar Cadastro</button>
  )}
  </div>
  </form>

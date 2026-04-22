@@ -345,7 +345,7 @@ const AccountManager = () => {
             {isColumnSelectorOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[80] overflow-hidden animate-fade-in shadow-2xl">
                 <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center">
-                  <span className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Exibir Colunas</span>
+                  <span className="text-[11px] font-bold uppercase text-slate-400/80 tracking-wider">Exibir Colunas</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X size={14}/></button>
                 </div>
                 <div className="p-2 space-y-1">
@@ -368,7 +368,7 @@ const AccountManager = () => {
       <div className="flex gap-4 border-b border-slate-800 overflow-x-auto px-4 pt-2 bg-slate-900 rounded-t-2xl transition-colors">
         <button 
           onClick={() => setActiveFilter('ALL')} 
-          className={`px-4 py-3 text-[11px] font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === 'ALL' ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === 'ALL' ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
         >
           Todas
           <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeFilter === 'ALL' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>{accounts.length}</span>
@@ -377,7 +377,7 @@ const AccountManager = () => {
           <button 
             key={type} 
             onClick={() => setActiveFilter(type)} 
-            className={`px-4 py-3 text-[11px] font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === type ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeFilter === type ? 'border-indigo-600 text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
           >
             {type}
             <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeFilter === type ? 'bg-indigo-900/50 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>{accounts.filter(a => a.type === type).length}</span>
@@ -413,7 +413,7 @@ const AccountManager = () => {
               {visibleColumns.includes('name') && (
                 <td className="px-6 py-4">
                   <div className="font-bold text-slate-100 group-hover:text-white transition-colors">{acc.name}</div>
-                  <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">{acc.type}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80">{acc.type}</div>
                 </td>
               )}
               {visibleColumns.includes('login') && (
@@ -474,7 +474,7 @@ const AccountManager = () => {
               )}
               {visibleColumns.includes('status') && (
                 <td className="px-6 py-4 text-center truncate">
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-widest ${acc.status === 'Ativo' ? ' bg-emerald-900/20 text-emerald-400 border border-emerald-800/50' : ' bg-rose-900/20 text-rose-400 border border-rose-800/50'}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${acc.status === 'Ativo' ? ' bg-emerald-900/20 text-emerald-400 border border-emerald-800/50' : ' bg-rose-900/20 text-rose-400 border border-rose-800/50'}`}>
                     {acc.status}
                   </span>
                 </td>
@@ -558,10 +558,10 @@ const AccountManager = () => {
                    {editingAccount.id ? <ShieldCheck size={24}/> : <Plus size={24}/>}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tighter leading-tight">
+                  <h3 className="text-lg font-bold text-white uppercase tracking-tight leading-tight">
                     {editingAccount.id ? 'Editar Credencial' : 'Nova Credencial'}
                   </h3>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em]">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
+                  <p className="text-[11px] font-bold text-slate-500/80 uppercase tracking-wider">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
                 </div>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white transition-all hover:rotate-90"><X size={20}/></button>
@@ -570,7 +570,7 @@ const AccountManager = () => {
             <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="md:col-span-2 bg-slate-800/30 p-6 rounded-3xl border border-slate-800">
-                  <label className="block text-[11px] font-black uppercase text-indigo-400 mb-2 ml-1 tracking-widest">Identificação da Licença / Conta</label>
+                  <label className="block text-[11px] font-bold uppercase text-indigo-400 mb-2 ml-1 tracking-wider">Identificação da Licença / Conta</label>
                   <input 
                     required 
                     className="w-full border-2 border-slate-800 rounded-2xl p-4 text-base font-bold bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all shadow-inner"
@@ -582,7 +582,7 @@ const AccountManager = () => {
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">Tipo de Serviço</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500/80 mb-2 ml-1 tracking-wider">Tipo de Serviço</label>
                     <select 
                       className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm font-bold bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all cursor-pointer"
                       value={editingAccount.type} 
@@ -592,7 +592,7 @@ const AccountManager = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">Status Atual</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500/80 mb-2 ml-1 tracking-wider">Status Atual</label>
                     <select 
                       className={`w-full border-2 rounded-2xl p-4 text-sm font-bold outline-none transition-all cursor-pointer ${editingAccount.status === 'Ativo' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/30 focus:border-emerald-500' : 'bg-rose-900/20 text-rose-400 border-rose-900/30 focus:border-rose-500'}`}
                       value={editingAccount.status} 

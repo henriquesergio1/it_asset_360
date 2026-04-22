@@ -85,7 +85,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
                 <h1 className="text-sm font-bold text-slate-100 leading-tight break-words px-1 tracking-tight">
                   {settings.appName}
                 </h1>
-                <p className="text-[10px] text-blue-400 font-black uppercase tracking-[0.2em] mt-1.5 opacity-60">IT Asset 360 v{APP_VERSION}</p>
+                <p className="text-[11px] text-blue-400 font-bold uppercase tracking-wider mt-1.5 opacity-60">IT Asset 360 v{APP_VERSION}</p>
               </div>
             )}
           </div>
@@ -108,7 +108,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           
           {isAdmin && (
             <div className={`pt-4 mt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'px-0' : ''}`}>
-               {!isSidebarCollapsed && <p className="px-6 text-xs text-slate-500 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
+               {!isSidebarCollapsed && <p className="px-6 text-[11px] text-slate-500/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
                <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isSidebarCollapsed} />
             </div>
           )}
@@ -117,7 +117,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         {/* Footer Info & Logout */}
         <div className={`border-t border-slate-800 bg-slate-950 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-6'}`}>
           {!isSidebarCollapsed && (
-              <div className="flex items-center gap-2 text-xs text-blue-400 mb-4 w-full overflow-hidden whitespace-nowrap">
+              <div className="flex items-center gap-2 text-[11px] text-blue-400/80 mb-4 w-full overflow-hidden whitespace-nowrap">
                  <span className="shrink-0"><Info size={14}/></span>
                  <span>Versão {APP_VERSION}</span>
               </div>
@@ -142,7 +142,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div className="flex items-center space-x-4 ml-auto">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-100">{user?.name}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400 font-bold border border-blue-900/50 shadow-inner">
               {user?.name.charAt(0)}

@@ -30,9 +30,9 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
       )}
     </div>
     <div className="z-10">
-      <p className="text-xs font-black uppercase tracking-widest mb-1 text-slate-500">{title}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500/80">{title}</p>
       <div className="flex items-baseline gap-2">
-        <h3 className="text-3xl font-black text-slate-100 tracking-tight">{value}</h3>
+        <h3 className="text-3xl font-bold text-slate-100 tracking-tight">{value}</h3>
       </div>
       {subtitle && <p className="text-[11px] mt-2 text-slate-400 font-medium italic">{subtitle}</p>}
     </div>
@@ -41,7 +41,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
       <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20 flex flex-col">
         <div className="flex items-center gap-2 mb-4">
           <Icon className={`w-4 h-4 ${color.replace('bg-', 'text-')}`} />
-          <h4 className="text-sm font-black uppercase tracking-widest text-slate-100">{title} Detalhes</h4>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-slate-100">{title} Detalhes</h4>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
           {children}
@@ -180,8 +180,8 @@ const Dashboard = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-100 tracking-tight flex items-center gap-3">
-            <LayoutDashboard className="text-blue-500" size={32} />
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight flex items-center gap-3">
+            <LayoutDashboard className="text-blue-500" size={28} />
             Dashboard
           </h1>
           <p className="text-slate-400 text-sm font-medium mt-1">Bem-vindo ao centro de controle do seu inventário de TI.</p>
@@ -189,7 +189,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-3">
           <div className="px-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Sistema Online</span>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Sistema Online</span>
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@ const Dashboard = () => {
           {/* Alertas Críticos Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
                 <AlertTriangle className="text-amber-500" size={20} />
                 Alertas do Sistema
               </h2>

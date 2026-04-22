@@ -5,7 +5,8 @@ import { useToast } from './ToastContext';
 import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-const API_URL = ''; 
+// v3.26.3: API_URL agora é configurável via .env
+const API_URL = import.meta.env.VITE_API_URL || ''; 
 
 export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  const queryClient = useQueryClient();

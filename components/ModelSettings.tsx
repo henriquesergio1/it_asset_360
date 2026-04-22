@@ -302,10 +302,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="max-w-2xl">
  <h4 className="text-xl font-bold text-slate-100 mb-4">Cargos e Funções</h4>
  <form onSubmit={handleSectorSubmit} className="bg-emerald-900/20 p-6 rounded-2xl border border-emerald-900/40 mb-6 transition-colors">
- <h5 className="font-black text-emerald-300 mb-4 uppercase text-xs tracking-widest">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
+ <h5 className="font-bold text-emerald-300 mb-4 uppercase text-xs tracking-wider">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
  <div className="flex gap-3">
  <input required type="text"placeholder="Ex: Analista de RH, Gerente de Vendas..."className="flex-1 border-2 border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 outline-none font-bold bg-slate-800 text-slate-100 transition-all"value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
- <button type="submit"className="bg-emerald-600 bg-emerald-500 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 hover:bg-emerald-600 font-black uppercase text-xs tracking-widest transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
+ <button type="submit"className="bg-emerald-600 bg-emerald-500 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 hover:bg-emerald-600 font-bold uppercase text-xs tracking-wider transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
  {editingSector.id && <button type="button"onClick={() => setEditingSector({})} className="p-3 hover:text-slate-600 hover:text-slate-300 transition-colors"><X size={20}/></button>}
  </div>
  </form>
@@ -330,10 +330,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="max-w-2xl">
  <h4 className="text-xl font-bold text-slate-100 mb-4">Tipos de Equipamento</h4>
  <form onSubmit={handleTypeSubmit} className="bg-blue-900/20 p-6 rounded-2xl border border-blue-900/40 mb-6 transition-colors">
- <h5 className="font-black text-blue-300 mb-4 uppercase text-xs tracking-widest">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
+ <h5 className="font-bold text-blue-300 mb-4 uppercase text-xs tracking-wider">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
  <div className="flex gap-3 mb-4">
  <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-800 text-slate-100 transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
- <button type="submit"className="bg-blue-500 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">Salvar</button>
+ <button type="submit"className="bg-blue-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Salvar</button>
  </div>
  
  <div className="flex items-center gap-2 mb-6 bg-slate-800 p-3 rounded-xl border border-slate-700">
@@ -349,7 +349,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="bg-slate-800 p-4 rounded-xl border-2 border-slate-700 shadow-inner">
- <label className="block text-[10px] font-black uppercase mb-3 tracking-widest border-b border-slate-700 pb-1">Campos Extras (A-Z)</label>
+ <label className="block text-[11px] font-bold uppercase mb-3 tracking-wider text-slate-500/80 border-b border-slate-700 pb-1">Campos Extras (A-Z)</label>
  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
  {sortedCustomFields.map(f => (
  <label key={f.id} className="flex items-center gap-3 text-xs font-bold p-2 rounded-lg hover:bg-slate-700 cursor-pointer text-slate-300 transition-colors">
@@ -361,13 +361,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  </div>
  
  <div className="bg-slate-800 p-4 rounded-xl border-2 border-slate-700 shadow-inner">
- <label className="block text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3 border-b border-slate-700 pb-1">Ordem de Exibição</label>
+ <label className="block text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Ordem de Exibição</label>
  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
  {(editingType.customFieldIds || []).map((id, index) => {
  const field = customFields.find(f => f.id === id);
  return (
  <div key={id} className="flex items-center justify-between bg-emerald-900/40 p-2 rounded-lg border border-emerald-900/20">
- <span className="text-xs font-black text-emerald-300">{field?.name}</span>
+ <span className="text-xs font-bold text-emerald-300">{field?.name}</span>
  <div className="flex gap-1">
  <button type="button"onClick={() => moveField(index, 'UP')} disabled={index === 0} className="p-1 text-emerald-400 disabled:opacity-30"><ChevronUp size={14}/></button>
  <button type="button"onClick={() => moveField(index, 'DOWN')} disabled={index === (editingType.customFieldIds || []).length - 1} className="p-1 text-emerald-400 disabled:opacity-30"><ChevronDown size={14}/></button>
@@ -398,7 +398,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <form onSubmit={handleFieldSubmit} className="bg-indigo-900/20 p-5 rounded-2xl border border-indigo-900/40 mb-6 transition-colors">
  <div className="flex gap-2">
  <input required type="text"placeholder="Nome do Campo (ex: Memória RAM)"className="flex-1 border-2 border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none font-bold bg-slate-800 text-slate-100 transition-all"value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
- <button type="submit"className="bg-indigo-600 bg-indigo-500 text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">Adicionar</button>
+ <button type="submit"className="bg-indigo-600 bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Adicionar</button>
  </div>
  </form>
  <div className="space-y-2">

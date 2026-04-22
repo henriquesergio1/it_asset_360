@@ -970,23 +970,23 @@ const Reports = () => {
                 {/* Resumo de Consumíveis */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-800">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1">Total de Movimentações</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Total de Movimentações</p>
                     <p className="text-2xl font-bold text-slate-100">{consumablesReportData.length}</p>
                   </div>
                   <div className="bg-emerald-900/10 p-4 rounded-2xl border border-emerald-900/20">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Total Recebido (Entradas)</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-1">Total Recebido (Entradas)</p>
                     <p className="text-2xl font-bold text-emerald-400">
                       {consumablesReportData.filter(t => t.type === 'IN').reduce((acc, t) => acc + t.quantity, 0)}
                     </p>
                   </div>
                   <div className="bg-rose-900/10 p-4 rounded-2xl border border-rose-900/20">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-rose-400 mb-1">Total Utilizado (Saídas)</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-rose-400 mb-1">Total Utilizado (Saídas)</p>
                     <p className="text-2xl font-bold text-rose-400">
                       {consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}
                     </p>
                   </div>
                   <div className="bg-blue-900/10 p-4 rounded-2xl border border-blue-900/20">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-blue-400 mb-1">Saldo do Período</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-blue-400 mb-1">Saldo do Período</p>
                     <p className="text-2xl font-bold text-blue-400">
                       {consumablesReportData.reduce((acc, t) => acc + (t.type === 'IN' ? t.quantity : -t.quantity), 0)}
                     </p>
@@ -994,7 +994,7 @@ const Reports = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 flex items-center gap-2">
                     <Package size={14} /> Resumo por Item no Período
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1027,7 +1027,7 @@ const Reports = () => {
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-slate-800">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 flex items-center gap-2">
                     <FileText size={14} /> Detalhamento de Movimentações
                   </h3>
                   <table className="w-full text-sm text-left table-fixed">
@@ -1133,19 +1133,19 @@ const Reports = () => {
               <div className="overflow-x-auto">
                 <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-800/20 border-b border-slate-800">
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Aquisição</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-1">Total Aquisição</p>
                     <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalPurchase)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Total Manutenção</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-1">Total Manutenção</p>
                     <p className="text-lg font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalMaint)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">LCC Global (TCO)</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-1">LCC Global (TCO)</p>
                     <p className="text-lg font-bold text-blue-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialSummary.totalLCC)}</p>
                   </div>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">Alertas Críticos</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-1">Alertas Críticos</p>
                     <p className={`text-lg font-bold ${financialSummary.criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{financialSummary.criticalCount}</p>
                   </div>
                 </div>
