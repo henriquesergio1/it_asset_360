@@ -514,6 +514,12 @@ const UserManager: React.FC = () => {
       
       const sector = sectors.find(s => s.id === user.sectorId);
       
+      // Busca o chip vinculado se for um dispositivo e tiver o ID do chip
+      let linkedSim: SimCard | undefined = undefined;
+      if (!isSim && asset && asset.linkedSimId) {
+        linkedSim = sims.find(s => s.id === asset.linkedSimId);
+      }
+      
       generateAndPrintTerm({
         user,
         asset,
@@ -521,6 +527,7 @@ const UserManager: React.FC = () => {
         model: modelData || { name: modelName },
         actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
         sectorName: sector?.name,
+        linkedSim,
         notes: term.notes,
         condition: term.condition,
         damageDescription: term.damageDescription,
@@ -1004,7 +1011,7 @@ const UserManager: React.FC = () => {
               )}
               {activeTab === 'TERMS' && (
                 <div className="space-y-4">
-                   <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     {currentUserTerms.map(term => (
                       <div key={term.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
                         <div className="flex items-center gap-4">
@@ -1024,50 +1031,52 @@ const UserManager: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                           <div className="text-right">
-                              <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${term.fileUrl || term.hasFile ? 'bg-emerald-900/30 text-emerald-400' : 'bg-orange-900/30 text-orange-400'}`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
-                           </div>
-                           <div className="flex gap-2">
-                             <button 
-                               type="button"
-                               onClick={() => {
-                                 setEditingTerm(term); 
-                                 setTermEditData({
-                                   status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), 
-                                   notes: term.notes || '', 
-                                   evidenceFiles: term.evidenceFiles || []
-                                 });
-                               }} 
-                               disabled={term.fileUrl || term.hasFile}
-                               className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
-                             >
-                               <Edit2 size={16} />
-                             </button>
-                             <button 
-                               type="button"
-                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
-                               className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
-                               title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
-                             >
-                               <Download size={16} />
-                             </button>
+                          <div className="text-right">
+                            <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                              (term.fileUrl || term.hasFile) ? 'bg-emerald-900 text-emerald-400' : 'bg-orange-900 text-orange-400'
+                            }`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setEditingTerm(term); 
+                                setTermEditData({
+                                  status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), 
+                                  notes: term.notes || '', 
+                                  evidenceFiles: term.evidenceFiles || []
+                                });
+                              }} 
+                              disabled={term.fileUrl || term.hasFile}
+                              className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
+                              className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
+                              title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
+                            >
+                              <Download size={16} />
+                            </button>
                              
-                             {!(term.fileUrl || term.hasFile) ? (
-                               <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
-                                 <Upload size={16} />
-                                 <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
-                               </label>
-                             ) : (
-                               <button 
-                                 type="button"
-                                 onClick={() => handleDeleteTermFile(term.id)}
-                                 className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
-                                 title="Excluir/Alterar"
-                               >
-                                 <Trash2 size={16} />
-                               </button>
-                             )}
-                           </div>
+                            {!(term.fileUrl || term.hasFile) ? (
+                              <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
+                                <Upload size={16} />
+                                <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
+                              </label>
+                            ) : (
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteTermFile(term.id)}
+                                className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
+                                title="Excluir/Alterar"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1077,7 +1086,46 @@ const UserManager: React.FC = () => {
                         <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum termo gerado</h4>
                       </div>
                     )}
-                   </div>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'LOGS' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-800">
+                    <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {logs.filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName).length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {logs
+                      .filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName)
+                      .map(log => {
+                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-400' :
+                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-400' :
+                                           'bg-slate-800 text-slate-400';
+                        return (
+                          <div key={log.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-2 group hover:border-slate-700 transition-all">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3">
+                                <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
+                                  {log.action}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
+                            </div>
+                            <div className="text-xs font-bold text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                              <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {logs.filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName).length === 0 && (
+                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                        <History className="mx-auto text-slate-800 mb-4" size={48} />
+                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ export interface DataContextType {
  sims: SimCard[];
  users: User[];
  systemUsers: SystemUser[];
+ logs: AuditLog[];
  settings: SystemSettings;
  
  // ERP Integration

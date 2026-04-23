@@ -54,7 +54,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const value: DataContextType = {
-    devices, sims, users, loading: false, error: null, systemUsers, settings,
+    devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions,
     fetchData: async () => {},

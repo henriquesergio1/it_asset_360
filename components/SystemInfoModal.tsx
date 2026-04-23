@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.30.3',
+    date: 'Hoje',
+    title: 'Audit & Reprint Synchrony',
+    changes: [
+      'Fix: Restaurada a visualização do Histórico (Logs) no cadastro de colaboradores;',
+      'Fix: Adicionado suporte a exibição de Chip Vinculado na re-impressão de termos já gerados;',
+      'Stability: Correção de aninhamento de componentes que causava tela em branco em fluxos específicos.'
+    ]
+  },
+  {
     version: '3.30.2',
     date: 'Hoje',
     title: 'Rich Term Details',
