@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.32.0',
+    date: 'Hoje',
+    title: 'UX Improvements & Manual Terms Status',
+    changes: [
+      'UI: Substituído ícone genérico de colaborador por Avatares coloridos com iniciais dos nomes.',
+      'Terms: Implementada distinção visual para "Resolução Manual". Agora exibe badge "Manual" com motivo em vez de "Assinado".',
+      'Bugfix: Corrigida a função de remover anexo do termo. Agora limpa corretamente os arquivos no banco e reseta o status para "Pendente".',
+      'Infra: Ajustado endpoint de deleção de termos para resetar flags de contingência manual.'
+    ]
+  },
+  {
     version: '3.31.2',
     date: 'Hoje',
     title: 'Hotfix: Auditoria de Logs e Download de Arquivos',

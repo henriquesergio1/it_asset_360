@@ -198,7 +198,18 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       showToast('Termo de devolução processado', 'success');
     },
     updateTermFile: () => {},
-    deleteTermFile: () => {},
+    deleteTermFile: (termId, userId) => {
+      setUsers(prev => prev.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            terms: u.terms.map(t => t.id === termId ? { ...t, fileUrl: '', hasFile: false, isManual: false, resolutionReason: '' } : t)
+          };
+        }
+        return u;
+      }));
+      showToast('Anexo removido do termo (Mock)', 'success');
+    },
     updateTermDetails: () => {},
     clearLogs: () => setLogs([]),
     restoreItem: () => {},

@@ -858,7 +858,7 @@ app.delete('/api/terms/:id/file', async (req, res) => {
 
         if (!term) return res.status(404).send("Termo não encontrado");
 
-        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE Terms SET FileBinary=NULL WHERE Id=@Id");
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE Terms SET FileBinary=NULL, IsManual=0, ResolutionReason=NULL WHERE Id=@Id");
 
         const userRes = await pool.request().input('Uid', sql.NVarChar, term.UserId).query("SELECT FullName FROM Users WHERE Id=@Uid");
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';

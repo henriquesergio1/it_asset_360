@@ -101,6 +101,7 @@ const UserManager: React.FC = () => {
     accounts,
     logs,
     getTermFile,
+    deleteTermFile,
     addUser,
     updateUser: updateUserData,
     toggleUserActive,
@@ -571,15 +572,30 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      { bg: 'bg-blue-600/10', border: 'border-blue-500/20', text: 'text-blue-400' },
+      { bg: 'bg-emerald-600/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
+      { bg: 'bg-violet-600/10', border: 'border-violet-500/20', text: 'text-violet-400' },
+      { bg: 'bg-amber-600/10', border: 'border-amber-500/20', text: 'text-amber-400' },
+      { bg: 'bg-rose-600/10', border: 'border-rose-500/20', text: 'text-rose-400' },
+      { bg: 'bg-cyan-600/10', border: 'border-cyan-500/20', text: 'text-cyan-400' },
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ').filter(p => !['de', 'da', 'do', 'das', 'dos'].includes(p.toLowerCase()));
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
   const handleDeleteTermFile = (termId: string) => {
     if (editingId && window.confirm('Deseja realmente remover o arquivo deste termo? Esta ação permitirá o reenvio.')) {
-      const user = users.find(u => u.id === editingId);
-      if (user) {
-        const updatedTerms = user.terms.map(t => 
-          t.id === termId ? { ...t, fileUrl: undefined, hasFile: false, updatedAt: new Date().toISOString() } : t
-        );
-        updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Remoção de arquivo do termo para reenvio');
-      }
+      deleteTermFile(termId, editingId, 'Remoção de arquivo do termo para reenvio', authUser?.name || 'Admin');
     }
   };
 
@@ -779,9 +795,16 @@ const UserManager: React.FC = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-xl bg-slate-800 flex items-center justify-center border border-slate-700 shrink-0">
-                      <UserIcon size={18} className="text-slate-400" />
-                    </div>
+                    {(() => {
+                      const color = getAvatarColor(u.fullName);
+                      return (
+                        <div className={`h-9 w-9 rounded-xl ${color.bg} flex items-center justify-center border ${color.border} shrink-0 shadow-sm overflow-hidden`}>
+                          <span className={`text-[11px] font-black ${color.text} tracking-tighter`}>
+                            {getInitials(u.fullName)}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="min-w-0">
                       <div className="font-semibold text-slate-100 text-[13px]">{u.fullName}</div>
                       <div className="flex gap-1 mt-0.5">
@@ -1051,8 +1074,17 @@ const UserManager: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="text-right">
                             <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                              (term.fileUrl || term.hasFile) ? 'bg-emerald-900 text-emerald-400' : 'bg-orange-900 text-orange-400'
-                            }`}>{term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente'}</span>
+                              term.isManual 
+                                ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' 
+                                : (term.fileUrl || term.hasFile) 
+                                  ? 'bg-emerald-900 text-emerald-400' 
+                                  : 'bg-orange-900 text-orange-400'
+                            }`} title={term.isManual ? `Resolvido Manualmente: ${term.resolutionReason || 'Sem motivo'}` : ''}>
+                              {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente')}
+                            </span>
+                            {term.isManual && (
+                              <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">Resolução Manual</div>
+                            )}
                           </div>
                           <div className="flex gap-2">
                             <button 
