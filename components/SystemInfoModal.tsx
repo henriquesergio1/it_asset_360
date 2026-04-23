@@ -9,6 +9,24 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.30.2',
+    date: 'Hoje',
+    title: 'Rich Term Details',
+    changes: [
+      'UI: Substituído o ID técnico do termo pelos detalhes reais do dispositivo (Modelo/TAG/IMEI) na lista de termos do colaborador.',
+      'UX: Melhorada a legibilidade das informações de emissão de documento.'
+    ]
+  },
+  {
+    version: '3.30.1',
+    date: 'Hoje',
+    title: 'Smart Asset Identification (Term)',
+    changes: [
+      'UI: Campo "Patrimônio" renomeado para "Patrimônio / IMEI" (em negrito) no termo impresso;',
+      'Fix: Lógica inteligente para exibir apenas o identificador preenchido (TAG ou IMEI), ocultando "S/T" ou "S/I".'
+    ]
+  },
+  {
     version: '3.30.0',
     date: 'Hoje',
     title: 'Critical Fix - Provider Methods',

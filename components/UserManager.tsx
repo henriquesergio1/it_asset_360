@@ -1013,7 +1013,14 @@ const UserManager: React.FC = () => {
                           </div>
                           <div>
                             <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2 mt-1">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')} <span className="h-1 w-1 bg-slate-700 rounded-full"/> ID: {term.id.slice(0,8).toUpperCase()}</div>
+                            <div className="text-[11px] font-bold text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-emerald-500/80">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-medium">
+                                {term.assetDetails || '---'}
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
