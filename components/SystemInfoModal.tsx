@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.29.5',
+    date: 'Hoje',
+    title: 'Recuperação Visual de Patrimônio e Acessórios',
+    changes: [
+      'Fix: Restaurada leitura de AssetID legado ignorado nos termos;',
+      'UX: Acessórios, patrimônio condensado e Seriais voltam a ser populados perfeitamente no PDF.'
+    ]
+  },
+  {
     version: '3.29.4',
     date: 'Hoje',
     title: 'Estabilização de Geração de Termos',

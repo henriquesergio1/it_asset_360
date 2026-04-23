@@ -421,7 +421,7 @@ const UserManager: React.FC = () => {
         return;
       }
       if (url.startsWith('data:')) {
-        // Usa fetch para converter o base64 para Blob e fazer um download seguro
+        // Usa fetch para converter o base64 para Blob e fazer um download seguro sem navegação
         fetch(url)
           .then(res => res.blob())
           .then(blob => {
@@ -438,13 +438,7 @@ const UserManager: React.FC = () => {
           })
           .catch(err => {
             console.error("Erro ao gerar download via blob", err);
-            // Fallback direto
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            window.open(url, '_blank');
           });
       } else {
         window.open(url, '_blank');
@@ -459,29 +453,40 @@ const UserManager: React.FC = () => {
       let modelData: any = null;
       let modelName = term.assetDetails;
 
+      const rawAssetId = (term as any).assetId; // Campo legado existia no banco/versões antigas
+
       if (isSim) {
-        const phoneMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
-        const phone = phoneMatch ? phoneMatch[1] : '';
-        const realSim = sims.find(s => s.phoneNumber === phone);
+        let realSim = sims.find(s => s.id === rawAssetId);
+        if (!realSim) {
+          const phoneMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
+          const phone = phoneMatch ? phoneMatch[1] : '';
+          realSim = sims.find(s => s.phoneNumber === phone);
+        }
         
         asset = realSim || {
           operator: 'Operadora',
           iccid: 'N/A',
-          phoneNumber: phone || 'Chip SIM'
+          phoneNumber: term.assetDetails.replace(/\[.*?\]\s*/, '').trim() || 'Chip SIM'
         };
         modelName = 'Chip / SIM Card';
       } else {
-        const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
-        const tag = tagMatch ? tagMatch[1] : '';
-        const realDevice = devices.find(d => d.assetTag === tag);
+        let realDevice = devices.find(d => d.id === rawAssetId);
+        
+        if (!realDevice) {
+           const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
+           const tag = tagMatch ? tagMatch[1] : '';
+           realDevice = devices.find(d => d.assetTag === tag);
+        }
         
         if (realDevice) {
            asset = realDevice;
            modelData = models.find(m => m.id === realDevice.modelId);
         } else {
+           // Fallback seguro se o aparelho foi deletado do sistema
+           const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
            asset = {
-             serialNumber: 'S/N (Não Localizado)',
-             assetTag: tag || 'S/N',
+             serialNumber: 'Não Localizado',
+             assetTag: tagMatch ? tagMatch[1] : 'Desconhecido',
              imei: '',
              accessories: []
            };
