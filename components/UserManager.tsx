@@ -453,7 +453,11 @@ const UserManager: React.FC = () => {
           const blobUrl = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+          
+          // Lógica inteligente para extensão do arquivo
+          const extension = contentType.includes('pdf') ? 'pdf' : (contentType.includes('png') ? 'png' : 'jpg');
+          link.download = `termo_${term.type.toLowerCase()}_${editingId}.${extension}`;
+          
           document.body.appendChild(link);
           link.click();
           setTimeout(() => {
@@ -464,7 +468,12 @@ const UserManager: React.FC = () => {
           const link = document.createElement('a');
           link.href = url;
           link.target = '_blank';
-          link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+          
+          // Fallback seguro se não for data:, tenta detectar pela URL ou assume PDF para legado
+          const isImg = url.toLowerCase().match(/\.(jpg|jpeg|png)$/);
+          const extension = isImg ? isImg[1] : 'pdf';
+          link.download = `termo_${term.type.toLowerCase()}_${editingId}.${extension}`;
+          
           link.click();
         }
       } catch (err) {

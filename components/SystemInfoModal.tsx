@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.32.2',
+    date: 'Hoje',
+    title: 'Fix: Multiformat Term Support (PDF/JPG/PNG)',
+    changes: [
+      'Bugfix: Corrigido o download de termos que são imagens (JPG/PNG). Agora o sistema detecta o formato e salva com a extensão correta.',
+      'UX: Removido o erro que forçava .pdf em arquivos que originalmente eram fotos.',
+      'Stability: Melhorada a detecção de Content-Type durante a reconstrução de Blobs para download.'
+    ]
+  },
+  {
     version: '3.32.1',
     date: 'Hoje',
     title: 'Fix: Term File Upload & Versioning',
