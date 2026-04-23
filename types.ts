@@ -150,6 +150,10 @@ export interface Term {
   hasEvidence?: boolean;
   evidenceFiles?: string[];
   notes?: string;
+  
+  // Dados para re-impressão fiel
+  accessories?: { id: string; name: string }[];
+  linkedSim?: SimCard;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

@@ -99,6 +99,8 @@ const UserManager: React.FC = () => {
     devices, 
     sims, 
     accounts,
+    logs,
+    getTermFile,
     addUser,
     updateUser: updateUserData,
     toggleUserActive,
@@ -413,15 +415,20 @@ const UserManager: React.FC = () => {
     }
   };
 
-  const handleDownloadTerm = (term: Term) => {
-    // Verifica fileUrl e o campo legado filebinary citado pelo usuário
-    const url = term.fileUrl || (term as any).filebinary;
+  const handleDownloadTerm = async (term: Term) => {
+    // Verifica se existe arquivo assinado
+    let url = term.fileUrl || (term as any).filebinary;
     
-    if (url || term.hasFile) {
-      if (!url || url === '#') {
-        alert("O arquivo não está mais disponível ou ainda não foi sincronizado.");
-        return;
+    // Se não tem URL mas o sistema diz que tem arquivo, busca sob demanda
+    if (!url && term.hasFile) {
+      try {
+        url = await getTermFile(term.id);
+      } catch (err) {
+        console.error("Erro ao buscar arquivo do termo:", err);
       }
+    }
+    
+    if (url && url !== '#') {
       if (url.startsWith('data:')) {
         // Usa fetch para converter o base64 para Blob e fazer um download seguro sem navegação
         fetch(url)
@@ -445,11 +452,16 @@ const UserManager: React.FC = () => {
       } else {
         window.open(url, '_blank');
       }
+    } else if (term.hasFile) {
+      alert("O arquivo assinado ainda não foi sincronizado com o servidor ou está em processamento.");
     } else {
+      // MODO REIMPRESSÃO DINÂMICA
       const user = users.find(u => u.id === editingId);
       if (!user) return;
       
-      // Reconstrói informações do item analisando detalhadamente o assetDetails
+      // Prioridade 1: Usar dados salvos no próprio Termo (Fidelidade Total)
+      // Prioridade 2: Reconstruir via assetDetails se for termo antigo
+      
       const isSim = term.assetDetails.includes('[CHIP:');
       let asset: any = null;
       let modelData: any = null;
@@ -458,65 +470,60 @@ const UserManager: React.FC = () => {
       const rawAssetId = (term as any).assetId;
 
       if (isSim) {
-        // Exemplo: [CHIP: (11) 98888-5678 | ICCID: 89550...]
+        // ... Lógica similar de reconstrução para fallback ...
         const contentMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
         const content = contentMatch ? contentMatch[1] : '';
         const parts = content.split('|').map(p => p.trim());
-        
         let phoneNumber = parts[0] || '';
         let iccid = '';
-        
         parts.forEach(p => {
           if (p.startsWith('ICCID:')) iccid = p.replace('ICCID:', '').trim();
         });
 
-        // Tenta achar o SIM real no estado
-        let realSim = sims.find(s => s.id === rawAssetId || s.phoneNumber === phoneNumber);
-        
-        asset = realSim || {
+        const realSim = sims.find(s => s.id === rawAssetId || s.phoneNumber === phoneNumber);
+        asset = term.linkedSim || realSim || {
           operator: 'Operadora',
           iccid: iccid || 'N/A',
           phoneNumber: phoneNumber || 'Chip SIM'
         };
         modelName = 'Chip / SIM Card';
       } else {
-        // Exemplo: [TAG: S/T | S/N: RQCW908Q6RN | IMEI: 356353928369217] Samsung Galaxy M14
         const contentMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
         const content = contentMatch ? contentMatch[1] : '';
         const parts = content.split('|').map(p => p.trim());
-        
         let assetTag = parts[0] || '';
         let serialNumber = '';
         let imei = '';
-        
         parts.forEach(p => {
           if (p.startsWith('S/N:')) serialNumber = p.replace('S/N:', '').trim();
           else if (p.startsWith('IMEI:')) imei = p.replace('IMEI:', '').trim();
         });
 
         modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
-
-        // Tenta achar o dispositivo real no estado
-        let realDevice = devices.find(d => d.id === rawAssetId || d.assetTag === assetTag);
+        const realDevice = devices.find(d => d.id === rawAssetId || d.assetTag === assetTag);
         
         if (realDevice) {
-           asset = realDevice;
+           asset = { ...realDevice };
+           // Se o termo tem acessórios salvos, use-os! Senão use os atuais do device
+           if (term.accessories && term.accessories.length > 0) {
+             asset.accessories = term.accessories;
+           }
            modelData = models.find(m => m.id === realDevice.modelId);
         } else {
            asset = {
              assetTag: assetTag || 'Desconhecido',
              serialNumber: serialNumber || 'Não Localizado',
              imei: imei || '',
-             accessories: []
+             accessories: term.accessories || []
            };
         }
       }
       
       const sector = sectors.find(s => s.id === user.sectorId);
       
-      // Busca o chip vinculado se for um dispositivo e tiver o ID do chip
-      let linkedSim: SimCard | undefined = undefined;
-      if (!isSim && asset && asset.linkedSimId) {
+      // Se o termo tem o chip vinculado salvo, use-o!
+      let linkedSim = term.linkedSim;
+      if (!linkedSim && !isSim && asset && asset.linkedSimId) {
         linkedSim = sims.find(s => s.id === asset.linkedSimId);
       }
       
@@ -1047,7 +1054,7 @@ const UserManager: React.FC = () => {
                                   evidenceFiles: term.evidenceFiles || []
                                 });
                               }} 
-                              disabled={term.fileUrl || term.hasFile}
+                              disabled={!!(term.fileUrl || term.hasFile)}
                               className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
                             >
                               <Edit2 size={16} />

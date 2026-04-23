@@ -57,9 +57,18 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions,
+    isReadOnly,
     fetchData: async () => {},
     refreshData: async () => {},
-    getTermFile: async () => "",
+    getTermFile: async (id) => {
+      // Simula a busca de um arquivo assinado no mock
+      const userWithTerm = users.find(u => u.terms?.some(t => t.id === id));
+      const term = userWithTerm?.terms?.find(t => t.id === id);
+      if (term && (term.fileUrl || term.hasFile)) {
+        return term.fileUrl || "data:application/pdf;base64,JVBERi0xLjQKJ...[MOCK_PDF_CONTENT]...";
+      }
+      return "";
+    },
     getDeviceInvoice: async () => "",
     getMaintenanceInvoice: async () => "",
     getLogDetail: async (id) => logs.find(l => l.id === id) as any,
@@ -83,8 +92,111 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateSystemUser: (u) => setSystemUsers(p => p.map(x => x.id === u.id ? u : x)),
     deleteSystemUser: (id) => setSystemUsers(p => p.filter(x => x.id !== id)),
     updateSettings: (s) => setSettings(s),
-    assignAsset: () => {},
-    returnAsset: () => {},
+    assignAsset: (assetType, assetId, userId, notes, adminName, accessories) => {
+      const user = users.find(u => u.id === userId);
+      const isSim = assetType === 'Sim';
+      const asset = isSim ? sims.find(s => s.id === assetId) : devices.find(d => d.id === assetId);
+      
+      if (!user || !asset) return;
+
+      // Criação de Termo
+      let assetDetails = '';
+      let linkedSim: SimCard | undefined = undefined;
+
+      if ('phoneNumber' in asset) {
+        assetDetails = `[CHIP: ${asset.phoneNumber} | ICCID: ${asset.iccid}] Chip SIM Card`;
+      } else {
+        const tag = asset.assetTag || 'S/T';
+        const sn = asset.serialNumber || 'S/N';
+        const imei = asset.imei || 'S/I';
+        assetDetails = `[TAG: ${tag} | S/N: ${sn} | IMEI: ${imei}] ${models.find(m => m.id === asset.modelId)?.name || 'Equipamento'}`;
+        
+        if (asset.linkedSimId) {
+          linkedSim = sims.find(s => s.id === asset.linkedSimId);
+        }
+      }
+
+      const newTerm: Term = {
+        id: Math.random().toString(36).substr(2, 9),
+        userId,
+        type: 'ENTREGA',
+        assetDetails,
+        date: new Date().toISOString(),
+        fileUrl: '',
+        notes,
+        accessories: accessories?.map(a => ({ id: a.id, name: a.name })) || [],
+        linkedSim
+      };
+
+      const updatedUser = { ...user, terms: [newTerm, ...(user.terms || [])] };
+      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+
+      // Atualiza status do ativo
+      if (isSim) {
+        setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.IN_USE, currentUserId: userId } : s));
+      } else {
+        setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.IN_USE, currentUserId: userId, accessories: accessories || [] } : d));
+      }
+
+      logAction(ActionType.CHECKOUT, assetType, assetId, user.fullName, adminName, notes);
+      showToast('Termo de entrega gerado com sucesso', 'success');
+    },
+    returnAsset: (assetType, assetId, notes, adminName, returnedChecklist, inactivateUser, condition, damageDescription, evidenceFiles, isManual) => {
+      const isSim = assetType === 'Sim';
+      const asset = isSim ? sims.find(s => s.id === assetId) : devices.find(d => d.id === assetId);
+      const userId = asset?.currentUserId;
+      const user = users.find(u => u.id === userId);
+
+      if (!asset || !userId || !user) return;
+
+      // Criação de Termo de Devolução
+      let assetDetails = '';
+      let linkedSim: SimCard | undefined = undefined;
+
+      if ('phoneNumber' in asset) {
+        assetDetails = `[CHIP: ${asset.phoneNumber} | ICCID: ${asset.iccid}] Chip SIM Card`;
+      } else {
+        const tag = asset.assetTag || 'S/T';
+        const sn = asset.serialNumber || 'S/N';
+        const imei = asset.imei || 'S/I';
+        assetDetails = `[TAG: ${tag} | S/N: ${sn} | IMEI: ${imei}] ${models.find(m => m.id === asset.modelId)?.name || 'Equipamento'}`;
+        if (asset.linkedSimId) {
+          linkedSim = sims.find(s => s.id === asset.linkedSimId);
+        }
+      }
+
+      const newTerm: Term = {
+        id: Math.random().toString(36).substr(2, 9),
+        userId,
+        type: 'DEVOLUCAO',
+        assetDetails,
+        date: new Date().toISOString(),
+        fileUrl: '',
+        notes,
+        condition,
+        damageDescription,
+        evidenceFiles,
+        accessories: !isSim ? (asset as Device).accessories?.map(a => ({ id: a.id, name: a.name })) : [],
+        linkedSim
+      };
+
+      let updatedUser = { ...user, terms: [newTerm, ...(user.terms || [])] };
+      if (inactivateUser) {
+        updatedUser.active = false;
+        updatedUser.status = 'Inativo';
+      }
+      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+
+      // Atualiza status do ativo
+      if (isSim) {
+        setSims(prev => prev.map(s => s.id === assetId ? { ...s, status: DeviceStatus.AVAILABLE, currentUserId: null } : s));
+      } else {
+        setDevices(prev => prev.map(d => d.id === assetId ? { ...d, status: DeviceStatus.AVAILABLE, currentUserId: null, accessories: [] } : d));
+      }
+
+      logAction(ActionType.CHECKIN, assetType, assetId, user.fullName, adminName, notes);
+      showToast('Termo de devolução processado', 'success');
+    },
     updateTermFile: () => {},
     deleteTermFile: () => {},
     updateTermDetails: () => {},

@@ -9,6 +9,25 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.30.5',
+    date: 'Hoje',
+    title: 'Term Fidelity & Sync Fix',
+    changes: [
+      'Fix: Garantida a re-impressão fiel de termos incluindo acessórios e chips vinculados mesmo após mudanças no inventário;',
+      'Fix: Implementada busca automática de termos assinados (hasFile) quando a URL não está presente no estado inicial;',
+      'Fix: Habilitada funcionalidade de download de termos em modo Mock para testes de desenvolvimento.'
+    ]
+  },
+  {
+    version: '3.30.4',
+    date: 'Hoje',
+    title: 'Audit Consistency Fix',
+    changes: [
+      'Fix: Corrigido ReferenceError: logs is not defined ao acessar a aba de histórico do colaborador;',
+      'Fix: Garantida a provisão de dados de auditoria tanto em ambiente Mock quanto em Produção.'
+    ]
+  },
+  {
     version: '3.30.3',
     date: 'Hoje',
     title: 'Audit & Reprint Synchrony',

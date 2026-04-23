@@ -29,7 +29,7 @@ module.exports = (app) => {
 
     app.put('/api/terms/:id', async (req, res) => {
         try {
-            const { condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser } = req.body;
+            const { condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser, accessories, linkedSim } = req.body;
             const pool = await sql.connect(dbConfig);
             
             const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId, AssetDetails, FileBinary FROM Terms WHERE Id=@Id");
@@ -46,6 +46,16 @@ module.exports = (app) => {
                 .input('Desc', sql.NVarChar, damageDescription || null)
                 .input('Ad', sql.NVarChar, assetDetails || term.AssetDetails)
                 .input('Notes', sql.NVarChar, notes || null);
+
+            if (accessories !== undefined) {
+                query += ", Accessories=@Acc";
+                request.input('Acc', accessories ? JSON.stringify(accessories) : null);
+            }
+
+            if (linkedSim !== undefined) {
+                query += ", LinkedSimData=@Sim";
+                request.input('Sim', linkedSim ? JSON.stringify(linkedSim) : null);
+            }
 
             if (evidenceFiles !== undefined) {
                 query += ", EvidenceBinary=@Evid, Evidence2Binary=@Evid2, Evidence3Binary=@Evid3";

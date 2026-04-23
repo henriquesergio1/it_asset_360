@@ -81,7 +81,17 @@ export interface DataContextType {
  // Term Management
  updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;
  deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => void;
- updateTermDetails: (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string) => void;
+ updateTermDetails: (
+    termId: string, 
+    condition: string, 
+    damageDescription: string, 
+    assetDetails: string, 
+    notes: string, 
+    evidenceFiles: string[], 
+    adminName: string,
+    accessories?: { id: string; name: string }[],
+    linkedSim?: SimCard
+  ) => void;
 
  // Admin Tools
  clearLogs: () => void;

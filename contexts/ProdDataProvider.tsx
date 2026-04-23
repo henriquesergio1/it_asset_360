@@ -90,6 +90,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }));
  const maintenances = syncData?.maintenances || bootstrapData?.maintenances || [];
  const accounts = syncData?.accounts || bootstrapData?.accounts || [];
+ const logs = syncData?.logs || bootstrapData?.logs || [];
  
  const tasksData = syncData?.tasks || bootstrapData?.tasks || [];
  const taskLogs = syncData?.taskLogs || bootstrapData?.taskLogs || [];
@@ -298,10 +299,10 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  }
  };
 
- const updateTermDetails = async (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string) => {
+ const updateTermDetails = async (termId: string, condition: string, damageDescription: string, assetDetails: string, notes: string, evidenceFiles: string[], adminName: string, accessories?: { id: string; name: string }[], linkedSim?: SimCard) => {
   if (checkReadOnly()) return;
  try { 
- await putData('terms', { id: termId, condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser: adminName }); 
+ await putData('terms', { id: termId, condition, damageDescription, assetDetails, notes, evidenceFiles, _adminUser: adminName, accessories, linkedSim }); 
  fetchData(true); 
  } catch (err) { 
  showToast('Falha ao atualizar detalhes do termo', 'error'); 
@@ -425,7 +426,7 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  };
 
  const value: DataContextType = {
-   devices, sims, users, loading, error, systemUsers, settings,
+   devices, sims, users, logs, loading, error, systemUsers, settings,
    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
    accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions,
    fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,

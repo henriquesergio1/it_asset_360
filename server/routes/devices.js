@@ -37,6 +37,15 @@ module.exports = (app) => {
             }
 
             await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+            
+            let linkedSimData = null;
+            if (assetType === 'Device' && prev.LinkedSimId) {
+                const simRes = await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("SELECT Id, PhoneNumber, Operator, Iccid, Status, PlanDetails FROM SimCards WHERE Id=@Sid");
+                if (simRes.recordset[0]) {
+                    linkedSimData = JSON.stringify(simRes.recordset[0]);
+                }
+            }
+
             if (assetType === 'Device' && accessories) {
                 await pool.request().input('Did', assetId).query("DELETE FROM DeviceAccessories WHERE DeviceId=@Did");
                 for (let acc of accessories) {
@@ -44,7 +53,14 @@ module.exports = (app) => {
                 }
             }
             const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            await pool.request()
+                .input('I', termId)
+                .input('U', userId)
+                .input('T', 'ENTREGA')
+                .input('Ad', assetDetails)
+                .input('Acc', accessories ? JSON.stringify(accessories) : null)
+                .input('Sim', linkedSimData)
+                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Acc, @Sim)");
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
             await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
@@ -89,6 +105,21 @@ module.exports = (app) => {
                 const ev2 = evidenceFiles && evidenceFiles.length > 1 ? getBufferFromBase64(evidenceFiles[1]) : null;
                 const ev3 = evidenceFiles && evidenceFiles.length > 2 ? getBufferFromBase64(evidenceFiles[2]) : null;
                 
+                let linkedSimData = null;
+                if (assetType === 'Device' && prev.LinkedSimId) {
+                    const simRes = await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("SELECT Id, PhoneNumber, Operator, Iccid, Status, PlanDetails FROM SimCards WHERE Id=@Sid");
+                    if (simRes.recordset[0]) {
+                        linkedSimData = JSON.stringify(simRes.recordset[0]);
+                    }
+                }
+
+                // Get current accessories for checkin record
+                let currentAcc = [];
+                if (assetType === 'Device') {
+                    const accRes = await pool.request().input('Did', assetId).query("SELECT Id as id, Name as name FROM DeviceAccessories WHERE DeviceId=@Did");
+                    currentAcc = accRes.recordset;
+                }
+
                 await pool.request()
                     .input('I', termId)
                     .input('U', userId)
@@ -102,7 +133,9 @@ module.exports = (app) => {
                     .input('Evid3', sql.VarBinary, ev3)
                     .input('IsM', isManual ? 1 : 0)
                     .input('ResR', resolutionReason || null)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR)");
+                    .input('Acc', currentAcc.length > 0 ? JSON.stringify(currentAcc) : null)
+                    .input('Sim', linkedSimData)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @Acc, @Sim)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");

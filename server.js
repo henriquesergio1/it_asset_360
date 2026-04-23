@@ -335,6 +335,18 @@ async function initializeDatabase() {
                         console.log('- Adicionando coluna Notes em Terms...');
                         await pool.request().query('ALTER TABLE Terms ADD Notes NVARCHAR(MAX) NULL');
                     }
+
+                    const checkAcc = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'Accessories'`);
+                    if (checkAcc.recordset.length === 0) {
+                        console.log('- Adicionando coluna Accessories em Terms...');
+                        await pool.request().query('ALTER TABLE Terms ADD Accessories NVARCHAR(MAX) NULL');
+                    }
+
+                    const checkSimData = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'LinkedSimData'`);
+                    if (checkSimData.recordset.length === 0) {
+                        console.log('- Adicionando coluna LinkedSimData em Terms...');
+                        await pool.request().query('ALTER TABLE Terms ADD LinkedSimData NVARCHAR(MAX) NULL');
+                    }
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
@@ -596,7 +608,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSimData FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -618,7 +630,7 @@ app.get('/api/bootstrap', async (req, res) => {
             models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
+            sectors: format(sectorsRes), terms: format(termsRes, ['Accessories', 'LinkedSimData']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes)
@@ -641,7 +653,7 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSimData FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT * FROM Consumables")
@@ -657,7 +669,7 @@ app.get('/api/sync', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
+            terms: format(termsRes, ['Accessories', 'LinkedSimData']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']),
             consumables: format(consumablesRes)
