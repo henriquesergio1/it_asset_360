@@ -8,6 +8,17 @@ interface SystemInfoModalProps {
 
 const versions = [
     {
+    version: '3.31.0',
+    date: 'Hoje',
+    title: 'Fidelização de Termos e Correção de Histórico',
+    changes: [
+      'Termos: Vinculação direta de ativos a termos (AssetId/AssetType) para fidelidade total na reimpressão.',
+      'Arquivos: Correção no download de termos assinados (recuperação Base64 sob demanda).',
+      'Histórico: Filtro inteligente e robusto para logs de colaboradores no modal de detalhes.',
+      'Banco de Dados: Novas colunas para rastreabilidade de acessórios e chips vinculados.'
+    ]
+  },
+    {
     version: '3.26.6',
     date: 'Hoje',
     title: 'Restauração de Interface: Tailwind v4 Nativo',

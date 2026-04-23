@@ -432,7 +432,10 @@ const UserManager: React.FC = () => {
       if (url.startsWith('data:')) {
         // Usa fetch para converter o base64 para Blob e fazer um download seguro sem navegação
         fetch(url)
-          .then(res => res.blob())
+          .then(res => {
+            if (!res.ok) throw new Error("Erro na rede");
+            return res.blob();
+          })
           .then(blob => {
             const blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -447,7 +450,12 @@ const UserManager: React.FC = () => {
           })
           .catch(err => {
             console.error("Erro ao gerar download via blob", err);
-            window.open(url, '_blank');
+            // Fallback manual
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+            link.click();
           });
       } else {
         window.open(url, '_blank');
@@ -468,8 +476,9 @@ const UserManager: React.FC = () => {
       let modelName = '';
       
       const rawAssetId = (term as any).assetId;
+      const rawAssetType = (term as any).assetType;
 
-      if (isSim) {
+      if (isSim || rawAssetType === 'Sim') {
         // ... Lógica similar de reconstrução para fallback ...
         const contentMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
         const content = contentMatch ? contentMatch[1] : '';
@@ -500,6 +509,7 @@ const UserManager: React.FC = () => {
         });
 
         modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
+        // Tenta achar o dispositivo real pelo ID gravado ou pela TAG
         const realDevice = devices.find(d => d.id === rawAssetId || d.assetTag === assetTag);
         
         if (realDevice) {
@@ -1099,12 +1109,40 @@ const UserManager: React.FC = () => {
               {activeTab === 'LOGS' && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-800">
-                    <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {logs.filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName).length}</span>
+                    {(() => {
+                      const currentUser = users.find(u => u.id === editingId);
+                      const userLogs = logs.filter(l => 
+                        l.targetName.toLowerCase().trim() === currentUser?.fullName.toLowerCase().trim() ||
+                        l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ')[0] || '') && 
+                        l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ').pop() || '')
+                      );
+                      return (
+                        <>
+                          <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="space-y-3">
-                    {logs
-                      .filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName)
-                      .map(log => {
+                    {(() => {
+                      const currentUser = users.find(u => u.id === editingId);
+                      const userLogs = logs.filter(l => 
+                        l.targetName.toLowerCase().trim() === currentUser?.fullName.toLowerCase().trim() ||
+                        (currentUser?.fullName && l.targetName.toLowerCase().includes(currentUser.fullName.toLowerCase().trim())) ||
+                        (l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ')[0] || '') && 
+                         l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ').pop() || ''))
+                      ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                      if (userLogs.length === 0) {
+                        return (
+                          <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                            <History className="mx-auto text-slate-800 mb-4" size={48} />
+                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
+                          </div>
+                        );
+                      }
+
+                      return userLogs.map(log => {
                         const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-400' :
                                            log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-400' :
                                            'bg-slate-800 text-slate-400';
@@ -1125,13 +1163,8 @@ const UserManager: React.FC = () => {
                             </div>
                           </div>
                         );
-                      })}
-                    {logs.filter(l => l.targetName === users.find(u => u.id === editingId)?.fullName).length === 0 && (
-                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
-                        <History className="mx-auto text-slate-800 mb-4" size={48} />
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
-                      </div>
-                    )}
+                      });
+                    })()}
                   </div>
                 </div>
               )}

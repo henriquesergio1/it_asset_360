@@ -60,7 +60,9 @@ module.exports = (app) => {
                 .input('Ad', assetDetails)
                 .input('Acc', accessories ? JSON.stringify(accessories) : null)
                 .input('Sim', linkedSimData)
-                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Acc, @Sim)");
+                .input('Aid', assetId)
+                .input('Atyp', assetType)
+                .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Accessories, LinkedSimData, AssetId, AssetType) VALUES (@I, @U, @T, @Ad, GETDATE(), @Acc, @Sim, @Aid, @Atyp)");
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
             await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
@@ -135,7 +137,9 @@ module.exports = (app) => {
                     .input('ResR', resolutionReason || null)
                     .input('Acc', currentAcc.length > 0 ? JSON.stringify(currentAcc) : null)
                     .input('Sim', linkedSimData)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @Acc, @Sim)");
+                    .input('Aid', assetId)
+                    .input('Atyp', assetType)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, Accessories, LinkedSimData, AssetId, AssetType) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @Acc, @Sim, @Aid, @Atyp)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
