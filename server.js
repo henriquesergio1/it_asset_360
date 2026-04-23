@@ -595,7 +595,7 @@ app.get('/api/bootstrap', async (req, res) => {
         const [
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
-            accTypesRes, customFieldsRes, accountsRes, tasksRes, taskLogsRes,
+            accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
             consumablesRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
@@ -618,6 +618,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
+            pool.request().query("SELECT * FROM AuditLogs WHERE Timestamp > DATEADD(day, -30, GETDATE())"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables")
@@ -636,9 +637,9 @@ app.get('/api/bootstrap', async (req, res) => {
             models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            sectors: format(sectorsRes), terms: format(termsRes, ['Accessories', 'LinkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
+            sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes),
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -648,7 +649,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, consumablesRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -662,6 +663,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
+            pool.request().query("SELECT * FROM AuditLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables")
         ]);
 
@@ -675,9 +677,10 @@ app.get('/api/sync', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            terms: format(termsRes, ['Accessories', 'LinkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
+            terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']),
+            logs: format(logsRes),
             consumables: format(consumablesRes)
         });
     } catch (err) { res.status(500).send(err.message); }

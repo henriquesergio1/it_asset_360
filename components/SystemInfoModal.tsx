@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.31.2',
+    date: 'Hoje',
+    title: 'Hotfix: Auditoria de Logs e Download de Arquivos',
+    changes: [
+      'Histórico: Filtro expandido para buscar colaborador no campo Notas e Alvo (Correção de logs vazios).',
+      'Auditoria: Integrada tabela AuditLogs real no histórico do colaborador.',
+      'Downloads: Nova rotina de conversão Blob para garantir downloads de Base64 grandes sem falhas.',
+      'Fidelidade: Refinamento da reconstrução de ativos para termos legados (Fallback inteligente).',
+      'Infra: Sincronização de nomes de campos entre SQL e Frontend para acessórios e chips.'
+    ]
+  },
+  {
     version: '3.30.5',
     date: 'Hoje',
     title: 'Term Fidelity & Sync Fix',

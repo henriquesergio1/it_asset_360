@@ -429,35 +429,41 @@ const UserManager: React.FC = () => {
     }
     
     if (url && url !== '#') {
-      if (url.startsWith('data:')) {
-        // Usa fetch para converter o base64 para Blob e fazer um download seguro sem navegação
-        fetch(url)
-          .then(res => {
-            if (!res.ok) throw new Error("Erro na rede");
-            return res.blob();
-          })
-          .then(blob => {
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            setTimeout(() => {
-              document.body.removeChild(link);
-              window.URL.revokeObjectURL(blobUrl);
-            }, 100);
-          })
-          .catch(err => {
-            console.error("Erro ao gerar download via blob", err);
-            // Fallback manual
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
-            link.click();
-          });
-      } else {
+      try {
+        if (url.startsWith('data:')) {
+          const parts = url.split(',');
+          const contentType = parts[0].split(':')[1].split(';')[0];
+          const byteCharacters = atob(parts[1]);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, {type: contentType});
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+          }, 100);
+        } else {
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.download = `termo_${term.type.toLowerCase()}_${editingId}.pdf`;
+          link.click();
+        }
+      } catch (err) {
+        console.error("Erro ao processar download:", err);
         window.open(url, '_blank');
       }
     } else if (term.hasFile) {
@@ -478,21 +484,19 @@ const UserManager: React.FC = () => {
       const rawAssetId = (term as any).assetId;
       const rawAssetType = (term as any).assetType;
 
-      if (isSim || rawAssetType === 'Sim') {
-        // ... Lógica similar de reconstrução para fallback ...
+      if (isSim || rawAssetType === 'Sim' || term.assetDetails.includes('[CHIP:')) {
         const contentMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
         const content = contentMatch ? contentMatch[1] : '';
         const parts = content.split('|').map(p => p.trim());
         let phoneNumber = parts[0] || '';
-        let iccid = '';
-        parts.forEach(p => {
-          if (p.startsWith('ICCID:')) iccid = p.replace('ICCID:', '').trim();
-        });
+        if (!phoneNumber && term.assetDetails.includes('CHIP:')) {
+          phoneNumber = term.assetDetails.split('CHIP:')[1].trim().replace(']', '');
+        }
 
-        const realSim = sims.find(s => s.id === rawAssetId || s.phoneNumber === phoneNumber);
+        const realSim = sims.find(s => s.id === rawAssetId || (phoneNumber && s.phoneNumber === phoneNumber));
         asset = term.linkedSim || realSim || {
           operator: 'Operadora',
-          iccid: iccid || 'N/A',
+          iccid: 'N/A',
           phoneNumber: phoneNumber || 'Chip SIM'
         };
         modelName = 'Chip / SIM Card';
@@ -509,12 +513,10 @@ const UserManager: React.FC = () => {
         });
 
         modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
-        // Tenta achar o dispositivo real pelo ID gravado ou pela TAG
-        const realDevice = devices.find(d => d.id === rawAssetId || d.assetTag === assetTag);
+        const realDevice = devices.find(d => d.id === rawAssetId || (assetTag && d.assetTag === assetTag) || (imei && d.imei === imei));
         
         if (realDevice) {
            asset = { ...realDevice };
-           // Se o termo tem acessórios salvos, use-os! Senão use os atuais do device
            if (term.accessories && term.accessories.length > 0) {
              asset.accessories = term.accessories;
            }
@@ -531,7 +533,6 @@ const UserManager: React.FC = () => {
       
       const sector = sectors.find(s => s.id === user.sectorId);
       
-      // Se o termo tem o chip vinculado salvo, use-o!
       let linkedSim = term.linkedSim;
       if (!linkedSim && !isSim && asset && asset.linkedSimId) {
         linkedSim = sims.find(s => s.id === asset.linkedSimId);
@@ -1111,11 +1112,15 @@ const UserManager: React.FC = () => {
                   <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-800">
                     {(() => {
                       const currentUser = users.find(u => u.id === editingId);
-                      const userLogs = logs.filter(l => 
-                        l.targetName.toLowerCase().trim() === currentUser?.fullName.toLowerCase().trim() ||
-                        l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ')[0] || '') && 
-                        l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ').pop() || '')
-                      );
+                      const name = currentUser?.fullName.toLowerCase().trim() || '';
+                      const userLogs = logs.filter(l => {
+                        const target = (l.targetName || '').toLowerCase();
+                        const notes = (l.notes || '').toLowerCase();
+                        return target === name || 
+                               target.includes(name) ||
+                               notes.includes(name) ||
+                               (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
+                      });
                       return (
                         <>
                           <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
@@ -1126,12 +1131,15 @@ const UserManager: React.FC = () => {
                   <div className="space-y-3">
                     {(() => {
                       const currentUser = users.find(u => u.id === editingId);
-                      const userLogs = logs.filter(l => 
-                        l.targetName.toLowerCase().trim() === currentUser?.fullName.toLowerCase().trim() ||
-                        (currentUser?.fullName && l.targetName.toLowerCase().includes(currentUser.fullName.toLowerCase().trim())) ||
-                        (l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ')[0] || '') && 
-                         l.targetName.toLowerCase().includes(currentUser?.fullName.toLowerCase().split(' ').pop() || ''))
-                      ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                      const name = currentUser?.fullName.toLowerCase().trim() || '';
+                      const userLogs = logs.filter(l => {
+                        const target = (l.targetName || '').toLowerCase();
+                        const notes = (l.notes || '').toLowerCase();
+                        return target === name || 
+                               target.includes(name) ||
+                               notes.includes(name) ||
+                               (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
+                      }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
                       if (userLogs.length === 0) {
                         return (
