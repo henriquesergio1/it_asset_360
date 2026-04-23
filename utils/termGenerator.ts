@@ -166,7 +166,7 @@ export const generateAndPrintTerm = ({
  } else {
  assetName =`Chip SIM Card - ${asset.operator}`;
  serial = 'N/A';
- idCode =`ICCID: ${asset.iccid}`;
+ idCode = `Número: ${asset.phoneNumber} / ICCID: ${asset.iccid}`;
  accessories = 'Chip Físico';
  }
 

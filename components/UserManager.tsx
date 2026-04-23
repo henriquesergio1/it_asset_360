@@ -414,8 +414,10 @@ const UserManager: React.FC = () => {
   };
 
   const handleDownloadTerm = (term: Term) => {
-    if (term.fileUrl || term.hasFile) {
-      const url = term.fileUrl;
+    // Verifica fileUrl e o campo legado filebinary citado pelo usuário
+    const url = term.fileUrl || (term as any).filebinary;
+    
+    if (url || term.hasFile) {
       if (!url || url === '#') {
         alert("O arquivo não está mais disponível ou ainda não foi sincronizado.");
         return;
@@ -447,50 +449,66 @@ const UserManager: React.FC = () => {
       const user = users.find(u => u.id === editingId);
       if (!user) return;
       
-      // Reconstrói informações do item
+      // Reconstrói informações do item analisando detalhadamente o assetDetails
       const isSim = term.assetDetails.includes('[CHIP:');
       let asset: any = null;
       let modelData: any = null;
-      let modelName = term.assetDetails;
-
-      const rawAssetId = (term as any).assetId; // Campo legado existia no banco/versões antigas
+      let modelName = '';
+      
+      const rawAssetId = (term as any).assetId;
 
       if (isSim) {
-        let realSim = sims.find(s => s.id === rawAssetId);
-        if (!realSim) {
-          const phoneMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
-          const phone = phoneMatch ? phoneMatch[1] : '';
-          realSim = sims.find(s => s.phoneNumber === phone);
-        }
+        // Exemplo: [CHIP: (11) 98888-5678 | ICCID: 89550...]
+        const contentMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
+        const content = contentMatch ? contentMatch[1] : '';
+        const parts = content.split('|').map(p => p.trim());
+        
+        let phoneNumber = parts[0] || '';
+        let iccid = '';
+        
+        parts.forEach(p => {
+          if (p.startsWith('ICCID:')) iccid = p.replace('ICCID:', '').trim();
+        });
+
+        // Tenta achar o SIM real no estado
+        let realSim = sims.find(s => s.id === rawAssetId || s.phoneNumber === phoneNumber);
         
         asset = realSim || {
           operator: 'Operadora',
-          iccid: 'N/A',
-          phoneNumber: term.assetDetails.replace(/\[.*?\]\s*/, '').trim() || 'Chip SIM'
+          iccid: iccid || 'N/A',
+          phoneNumber: phoneNumber || 'Chip SIM'
         };
         modelName = 'Chip / SIM Card';
       } else {
-        let realDevice = devices.find(d => d.id === rawAssetId);
+        // Exemplo: [TAG: S/T | S/N: RQCW908Q6RN | IMEI: 356353928369217] Samsung Galaxy M14
+        const contentMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
+        const content = contentMatch ? contentMatch[1] : '';
+        const parts = content.split('|').map(p => p.trim());
         
-        if (!realDevice) {
-           const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
-           const tag = tagMatch ? tagMatch[1] : '';
-           realDevice = devices.find(d => d.assetTag === tag);
-        }
+        let assetTag = parts[0] || '';
+        let serialNumber = '';
+        let imei = '';
+        
+        parts.forEach(p => {
+          if (p.startsWith('S/N:')) serialNumber = p.replace('S/N:', '').trim();
+          else if (p.startsWith('IMEI:')) imei = p.replace('IMEI:', '').trim();
+        });
+
+        modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
+
+        // Tenta achar o dispositivo real no estado
+        let realDevice = devices.find(d => d.id === rawAssetId || d.assetTag === assetTag);
         
         if (realDevice) {
            asset = realDevice;
            modelData = models.find(m => m.id === realDevice.modelId);
         } else {
-           // Fallback seguro se o aparelho foi deletado do sistema
-           const tagMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
            asset = {
-             serialNumber: 'Não Localizado',
-             assetTag: tagMatch ? tagMatch[1] : 'Desconhecido',
-             imei: '',
+             assetTag: assetTag || 'Desconhecido',
+             serialNumber: serialNumber || 'Não Localizado',
+             imei: imei || '',
              accessories: []
            };
-           modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
         }
       }
       

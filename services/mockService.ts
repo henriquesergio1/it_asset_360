@@ -16,7 +16,10 @@ export const mockSystemSettings: SystemSettings = {
   cnpj: '00.000.000/0001-00',
   logoUrl: '',
   termTemplate: DEFAULT_CONFIG_JSON, 
-  returnTermTemplate: ''
+  returnTermTemplate: '',
+  licenseKey: 'MOCK-LICENSE-ACTIVE-2026',
+  licenseClient: 'Demonstração Interna',
+  licenseExpires: '2026-12-31T23:59:59Z'
 };
 
 export const mockSystemUsers: SystemUser[] = [
@@ -74,7 +77,10 @@ export const mockDevices: Device[] = [
     currentUserId: null,
     sectorId: 'sec3', // TI
     costCenter: 'CC-1010',
-    // Dados migrados para customData
+    accessories: [
+      { id: 'acc1', deviceId: 'd1', accessoryTypeId: 'ac1', name: 'Carregador Original' },
+      { id: 'acc2', deviceId: 'd1', accessoryTypeId: 'ac3', name: 'Mochila Dell' }
+    ],
     customData: {
         'cf_ram': '16GB',
         'cf_storage': '512GB SSD'
@@ -94,6 +100,10 @@ export const mockDevices: Device[] = [
     pulsusId: '10928',
     sectorId: 'sec1', 
     costCenter: 'CC-2020',
+    accessories: [
+        { id: 'acc3', deviceId: 'd2', accessoryTypeId: 'ac1', name: 'Adaptador de Tomada' },
+        { id: 'acc4', deviceId: 'd2', accessoryTypeId: 'ac4', name: 'Capa Silicone' }
+    ],
     customData: {
         'cf_storage': '128GB',
         'cf_flexx': 'FX-100',
@@ -167,9 +177,32 @@ export const mockUsers: User[] = [
     address: 'Av. Paulista, 1000 - São Paulo, SP',
     email: 'carlos.silva@empresa.com.br',
     sectorId: 'sec1',
-    // Removed redundant jobTitle in favor of sectorId
     active: true,
-    terms: []
+    terms: [
+        {
+          id: 't-signed-1',
+          userId: 'u1',
+          type: 'ENTREGA',
+          assetDetails: '[TAG: TI-002 | S/N: FFGJW2 | IMEI: 356988012345678] iPhone 13 128GB',
+          date: '2023-03-12',
+          fileUrl: '', // Testando filebinary legado
+          hasFile: true,
+          notes: 'Assinado via portal',
+          // Simulando o campo legado filebinary citado como existente no banco
+          ...({ filebinary: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDMvMTAwAFEwUfCxVLBQK0pNyUwvSsxMzy9KzEnV98rPS9X3S8vP1XfPz9X3K0ouUfAFABQWDBQKZW5kc3RyZWFtCmVuZG9iai8vRE9ORQ==' } as any),
+          ...({ assetId: 'd2' } as any)
+        },
+        {
+          id: 't-pending-1',
+          userId: 'u1',
+          type: 'ENTREGA',
+          assetDetails: '[CHIP: (11) 99999-1234 | ICCID: 89551012345678901234] Chip SIM Card - Vivo',
+          date: '2023-03-12',
+          fileUrl: '',
+          hasFile: false,
+          ...({ assetId: 's1' } as any)
+        }
+    ]
   },
   {
     id: 'u2',
@@ -180,19 +213,6 @@ export const mockUsers: User[] = [
     address: 'Rua Augusta, 500 - São Paulo, SP',
     email: 'ana.pereira@empresa.com.br',
     sectorId: 'sec2',
-    // Removed redundant jobTitle in favor of sectorId
-    active: true,
-    terms: []
-  },
-  {
-    id: 'u3',
-    fullName: 'Roberto Santos',
-    cpf: '456.789.123-22',
-    rg: '44.555.666-7',
-    address: 'Rua Funchal, 200 - São Paulo, SP',
-    email: 'roberto.santos@empresa.com.br',
-    sectorId: 'sec1',
-    // Removed redundant jobTitle in favor of sectorId
     active: true,
     terms: []
   }

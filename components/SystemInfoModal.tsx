@@ -9,6 +9,55 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.30.0',
+    date: 'Hoje',
+    title: 'Critical Fix - Provider Methods',
+    changes: [
+      'Fix: Restaurados métodos ausentes no MockDataProvider que causavam erro no Dashboard;',
+      'Stability: Garantida compatibilidade total do modo Mock com as telas do sistema.'
+    ]
+  },
+  {
+    version: '3.29.9',
+    date: 'Hoje',
+    title: 'Force Mock Data & License Reset',
+    changes: [
+      'Data: Forçado o carregamento de dados Mock em ambiente de desenvolvimento;',
+      'Data: Reset automático de cache de licença para evitar a barra de "Modo Consulta";',
+      'Data: Garantida a visualização de Chips e Dispositivos de teste.'
+    ]
+  },
+  {
+    version: '3.29.8',
+    date: 'Hoje',
+    title: 'Renew Mock License & Data Refresh',
+    changes: [
+      'Data: Renovação da licença de demonstração (expira em Dez/2026);',
+      'Data: Forçada atualização das configurações mock para evitar cache de licenças expiradas;',
+      'Data: Vinculo de campos personalizados e acessórios reestabelecido no ambiente mock.'
+    ]
+  },
+  {
+    version: '3.29.7',
+    date: 'Hoje',
+    title: 'Atualização de Dados para Testes',
+    changes: [
+      'Data: Dados mock regenerados com novos formatos de etiquetas;',
+      'Data: Inclusão de termos históricos com suporte a filebinary legacy e assetId;',
+      'Dev: Melhoria na cobertura de acessórios para validação de termos.'
+    ]
+  },
+  {
+    version: '3.29.6',
+    date: 'Hoje',
+    title: 'Correção de Download e Identificação de Ativos',
+    changes: [
+      'Fix: Recuperado suporte ao campo legado de arquivos (filebinary);',
+      'Fix: Parsing detalhado de etiquetas [TAG] e [CHIP] para recuperar IMEI/Serial/Número separadamente;',
+      'UX: Garantida exibição de Número e ICCID em termos de SIM card solo.'
+    ]
+  },
+  {
     version: '3.29.5',
     date: 'Hoje',
     title: 'Recuperação Visual de Patrimônio e Acessórios',

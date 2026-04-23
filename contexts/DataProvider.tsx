@@ -4,70 +4,59 @@ import { ProdDataProvider } from './ProdDataProvider';
 import { Loader2, Globe } from 'lucide-react';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
- // Estado para armazenar o modo detectado: null (pendente), 'prod' (SQL Server) ou 'mock' (Teste)
   const [mode, setMode] = useState<'prod' | 'mock' | null>(null);
 
- useEffect(() => {
- // Se o modo já estiver definido via localStorage, não bloqueamos o carregamento com o ping
- if (mode !== null) return;
+  useEffect(() => {
+    const detectMode = async () => {
+      // Force mock in development environment
+      if (window.location.hostname.includes('ais-dev')) {
+        console.log("[ITAsset360] Dev Mode: Forcing Mock Data");
+        setMode('mock');
+        return;
+      }
 
- const checkConnectivity = async () => {
- try {
- console.log("[ITAsset360] Verificando conectividade com a API...");
- 
- const controller = new AbortController();
- const timeoutId = setTimeout(() => controller.abort(), 2000);
- 
- const response = await fetch('/api/health', { 
- signal: controller.signal,
- cache: 'no-store'
- });
- 
- clearTimeout(timeoutId);
- 
- if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
- console.log("[ITAsset360] API detectada. Iniciando em modo PRODUÇÃO.");
- setMode('prod');
- localStorage.setItem('app_mode', 'prod');
- } else {
- throw new Error("API retornou resposta inválida ou erro");
- }
- } catch (err) {
- console.warn("[ITAsset360] API inacessível ou timeout. Iniciando em modo de TESTE (MOCK).");
- setMode('mock');
- localStorage.setItem('app_mode', 'mock');
- }
- };
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const response = await fetch('/api/health', { 
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          setMode('prod');
+        } else {
+          setMode('mock');
+        }
+      } catch (err) {
+        setMode('mock');
+      }
+    };
 
- checkConnectivity();
- }, [mode]);
+    detectMode();
+  }, []);
 
- // Tela de carregamento enquanto detecta o ambiente (apenas se for a PRIMEIRA vez, sem localStorage)
- if (mode === null) {
- return (
- <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-6">
- <div className="p-6 rounded-3xl mb-8 animate-pulse">
- <Globe size={48}/>
- </div>
- <div className="text-center">
- <h2 className="text-xl font-black uppercase tracking-[0.3em] mb-2">IT Asset 360</h2>
- <p className="text-blue-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
- <Loader2 size={16} className="animate-spin"/>
- Sincronizando Ambiente...
- </p>
- </div>
- <div className="mt-12 max-w-xs text-center">
- <p className="text-[10px] font-medium uppercase leading-relaxed">
- O sistema está verificando a disponibilidade do servidor SQL. Caso não haja conexão, o modo de demonstração será ativado automaticamente.
- </p>
- </div>
- </div>
- );
- }
+  if (mode === null) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-6">
+        <div className="p-6 rounded-3xl mb-8 animate-pulse text-blue-500">
+          <Globe size={48}/>
+        </div>
+        <div className="text-center">
+          <h2 className="text-xl font-black uppercase tracking-[0.3em] mb-2">IT Asset 360</h2>
+          <p className="text-blue-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+            <Loader2 size={16} className="animate-spin"/>
+            Sincronizando Ambiente...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
- if (mode === 'prod') {
- return <ProdDataProvider>{children}</ProdDataProvider>;
- }
-
- return <MockDataProvider>{children}</MockDataProvider>;
+  return mode === 'prod' ? (
+    <ProdDataProvider>{children}</ProdDataProvider>
+  ) : (
+    <MockDataProvider>{children}</MockDataProvider>
+  );
 };
