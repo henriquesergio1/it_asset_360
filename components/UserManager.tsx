@@ -103,6 +103,7 @@ const UserManager: React.FC = () => {
     accounts,
     logs,
     getTermFile,
+    updateTermFile,
     deleteTermFile,
     resolveTermManual,
     addUser,
@@ -563,13 +564,9 @@ const UserManager: React.FC = () => {
     if (file && editingId) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const user = users.find(u => u.id === editingId);
-        if (user) {
-          const updatedTerms = user.terms.map(t => 
-            t.id === termId ? { ...t, fileUrl: event.target?.result as string, hasFile: true, updatedAt: new Date().toISOString() } : t
-          );
-          updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Upload de termo assinado');
-        }
+        const fileUrl = event.target?.result as string;
+        updateTermFile(termId, editingId, fileUrl, authUser?.name || 'Admin');
+        showToast('Termo assinado enviado com sucesso', 'success');
       };
       reader.readAsDataURL(file);
     }

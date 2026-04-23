@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.32.1',
+    date: 'Hoje',
+    title: 'Fix: Term File Upload & Versioning',
+    changes: [
+      'Bugfix: Corrigido o fluxo de upload de termos assinado na ficha do colaborador.',
+      'Stability: Migrada a lógica de salvamento de arquivos para função especializada `updateTermFile`.',
+      'Mock: Implementado suporte a persistência simulada de upload de termos em modo desenvolvimento.'
+    ]
+  },
+  {
     version: '3.32.0',
     date: 'Hoje',
     title: 'UX Improvements & Manual Terms Status',
