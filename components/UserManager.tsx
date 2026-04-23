@@ -237,15 +237,19 @@ const UserManager: React.FC = () => {
   const { userDevices, allUserSims: userSims } = editingId ? getUserAssetsEnrich(editingId) : { userDevices: [] as Device[], allUserSims: [] as any[] };
 
   const filteredUsers = useMemo(() => {
-    let result = users.filter(u => {
-      const modeMatch = viewMode === 'ACTIVE' ? u.active && (!u.status || u.status === UserStatus.ACTIVE) :
-                        viewMode === 'INACTIVE' ? !u.active :
-                        viewMode === 'ON_LEAVE' ? u.active && u.status === UserStatus.ON_LEAVE : true;
-      return modeMatch;
-    });
+    let result = users;
 
     if (showPendingOnly) {
+      // Se estiver no modo de termos pendentes, mostra todos (ativos, inativos, afastados) que tenham pendência
       result = result.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile));
+    } else {
+      // Caso contrário, aplica o filtro de status (Ativos/Inativos/Afastados)
+      result = result.filter(u => {
+        const modeMatch = viewMode === 'ACTIVE' ? u.active && (!u.status || u.status === UserStatus.ACTIVE) :
+                          viewMode === 'INACTIVE' ? !u.active :
+                          viewMode === 'ON_LEAVE' ? u.active && u.status === UserStatus.ON_LEAVE : true;
+        return modeMatch;
+      });
     }
 
     if (searchTerm) {
@@ -722,7 +726,14 @@ const UserManager: React.FC = () => {
 
       <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
         {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
-          <button key={mode} onClick={() => setViewMode(mode)} className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${viewMode === mode ? 'border-emerald-600 text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
+          <button 
+            key={mode} 
+            onClick={() => {
+              setViewMode(mode);
+              setShowPendingOnly(false);
+            }} 
+            className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && viewMode === mode) ? 'border-emerald-600 text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+          >
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
             <span className="ml-2 bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">
               {users.filter(u => {
@@ -734,7 +745,15 @@ const UserManager: React.FC = () => {
             </span>
           </button>
         ))}
-        <button onClick={() => setShowPendingOnly(!showPendingOnly)} className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 ' : 'border-transparent hover:text-orange-400'}`}>Termos Pendentes<span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</span></button>
+        <button 
+          onClick={() => setShowPendingOnly(true)} 
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-500 hover:text-orange-400'}`}
+        >
+          Termos Pendentes
+          <span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">
+            {users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}
+          </span>
+        </button>
       </div>
 
       <div className="relative">
