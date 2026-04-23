@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.0',
+    date: 'Hoje',
+    title: 'Performance & Network Optimization',
+    changes: [
+      'Infra: Reduzido drasticamente o tamanho do payload e a frequência de requisições de /sync e /bootstrap.',
+      'Infra: React Query configurado com staleTime e intervalo de refetch inteligentes para evitar spam na rede (causa comum de lentidão no frontend).',
+      'Infra: Os logs de auditoria retornam limitados da DB no load.'
+    ]
+  },
+  {
     version: '3.32.2',
     date: 'Hoje',
     title: 'Fix: Multiformat Term Support (PDF/JPG/PNG)',

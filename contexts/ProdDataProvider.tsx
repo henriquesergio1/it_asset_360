@@ -47,7 +47,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const res = await fetch(`${API_URL}/api/sync`);
  return safeJson(res, '/api/sync');
  },
- refetchInterval: 30000,
+ refetchInterval: 120000,
+ refetchOnWindowFocus: false,
+ staleTime: 60000,
  enabled: !!bootstrapData,
  });
 
@@ -56,7 +58,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  queryFn: async () => {
  const res = await fetch(`${API_URL}/api/admin/external-db/config`);
  return safeJson(res, '/api/admin/external-db/config');
- }
+ },
+ staleTime: Infinity,
+ refetchOnWindowFocus: false,
  });
 
  const { data: expedienteAlertsData } = useQuery({
@@ -64,7 +68,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  queryFn: async () => {
  const res = await fetch(`${API_URL}/api/dashboard/expediente-alerts`);
  return safeJson(res, '/api/dashboard/expediente-alerts');
- }
+ },
+ refetchInterval: 120000,
+ refetchOnWindowFocus: false,
  });
 
  const { data: consumableTransactionsData } = useQuery({
@@ -74,7 +80,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const data = await safeJson(res, '/api/consumables/transactions');
  return normalizeKeys(data);
  },
- refetchInterval: 60000,
+ refetchInterval: 120000,
+ refetchOnWindowFocus: false,
+ staleTime: 60000,
  });
 
  const loading = isBootstrapLoading || (isSyncLoading && !syncData);
@@ -136,10 +144,10 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
 
  const fetchData = async (silent: boolean = false) => {
   if (silent) {
-    await queryClient.refetchQueries({ queryKey: ['sync'] });
+    await queryClient.invalidateQueries({ queryKey: ['sync'] });
   } else {
-    await queryClient.refetchQueries({ queryKey: ['bootstrap'] });
-    await queryClient.refetchQueries({ queryKey: ['sync'] });
+    await queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
+    await queryClient.invalidateQueries({ queryKey: ['sync'] });
   }
  };
 

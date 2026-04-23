@@ -618,7 +618,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
-            pool.request().query("SELECT * FROM AuditLogs WHERE Timestamp > DATEADD(day, -30, GETDATE())"),
+            pool.request().query("SELECT TOP 20 * FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables")
@@ -663,7 +663,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
-            pool.request().query("SELECT * FROM AuditLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
+            pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Consumables")
         ]);
 
