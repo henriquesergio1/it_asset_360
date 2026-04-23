@@ -135,14 +135,12 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  };
 
  const fetchData = async (silent: boolean = false) => {
- if (silent) {
- await queryClient.invalidateQueries({ queryKey: ['sync'] });
- } else {
- await queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
- await queryClient.invalidateQueries({ queryKey: ['sync'] });
- await queryClient.invalidateQueries({ queryKey: ['externalDbConfig'] });
- await queryClient.invalidateQueries({ queryKey: ['expedienteAlerts'] });
- }
+  if (silent) {
+    await queryClient.refetchQueries({ queryKey: ['sync'] });
+  } else {
+    await queryClient.refetchQueries({ queryKey: ['bootstrap'] });
+    await queryClient.refetchQueries({ queryKey: ['sync'] });
+  }
  };
 
  const getLogDetail = async (id: string): Promise<AuditLog> => {
@@ -309,6 +307,20 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  }
  };
 
+  const resolveTermManual = async (termId: string, reason: string, adminName: string) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/terms/resolve/${termId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, _adminUser: adminName })
+      });
+      await fetchData(true);
+    } catch (err) {
+      showToast('Erro ao resolver termo manualmente', 'error');
+    }
+  };
+
  const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
   if (checkReadOnly()) return;
  try { 
@@ -457,7 +469,7 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  showToast('Erro ao devolver ativo', 'error');
  }
  },
- updateTermFile, deleteTermFile, updateTermDetails,
+ updateTermFile, deleteTermFile, updateTermDetails, resolveTermManual,
  clearLogs: async () => { 
  try {
  await fetch(`${API_URL}/api/logs`, { method: 'DELETE' }); 

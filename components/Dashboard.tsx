@@ -57,10 +57,10 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
 const Dashboard = () => {
   const { 
     devices, users, accounts, sectors, maintenances, models, brands, assetTypes,
-    refreshData, expedienteAlerts, fetchExpedienteAlerts, saveExpedienteOverride, 
+    refreshData, resolveTermManual, expedienteAlerts, fetchExpedienteAlerts, saveExpedienteOverride, 
     tasks, updateTask, systemUsers, consumables 
   } = useData();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user: authUser } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(true);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
   const [isTasksExpanded, setIsTasksExpanded] = useState(true);
@@ -153,26 +153,9 @@ const Dashboard = () => {
 
   const handleResolveManual = async () => {
     if (!resolvingTerm || !resolveReason.trim()) return;
-    try {
-      const response = await fetch(`/api/terms/resolve/${resolvingTerm.termId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          reason: resolveReason,
-          _adminUser: localStorage.getItem('userName') || 'Admin'
-        })
-      });
-      if (response.ok) {
-        setResolvingTerm(null);
-        setResolveReason('');
-        refreshData();
-      } else {
-        alert('Erro ao resolver pendência');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Erro de conexão');
-    }
+    await resolveTermManual(resolvingTerm.termId, resolveReason, authUser?.name || 'Admin');
+    setResolvingTerm(null);
+    setResolveReason('');
   };
 
   return (

@@ -210,6 +210,13 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }));
       showToast('Anexo removido do termo (Mock)', 'success');
     },
+    resolveTermManual: async (termId, reason) => {
+      setUsers(prev => prev.map(u => ({
+        ...u,
+        terms: u.terms.map(t => t.id === termId ? { ...t, isManual: true, resolutionReason: reason, fileUrl: '', hasFile: false } : t)
+      })));
+      showToast('Termo resolvido manualmente (Mock)', 'success');
+    },
     updateTermDetails: () => {},
     clearLogs: () => setLogs([]),
     restoreItem: () => {},

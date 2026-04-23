@@ -54,6 +54,8 @@ const UserManager: React.FC = () => {
   }, [columnWidths]);
   const [isEditingTerm, setIsEditingTerm] = useState(false);
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
+  const [resolvingManualTerm, setResolvingManualTerm] = useState<Term | null>(null);
+  const [resolveManualReason, setResolveManualReason] = useState('');
   const [termEditData, setTermEditData] = useState<{
     status: string;
     notes: string;
@@ -102,6 +104,7 @@ const UserManager: React.FC = () => {
     logs,
     getTermFile,
     deleteTermFile,
+    resolveTermManual,
     addUser,
     updateUser: updateUserData,
     toggleUserActive,
@@ -591,6 +594,13 @@ const UserManager: React.FC = () => {
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  const handleConfirmResolveManual = async () => {
+    if (!resolvingManualTerm || !resolveManualReason.trim()) return;
+    await resolveTermManual(resolvingManualTerm.id, resolveManualReason, authUser?.name || 'Admin');
+    setResolvingManualTerm(null);
+    setResolveManualReason('');
   };
 
   const handleDeleteTermFile = (termId: string) => {
@@ -1112,10 +1122,22 @@ const UserManager: React.FC = () => {
                             </button>
                              
                             {!(term.fileUrl || term.hasFile) ? (
-                              <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
-                                <Upload size={16} />
-                                <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
-                              </label>
+                              <div className="flex gap-2">
+                                {!(term.isManual) && (
+                                  <button 
+                                    type="button"
+                                    onClick={() => setResolvingManualTerm(term)}
+                                    className="p-2 bg-slate-900 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-800"
+                                    title="Resolução Manual"
+                                  >
+                                    <CheckSquare size={16} />
+                                  </button>
+                                )}
+                                <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
+                                  <Upload size={16} />
+                                  <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
+                                </label>
+                              </div>
                             ) : (
                               <button 
                                 type="button"
@@ -1308,6 +1330,43 @@ const UserManager: React.FC = () => {
                 <button onClick={() => setIsReasonModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Voltar</button>
                 <button onClick={confirmUserUpdate} disabled={!editReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Salvar</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resolvingManualTerm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[300] p-4 animate-fade-in">
+          <div className="bg-slate-900 rounded-2xl p-8 w-full max-w-md border border-slate-800 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-100 mb-4 uppercase tracking-tight">Resolução Manual de Termo</h3>
+            <p className="text-sm text-slate-400 mb-6 font-medium leading-relaxed">
+              Deseja resolver este termo manualmente para <span className="text-slate-100 font-bold">{users.find(u => u.id === editingId)?.fullName}</span>? 
+              Isso marcará a pendência como resolvida sem anexo.
+            </p>
+            <div className="mb-6">
+              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo/Justificativa</label>
+              <textarea
+                rows={4}
+                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                placeholder="Ex: Assinatura física coletada em via única, Contingência de sistema, etc..."
+                value={resolveManualReason}
+                onChange={(e) => setResolveManualReason(e.target.value)}
+              ></textarea>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
+                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-slate-400 hover:bg-slate-800 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmResolveManual}
+                disabled={!resolveManualReason.trim()}
+                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-orange-900/20"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>

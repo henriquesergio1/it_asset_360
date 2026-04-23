@@ -92,6 +92,7 @@ export interface DataContextType {
     accessories?: { id: string; name: string }[],
     linkedSim?: SimCard
   ) => void;
+  resolveTermManual: (termId: string, reason: string, adminName: string) => Promise<void>;
 
  // Admin Tools
  clearLogs: () => void;
