@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -7,7 +8,7 @@ import { SoftwareAccount, AccountType, User, Device } from '../types';
 import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown, CreditCard, Key, ShieldCheck, UserCheck, Smartphone as DeviceIcon, FileSpreadsheet, Download, Copy } from 'lucide-react';
 import { SortableResizableHeader } from './SortableResizableHeader';
 import { DataTable, Column } from './DataTable';
-import { normalizeString } from '../utils/stringUtils';
+import { normalizeString, copyToClipboard } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -121,7 +122,20 @@ const AccountManager = () => {
   const { accounts, addAccount, updateAccount, deleteAccount, users, devices, models, brands, isReadOnly } = useData();
   const { user: currentUser } = useAuth();
   const { showToast } = useToast();
-  
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const accountId = params.get('accountId');
+    if (accountId) {
+      const acc = accounts.find(a => a.id === accountId);
+      if (acc) {
+        setEditingAccount(acc);
+        setIsModalOpen(true);
+      }
+    }
+  }, [location.search, accounts]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<AccountType | 'ALL'>('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -494,9 +508,14 @@ const AccountManager = () => {
                     </button>
                     {acc.password && (
                       <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(acc.password || '');
-                          showToast('Senha copiada para a área de transferência', 'success');
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const success = await copyToClipboard(acc.password || '');
+                          if (success) {
+                            showToast('Senha copiada para a área de transferência', 'success');
+                          } else {
+                            showToast('Erro ao copiar senha', 'error');
+                          }
                         }} 
                         className="text-slate-500 hover:text-blue-400 p-1 hover:bg-slate-700 rounded-lg transition-all" 
                         title="Copiar Senha"

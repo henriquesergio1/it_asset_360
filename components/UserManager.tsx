@@ -15,7 +15,7 @@ import { useData } from '../contexts/DataContext';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
-import { normalizeString, phoneticEncode } from '../utils/stringUtils';
+import { normalizeString, phoneticEncode, copyToClipboard } from '../utils/stringUtils';
 import { DataTable, Column } from './DataTable';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -1002,7 +1002,7 @@ const UserManager: React.FC = () => {
                         return (
                           <div 
                             key={d.id} 
-                            onClick={() => { setIsModalOpen(false); navigate(`/devices?id=${d.id}`); }}
+                            onClick={() => { setIsModalOpen(false); navigate(`/devices?deviceId=${d.id}`); }}
                             className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
                           >
                               <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
@@ -1033,7 +1033,7 @@ const UserManager: React.FC = () => {
                       {userSims.map(sim => (
                         <div 
                           key={sim.id} 
-                          onClick={() => { setIsModalOpen(false); navigate(`/devices?id=${sim.id}`); }}
+                          onClick={() => { setIsModalOpen(false); navigate(`/sims?simId=${sim.id}`); }}
                           className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
                         >
                           <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-900/30 shrink-0">
@@ -1077,10 +1077,14 @@ const UserManager: React.FC = () => {
                                   {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                                 </button>
                                 <button
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
-                                    navigator.clipboard.writeText(acc.password || '');
-                                    showToast('Senha copiada', 'success');
+                                    const success = await copyToClipboard(acc.password || '');
+                                    if (success) {
+                                      showToast('Senha copiada', 'success');
+                                    } else {
+                                      showToast('Erro ao copiar senha', 'error');
+                                    }
                                   }}
                                   className="text-slate-500 hover:text-blue-400 p-0.5 transition-colors"
                                   title="Copiar Senha"
@@ -1097,7 +1101,7 @@ const UserManager: React.FC = () => {
                               <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
                            </div>
                            <button 
-                             onClick={() => { setIsModalOpen(false); navigate(`/accounts?id=${acc.id}`); }}
+                             onClick={() => { setIsModalOpen(false); navigate(`/accounts?accountId=${acc.id}`); }}
                              className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800"
                            >
                              <ExternalLink size={16} />

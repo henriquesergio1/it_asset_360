@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.7',
+    date: 'Hoje',
+    title: 'Correções de Fluxo e Funcionalidades',
+    changes: [
+      'Fix: Botão de copiar senhas em Gestão de Contas e Perfil do Colaborador restabelecido, agora inclui modo fallback via document.execCommand para funcionar com consistência',
+      'Fix: Clicar em Dispositivos, Chips ou Licenças na aba do colaborador agora abre corretamente os detalhes daquele item abrindo sua edição/view'
+    ]
+  },
+  {
     version: '3.33.6',
     date: 'Hoje',
     title: 'Correção Visual da Coluna Ações',

@@ -6,6 +6,34 @@ export const normalizeString = (str: string | null | undefined): string => {
  .toLowerCase();
 };
 
+export const copyToClipboard = async (text: string): Promise<boolean> => {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      // move it out of viewport
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      return new Promise((resolve) => {
+        const successful = document.execCommand('copy');
+        textArea.remove();
+        resolve(successful);
+      });
+    }
+  } catch (error) {
+    console.error("Failed to copy to clipboard", error);
+    return false;
+  }
+};
+
 export const phoneticEncode = (str: string | null | undefined): string => {
   if (!str) return '';
   
