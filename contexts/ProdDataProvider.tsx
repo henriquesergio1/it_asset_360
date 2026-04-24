@@ -469,9 +469,9 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  showToast('Erro ao atribuir ativo', 'error');
  }
  },
- returnAsset: async (at, aid, n, adm, list, inactivate, cond, desc, evids, isManual, resolutionReason) => { 
+ returnAsset: async (at, aid, n, adm, list, inactivate, cond, desc, evids, isManual, resolutionReason, returningUserId) => { 
  try {
- await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate, condition: cond, damageDescription: desc, evidenceFiles: evids, isManual, resolutionReason }); 
+ await postData('operations/checkin', { assetId: aid, assetType: at, notes: n, _adminUser: adm, returnedChecklist: list, inactivateUser: inactivate, condition: cond, damageDescription: desc, evidenceFiles: evids, isManual, resolutionReason, returningUserId }); 
  fetchData(true); 
  } catch (err) {
  showToast('Erro ao devolver ativo', 'error');

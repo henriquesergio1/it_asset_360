@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.10',
+    date: 'Hoje',
+    title: 'Ajuste de Dispositivos Compartilhados',
+    changes: [
+      'Bugfix: Ao entregar dispositivo compartilhado para um novo usuário, o sistema não desvincula mais o usuário anterior, mantendo no AdditionalUserIds',
+      'Feature: O termo de entrega gerado para entregas compartilhadas ganha a observação automática "(Uso Compartilhado)" na listagem de ativos.'
+    ]
+  },
+  {
     version: '3.33.9',
     date: 'Hoje',
     title: 'Ajuste no Painel de Termos Pendentes do Dashboard',

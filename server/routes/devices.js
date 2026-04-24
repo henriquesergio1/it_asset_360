@@ -25,10 +25,20 @@ module.exports = (app) => {
             
             let assetDetails = notes || '';
             let targetIdStr = assetId;
+            let isShared = false;
 
             if (assetType === 'Device' && prev) {
-                const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT Name FROM Models WHERE Id=@Mid");
-                const modelName = modelRes.recordset[0]?.Name || 'Dispositivo';
+                const modelRes = await pool.request().input('Mid', sql.NVarChar, prev.ModelId).query("SELECT TypeId, Name FROM Models WHERE Id=@Mid");
+                const modelData = modelRes.recordset[0];
+                const modelName = modelData?.Name || 'Dispositivo';
+                
+                if (modelData && modelData.TypeId) {
+                    const typeRes = await pool.request().input('Tid', sql.NVarChar, modelData.TypeId).query("SELECT AllowMultipleUsers FROM AssetTypes WHERE Id=@Tid");
+                    if (typeRes.recordset[0] && (typeRes.recordset[0].AllowMultipleUsers === true || typeRes.recordset[0].AllowMultipleUsers === 1)) {
+                        isShared = true;
+                    }
+                }
+
                 assetDetails = `[TAG: ${prev.AssetTag || 'S/T'} | S/N: ${prev.SerialNumber || 'S/S'} | IMEI: ${prev.Imei || 'S/I'}] ${modelName}`;
                 targetIdStr = `${prev.AssetTag || prev.Imei || prev.SerialNumber} (${modelName})`;
             } else if (prev) {
@@ -36,7 +46,22 @@ module.exports = (app) => {
                 targetIdStr = prev.PhoneNumber;
             }
 
-            await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+            if (isShared && prev.CurrentUserId && prev.CurrentUserId !== userId) {
+                let additional = [];
+                if (prev.AdditionalUserIds) {
+                    try { additional = JSON.parse(prev.AdditionalUserIds); } catch(e){}
+                }
+                if (!additional.includes(userId)) {
+                    additional.push(userId);
+                }
+                await pool.request().input('Aid', assetId).input('Add', JSON.stringify(additional)).query(`UPDATE ${table} SET Status='Em Uso', AdditionalUserIds=@Add WHERE Id=@Aid`);
+                assetDetails = assetDetails + ' (Uso Compartilhado)';
+            } else {
+                if (isShared) {
+                    assetDetails = assetDetails + ' (Uso Compartilhado)';
+                }
+                await pool.request().input('Aid', assetId).input('Uid', userId).query(`UPDATE ${table} SET Status='Em Uso', CurrentUserId=@Uid WHERE Id=@Aid`);
+            }
             
             let linkedSimData = null;
             if (assetType === 'Device' && prev.LinkedSimId) {
@@ -72,12 +97,19 @@ module.exports = (app) => {
 
     app.post('/api/operations/checkin', async (req, res) => {
         try {
-            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason } = req.body;
+            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason, returningUserId } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
             const prev = oldRes.recordset[0];
-            const userId = prev?.CurrentUserId;
+            const primaryUserId = prev?.CurrentUserId;
+            
+            let additional = [];
+            if (assetType === 'Device' && prev && prev.AdditionalUserIds) {
+                try { additional = JSON.parse(prev.AdditionalUserIds); } catch(e){}
+            }
+
+            const userId = returningUserId || primaryUserId; // Ensure we operate on the intended return user
             
             let assetDetails = notes || '';
             let targetIdStr = assetId;
@@ -98,7 +130,17 @@ module.exports = (app) => {
                 userName = userRes.recordset[0]?.FullName || 'Colaborador';
             }
             
-            await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL WHERE Id=@Aid`);
+            if (assetType === 'Device' && (additional.length > 0 || (primaryUserId && primaryUserId !== userId))) {
+                if (userId === primaryUserId) {
+                    const nextPrimary = additional.shift();
+                    await pool.request().input('Aid', assetId).input('NewP', nextPrimary).input('Add', JSON.stringify(additional)).query(`UPDATE ${table} SET CurrentUserId=@NewP, AdditionalUserIds=@Add WHERE Id=@Aid`);
+                } else if (additional.includes(userId)) {
+                    additional = additional.filter(id => id !== userId);
+                    await pool.request().input('Aid', assetId).input('Add', JSON.stringify(additional)).query(`UPDATE ${table} SET AdditionalUserIds=@Add WHERE Id=@Aid`);
+                }
+            } else {
+                await pool.request().input('Aid', assetId).query(`UPDATE ${table} SET Status='Disponível', CurrentUserId=NULL, AdditionalUserIds=NULL WHERE Id=@Aid`);
+            }
             
             if (userId) {
                 const termId = Math.random().toString(36).substr(2, 9);
