@@ -4,7 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SoftwareAccount, AccountType, User, Device } from '../types';
-import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown, CreditCard, Key, ShieldCheck, UserCheck, Smartphone as DeviceIcon, FileSpreadsheet, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Mail, Shield, X, Eye, EyeOff, User as UserIcon, Smartphone, Briefcase, Lock, Save, AlertTriangle, FileText, SlidersHorizontal, Check, ChevronLeft, ChevronRight, ChevronDown, Info, ExternalLink, Globe, ArrowUp, ArrowDown, CreditCard, Key, ShieldCheck, UserCheck, Smartphone as DeviceIcon, FileSpreadsheet, Download, Copy } from 'lucide-react';
 import { SortableResizableHeader } from './SortableResizableHeader';
 import { DataTable, Column } from './DataTable';
 import { normalizeString } from '../utils/stringUtils';
@@ -489,9 +489,21 @@ const AccountManager = () => {
                     <div className="bg-slate-800 px-3 py-1 rounded-full font-mono text-[11px] font-bold text-slate-300 border border-slate-700/50">
                       {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                     </div>
-                    <button onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="text-slate-500 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-all">
+                    <button onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="text-slate-500 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-all" title={showPasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}>
                       {showPasswords[acc.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
                     </button>
+                    {acc.password && (
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(acc.password || '');
+                          showToast('Senha copiada para a área de transferência', 'success');
+                        }} 
+                        className="text-slate-500 hover:text-blue-400 p-1 hover:bg-slate-700 rounded-lg transition-all" 
+                        title="Copiar Senha"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               )}

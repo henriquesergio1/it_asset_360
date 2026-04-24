@@ -330,7 +330,7 @@ const SimManager = () => {
                 {visibleColumns.includes('iccid') && <SortableResizableHeader label="ICCID" sortKey="iccid" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['iccid']} onResize={(x, w) => handleResize('iccid', x, w)} />}
                 {visibleColumns.includes('status') && <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="120px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />}
                 {visibleColumns.includes('currentUserId') && <SortableResizableHeader label="Usuário" sortKey="currentUserId" currentSort={sortConfig} requestSort={handleSort} minWidth="200px" width={columnWidths['currentUserId']} onResize={(x, w) => handleResize('currentUserId', x, w)} />}
-                <th className="px-6 py-4 text-right border-b border-slate-700 text-[11px] uppercase font-bold tracking-wider text-slate-400/80" style={{ width: '120px' }}>Ações</th>
+                <th className="px-6 py-4 text-right border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-400/80 align-middle" style={{ width: '120px', minWidth: '120px' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -364,7 +364,7 @@ const SimManager = () => {
                       </td>
                     )}
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2 text-slate-400 transition-opacity">
                         <button onClick={() => handleOpenModal(sim, false)} disabled={isReadOnly} className={`hover:text-blue-400 hover:bg-blue-900/30 p-2 rounded-xl transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} title="Editar"><Edit2 size={16} /></button>
                         <button onClick={() => !isReadOnly && handleDeleteClick(sim.id)} disabled={isReadOnly} className={`hover:text-red-400 hover:bg-red-900/30 p-2 rounded-xl transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`} title="Excluir"><Trash2 size={16} /></button>
                       </div>

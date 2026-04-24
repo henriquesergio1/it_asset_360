@@ -431,7 +431,7 @@ const Consumables = () => {
                                 {visibleColumns.includes('MinStock') && <SortableResizableHeader label="Mínimo" sortKey="MinStock" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['MinStock']} onResize={(x, w) => handleResize('MinStock', x, w)} />}
                                 {visibleColumns.includes('AvgDailyConsumption') && <SortableResizableHeader label="Consumo Médio (30d)" sortKey="AvgDailyConsumption" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['AvgDailyConsumption']} onResize={(x, w) => handleResize('AvgDailyConsumption', x, w)} />}
                                 {visibleColumns.includes('EstimatedDaysLeft') && <SortableResizableHeader label="Duração Estimada" sortKey="EstimatedDaysLeft" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['EstimatedDaysLeft']} onResize={(x, w) => handleResize('EstimatedDaysLeft', x, w)} />}
-                                <th className="p-4 font-black text-right" style={{ width: '180px' }}>Ações</th>
+                                <th className="px-6 py-4 text-right border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-400/80 align-middle" style={{ width: '180px', minWidth: '180px' }}>Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/30 bg-slate-900/50">
@@ -482,7 +482,7 @@ const Consumables = () => {
                                                 </td>
                                             )}
                                             <td className="p-4 text-right">
-                                                <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end gap-1.5 transition-opacity">
                                                     <button onClick={() => openTransactionModal(c, 'IN')} className="p-2 bg-emerald-900/20 text-emerald-400 hover:bg-emerald-700 hover:text-white rounded-xl transition-all border border-emerald-800/30" title="Adicionar Estoque (Compra)">
                                                         <ArrowUp size={16} />
                                                     </button>

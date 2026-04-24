@@ -459,7 +459,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
                 <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
                 <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
-                <th className="px-6 py-5 text-right font-black" style={{ width: '100px' }}>Ações</th>
+                <th className="px-6 py-4 text-right border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-400/80 align-middle" style={{ width: '100px', minWidth: '100px' }}>Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 bg-slate-900/50">

@@ -7,7 +7,7 @@ import {
   ExternalLink, Power, History, Shield, Smartphone, 
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, 
   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
-  Save, Eye, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle
+  Save, Eye, EyeOff, Key, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -92,6 +92,7 @@ const UserManager: React.FC = () => {
     return saved ? JSON.parse(saved) : ['email', 'cpf', 'rg', 'sector', 'assetsCount', 'activeSims', 'devicesInfo'];
   });
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<{ [key: string]: boolean }>({});
   const columnRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -1001,7 +1002,7 @@ const UserManager: React.FC = () => {
                         return (
                           <div 
                             key={d.id} 
-                            onClick={() => navigate(`/devices?id=${d.id}`)}
+                            onClick={() => { setIsModalOpen(false); navigate(`/devices?id=${d.id}`); }}
                             className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
                           >
                               <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
@@ -1032,7 +1033,7 @@ const UserManager: React.FC = () => {
                       {userSims.map(sim => (
                         <div 
                           key={sim.id} 
-                          onClick={() => navigate(`/devices?id=${sim.id}`)}
+                          onClick={() => { setIsModalOpen(false); navigate(`/devices?id=${sim.id}`); }}
                           className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
                         >
                           <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-900/30 shrink-0">
@@ -1061,7 +1062,33 @@ const UserManager: React.FC = () => {
                           </div>
                           <div>
                             <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{acc.name}</div>
-                            <div className="text-xs font-bold text-slate-400 truncate max-w-[250px]">{acc.login}</div>
+                            <div className="text-xs font-bold text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
+                            {acc.password && (
+                              <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                                <Key size={12} className="text-slate-500"/>
+                                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-300">
+                                  {visiblePasswords[acc.id] ? acc.password : '••••••••'}
+                                </span>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
+                                  className="text-slate-500 hover:text-emerald-400 p-0.5 ml-1 transition-colors"
+                                  title={visiblePasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}
+                                >
+                                  {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(acc.password || '');
+                                    showToast('Senha copiada', 'success');
+                                  }}
+                                  className="text-slate-500 hover:text-blue-400 p-0.5 transition-colors"
+                                  title="Copiar Senha"
+                                >
+                                  <Copy size={11} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6">
@@ -1069,7 +1096,10 @@ const UserManager: React.FC = () => {
                               <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
                               <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
                            </div>
-                           <button className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800">
+                           <button 
+                             onClick={() => { setIsModalOpen(false); navigate(`/accounts?id=${acc.id}`); }}
+                             className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800"
+                           >
                              <ExternalLink size={16} />
                            </button>
                         </div>

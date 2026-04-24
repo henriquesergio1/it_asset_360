@@ -9,6 +9,49 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.6',
+    date: 'Hoje',
+    title: 'Correção Visual da Coluna Ações',
+    changes: [
+      'UI: Corrigido o estilo (cor de fundo e tamanho) da coluna "Ações" nas telas de Consumíveis, Gestão de Tarefas e Chips.'
+    ]
+  },
+  {
+    version: '3.33.5',
+    date: 'Hoje',
+    title: 'Visibilidade de Ações nas Telas de Chip e Consumíveis',
+    changes: [
+      'UX: Removido o comportamento de "hover" (passar o mouse) das ações de edição e exclusão na lista de Chips/SIMs e Consumíveis, mantendo-os sempre visíveis como nas demais telas do sistema.',
+    ]
+  },
+  {
+    version: '3.33.4',
+    date: 'Hoje',
+    title: 'Botão Copiar Senha na Gestão de Contas',
+    changes: [
+      'UX: Adicionado botão "Copiar Senha" diretamente na tabela raiz de Licenças/Contas (Gestão de Contas).'
+    ]
+  },
+  {
+    version: '3.33.3',
+    date: 'Hoje',
+    title: 'Adicionado Botão Copiar Senha',
+    changes: [
+      'UX: Adicionado botão "Copiar Senha" na aba de "Licenças e Contas" do Colaborador para facilitar o fluxo do Service Desk.',
+      'Fix: Adicionado stopPropagation nas ações de exibição de senha para não acionar a navegação do card acidentalmente.'
+    ]
+  },
+  {
+    version: '3.33.2',
+    date: 'Hoje',
+    title: 'Navegação Reativa e Exibição de Senhas',
+    changes: [
+      'UX: Agora é possível navegar diretamente para os Detalhes de um Ativo (Dispositivo/Linha) a partir da aba "Ativos em Posse" do Colaborador.',
+      'UX: A aba de "Licenças e Contas" agora permite visualizar a senha (com toggle de ocultar/mostrar) e navegar direto para a Conta em questão.',
+      'Fix: O modal do Colaborador agora se fecha automaticamente ao navegar para os painéis de origens das vinculações.'
+    ]
+  },
+  {
     version: '3.33.0',
     date: 'Hoje',
     title: 'Performance & Network Optimization',
