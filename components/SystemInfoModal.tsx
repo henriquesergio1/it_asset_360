@@ -9,6 +9,24 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.9',
+    date: 'Hoje',
+    title: 'Ajuste no Painel de Termos Pendentes do Dashboard',
+    changes: [
+      'Feature: Agora, clicar em "Ver mais pendências" expande a lista via scrollbar direto no Dashboard sem precisar sair da tela'
+    ]
+  },
+  {
+    version: '3.33.8',
+    date: 'Hoje',
+    title: 'Correção Adicional de Compartilhados e Copiar Senhas',
+    changes: [
+      'Fix: Adicionado e.preventDefault() nos botões de cópia para garantir que evitem navegação/abertura de outras telas acidentalmente',
+      'Fix: Aprimorada a lista de entrega para exibir dispositivos compartilhados mesclando disponibilidade mesmo quando atrelados',
+      'Fix: Corrigida a prop type="button" nos botões de cópia para prevenir recarregamentos default'
+    ]
+  },
+  {
     version: '3.33.7',
     date: 'Hoje',
     title: 'Correções de Fluxo e Funcionalidades',

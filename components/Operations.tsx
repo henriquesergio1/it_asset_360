@@ -192,7 +192,15 @@ const Operations = () => {
  }
  }, [selectedAssetId, activeTab, assetType, devices, sims]);
 
- const availableDevices = devices.filter(d => d.status === DeviceStatus.AVAILABLE);
+ const availableDevices = devices.filter(d => {
+    if (d.status === DeviceStatus.AVAILABLE) return true;
+    if (d.status === DeviceStatus.IN_USE || d.currentUserId) {
+      const model = models.find(m => m.id === d.modelId);
+      const type = assetTypes.find(t => t.id === model?.typeId);
+      return type?.allowMultipleUsers;
+    }
+    return false;
+  });
  const inUseDevices = devices.filter(d => d.status === DeviceStatus.IN_USE);
  const availableSims = sims.filter(s => s.status === DeviceStatus.AVAILABLE);
  const inUseSims = sims.filter(s => s.status === DeviceStatus.IN_USE);
@@ -228,7 +236,17 @@ const Operations = () => {
  : inUseSims.map(s => ({ value: s.id, label:`${s.phoneNumber} - ${s.operator}`, subLabel:`ICCID: ${s.iccid}`})))
  ).sort((a,b) => a.label.localeCompare(b.label));
 
- const userOptions: Option[] = users.filter(u => u.active).map(u => ({ value: u.id, label: u.fullName, subLabel: u.email }))
+ const userOptions: Option[] = users.filter(u => {
+   if (!u.active) return false;
+   if (activeTab === 'CHECKOUT' && selectedAssetId && assetType === 'Device') {
+     const dev = devices.find(d => d.id === selectedAssetId);
+     if (dev) {
+       if (dev.currentUserId === u.id) return false;
+       if (dev.additionalUserIds?.includes(u.id)) return false;
+     }
+   }
+   return true;
+ }).map(u => ({ value: u.id, label: u.fullName, subLabel: u.email }))
  .sort((a,b) => a.label.localeCompare(b.label));
 
  const handleExecute = async () => {

@@ -503,12 +503,14 @@ const AccountManager = () => {
                     <div className="bg-slate-800 px-3 py-1 rounded-full font-mono text-[11px] font-bold text-slate-300 border border-slate-700/50">
                       {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                     </div>
-                    <button onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="text-slate-500 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-all" title={showPasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}>
+                    <button type="button" onClick={(e) => { e.preventDefault(); setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]})); }} className="text-slate-500 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-all" title={showPasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}>
                       {showPasswords[acc.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
                     </button>
                     {acc.password && (
                       <button 
+                        type="button"
                         onClick={async (e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           const success = await copyToClipboard(acc.password || '');
                           if (success) {

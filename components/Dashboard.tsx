@@ -455,7 +455,7 @@ const Dashboard = () => {
                       </p>
                       
                       <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
-                        {pendingTerms.slice(0, 5).map(({term, user}) => {
+                        {pendingTerms.slice(0, isTermsExpanded ? pendingTerms.length : 5).map(({term, user}) => {
                           return (
                             <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-orange-900/30 flex flex-col gap-2 group hover:border-orange-700 transition-all">
                               <div className="flex items-center justify-between">
@@ -503,8 +503,8 @@ const Dashboard = () => {
                             </div>
                           );
                         })}
-                        {pendingTerms.length > 5 && (
-                          <button onClick={() => navigate('/users?showPendingOnly=true')} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
+                        {pendingTerms.length > 5 && !isTermsExpanded && (
+                          <button onClick={() => setIsTermsExpanded(true)} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}

@@ -1070,14 +1070,17 @@ const UserManager: React.FC = () => {
                                   {visiblePasswords[acc.id] ? acc.password : '••••••••'}
                                 </span>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
+                                  type="button"
+                                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
                                   className="text-slate-500 hover:text-emerald-400 p-0.5 ml-1 transition-colors"
                                   title={visiblePasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}
                                 >
                                   {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={async (e) => {
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     const success = await copyToClipboard(acc.password || '');
                                     if (success) {
