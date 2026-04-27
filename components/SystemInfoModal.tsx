@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.12',
+    date: 'Hoje',
+    title: 'Exibição de Status de Alertas',
+    changes: [
+      'Feature: Quando não há nenhum alerta de Expediente Falso ou Estoque Crítico de Consumíveis, o Dashboard passa a exibir cartões confirmando "0 alertas" ou "Tudo Certo" para evitar confusão sobre o funcionamento da área.'
+    ]
+  },
+  {
     version: '3.33.11',
     date: 'Hoje',
     title: 'Correção nos Alertas de Expediente',

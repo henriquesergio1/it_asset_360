@@ -264,7 +264,7 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 gap-4">
               {/* 1º Alerta de Expediente ERP */}
-              {filteredExpedienteAlerts.length > 0 && (
+              {filteredExpedienteAlerts.length > 0 ? (
                 <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
@@ -365,10 +365,26 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="bg-slate-900 border-l-4 border-l-emerald-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-900/30 text-emerald-400 rounded-lg shrink-0">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        Alertas de Expediente
+                        <span className="bg-emerald-900/40 text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">Nenhum colaborador online no ERP divergente do local.</p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="text-emerald-500" size={24} />
+                </div>
               )}
 
               {/* 2º Alerta de Consumíveis */}
-              {consumableAlerts.length > 0 && (
+              {consumableAlerts.length > 0 ? (
                 <div className="bg-slate-900 border-l-4 border-l-amber-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-amber-900/30 text-amber-400 rounded-lg shrink-0">
@@ -425,6 +441,22 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="bg-slate-900 border-l-4 border-l-emerald-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-900/30 text-emerald-400 rounded-lg shrink-0">
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        Estoque Crítico
+                        <span className="bg-emerald-900/40 text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">Não há itens apontando baixo estoque.</p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="text-emerald-500" size={24} />
                 </div>
               )}
 
