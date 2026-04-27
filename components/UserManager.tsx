@@ -988,6 +988,15 @@ const UserManager: React.FC = () => {
                         <option value={UserStatus.ON_LEAVE}>Afastado (INSS/Licença)</option>
                       </select>
                     </div>
+
+                    <div className="md:col-span-2 border-t border-slate-800 pt-6 mt-2">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-4">Informações Complementares</h4>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Endereço Residencial</label>
+                      <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Complemento, Bairro" />
+                    </div>
                   </div>
                 </form>
               )}

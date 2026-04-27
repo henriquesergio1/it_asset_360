@@ -9,6 +9,22 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.14',
+    date: 'Hoje',
+    title: 'Ajuste no Formulário de Colaborador',
+    changes: [
+      'Refinamento: Removidos campos extras de informações complementares, mantendo apenas o campo de Endereço Residencial conforme solicitado pelo usuário.'
+    ]
+  },
+  {
+    version: '3.33.13',
+    date: 'Hoje',
+    title: 'Restauração de Campos de Colaboradores',
+    changes: [
+      'Bugfix: Restaurado o campo de Endereço e demais informações complementares (Cidade, Estado, CEP, Telefones, Gênero e Nascimento) que estavam ocultos no formulário de detalhes do colaborador.'
+    ]
+  },
+  {
     version: '3.33.12',
     date: 'Hoje',
     title: 'Exibição de Status de Alertas',
