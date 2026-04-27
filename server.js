@@ -574,10 +574,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Mock/Empty endpoint to avoid 404
-app.get('/api/dashboard/expediente-alerts', (req, res) => {
-    res.json([]);
-});
+
 
 const format = (set, jsonKeys = []) => set.recordset.map(row => {
     const entry = {};

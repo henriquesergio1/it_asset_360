@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.11',
+    date: 'Hoje',
+    title: 'Correção nos Alertas de Expediente',
+    changes: [
+      'Bugfix: Restaurada a funcionalidade de leitura do ERP para alertas de expediente falso que havia sido bloqueada por uma rota fantasma.'
+    ]
+  },
+  {
     version: '3.33.10',
     date: 'Hoje',
     title: 'Ajuste de Dispositivos Compartilhados',
