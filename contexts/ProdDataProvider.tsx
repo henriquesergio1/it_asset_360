@@ -461,9 +461,9 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  showToast('Erro ao atualizar configurações do sistema', 'error');
  }
  },
- assignAsset: async (at, aid, uid, n, adm, acc) => { 
+ assignAsset: async (at, aid, uid, n, adm, acc, syncSector) => { 
  try {
- await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc }); 
+ await postData('operations/checkout', { assetId: aid, assetType: at, userId: uid, notes: n, _adminUser: adm, accessories: acc, syncSector }); 
  fetchData(true); 
  } catch (err) {
  showToast('Erro ao atribuir ativo', 'error');

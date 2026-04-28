@@ -9,6 +9,32 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.17',
+    date: 'Hoje',
+    title: 'Correção de UI: Sobreposição de Menus',
+    changes: [
+      'UI: Corrigido problema onde o seletor de colunas aparecia atrás da tabela nos menus de Colaboradores e Dispositivos.',
+      'Ajuste: Aumentado o nível de sobreposição (z-index) do seletor de colunas.'
+    ]
+  },
+  {
+    version: '3.33.16',
+    date: 'Hoje',
+    title: 'Ajuste de UI',
+    changes: [
+      'UI: Renomeado o campo "Código Interno (Folha)" para "Código Interno" no cadastro de colaboradores.'
+    ]
+  },
+  {
+    version: '3.33.15',
+    date: 'Hoje',
+    title: 'Sincronização de Código Interno',
+    changes: [
+      'Correção: Restaurada a lógica de sincronização automática do Código Interno (Folha) do dispositivo para o colaborador durante a entrega.',
+      'UI: Campo "Código Interno (Folha)" agora está visível e editável no cadastro de colaboradores.'
+    ]
+  },
+  {
     version: '3.33.14',
     date: 'Hoje',
     title: 'Ajuste no Formulário de Colaborador',

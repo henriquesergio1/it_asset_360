@@ -286,7 +286,7 @@ const Operations = () => {
  if (user && device) await updateDevice({ ...device, sectorId: user.sectorId }, adminName);
  }
 
- await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories);
+ await assignAsset(assetType, selectedAssetId, selectedUserId, notes, adminName, deliveryAccessories, syncAssetData);
  } else {
  // Pass the inactivation flag and the returning user to the return process
  await returnAsset(assetType, selectedAssetId, notes, adminName, checklist, inactivateAfterReturn, condition, damageDescription, evidenceFiles, false, '', returningUserId);

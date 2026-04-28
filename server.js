@@ -1141,11 +1141,21 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     // Operations Checkout/Checkin
     app.post('/api/operations/checkout', async (req, res) => {
         try {
-            const { assetId, assetType, userId, notes, _adminUser, accessories } = req.body;
+            const { assetId, assetType, userId, notes, _adminUser, accessories, syncSector } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
             const prev = oldRes.recordset[0];
+
+            if (syncSector && assetType === 'Device' && prev) {
+                // Sincroniza o cargo/setor e o código interno do dispositivo para o colaborador
+                await pool.request()
+                    .input('Uid', userId)
+                    .input('Sid', prev.SectorId || null)
+                    .input('Ic', prev.InternalCode || null)
+                    .query("UPDATE Users SET SectorId = @Sid, InternalCode = @Ic WHERE Id = @Uid");
+            }
+
             const userRes = await pool.request().input('Uid', sql.NVarChar, userId).query("SELECT FullName FROM Users WHERE Id=@Uid");
             const userName = userRes.recordset[0]?.FullName || 'Colaborador';
             

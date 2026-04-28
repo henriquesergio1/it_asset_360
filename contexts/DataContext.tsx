@@ -75,7 +75,7 @@ export interface DataContextType {
  updateSettings: (settings: SystemSettings, adminName: string) => void;
 
  // Operations
- assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[]) => void;
+ assignAsset: (assetType: 'Device' | 'Sim', assetId: string, userId: string, notes: string, adminName: string, accessories?: DeviceAccessory[], syncSector?: boolean) => void;
  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean, condition?: string, damageDescription?: string, evidenceFiles?: string[], isManual?: boolean, resolutionReason?: string, returningUserId?: string) => void;
  
  // Term Management
