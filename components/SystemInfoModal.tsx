@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.33.18',
+    date: 'Hoje',
+    title: 'Correção de UI: Licenças e Contas',
+    changes: [
+      'UI: Corrigida a sincronização entre o seletor de colunas e o cabeçalho da tabela no menu Licenças.',
+      'Ajuste: Aumentado o z-index do seletor de colunas para evitar sobreposição por outros elementos.'
+    ]
+  },
+  {
     version: '3.33.17',
     date: 'Hoje',
     title: 'Correção de UI: Sobreposição de Menus',
