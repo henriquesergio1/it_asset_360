@@ -61,10 +61,16 @@ const UserManager: React.FC = () => {
     status: string;
     notes: string;
     evidenceFiles: string[];
+    condition: string;
+    damageDescription: string;
+    assetDetails: string;
   }>({
     status: 'PENDING',
     notes: '',
-    evidenceFiles: []
+    evidenceFiles: [],
+    condition: 'Perfeito',
+    damageDescription: '',
+    assetDetails: ''
   });
 
   const [formData, setFormData] = useState<Partial<User & { gender?: string; birthDate?: string; phone?: string; personalPhone?: string; city?: string; state?: string; zipCode?: string; hireDate?: string; notes?: string; }>>({
@@ -109,6 +115,7 @@ const UserManager: React.FC = () => {
     getTermFile,
     getTermEvidences,
     updateTermFile,
+    updateTermDetails,
     deleteTermFile,
     resolveTermManual,
     addUser,
@@ -414,17 +421,17 @@ const UserManager: React.FC = () => {
     }));
   };
 
-  const handleSaveTermEdit = () => {
+  const handleSaveTermEdit = async () => {
     if (editingTerm) {
-      const user = users.find(u => u.id === editingId);
-      if (user) {
-        const updatedTerms = user.terms.map(t => 
-          t.id === editingTerm.id 
-            ? { ...t, notes: termEditData.notes, evidenceFiles: termEditData.evidenceFiles } 
-            : t
-        );
-        updateUserData({ ...user, terms: updatedTerms }, authUser?.name || 'Admin', 'Atualização de notas/evidências do termo');
-      }
+      await updateTermDetails(
+        editingTerm.id,
+        termEditData.condition,
+        termEditData.damageDescription,
+        termEditData.assetDetails,
+        termEditData.notes,
+        termEditData.evidenceFiles,
+        authUser?.name || 'Admin'
+      );
       setEditingTerm(null);
     }
   };
@@ -1211,12 +1218,26 @@ const UserManager: React.FC = () => {
                           <div className="flex gap-2">
                             <button 
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 setEditingTerm(term); 
+                                
+                                // Busca evidências se o termo sinalizar que tem, mas elas não estão no objeto local
+                                let evidences = term.evidenceFiles || [];
+                                if (evidences.length === 0 && term.hasEvidence) {
+                                  try {
+                                    evidences = await getTermEvidences(term.id);
+                                  } catch (err) {
+                                    console.error("Erro ao carregar evidências para edição:", err);
+                                  }
+                                }
+
                                 setTermEditData({
                                   status: (term.fileUrl || term.hasFile ? 'SIGNED' : 'PENDING'), 
                                   notes: term.notes || '', 
-                                  evidenceFiles: term.evidenceFiles || []
+                                  evidenceFiles: evidences,
+                                  condition: term.condition || 'Perfeito',
+                                  damageDescription: term.damageDescription || '',
+                                  assetDetails: term.assetDetails || ''
                                 });
                               }} 
                               disabled={!!(term.fileUrl || term.hasFile)}
