@@ -147,6 +147,16 @@ const DB_SCHEMAS = {
         DatabaseName NVARCHAR(255),
         SelectionQuery NVARCHAR(MAX),
         LastSync DATETIME
+    )`,
+    TechnicalAudits: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        DeviceId NVARCHAR(255),
+        Date DATETIME,
+        Technician NVARCHAR(255),
+        Type NVARCHAR(100),
+        Description NVARCHAR(MAX),
+        Observations NVARCHAR(MAX),
+        Status NVARCHAR(50)
     )`
 };
 
@@ -593,7 +603,7 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes
+            consumablesRes, auditsRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
@@ -618,7 +628,8 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT TOP 20 * FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
-            pool.request().query("SELECT * FROM Consumables")
+            pool.request().query("SELECT * FROM Consumables"),
+            pool.request().query("SELECT * FROM TechnicalAudits")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -637,7 +648,7 @@ app.get('/api/bootstrap', async (req, res) => {
             sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), logs: format(logsRes), taskLogs: format(taskLogsRes),
-            consumables: format(consumablesRes)
+            consumables: format(consumablesRes), audits: format(auditsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -646,7 +657,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -661,7 +672,8 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT * FROM Consumables")
+            pool.request().query("SELECT * FROM Consumables"),
+            pool.request().query("SELECT * FROM TechnicalAudits")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -678,7 +690,8 @@ app.get('/api/sync', async (req, res) => {
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']),
             logs: format(logsRes),
-            consumables: format(consumablesRes)
+            consumables: format(consumablesRes),
+            audits: format(auditsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -1312,6 +1325,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     crud('SoftwareAccounts', 'accounts', 'Account');
     crud('Users', 'users', 'User');
+    crud('TechnicalAudits', 'audits', 'Audit');
     // v2.18.14: Custom Device CRUD to handle SIM card status
     app.post('/api/devices', async (req, res) => {
         try {
