@@ -452,8 +452,30 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
    accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
    fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, 
-   addAudit: (audit: DeviceAudit, admin: string) => { showToast('Auditoria técnica sincronizada', 'success'); fetchData(true); }, 
-   deleteAudit: (id: string, admin: string) => { showToast('Auditoria técnica removida', 'success'); fetchData(true); },
+   addAudit: async (audit: DeviceAudit, admin: string) => { 
+     if (checkReadOnly()) return;
+     try {
+       await postData('audits', { ...audit, _adminUser: admin }); 
+       showToast('Auditoria técnica registrada com sucesso', 'success');
+       fetchData(true); 
+     } catch (err) {
+       showToast('Erro ao registrar auditoria técnica', 'error');
+     }
+   }, 
+   deleteAudit: async (id: string, admin: string) => { 
+     if (checkReadOnly()) return;
+     try {
+       await fetch(`${API_URL}/api/audits/${id}`, { 
+         method: 'DELETE', 
+         headers: { 'Content-Type': 'application/json' }, 
+         body: JSON.stringify({ _adminUser: admin }) 
+       });
+       showToast('Auditoria técnica removida', 'success');
+       fetchData(true); 
+     } catch (err) {
+       showToast('Erro ao remover auditoria técnica', 'error');
+     }
+   },
    updateLicense, getLicenseStatus,
    isReadOnly,
    updateSettings: async (s: SystemSettings, a: string) => { 
