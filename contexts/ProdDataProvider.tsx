@@ -157,11 +157,17 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  return safeJson(res,`/api/logs/${id}`);
  };
 
- const getTermFile = async (id: string): Promise<string> => {
- const res = await fetch(`${API_URL}/api/terms/${id}/file`);
- const data = await safeJson(res,`/api/terms/${id}/file`);
- return data.fileUrl || '';
- };
+  const getTermFile = async (id: string): Promise<string> => {
+   const res = await fetch(`${API_URL}/api/terms/${id}/file`);
+   const data = await safeJson(res, `/api/terms/${id}/file`);
+   return data.fileUrl || '';
+  };
+
+  const getTermEvidences = async (id: string): Promise<string[]> => {
+    const res = await fetch(`${API_URL}/api/terms/evidence/${id}`);
+    const data = await safeJson(res, `/api/terms/evidence/${id}`);
+    return data.fileUrls || [];
+  };
 
  const getDeviceInvoice = async (id: string): Promise<string> => {
  const res = await fetch(`${API_URL}/api/devices/${id}/invoice`);
@@ -450,7 +456,7 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
    devices, sims, users, logs, loading, error, systemUsers, settings,
    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
    accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
-   fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+   fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getTermEvidences, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, 
    addAudit: async (audit: DeviceAudit, admin: string) => { 
      if (checkReadOnly()) return;

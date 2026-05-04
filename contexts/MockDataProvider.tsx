@@ -73,6 +73,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getDeviceInvoice: async () => "",
     getMaintenanceInvoice: async () => "",
     getLogDetail: async (id) => logs.find(l => l.id === id) as any,
+    getTermEvidences: async () => [],
     addDevice: (d) => setDevices(p => [...p, d]),
     updateDevice: (d) => setDevices(p => p.map(x => x.id === d.id ? d : x)),
     deleteDevice: (id) => setDevices(p => p.filter(x => x.id !== id)),

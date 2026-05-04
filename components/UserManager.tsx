@@ -107,6 +107,7 @@ const UserManager: React.FC = () => {
     accounts,
     logs,
     getTermFile,
+    getTermEvidences,
     updateTermFile,
     deleteTermFile,
     resolveTermManual,
@@ -517,6 +518,16 @@ const UserManager: React.FC = () => {
       // MODO REIMPRESSÃO DINÂMICA
       const user = users.find(u => u.id === editingId);
       if (!user) return;
+
+      // Busca evidências se o termo sinalizar que tem, mas elas não estão carregadas no objeto
+      let evidenceFiles = term.evidenceFiles || [];
+      if (evidenceFiles.length === 0 && term.hasEvidence) {
+        try {
+          evidenceFiles = await getTermEvidences(term.id);
+        } catch (err) {
+          console.error("Erro ao buscar evidências do termo:", err);
+        }
+      }
       
       // Prioridade 1: Usar dados salvos no próprio Termo (Fidelidade Total)
       // Prioridade 2: Reconstruir via assetDetails se for termo antigo
@@ -594,7 +605,7 @@ const UserManager: React.FC = () => {
         notes: term.notes,
         condition: term.condition,
         damageDescription: term.damageDescription,
-        evidenceFiles: term.evidenceFiles
+        evidenceFiles: evidenceFiles
       });
     }
   };

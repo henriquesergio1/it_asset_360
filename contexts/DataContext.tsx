@@ -37,6 +37,7 @@ export interface DataContextType {
  
  // Carregamento sob demanda (Otimização de Bootstrap)
  getTermFile: (id: string) => Promise<string>;
+ getTermEvidences: (id: string) => Promise<string[]>;
  getDeviceInvoice: (id: string) => Promise<string>;
  getMaintenanceInvoice: (id: string) => Promise<string>;
  getLogDetail: (id: string) => Promise<AuditLog>;
