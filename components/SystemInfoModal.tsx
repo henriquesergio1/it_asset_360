@@ -9,6 +9,27 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.35.0',
+    date: 'Hoje',
+    title: 'Auditoria Técnica & Verificações Locais',
+    changes: [
+      'Funcionalidade: Nova seção de Auditoria Técnica dentro da aba de Manutenção dos dispositivos.',
+      'Recurso: Registro de verificações de software, hardware, atualizações e inspeções físicas.',
+      'Histórico: Separação visual entre manutenções externas corporativas e intervenções técnicas internas.',
+      'Gestão: Acompanhamento de estado de conservação e conformidade de software sem fluxo de custos.'
+    ]
+  },
+  {
+    version: '3.34.0',
+    date: 'Hoje',
+    title: 'Visualização de Documentos',
+    changes: [
+      'Funcionalidade: Implementada visualização rápida de arquivos (PDF e Imagens) diretamente no sistema.',
+      'Melhoria: Adicionado suporte a pré-visualização para Termos, Notas Fiscais e Registros de Manutenção.',
+      'UX: Otimização do fluxo de conferência de documentos sem a necessidade de download obrigatório.'
+    ]
+  },
+  {
     version: '3.33.18',
     date: 'Hoje',
     title: 'Correção de UI: Licenças e Contas',

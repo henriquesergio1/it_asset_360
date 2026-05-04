@@ -4,11 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog } from '../types';
+import { Device, DeviceStatus, MaintenanceRecord, MaintenanceType, ActionType, AssetType, CustomField, User, SimCard, AccountType, AuditLog, DeviceAudit } from '../types';
 import { Plus, Search, Edit2, Trash2, Smartphone, Settings, Image as ImageIcon, Wrench, DollarSign, Paperclip, ExternalLink, X, RotateCcw, AlertTriangle, RefreshCw, FileText, Calendar, Box, Hash, Tag as TagIcon, FileCode, Briefcase, Cpu, History, SlidersHorizontal, Check, Info, ShieldCheck, ChevronDown, Save, Globe, Lock, Eye, EyeOff, Mail, Key, UserCheck, UserX, FileWarning, SlidersHorizontal as Sliders, ChevronLeft, ChevronRight, Users, CheckCircle, Loader2, ArrowRight, Download, FileSpreadsheet, FileJson } from 'lucide-react';
 import { SortableResizableHeader } from './SortableResizableHeader';
 import { DataTable, Column } from './DataTable';
 import ModelSettings from './ModelSettings';
+import FilePreviewModal from './FilePreviewModal';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { APP_VERSION, UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER, UI_BUTTON_WARNING } from '../constants';
@@ -376,7 +377,7 @@ const DeviceManager = () => {
  devices, addDevice, updateDevice, deleteDevice, restoreDevice,
  users, models, brands, assetTypes, sims, customFields, sectors,
  maintenances, addMaintenance, deleteMaintenance, accounts,
-   getDeviceInvoice, getMaintenanceInvoice, isReadOnly
+   getDeviceInvoice, getMaintenanceInvoice, isReadOnly, audits, addAudit, deleteAudit
  } = useData();
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
@@ -438,6 +439,9 @@ const DeviceManager = () => {
  const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
  const [filterNoInvoice, setFilterNoInvoice] = useState(false);
  const [filterAssetType, setFilterAssetType] = useState<string>('');
+ const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+ const [previewData, setPreviewData] = useState({ url: '', name: '' });
+
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -612,21 +616,27 @@ const DeviceManager = () => {
  }
  };
 
- const openBase64File = async (type: 'DEVICE' | 'MAINTENANCE', id?: string, url?: string) => {
- if (!url && id) {
- setLoadingFiles(prev => ({ ...prev, [id]: true }));
- try {
- const fileUrl = type === 'DEVICE' ? await getDeviceInvoice(id) : await getMaintenanceInvoice(id);
- if (fileUrl) openBlob(fileUrl);
- else alert("Documento não encontrado no servidor.");
- } catch (e) {
- alert("Erro ao baixar documento.");
- } finally {
- setLoadingFiles(prev => ({ ...prev, [id]: false }));
- }
- return;
- }
- if (url) openBlob(url);
+ const openBase64File = async (type: 'DEVICE' | 'MAINTENANCE', id?: string, url?: string, fileName?: string) => {
+  if (!url && id) {
+  setLoadingFiles(prev => ({ ...prev, [id]: true }));
+  try {
+  const fileUrl = type === 'DEVICE' ? await getDeviceInvoice(id) : await getMaintenanceInvoice(id);
+  if (fileUrl) {
+    setPreviewData({ url: fileUrl, name: fileName || (type === 'DEVICE' ? `Nota_Fiscal_${id}.pdf` : `Manutencao_${id}.pdf`) });
+    setIsPreviewOpen(true);
+  }
+  else alert("Documento não encontrado no servidor.");
+  } catch (e) {
+  alert("Erro ao baixar documento.");
+  } finally {
+  setLoadingFiles(prev => ({ ...prev, [id]: false }));
+  }
+  return;
+  }
+  if (url) {
+    setPreviewData({ url, name: fileName || 'Documento.pdf' });
+    setIsPreviewOpen(true);
+  }
  };
 
  const openBlob = (base64: string) => {
@@ -640,6 +650,43 @@ const DeviceManager = () => {
  const blobUrl = URL.createObjectURL(blob);
  window.open(blobUrl, '_blank');
  };
+
+  const [newAudit, setNewAudit] = useState<Partial<DeviceAudit>>({ 
+    date: new Date().toISOString().split('T')[0],
+    type: 'Verificação de Software',
+    status: 'Aprovado'
+  });
+  const [maintenanceSubTab, setMaintenanceSubTab] = useState<'EXTERNAL' | 'AUDIT'>('EXTERNAL');
+
+  const handleMaintenanceTabChange = (tab: 'EXTERNAL' | 'AUDIT') => {
+    setMaintenanceSubTab(tab);
+  };
+
+  const saveAudit = () => {
+    if (!newAudit.description || !editingId || isReadOnly) {
+      showToast('Preencha a descrição da auditoria', 'error');
+      return;
+    }
+    
+    const auditRecord: DeviceAudit = {
+      id: Math.random().toString(36).substr(2, 9),
+      deviceId: editingId,
+      date: newAudit.date || new Date().toISOString(),
+      technician: adminName,
+      type: newAudit.type || 'Verificação de Software',
+      description: newAudit.description,
+      observations: newAudit.observations || '',
+      status: newAudit.status || 'Aprovado'
+    };
+
+    addAudit(auditRecord, adminName);
+    setNewAudit({ 
+      date: new Date().toISOString().split('T')[0],
+      type: 'Verificação de Software',
+      status: 'Aprovado'
+    });
+    showToast('Auditoria técnica registrada', 'success');
+  };
 
  const saveMaintenance = () => {
  if (!editingId || !newMaint.description) return;
@@ -925,7 +972,7 @@ const DeviceManager = () => {
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[200] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                 <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
@@ -1232,113 +1279,268 @@ const DeviceManager = () => {
 
     {activeTab === 'MAINTENANCE' && (
       <div className="space-y-6 animate-fade-in">
-        {!isViewOnly && (
-          <div className="bg-orange-900/20 p-6 rounded-2xl border border-orange-900/40 space-y-4 transition-colors">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400">
-                <Wrench size={16}/>
-              </div>
-              <h5 className="text-[11px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-3">
-                <label className="block text-[11px] font-bold text-orange-400 mb-1">Descrição</label>
-                <input 
-                  placeholder="Ex: Troca de tela..."
-                  className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
-                  value={newMaint.description || ''} 
-                  onChange={e => setNewMaint({...newMaint, description: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-orange-400 mb-1">Custo (R$)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
-                  <input 
-                    type="text"
-                    className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
-                    value={formatCurrencyBR(newMaint.cost || 0)} 
-                    onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-orange-400 mb-1">Data</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
-                  <input 
-                    type="date"
-                    className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
-                    value={newMaint.date || ''} 
-                    onChange={e => setNewMaint({...newMaint, date: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-orange-400 mb-1">Anexo</label>
-                <label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
-                  <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
-                    {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
+        {/* Sub-tabs selection */}
+        <div className="flex p-1 bg-slate-900 rounded-2xl border border-slate-800 self-start inline-flex">
+          <button 
+            type="button"
+            onClick={() => handleMaintenanceTabChange('EXTERNAL')}
+            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${maintenanceSubTab === 'EXTERNAL' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            Manutenções Externas (Custo/NF)
+          </button>
+          <button 
+            type="button"
+            onClick={() => handleMaintenanceTabChange('AUDIT')}
+            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${maintenanceSubTab === 'AUDIT' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}
+          >
+            Auditoria Técnica (Local)
+          </button>
+        </div>
+
+        {maintenanceSubTab === 'EXTERNAL' ? (
+          <>
+            {!isViewOnly && (
+              <div className="bg-orange-900/20 p-6 rounded-2xl border border-orange-900/40 space-y-4 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400">
+                    <Wrench size={16}/>
                   </div>
-                  <span className="text-[11px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
-                  <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*"/>
-                </label>
-              </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <button 
-                type="button" 
-                onClick={saveMaintenance} 
-                disabled={!newMaint.description || isUploadingMaint || isReadOnly} 
-                className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50"
-              >
-                Lançar
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="space-y-3">
-          <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2"><History size={12}/> Histórico</h4>
-          <div className="grid grid-cols-1 gap-3">
-            {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
-              <div key={m.id} className="flex justify-between items-center p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-orange-200 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 bg-orange-900/40 rounded-xl flex items-center justify-center">
-                    <Wrench size={20}/>
+                  <h5 className="text-[11px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-3">
+                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Descrição</label>
+                    <input 
+                      placeholder="Ex: Troca de tela..."
+                      className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
+                      value={newMaint.description || ''} 
+                      onChange={e => setNewMaint({...newMaint, description: e.target.value})}
+                    />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-100 text-sm">{m.description}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold uppercase">{formatDateBR(m.date)}</span>
-                      <span className="text-[10px] font-bold uppercase">R$ {formatCurrencyBR(m.cost)}</span>
+                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Custo (R$)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
+                      <input 
+                        type="text"
+                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
+                        value={formatCurrencyBR(newMaint.cost || 0)} 
+                        onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
+                      />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Data</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
+                      <input 
+                        type="date"
+                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-100"
+                        value={newMaint.date || ''} 
+                        onChange={e => setNewMaint({...newMaint, date: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Anexo</label>
+                    <label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
+                      <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
+                        {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
+                      </div>
+                      <span className="text-[11px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
+                      <input type="file" className="hidden" onChange={handleMaintFileChange} accept="application/pdf,image/*"/>
+                    </label>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {(m.invoiceUrl || m.hasInvoice) && (
-                    <button disabled={loadingFiles[m.id]} type="button" onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-900/30 text-blue-400 rounded-xl transition-all flex items-center justify-center">
-                      {loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}
-                    </button>
-                  )}
-                  {!isViewOnly && (
-                    <button 
-                      type="button" 
-                      onClick={() => { if(!isReadOnly && window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} 
-                      disabled={isReadOnly} 
-                      className="p-2.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-50"
-                    >
-                      <Trash2 size={16}/>
-                    </button>
-                  )}
+                <div className="flex justify-end pt-2">
+                  <button 
+                    type="button" 
+                    onClick={saveMaintenance} 
+                    disabled={!newMaint.description || isUploadingMaint || isReadOnly} 
+                    className="bg-orange-600 text-white px-8 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    Lançar
+                  </button>
                 </div>
-              </div>
-            )) : (
-              <div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">
-                <p className="font-bold text-xs uppercase tracking-widest italic">Nenhuma manutenção registrada.</p>
               </div>
             )}
-          </div>
-        </div>
+            <div className="space-y-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 text-orange-400"><History size={12}/> Histórico de Manutenções</h4>
+              <div className="grid grid-cols-1 gap-3">
+                {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
+                  <div key={m.id} className="flex justify-between items-center p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-orange-200 transition-all group">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-400">
+                        <Wrench size={20}/>
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-100 text-sm">{m.description}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-bold uppercase text-slate-400">{formatDateBR(m.date)}</span>
+                          <span className="text-[10px] font-bold uppercase text-orange-400">R$ {formatCurrencyBR(m.cost)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {(m.invoiceUrl || m.hasInvoice) && (
+                        <button disabled={loadingFiles[m.id]} type="button" onClick={() => openBase64File('MAINTENANCE', m.id, m.invoiceUrl)} className="p-2.5 bg-blue-900/30 text-blue-400 rounded-xl transition-all flex items-center justify-center">
+                          {loadingFiles[m.id] ? <Loader2 size={16} className="animate-spin"/> : <ExternalLink size={16}/>}
+                        </button>
+                      )}
+                      {!isViewOnly && (
+                        <button 
+                          type="button" 
+                          onClick={() => { if(!isReadOnly && window.confirm('Excluir?')) deleteMaintenance(m.id, adminName) }} 
+                          disabled={isReadOnly} 
+                          className="p-2.5 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-50"
+                        >
+                          <Trash2 size={16}/>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">
+                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-500">Nenhuma manutenção externa registrada.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Secção de Auditoria Técnica */}
+            {!isViewOnly && (
+              <div className="bg-indigo-900/20 p-6 rounded-2xl border border-indigo-900/40 space-y-4 transition-colors">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-indigo-900/40 rounded-full flex items-center justify-center text-indigo-400">
+                    <ShieldCheck size={16}/>
+                  </div>
+                  <h5 className="text-[11px] font-black text-indigo-100 uppercase tracking-widest">Nova Auditoria/Verificação Técnica</h5>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Tipo de Verificação</label>
+                    <select 
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100"
+                      value={newAudit.type || ''} 
+                      onChange={e => setNewAudit({...newAudit, type: e.target.value as any})}
+                    >
+                      <option value="Verificação de Software">Verificação de Software</option>
+                      <option value="Atualização de Sistema">Atualização de Sistema</option>
+                      <option value="Check-up de Hardware">Check-up de Hardware</option>
+                      <option value="Limpeza/Preventiva">Limpeza/Preventiva</option>
+                      <option value="Auditoria de Segurança">Auditoria de Segurança</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Status Geral</label>
+                    <select 
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 font-bold"
+                      value={newAudit.status || ''} 
+                      onChange={e => setNewAudit({...newAudit, status: e.target.value as any})}
+                    >
+                      <option value="Aprovado" className="text-emerald-400">✅ Aprovado (Integridade OK)</option>
+                      <option value="Observação" className="text-orange-400">⚠️ Observações (Requer atenção)</option>
+                      <option value="Reprovado" className="text-red-400">❌ Reprovado (Necessita reparo)</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Descrição das Ações</label>
+                    <input 
+                      placeholder="Ex: Atualizado para Windows 11 23H2, verificado drivers..."
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
+                      value={newAudit.description || ''} 
+                      onChange={e => setNewAudit({...newAudit, description: e.target.value})}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Observações Adicionais</label>
+                    <textarea 
+                      placeholder="Detalhes técnicos ou pendências encontradas..."
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 shadow-inner h-20 resize-none"
+                      value={newAudit.observations || ''} 
+                      onChange={e => setNewAudit({...newAudit, observations: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Data do Registro</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 text-indigo-300" size={16}/>
+                      <input 
+                        type="date"
+                        className="w-full border-2 border-indigo-900/30 rounded-xl p-3 pl-10 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100"
+                        value={newAudit.date || ''} 
+                        onChange={e => setNewAudit({...newAudit, date: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end justify-end">
+                    <button 
+                      type="button" 
+                      onClick={saveAudit} 
+                      disabled={!newAudit.description || isReadOnly} 
+                      className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-[11px] uppercase tracking-wider hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg"
+                    >
+                      <Save size={14}/> Registrar Auditoria
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 text-indigo-400"><ShieldCheck size={12}/> Histórico de Verificações Locais</h4>
+              <div className="grid grid-cols-1 gap-3">
+                {audits?.filter(a => a.deviceId === editingId).length > 0 ? (
+                  audits.filter(a => a.deviceId === editingId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(a => (
+                    <div key={a.id} className="p-4 bg-slate-900 border-2 border-slate-800 rounded-2xl hover:border-indigo-900 transition-all group relative overflow-hidden">
+                      <div className={`absolute top-0 left-0 w-1 h-full ${a.status === 'Aprovado' ? 'bg-emerald-500' : a.status === 'Observação' ? 'bg-orange-500' : 'bg-red-500'}`} />
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${a.status === 'Aprovado' ? 'bg-emerald-900/20 text-emerald-400' : a.status === 'Observação' ? 'bg-orange-900/20 text-orange-400' : 'bg-red-900/20 text-red-400'}`}>
+                            <ShieldCheck size={20}/>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-slate-100 text-sm">{a.description}</p>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${a.status === 'Aprovado' ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30' : a.status === 'Observação' ? 'bg-orange-900/40 text-orange-400 border border-orange-500/30' : 'bg-red-900/40 text-red-400 border border-red-500/30'}`}>
+                                {a.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1"><Calendar size={10}/> {formatDateBR(a.date)}</span>
+                              <span className="text-[10px] font-bold uppercase text-indigo-400 flex items-center gap-1"><Settings size={10}/> {a.type}</span>
+                              <span className="text-[10px] font-bold uppercase text-slate-500 flex items-center gap-1 font-mono tracking-tighter">Por: {a.technician}</span>
+                            </div>
+                            {a.observations && (
+                              <p className="text-[11px] text-slate-400 mt-2 italic bg-slate-800/40 p-2 rounded-lg border border-slate-700/50 line-clamp-2">{a.observations}</p>
+                            )}
+                          </div>
+                        </div>
+                        {!isViewOnly && (
+                          <button 
+                            type="button" 
+                            onClick={() => { if(!isReadOnly && window.confirm('Excluir registro de auditoria?')) deleteAudit(a.id, adminName) }} 
+                            disabled={isReadOnly} 
+                            className="p-2.5 text-red-400/50 hover:text-red-400 hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-50"
+                          >
+                            <Trash2 size={16}/>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-800">
+                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-500">Nenhuma auditoria ou verificação técnica realizada.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     )}
     {activeTab === 'LICENSES' && (
@@ -1477,6 +1679,13 @@ const DeviceManager = () => {
  </div>
  )}
  {isModelSettingsOpen && <ModelSettings onClose={() => setIsModelSettingsOpen(false)} />}
+ <FilePreviewModal 
+   isOpen={isPreviewOpen}
+   onClose={() => setIsPreviewOpen(false)}
+   fileUrl={previewData.url}
+   fileName={previewData.name}
+ />
+
  </div>
  );
 };

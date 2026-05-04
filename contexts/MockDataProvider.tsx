@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes, mockCustomFields } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,6 +36,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     { id: '2', name: 'Teclado Dell', unit: 'UN', currentStock: 4, minStock: 10, category: 'Periféricos' }
   ]);
   const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([]);
+  const [audits, setAudits] = useState<DeviceAudit[]>([]);
 
   const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 
@@ -56,7 +57,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const value: DataContextType = {
     devices, sims, users, logs, loading: false, error: null, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
-    externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions,
+    externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions, audits,
     isReadOnly,
     fetchData: async () => {},
     refreshData: async () => {},
@@ -251,6 +252,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addMaintenance: () => {},
     deleteMaintenance: () => {},
     finishMaintenance: () => {},
+    addAudit: (a) => setAudits(p => [...p, a]),
+    deleteAudit: (id) => setAudits(p => p.filter(x => x.id !== id)),
     updateExternalDbConfig: async () => {},
     testExternalDbConnection: async () => ({ success: true, message: 'Mock connection successful' }),
     fetchExpedienteAlerts: async () => { console.log("Mock fetching alerts..."); },

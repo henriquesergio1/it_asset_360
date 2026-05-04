@@ -4,8 +4,9 @@ import {
  X, Clock, User, FileText, CheckCircle2, AlertCircle, 
  History, MessageSquare, Paperclip, Send, AlertTriangle,
  ClipboardList, Printer, Trash2, ExternalLink, Plus, XCircle,
- Wrench, DollarSign
+ Wrench, DollarSign, Eye
 } from 'lucide-react';
+import FilePreviewModal from './FilePreviewModal';
 import { Task, TaskLog, TaskStatus, SystemUser, TaskType, MaintenanceType, Device, DeviceModel } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -49,6 +50,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  const [editHasDueDate, setEditHasDueDate] = useState(task.hasDueDate || false);
  const [editIsRecurring, setEditIsRecurring] = useState(task.isRecurring || false);
  const [editRecurrenceConfig, setEditRecurrenceConfig] = useState<any>(task.recurrenceConfig || { type: 'Nenhuma' as any });
+ const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+ const [previewData, setPreviewData] = useState({ url: '', name: '' });
  const [editMaintenanceItems, setEditMaintenanceItems] = useState(task.maintenanceItems || []);
  const [searchTerm, setSearchTerm] = useState('');
  const noteInputRef = useRef<HTMLTextAreaElement>(null);
@@ -83,6 +86,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  if (!device) return 'Dispositivo não encontrado';
  const model = models.find(m => m.id === device.modelId);
  return`${model?.name || 'Modelo Desconhecido'} (${device.assetTag || device.serialNumber})`;
+ };
+
+ const handleViewFile = (url: string, name: string) => {
+  setPreviewData({ url, name });
+  setIsPreviewOpen(true);
  };
 
  const handleCompleteItem = async () => {
@@ -593,17 +601,21 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  )}
  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
  <button 
+  onClick={() => handleViewFile(attachment, `Anexo_${index + 1}`)}
+  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+  title="Visualizar"
+ >
+  <Eye size={14} />
+ </button>
+ <button 
  onClick={() => {
- const w = window.open('');
- if (w) {
- if (attachment.startsWith('data:image')) {
- w.document.write(`<img src="${attachment}"style="max-width: 100%;"/>`);
- } else {
- w.document.write(`<iframe src="${attachment}"width="100%"height="100%"style="border:none;"></iframe>`);
- }
- }
+  const link = document.createElement('a');
+  link.href = attachment;
+  link.download = `Anexo_${index + 1}`;
+  link.click();
  }}
  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+ title="Download"
  >
  <ExternalLink size={14} />
  </button>
@@ -660,17 +672,19 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <span className="text-[10px] mt-1 font-bold">PDF</span>
  </div>
  )}
- <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+ <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+ <button 
+  onClick={() => handleViewFile(attachment, `Anexo_${index + 1}`)}
+  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
+ >
+  <Eye size={14} /> Ver
+ </button>
  <button 
  onClick={() => {
- const w = window.open('');
- if (w) {
- if (attachment.startsWith('data:image')) {
- w.document.write(`<img src="${attachment}"style="max-width: 100%;"/>`);
- } else {
- w.document.write(`<iframe src="${attachment}"width="100%"height="100%"style="border:none;"></iframe>`);
- }
- }
+  const link = document.createElement('a');
+  link.href = attachment;
+  link.download = `Anexo_${index + 1}`;
+  link.click();
  }}
  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
  >
@@ -1086,9 +1100,20 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  ) : (
  <>
  {item.status === 'Concluído' ? (
- <div className="text-right">
- <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Concluído</div>
- <div className="text-[10px]">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
+ <div className="flex items-center gap-3">
+  {item.invoiceUrl && (
+   <button 
+    onClick={() => handleViewFile(item.invoiceUrl!, `NF_${item.assetTag}.pdf`)}
+    className="p-1.5 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
+    title="Ver Nota Fiscal"
+   >
+    <Eye size={14} />
+   </button>
+  )}
+  <div className="text-right">
+  <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">Concluído</div>
+  <div className="text-[10px]">{item.completedAt ? new Date(item.completedAt).toLocaleDateString('pt-BR') : ''}</div>
+  </div>
  </div>
  ) : item.status === 'Em Andamento' ? (
  <div className="flex items-center gap-2">
@@ -1251,6 +1276,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  </div>
  </motion.div>
+ <FilePreviewModal 
+  isOpen={isPreviewOpen}
+  onClose={() => setIsPreviewOpen(false)}
+  fileUrl={previewData.url}
+  fileName={previewData.name}
+ />
  </div>
  );
 };

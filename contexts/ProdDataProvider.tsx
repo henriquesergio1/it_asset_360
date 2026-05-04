@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, DeviceAudit } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // v3.27.7: Forçando URLs relativas para evitar problemas de porta em produção
@@ -98,6 +98,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  }));
  const maintenances = syncData?.maintenances || bootstrapData?.maintenances || [];
  const accounts = syncData?.accounts || bootstrapData?.accounts || [];
+ const audits = syncData?.audits || bootstrapData?.audits || [];
  const logs = syncData?.logs || bootstrapData?.logs || [];
  
  const tasksData = syncData?.tasks || bootstrapData?.tasks || [];
@@ -448,9 +449,11 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  const value: DataContextType = {
    devices, sims, users, logs, loading, error, systemUsers, settings,
    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-   accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions,
+   accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
    fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
-   addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive,
+   addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, 
+   addAudit: (audit: DeviceAudit, admin: string) => { showToast('Auditoria técnica sincronizada', 'success'); fetchData(true); }, 
+   deleteAudit: (id: string, admin: string) => { showToast('Auditoria técnica removida', 'success'); fetchData(true); },
    updateLicense, getLicenseStatus,
    isReadOnly,
    updateSettings: async (s: SystemSettings, a: string) => { 

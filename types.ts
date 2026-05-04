@@ -85,6 +85,17 @@ export interface MaintenanceRecord {
   hasInvoice?: boolean;
 }
 
+export interface DeviceAudit {
+  id: string;
+  deviceId: string;
+  date: string;
+  technician: string;
+  type: 'Verificação de Software' | 'Atualização de Sistema' | 'Check-up de Hardware' | 'Limpeza/Preventiva' | 'Auditoria de Segurança' | 'Outros';
+  description: string;
+  observations?: string;
+  status: 'Aprovado' | 'Observação' | 'Reprovado';
+}
+
 export enum MaintenanceType {
   CORRECTIVE = 'Corretiva',
   PREVENTIVE = 'Preventiva',

@@ -21,6 +21,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { generateAndPrintTerm } from '../utils/termGenerator';
+import FilePreviewModal from './FilePreviewModal';
 import { useRef } from 'react';
 
 const UserManager: React.FC = () => {
@@ -93,6 +94,8 @@ const UserManager: React.FC = () => {
   });
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<{ [key: string]: boolean }>({});
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState({ url: '', name: '' });
   const columnRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -425,6 +428,29 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const handleViewTerm = async (term: Term) => {
+    let url = term.fileUrl || (term as any).filebinary;
+    
+    if (!url && term.hasFile) {
+      try {
+        url = await getTermFile(term.id);
+      } catch (err) {
+        console.error("Erro ao buscar arquivo do termo:", err);
+      }
+    }
+    
+    if (url && url !== '#') {
+      setPreviewData({ 
+        url, 
+        name: `termo_${term.type.toLowerCase()}_${editingId || 'document'}.${url.includes('pdf') ? 'pdf' : 'jpg'}` 
+      });
+      setIsPreviewOpen(true);
+    } else {
+      // Se não tem arquivo, apenas abre o gerador de impressão como era antes ou informa
+      handleDownloadTerm(term);
+    }
+  };
+
   const handleDownloadTerm = async (term: Term) => {
     // Verifica se existe arquivo assinado
     let url = term.fileUrl || (term as any).filebinary;
@@ -667,7 +693,7 @@ const UserManager: React.FC = () => {
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[200] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                 <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
@@ -1187,6 +1213,16 @@ const UserManager: React.FC = () => {
                             >
                               <Edit2 size={16} />
                             </button>
+                            {(term.fileUrl || term.hasFile) && (
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
+                                className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                title="Visualizar Assinado"
+                              >
+                                <Eye size={16} />
+                              </button>
+                            )}
                             <button 
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
@@ -1446,6 +1482,12 @@ const UserManager: React.FC = () => {
           </div>
         </div>
       )}
+      <FilePreviewModal 
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        fileUrl={previewData.url}
+        fileName={previewData.name}
+      />
     </div>
   );
 };

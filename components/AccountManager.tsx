@@ -164,7 +164,7 @@ const AccountManager = () => {
 
   const accountColumns: Column<SoftwareAccount>[] = [
     ...(visibleColumns.includes('name') ? [{ key: 'name', label: 'Nome / Adicional', minWidth: '200px', sortable: true } as Column<SoftwareAccount>] : []),
-    { key: 'login', label: 'Login / E-mail', minWidth: '180px', sortable: true },
+    ...(visibleColumns.includes('login') ? [{ key: 'login', label: 'Login / E-mail', minWidth: '180px', sortable: true } as Column<SoftwareAccount>] : []),
     ...(visibleColumns.includes('password') ? [{ key: 'password', label: 'Senha', minWidth: '120px', sortable: false } as Column<SoftwareAccount>] : []),
     ...(visibleColumns.includes('accessUrl') ? [{ key: 'accessUrl', label: 'Acesso / URL', minWidth: '150px', sortable: true } as Column<SoftwareAccount>] : []),
     ...(visibleColumns.includes('link') ? [{ key: 'link', label: 'Vínculo', minWidth: '150px', sortable: false } as Column<SoftwareAccount>] : []),
@@ -392,7 +392,7 @@ const AccountManager = () => {
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[200] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                 <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
