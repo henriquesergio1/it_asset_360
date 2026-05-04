@@ -653,7 +653,7 @@ const DeviceManager = () => {
 
   const [newAudit, setNewAudit] = useState<Partial<DeviceAudit>>({ 
     date: new Date().toISOString().split('T')[0],
-    type: 'Verificação de Software',
+    type: 'Outros',
     status: 'Aprovado'
   });
   const [maintenanceSubTab, setMaintenanceSubTab] = useState<'EXTERNAL' | 'AUDIT'>('EXTERNAL');
@@ -673,7 +673,7 @@ const DeviceManager = () => {
       deviceId: editingId,
       date: newAudit.date || new Date().toISOString(),
       technician: adminName,
-      type: newAudit.type || 'Verificação de Software',
+      type: 'Outros',
       description: newAudit.description,
       observations: newAudit.observations || '',
       status: newAudit.status || 'Aprovado'
@@ -1418,24 +1418,9 @@ const DeviceManager = () => {
                   </div>
                   <h5 className="text-[11px] font-black text-indigo-100 uppercase tracking-widest">Nova Auditoria/Verificação Técnica</h5>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Tipo de Verificação</label>
-                    <select 
-                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100"
-                      value={newAudit.type || ''} 
-                      onChange={e => setNewAudit({...newAudit, type: e.target.value as any})}
-                    >
-                      <option value="Verificação de Software">Verificação de Software</option>
-                      <option value="Atualização de Sistema">Atualização de Sistema</option>
-                      <option value="Check-up de Hardware">Check-up de Hardware</option>
-                      <option value="Limpeza/Preventiva">Limpeza/Preventiva</option>
-                      <option value="Auditoria de Segurança">Auditoria de Segurança</option>
-                      <option value="Outros">Outros</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Status Geral</label>
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Status Geral da Auditoria</label>
                     <select 
                       className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 font-bold"
                       value={newAudit.status || ''} 
@@ -1446,10 +1431,10 @@ const DeviceManager = () => {
                       <option value="Reprovado" className="text-red-400">❌ Reprovado (Necessita reparo)</option>
                     </select>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Descrição das Ações</label>
+                  <div className="md:col-span-1">
+                    <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Descrição das Ações / Verificações Realizadas</label>
                     <input 
-                      placeholder="Ex: Atualizado para Windows 11 23H2, verificado drivers..."
+                      placeholder="Ex: Verificado Software, Hardware, Limpeza preventiva..."
                       className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
                       value={newAudit.description || ''} 
                       onChange={e => setNewAudit({...newAudit, description: e.target.value})}
