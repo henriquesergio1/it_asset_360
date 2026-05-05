@@ -779,6 +779,10 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  return safeJson(res,`/api/tasks/${tid}/logs`);
  },
 
+ generateSignatureToken: async (termId) => {
+  const res = await postData(`terms/${termId}/generate-signature-token`, {});
+  return res.token;
+ },
  updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride
  };
  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -118,6 +118,7 @@ const UserManager: React.FC = () => {
     updateTermDetails,
     deleteTermFile,
     resolveTermManual,
+    generateSignatureToken,
     addUser,
     updateUser: updateUserData,
     toggleUserActive,
@@ -462,9 +463,7 @@ const UserManager: React.FC = () => {
   const handleGenerateSignatureLink = async (termId: string) => {
     if (isReadOnly) return;
     try {
-      const res = await fetch(`/api/terms/${termId}/generate-signature-token`, { method: 'POST' });
-      if (!res.ok) throw new Error('Falha ao gerar link');
-      const { token } = await res.json();
+      const token = await generateSignatureToken(termId);
       const link = `${window.location.origin}/#/sign-term/${token}`;
       await navigator.clipboard.writeText(link);
       showToast('Link de assinatura copiado para a área de transferência!', 'success');

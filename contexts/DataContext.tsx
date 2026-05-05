@@ -96,6 +96,9 @@ export interface DataContextType {
   ) => void;
   resolveTermManual: (termId: string, reason: string, adminName: string) => Promise<void>;
 
+  // Digital Signature
+  generateSignatureToken: (termId: string) => Promise<string>;
+
  // Admin Tools
  clearLogs: () => void;
  restoreItem: (logId: string, adminName: string) => void;

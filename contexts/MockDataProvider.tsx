@@ -231,6 +231,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       showToast('Termo resolvido manualmente (Mock)', 'success');
     },
     updateTermDetails: () => {},
+    generateSignatureToken: async () => Math.random().toString(36).substring(2, 15),
     clearLogs: () => setLogs([]),
     restoreItem: () => {},
     addAssetType: (t) => setAssetTypes(p => [...p, t]),

@@ -107,7 +107,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
 };
 
 const Operations = () => {
- const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors, updateDevice, accessoryTypes } = useData();
+ const { devices, sims, users, assignAsset, returnAsset, models, brands, assetTypes, settings, sectors, updateDevice, accessoryTypes, generateSignatureToken } = useData();
  const { user: currentUser } = useAuth();
  
  const [activeTab, setActiveTab] = useState<OperationType>('CHECKOUT');
@@ -329,8 +329,7 @@ const Operations = () => {
   if (!createdTermId) return;
   setGeneratingLink(true);
   try {
-   const res = await fetch(`/api/terms/${createdTermId}/generate-signature-token`, { method: 'POST' });
-   const { token } = await res.json();
+   const token = await generateSignatureToken(createdTermId);
    const link = `${window.location.origin}/#/sign-term/${token}`;
    await navigator.clipboard.writeText(link);
    alert('Link de assinatura digital copiado!');
