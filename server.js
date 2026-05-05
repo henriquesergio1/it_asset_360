@@ -256,6 +256,30 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Devices DROP COLUMN PurchaseInvoiceUrl');
                     }
                 }
+                
+                if (table === 'Terms') {
+                    const columnsNeeded = [
+                        { name: 'SignatureToken', type: 'NVARCHAR(255) NULL' },
+                        { name: 'SignatureIp', type: 'NVARCHAR(50) NULL' },
+                        { name: 'SignatureDate', type: 'DATETIME NULL' },
+                        { name: 'SignatureLocation', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' }
+                    ];
+
+                    for (const col of columnsNeeded) {
+                        try {
+                            const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = '${col.name}'`);
+                            if (check.recordset.length === 0) {
+                                console.log(`- Adicionando coluna ${col.name} em Terms...`);
+                                await pool.request().query(`ALTER TABLE Terms ADD ${col.name} ${col.type}`);
+                            }
+                        } catch (err) {
+                            console.error(`Erro ao adicionar coluna ${col.name} em Terms:`, err.message);
+                        }
+                    }
+                }
                 if (table === 'SoftwareAccounts') {
                     const checkUserId = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SoftwareAccounts' AND COLUMN_NAME = 'UserId'`);
                     if (checkUserId.recordset.length > 0) {
@@ -613,7 +637,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.36.2', 
+            version: '3.36.3', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });

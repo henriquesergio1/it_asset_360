@@ -148,7 +148,14 @@ CREATE TABLE Terms (
     DamageDescription NVARCHAR(MAX) NULL,
     Evidence2Binary VARBINARY(MAX) NULL,
     Evidence3Binary VARBINARY(MAX) NULL,
-    Notes NVARCHAR(MAX) NULL
+    Notes NVARCHAR(MAX) NULL,
+    SignatureToken NVARCHAR(255) NULL,
+    SignatureDate DATETIME NULL,
+    SignatureIp NVARCHAR(50) NULL,
+    SignatureLocation NVARCHAR(MAX) NULL,
+    SignatureCanvasBinary VARBINARY(MAX) NULL,
+    SignatureDocumentPhoto VARBINARY(MAX) NULL,
+    SignatureHash NVARCHAR(255) NULL
 );
 
 -- Tabela de Tipos de Acessórios (AccessoryTypes)
