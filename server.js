@@ -637,7 +637,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.36.3', 
+            version: '3.36.4', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1379,15 +1379,27 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
 
     app.post('/api/terms/:id/generate-signature-token', async (req, res) => {
         try {
+            console.log(`[Signature] Gerando token para termo: ${req.params.id}`);
             const pool = await sql.connect(dbConfig);
-            const token = crypto.randomUUID();
-            await pool.request()
+            // Uso de randomBytes para maior compatibilidade com versões do Node
+            const token = crypto.randomBytes(16).toString('hex');
+            
+            const result = await pool.request()
                 .input('Id', sql.NVarChar, req.params.id)
                 .input('Token', sql.NVarChar, token)
                 .query("UPDATE Terms SET SignatureToken = @Token WHERE Id = @Id");
             
+            if (result.rowsAffected[0] === 0) {
+                console.error(`[Signature] Nenhum termo encontrado com ID: ${req.params.id}`);
+                return res.status(404).send("Termo não encontrado");
+            }
+
+            console.log(`[Signature] Token gerado com sucesso: ${token}`);
             res.json({ success: true, token });
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error('[Signature] Erro fatal ao gerar token:', err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.get('/api/public/terms-to-sign/:token', async (req, res) => {

@@ -469,7 +469,8 @@ const UserManager: React.FC = () => {
       showToast('Link de assinatura copiado para a área de transferência!', 'success');
       fetchData(true);
     } catch (err) {
-      showToast('Erro ao gerar link de assinatura', 'error');
+      console.error("Erro ao gerar link:", err);
+      showToast(`Erro ao gerar link: ${err.message}`, 'error');
     }
   };
 
