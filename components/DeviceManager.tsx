@@ -727,9 +727,10 @@ const DeviceManager = () => {
  useEffect(() => {
  const params = new URLSearchParams(location.search);
  const deviceId = params.get('deviceId');
+ const tabParam = params.get('tab') as any;
  if (deviceId) {
  const device = devices.find(d => d.id === deviceId);
- if (device) handleOpenModal(device, true);
+ if (device) handleOpenModal(device, true, tabParam);
  }
  }, [location, devices]);
 
@@ -837,8 +838,8 @@ const DeviceManager = () => {
  const startIndex = (currentPage - 1) * (itemsPerPage === 'ALL' ? 0 : itemsPerPage as number);
  const paginatedDevices = itemsPerPage === 'ALL' ? filteredDevices : filteredDevices.slice(startIndex, startIndex + (itemsPerPage as number));
 
- const handleOpenModal = (device?: Device, viewOnly: boolean = false) => {
- setActiveTab('GENERAL');
+ const handleOpenModal = (device?: Device, viewOnly: boolean = false, initialTab?: 'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'LICENSES' | 'CUSTODY' | 'HISTORY') => {
+ setActiveTab(initialTab || 'GENERAL');
  const isRetired = device?.status === DeviceStatus.RETIRED;
  setIsViewOnly(isRetired || viewOnly);
  if (device) { setEditingId(device.id); const { modelName, brandName, typeName, sectorName, currentUserName, linkedSimNumber, ...validData } = device as any;

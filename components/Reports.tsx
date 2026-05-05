@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign, ArrowUp, ArrowDown, Scale, Box, TrendingUp, AlertTriangle, CheckCircle, History, Wrench, Plus } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { normalizeString } from '../utils/stringUtils';
@@ -8,7 +9,21 @@ import { DeviceStatus } from '../types';
 
 const Reports = () => {
   const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances, audits } = useData();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL' | 'AUDITS'>('USERS');
+
+  const getSmartId = (deviceId: string) => {
+    const d = devices.find(device => device.id === deviceId);
+    if (!d) return 'S/T';
+    if (d.assetTag && d.assetTag !== 'S/T') return d.assetTag;
+    if (d.imei) return `IMEI: ${d.imei}`;
+    if (d.serialNumber) return `SN: ${d.serialNumber}`;
+    return 'S/ID';
+  };
+
+  const handleDeviceClick = (deviceId: string) => {
+    navigate(`/devices?deviceId=${deviceId}&tab=MAINTENANCE`);
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
@@ -1412,14 +1427,38 @@ const Reports = () => {
                           return (
                             <tr key={a.id} className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all">
                               <td className="px-6 py-4 font-bold text-slate-300">{new Date(a.date).toLocaleDateString('pt-BR')}</td>
-                              <td className="px-6 py-4">
+                              <td 
+                                onClick={() => handleDeviceClick(a.deviceId)}
+                                className="px-6 py-4 cursor-pointer group/cell"
+                              >
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-slate-100">{device?.assetTag || 'S/T'}</span>
-                                  <span className="text-[10px] text-slate-500 uppercase">{device?.serialNumber || 'S/N'}</span>
+                                  <span className="font-bold text-slate-100 group-hover/cell:text-blue-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(a.deviceId)}</span>
+                                  {/* Mostrar SN se o smartId não for SN */}
+                                  {(() => {
+                                    const d = devices.find(dev => dev.id === a.deviceId);
+                                    const sid = getSmartId(a.deviceId);
+                                    if (d?.serialNumber && !sid.includes(d.serialNumber)) {
+                                      return <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber}</span>;
+                                    }
+                                    return null;
+                                  })()}
                                 </div>
                               </td>
                               <td className="px-6 py-4 font-medium text-slate-300">{a.technician}</td>
-                              <td className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">{a.type}</td>
+                              <td className="px-6 py-4">
+                                {(() => {
+                                  const d = devices.find(dev => dev.id === a.deviceId);
+                                  const m = d ? models.find(mod => mod.id === d.modelId) : null;
+                                  const b = m ? brands.find(brand => brand.id === m.brandId) : null;
+                                  const t = m ? assetTypes.find(type => type.id === m.typeId) : null;
+                                  return (
+                                    <div className="flex flex-col">
+                                      <span className="font-bold text-slate-100 text-[10px] uppercase">{m?.name || 'Desconhecido'}</span>
+                                      <span className="text-[9px] text-slate-500 uppercase font-black">{t?.name || '---'} • {b?.name || '---'}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
                                   a.status === 'Aprovado' ? 'bg-emerald-900/30 text-emerald-400' :
@@ -1458,11 +1497,22 @@ const Reports = () => {
                     <tbody className="divide-y divide-slate-800/50">
                       {devicesWithoutAuditData.length > 0 ? (
                         devicesWithoutAuditData.map(d => (
-                          <tr key={d.id} className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all">
+                          <tr 
+                            key={d.id} 
+                            onClick={() => handleDeviceClick(d.id)}
+                            className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all cursor-pointer group"
+                          >
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-100">{d.assetTag || 'S/T'}</span>
-                                <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber || 'S/N'}</span>
+                                <span className="font-bold text-slate-100 group-hover:text-blue-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(d.id)}</span>
+                                {/* Mostrar SN se o smartId não for SN */}
+                                {(() => {
+                                  const sid = getSmartId(d.id);
+                                  if (d.serialNumber && !sid.includes(d.serialNumber)) {
+                                    return <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber}</span>;
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </td>
                             <td className="px-6 py-4">
