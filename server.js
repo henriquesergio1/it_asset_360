@@ -4,6 +4,7 @@ const packageJson = require('./package.json');
 const sql = require('mssql');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
@@ -100,7 +101,25 @@ const DB_SCHEMAS = {
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX), AllowMultipleUsers BIT DEFAULT 0)`,
     MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    Terms: `(Id NVARCHAR(255) PRIMARY KEY, UserId NVARCHAR(255), Type NVARCHAR(50), AssetDetails NVARCHAR(MAX), Date DATETIME, FileBinary VARBINARY(MAX), IsManual BIT DEFAULT 0, ResolutionReason NVARCHAR(MAX), AssetId NVARCHAR(255) NULL, AssetType NVARCHAR(100) NULL)`,
+    Terms: `(
+        Id NVARCHAR(255) PRIMARY KEY, 
+        UserId NVARCHAR(255), 
+        Type NVARCHAR(50), 
+        AssetDetails NVARCHAR(MAX), 
+        Date DATETIME, 
+        FileBinary VARBINARY(MAX), 
+        IsManual BIT DEFAULT 0, 
+        ResolutionReason NVARCHAR(MAX), 
+        AssetId NVARCHAR(255) NULL, 
+        AssetType NVARCHAR(100) NULL,
+        SignatureToken NVARCHAR(255) NULL,
+        SignatureIp NVARCHAR(50) NULL,
+        SignatureDate DATETIME NULL,
+        SignatureLocation NVARCHAR(MAX) NULL,
+        SignatureDocumentPhoto VARBINARY(MAX) NULL,
+        SignatureCanvasBinary VARBINARY(MAX) NULL,
+        SignatureHash NVARCHAR(MAX) NULL
+    )`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
     CustomFields: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
@@ -363,6 +382,22 @@ async function initializeDatabase() {
                         console.log('- Adicionando colunas AssetId e AssetType em Terms...');
                         await pool.request().query('ALTER TABLE Terms ADD AssetId NVARCHAR(255) NULL, AssetType NVARCHAR(100) NULL');
                     }
+
+                    // v3.36.0 - Colunas para Assinatura Digital
+                    const checkSigToken = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'SignatureToken'`);
+                    if (checkSigToken.recordset.length === 0) {
+                        console.log('- Adicionando colunas de Assinatura Digital em Terms...');
+                        await pool.request().query(`
+                            ALTER TABLE Terms ADD 
+                            SignatureToken NVARCHAR(255) NULL,
+                            SignatureIp NVARCHAR(50) NULL,
+                            SignatureDate DATETIME NULL,
+                            SignatureLocation NVARCHAR(MAX) NULL,
+                            SignatureDocumentPhoto VARBINARY(MAX) NULL,
+                            SignatureCanvasBinary VARBINARY(MAX) NULL,
+                            SignatureHash NVARCHAR(MAX) NULL
+                        `);
+                    }
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
@@ -575,14 +610,14 @@ async function startServer() {
     });
 
     // --- HEALTH CHECK ---
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        version: '3.27.8', 
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+    app.get('/api/health', (req, res) => {
+        res.json({ 
+            status: 'ok', 
+            version: '3.36.1', 
+            timestamp: new Date().toISOString(),
+            environment: process.env.NODE_ENV || 'development'
+        });
     });
-});
 
 
 
@@ -621,7 +656,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -668,7 +703,7 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -1223,7 +1258,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
             await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
-            res.json({success: true});
+            res.json({success: true, termId});
         } catch (err) { res.status(500).send(err.message); }
     });
 
@@ -1312,7 +1347,112 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}${condition && condition !== 'Perfeito' ? `\nCondição: ${condition}\nDescrição do Dano: ${damageDescription || 'N/A'}` : ''}`;
             await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
-            res.json({success: true});
+            res.json({success: true, termId: userId ? termId : null});
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    // --- DIGITAL SIGNATURE ENDPOINTS ---
+
+    app.post('/api/terms/:id/generate-signature-token', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const token = crypto.randomUUID();
+            await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .input('Token', sql.NVarChar, token)
+                .query("UPDATE Terms SET SignatureToken = @Token WHERE Id = @Id");
+            
+            res.json({ success: true, token });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/public/terms-to-sign/:token', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('Token', sql.NVarChar, req.params.token)
+                .query(`
+                    SELECT t.*, u.FullName as UserName, u.Cpf as UserCpf, u.InternalCode as UserCode
+                    FROM Terms t
+                    JOIN Users u ON u.Id = t.UserId
+                    WHERE t.SignatureToken = @Token
+                `);
+            
+            const term = result.recordset[0];
+            if (!term) return res.status(404).send("Termo não encontrado ou link expirado");
+            if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado digitalmente");
+
+            res.json({
+                id: term.Id,
+                type: term.Type,
+                assetDetails: term.AssetDetails,
+                date: term.Date,
+                userName: term.UserName,
+                userCpf: term.UserCpf,
+                userCode: term.UserCode,
+                accessories: term.Accessories ? JSON.parse(term.Accessories) : []
+            });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/public/terms-to-sign/:token/sign', async (req, res) => {
+        try {
+            const { signatureCanvas, documentPhoto, location, ip } = req.body;
+            const pool = await sql.connect(dbConfig);
+            
+            const checkRes = await pool.request()
+                .input('Token', sql.NVarChar, req.params.token)
+                .query("SELECT Id, SignatureDate FROM Terms WHERE SignatureToken = @Token");
+            
+            const term = checkRes.recordset[0];
+            if (!term) return res.status(404).send("Termo não encontrado");
+            if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado");
+
+            const sigDate = new Date();
+            const canvasBuffer = signatureCanvas ? getBufferFromBase64(signatureCanvas) : null;
+            const photoBuffer = documentPhoto ? getBufferFromBase64(documentPhoto) : null;
+            
+            // Gerar Hash de integridade
+            const hashInput = `${term.Id}-${sigDate.toISOString()}-${ip}-${location}`;
+            const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
+
+            await pool.request()
+                .input('Token', sql.NVarChar, req.params.token)
+                .input('Date', sql.DateTime, sigDate)
+                .input('Ip', sql.NVarChar, ip)
+                .input('Loc', sql.NVarChar, location)
+                .input('Canvas', sql.VarBinary, canvasBuffer)
+                .input('Photo', sql.VarBinary, photoBuffer)
+                .input('Hash', sql.NVarChar, hash)
+                .query(`
+                    UPDATE Terms SET 
+                        SignatureDate = @Date,
+                        SignatureIp = @Ip,
+                        SignatureLocation = @Loc,
+                        SignatureCanvasBinary = @Canvas,
+                        SignatureDocumentPhoto = @Photo,
+                        SignatureHash = @Hash
+                    WHERE SignatureToken = @Token
+                `);
+
+            res.json({ success: true, hash, signatureDate: sigDate });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.get('/api/terms/:id/signature-data', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .query("SELECT SignatureCanvasBinary, SignatureDocumentPhoto FROM Terms WHERE Id = @Id");
+            
+            const row = result.recordset[0];
+            if (!row) return res.status(404).send("Dados não encontrados");
+            
+            res.json({
+                signatureCanvas: row.SignatureCanvasBinary ? getBase64FromBuffer(row.SignatureCanvasBinary) : null,
+                documentPhoto: row.SignatureDocumentPhoto ? getBase64FromBuffer(row.SignatureDocumentPhoto) : null
+            });
         } catch (err) { res.status(500).send(err.message); }
     });
 

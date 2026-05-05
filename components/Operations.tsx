@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX, Upload, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX, Upload, Trash2, Share2 } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 import { normalizeString } from '../utils/stringUtils';
 
@@ -157,6 +157,8 @@ const Operations = () => {
    }
  }, [selectedAssetId, activeTab, assetType, holders]);
 
+ const [createdTermId, setCreatedTermId] = useState<string | null>(null);
+ const [generatingLink, setGeneratingLink] = useState(false);
  const [lastOperation, setLastOperation] = useState<{
  userId: string;
  assetId: string;
@@ -306,11 +308,37 @@ const Operations = () => {
  });
  
  setIsProcessed(true);
+ // Busca o termo mais recente para este usuário para permitir a assinatura digital imediatatente
+ try {
+  const freshTermsRes = await fetch(`/api/sync?lastSync=2000-01-01`); 
+  const freshData = await freshTermsRes.json();
+  const userTerms = freshData.terms.filter((t: any) => t.userId === currentUserId && !t.signatureDate);
+  if (userTerms.length > 0) {
+   const sorted = userTerms.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+   setCreatedTermId(sorted[0].id);
+  }
+ } catch(e) { console.error("Erro ao buscar tId:", e); }
  } catch (e) { 
  alert('Erro ao processar: ' + (e as Error).message); 
  } finally { 
  setIsExecuting(false); 
  }
+ };
+
+ const handleGenerateLink = async () => {
+  if (!createdTermId) return;
+  setGeneratingLink(true);
+  try {
+   const res = await fetch(`/api/terms/${createdTermId}/generate-signature-token`, { method: 'POST' });
+   const { token } = await res.json();
+   const link = `${window.location.origin}/#/sign-term/${token}`;
+   await navigator.clipboard.writeText(link);
+   alert('Link de assinatura digital copiado!');
+  } catch (e) {
+   alert('Erro ao gerar link');
+  } finally {
+   setGeneratingLink(false);
+  }
  };
 
  const handlePrint = () => {
@@ -367,7 +395,7 @@ const Operations = () => {
  setDamageDescription('');
  setEvidenceFiles([]);
  setLastOperation(null); 
- setSelectedAccessoryTypeIds([]);
+ setCreatedTermId(null); setSelectedAccessoryTypeIds([]);
  setInactivateAfterReturn(false);
  };
 
@@ -384,6 +412,11 @@ const Operations = () => {
  <button onClick={handlePrint} className="flex items-center justify-center gap-3 text-white py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:scale-105 active:scale-95">
  <Printer size={20}/> Imprimir Termo
  </button>
+ {createdTermId && (
+  <button onClick={handleGenerateLink} disabled={generatingLink} className="flex items-center justify-center gap-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-blue-600/30 transition-all">
+   <Share2 size={20}/> {generatingLink ? 'Gerando...' : 'Link Assinatura Digital'}
+  </button>
+ )}
  <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-700 transition-all">
  <ArrowLeft size={20}/> Nova Operação
  </button>

@@ -5,8 +5,7 @@ import {
   FilterX, MoreHorizontal, UserPlus, Info, 
   MapPin, Phone, Mail, CreditCard, Hash, FileText, 
   ExternalLink, Power, History, Shield, Smartphone, 
-  Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, 
-  FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
+  Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, ShieldCheck,   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
   Save, Eye, EyeOff, Key, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -110,6 +109,7 @@ const UserManager: React.FC = () => {
     models, 
     devices, 
     sims, 
+    fetchData,
     accounts,
     logs,
     getTermFile,
@@ -456,6 +456,21 @@ const UserManager: React.FC = () => {
     } else {
       // Se não tem arquivo, apenas abre o gerador de impressão como era antes ou informa
       handleDownloadTerm(term);
+    }
+  };
+
+  const handleGenerateSignatureLink = async (termId: string) => {
+    if (isReadOnly) return;
+    try {
+      const res = await fetch(`/api/terms/${termId}/generate-signature-token`, { method: 'POST' });
+      if (!res.ok) throw new Error('Falha ao gerar link');
+      const { token } = await res.json();
+      const link = `${window.location.origin}/#/sign-term/${token}`;
+      await navigator.clipboard.writeText(link);
+      showToast('Link de assinatura copiado para a área de transferência!', 'success');
+      fetchData(true);
+    } catch (err) {
+      showToast('Erro ao gerar link de assinatura', 'error');
     }
   };
 
@@ -1263,6 +1278,23 @@ const UserManager: React.FC = () => {
                             >
                               <Download size={16} />
                             </button>
+
+                            {!(term.fileUrl || term.hasFile) && !term.signatureDate && (
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(term.id); }}
+                                className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:text-blue-300 transition-all border border-blue-900/40"
+                                title="Gerar Link de Assinatura"
+                              >
+                                <Share2 size={16} />
+                              </button>
+                            )}
+
+                             {term.signatureDate && (
+                               <div className="flex items-center gap-2 bg-emerald-900/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-emerald-400">
+                                 <ShieldCheck size={10} /> Assinado Digitalmente
+                               </div>
+                             )}
                              
                             {!(term.fileUrl || term.hasFile) ? (
                               <div className="flex gap-2">

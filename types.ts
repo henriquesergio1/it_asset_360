@@ -165,6 +165,15 @@ export interface Term {
   // Dados para re-impressão fiel
   accessories?: { id: string; name: string }[];
   linkedSim?: SimCard;
+
+  // Assinatura Digital (v3.36.0)
+  signatureToken?: string;
+  signatureIp?: string;
+  signatureDate?: string;
+  signatureLocation?: string;
+  signatureHash?: string;
+  hasSignatureCanvas?: boolean;
+  hasSignaturePhoto?: boolean;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

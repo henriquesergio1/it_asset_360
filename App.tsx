@@ -21,6 +21,7 @@ import AccountManager from './components/AccountManager';
 import Reports from './components/Reports';
 import TaskManager from './components/TaskManager';
 import Consumables from './components/Consumables';
+import DigitalSignature from './components/DigitalSignature';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -218,6 +219,7 @@ const AppRoutes = () => {
                 </ProtectedRoute>
             } />
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+            <Route path="/sign-term/:token" element={<DigitalSignature />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
