@@ -7,8 +7,8 @@ import { SortableResizableHeader } from './SortableResizableHeader';
 import { DeviceStatus } from '../types';
 
 const Reports = () => {
-  const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances } = useData();
-  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL'>('USERS');
+  const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances, audits } = useData();
+  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL' | 'AUDITS'>('USERS');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
   const [showOnlyWithLine, setShowOnlyWithLine] = useState(false);
@@ -545,6 +545,56 @@ const Reports = () => {
     return { totalPurchase, totalMaint, totalLCC, criticalCount };
   }, [financialReportData]);
 
+  const [auditSubTab, setAuditSubTab] = useState<'HISTORY' | 'NO_AUDIT'>('HISTORY');
+
+  const auditsReportData = useMemo(() => {
+    if (!audits) return [];
+    const searchNormalized = normalizeString(searchTerm);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    return audits.filter(a => {
+      const auditDate = new Date(a.date);
+      const matchesDate = auditDate >= start && auditDate <= end;
+      const device = devices.find(d => d.id === a.deviceId);
+      const model = device ? models.find(m => m.id === device.modelId) : null;
+      
+      const matchesSearch = normalizeString(a.technician || '').includes(searchNormalized) ||
+                           normalizeString(a.description || '').includes(searchNormalized) ||
+                           normalizeString(device?.assetTag || '').includes(searchNormalized) ||
+                           normalizeString(model?.name || '').includes(searchNormalized);
+      return matchesDate && matchesSearch;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [audits, devices, models, searchTerm, startDate, endDate]);
+
+  const devicesWithoutAuditData = useMemo(() => {
+    const devicesWithAudits = new Set(audits.map(a => a.deviceId));
+    return devices.filter(d => !devicesWithAudits.has(d.id)).map(d => {
+      const model = models.find(m => m.id === d.modelId);
+      const brand = brands.find(b => b.id === model?.brandId);
+      const type = assetTypes.find(t => t.id === model?.typeId);
+      const user = users.find(u => u.id === d.currentUserId);
+
+      return {
+        ...d,
+        modelName: model?.name || 'Desconhecido',
+        brandName: brand?.name || 'Outros',
+        typeName: type?.name || 'Outros',
+        currentUser: user?.fullName || 'Estoque'
+      };
+    });
+  }, [devices, audits, models, brands, assetTypes, users]);
+
+  const auditMetrics = useMemo(() => {
+    const totalDevices = devices.length;
+    const totalWithAudit = new Set(audits.map(a => a.deviceId)).size;
+    const totalAudits = audits.length;
+    const coverage = totalDevices > 0 ? (totalWithAudit / totalDevices) * 100 : 0;
+
+    return { totalDevices, totalWithAudit, totalAudits, coverage };
+  }, [devices, audits]);
+
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     let headers: string[] = [];
     let data: any[] = [];
@@ -609,6 +659,37 @@ const Reports = () => {
       }));
       fileName = `saude_financeira_ativos_${new Date().toISOString().split('T')[0]}`;
       pdfTitle = 'Relatório de Saúde Financeira e Ciclo de Vida (LCC)';
+    } else if (activeTab === 'AUDITS') {
+      if (auditSubTab === 'HISTORY') {
+        headers = ['Data', 'Patrimônio', 'Técnico', 'Tipo', 'Descrição', 'Status', 'Observações'];
+        data = auditsReportData.map(a => {
+          const device = devices.find(d => d.id === a.deviceId);
+          return {
+            'Data': new Date(a.date).toLocaleString('pt-BR'),
+            'Patrimônio': device?.assetTag || 'S/T',
+            'Técnico': a.technician,
+            'Tipo': a.type,
+            'Descrição': a.description,
+            'Status': a.status,
+            'Observações': a.observations || ''
+          };
+        });
+        fileName = `historico_auditorias_${new Date().toISOString().split('T')[0]}`;
+        pdfTitle = 'Histórico de Auditorias Técnicas';
+      } else {
+        headers = ['Patrimônio', 'S/N', 'Tipo', 'Marca', 'Modelo', 'Usuário Atual', 'Status Ativo'];
+        data = devicesWithoutAuditData.map(d => ({
+          'Patrimônio': d.assetTag || 'S/T',
+          'S/N': d.serialNumber || 'S/N',
+          'Tipo': d.typeName,
+          'Marca': d.brandName,
+          'Modelo': d.modelName,
+          'Usuário Atual': d.currentUser,
+          'Status Ativo': d.status
+        }));
+        fileName = `ativos_sem_auditoria_${new Date().toISOString().split('T')[0]}`;
+        pdfTitle = 'Ativos sem Auditoria Realizada';
+      }
     }
 
     if (format === 'csv') {
@@ -636,7 +717,7 @@ const Reports = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-            {(['USERS', 'CONSUMABLES', 'ASSETS', 'FINANCIAL'] as const).map((tab) => (
+            {(['USERS', 'CONSUMABLES', 'ASSETS', 'FINANCIAL', 'AUDITS'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -648,7 +729,8 @@ const Reports = () => {
               >
                 {tab === 'USERS' ? 'Colaboradores' :
                  tab === 'CONSUMABLES' ? 'Consumo' :
-                 tab === 'ASSETS' ? 'Ativos' : 'Financeiro'}
+                 tab === 'ASSETS' ? 'Ativos' : 
+                 tab === 'FINANCIAL' ? 'Financeiro' : 'Auditorias'}
               </button>
             ))}
           </div>
@@ -787,6 +869,39 @@ const Reports = () => {
               </div>
             </>
           )}
+
+          {activeTab === 'AUDITS' && (
+            <>
+              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+                <div>
+                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Cadastrados</span>
+                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalDevices}</p>
+                </div>
+                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
+              </div>
+              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+                <div>
+                  <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Auditoria</span>
+                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalWithAudit}</p>
+                </div>
+                <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
+              </div>
+              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+                <div>
+                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Auditorias</span>
+                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalAudits}</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
+              </div>
+              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+                <div>
+                  <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Cobertura Técnica</span>
+                  <p className="text-2xl font-black text-slate-100">{auditMetrics.coverage.toFixed(1)}%</p>
+                </div>
+                <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><ShieldCheck size={24}/></div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
@@ -798,15 +913,35 @@ const Reports = () => {
                   {activeTab === 'CONSUMABLES' && 'Histórico de Consumo de Insumos'}
                   {activeTab === 'ASSETS' && 'Resumo de Ativos por Modelo'}
                   {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
+                  {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : 'Ativos sem Auditoria Realizada')}
                 </h2>
                 <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-1 opacity-70">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
                   {activeTab === 'CONSUMABLES' && 'Histórico detalhado de entradas e saídas de itens consumíveis.'}
                   {activeTab === 'ASSETS' && 'Contagem total de ativos agrupados por tipo, marca e modelo.'}
                   {activeTab === 'FINANCIAL' && 'Análise de investimento total, custos de manutenção e alertas de obsolescência.'}
+                  {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' 
+                    ? 'Listagem cronológica de todas as auditorias técnicas realizadas nos aparelhos.' 
+                    : 'Identificação de aparelhos que ainda não possuem nenhum registro de auditoria técnica.')}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                {activeTab === 'AUDITS' && (
+                  <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner mr-2">
+                    <button 
+                      onClick={() => setAuditSubTab('HISTORY')}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'HISTORY' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      Histórico
+                    </button>
+                    <button 
+                      onClick={() => setAuditSubTab('NO_AUDIT')}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      Sem Auditoria
+                    </button>
+                  </div>
+                )}
                 {/* Botão Imprimir */}
                 <button 
                   onClick={handlePrint}
@@ -851,6 +986,7 @@ const Reports = () => {
                   placeholder={
                     activeTab === 'USERS' ? "Buscar por nome, e-mail, linha ou ID Pulsus..." :
                     activeTab === 'CONSUMABLES' ? "Buscar por item, usuário ou notas..." :
+                    activeTab === 'AUDITS' ? "Buscar por patrimônio, técnico ou descrição..." :
                     "Buscar por tipo, marca ou modelo..."
                   }
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 transition-all"
@@ -859,7 +995,7 @@ const Reports = () => {
                 />
               </div>
               
-              {activeTab === 'CONSUMABLES' && (
+              {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && auditSubTab === 'HISTORY')) && (
                 <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-[11px] font-black uppercase text-slate-400 ml-2">De:</span>
@@ -1254,6 +1390,121 @@ const Reports = () => {
                 </table>
               </div>
             )}
+
+            {activeTab === 'AUDITS' && (
+              <div className="overflow-x-auto print:overflow-visible">
+                {auditSubTab === 'HISTORY' ? (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800/50">
+                      <tr className="border-b border-slate-800">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Data</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Patrimônio</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Técnico</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Tipo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Status</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Descrição</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {auditsReportData.length > 0 ? (
+                        auditsReportData.map(a => {
+                          const device = devices.find(d => d.id === a.deviceId);
+                          return (
+                            <tr key={a.id} className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all">
+                              <td className="px-6 py-4 font-bold text-slate-300">{new Date(a.date).toLocaleDateString('pt-BR')}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-100">{device?.assetTag || 'S/T'}</span>
+                                  <span className="text-[10px] text-slate-500 uppercase">{device?.serialNumber || 'S/N'}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 font-medium text-slate-300">{a.technician}</td>
+                              <td className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">{a.type}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                  a.status === 'Aprovado' ? 'bg-emerald-900/30 text-emerald-400' :
+                                  a.status === 'Reprovado' ? 'bg-red-900/30 text-red-400' :
+                                  'bg-amber-900/30 text-amber-400'
+                                }`}>
+                                  {a.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-xs text-slate-400 max-w-xs truncate" title={a.description}>{a.description}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                             <div className="flex flex-col items-center justify-center">
+                              <History size={48} className="mb-4 text-slate-300"/>
+                              <p className="text-sm font-bold">Nenhum histórico de auditoria encontrado no período</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800/50">
+                      <tr className="border-b border-slate-800">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Patrimônio / SN</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Tipo / Marca / Modelo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Usuário Atual</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 text-center">Status Ativo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {devicesWithoutAuditData.length > 0 ? (
+                        devicesWithoutAuditData.map(d => (
+                          <tr key={d.id} className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all">
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-100">{d.assetTag || 'S/T'}</span>
+                                <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber || 'S/N'}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-100 text-xs uppercase">{d.modelName}</span>
+                                <span className="text-[10px] text-slate-500 uppercase">{d.typeName} • {d.brandName}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                    {d.currentUser.charAt(0)}
+                                  </div>
+                                  <span className="font-medium text-slate-300 text-xs">{d.currentUser}</span>
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                  d.status === 'Disponível' ? 'bg-emerald-900/30 text-emerald-400' :
+                                  d.status === 'Em Uso' ? 'bg-blue-900/30 text-blue-400' :
+                                  'bg-amber-900/30 text-amber-400'
+                                }`}>
+                                  {d.status}
+                                </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                             <div className="flex flex-col items-center justify-center">
+                              <CheckCircle size={48} className="mb-4 text-emerald-400/50"/>
+                              <p className="text-sm font-bold">Excelente! Todos os ativos cadastrados possuem auditoria técnica.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-slate-800 bg-slate-800/30 flex justify-between items-center text-xs font-bold">
@@ -1261,7 +1512,8 @@ const Reports = () => {
               activeTab === 'USERS' ? reportData.length :
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
               activeTab === 'ASSETS' ? assetsSummaryData.length :
-              financialReportData.length
+              activeTab === 'FINANCIAL' ? financialReportData.length :
+              auditSubTab === 'HISTORY' ? auditsReportData.length : devicesWithoutAuditData.length
             }</span>
             <span className="print:hidden">Relatório gerado em {new Date().toLocaleDateString('pt-BR')}</span>
           </div>
