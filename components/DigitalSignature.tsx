@@ -26,6 +26,9 @@ const DigitalSignature = () => {
     
     const sigCanvas = useRef<SignatureCanvas>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const isSecureContext = window.isSecureContext || window.location.hostname === 'localhost';
 
     useEffect(() => {
         const fetchTermData = async () => {
@@ -84,6 +87,12 @@ const DigitalSignature = () => {
     };
 
     const startCamera = async (mode: 'document' | 'selfie') => {
+        if (!isSecureContext) {
+            setCameraMode(mode);
+            fileInputRef.current?.click();
+            return;
+        }
+
         try {
             setCameraMode(mode);
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -93,9 +102,25 @@ const DigitalSignature = () => {
                 videoRef.current.srcObject = stream;
             }
         } catch (err) {
-            alert('Acesso à câmera negado. Por favor, autorize no navegador.');
-            setCameraMode(null);
+            // Em caso de erro ou negação manual, permitir o upload de arquivo como fallback
+            console.warn('Câmera direta falhou, usando fallback de arquivo');
+            fileInputRef.current?.click();
         }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const base64 = event.target?.result as string;
+            if (cameraMode === 'document') setDocumentPhoto(base64);
+            else if (cameraMode === 'selfie') setSelfiePhoto(base64);
+            setCameraMode(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async () => {
@@ -159,6 +184,16 @@ const DigitalSignature = () => {
                         <div key={s} className={`h-1 flex-1 rounded-full transition-all duration-700 ${step >= s ? 'bg-blue-600' : 'bg-slate-800'}`} />
                     ))}
                 </div>
+
+                {/* Inputs de Fallback (Invisíveis) */}
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    capture={cameraMode === 'document' ? 'environment' : 'user'}
+                    onChange={handleFileUpload}
+                />
 
                 {/* ETAPA 1: TERMO INTEGRAL */}
                 <AnimatePresence mode="wait">
@@ -353,9 +388,9 @@ const DigitalSignature = () => {
                 </AnimatePresence>
             </div>
 
-            {/* CÂMERA FULLSCREEN MODAL */}
+            {/* CÂMERA FULLSCREEN MODAL (Apenas Contexto Seguro) */}
             <AnimatePresence>
-                {cameraMode && (
+                {cameraMode && isSecureContext && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1000] bg-black flex flex-col p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-white font-black uppercase tracking-[0.3em] text-[10px]">Capturando {cameraMode === 'document' ? 'Documento' : 'Selfie'}</h3>
