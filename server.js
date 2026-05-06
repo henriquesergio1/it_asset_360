@@ -418,7 +418,7 @@ async function initializeDatabase() {
                         { name: 'SignatureSelfiePhoto', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' },
-                        { name: 'SignatureStatus', type: "NVARCHAR(50) DEFAULT 'WAITING_APPROVAL'" }
+                        { name: 'SignatureStatus', type: "NVARCHAR(50) NULL" }
                     ];
 
                     for (const col of signatureCols) {
@@ -428,6 +428,23 @@ async function initializeDatabase() {
                             await pool.request().query(`ALTER TABLE Terms ADD ${col.name} ${col.type}`);
                         }
                     }
+                    
+                    // Migração: Remover default e corrigir status
+                    try {
+                        const defaultCols = await pool.request().query(`
+                            SELECT d.name 
+                            FROM sys.default_constraints d 
+                            INNER JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id 
+                            WHERE d.parent_object_id = OBJECT_ID('Terms') AND c.name = 'SignatureStatus'
+                        `);
+                        if (defaultCols.recordset.length > 0) {
+                            await pool.request().query(`ALTER TABLE Terms DROP CONSTRAINT ${defaultCols.recordset[0].name}`);
+                        }
+                    } catch (e) {
+                        console.log('Erro ignorado de constraint:', e);
+                    }
+                    
+                    await pool.request().query("UPDATE Terms SET SignatureStatus = NULL WHERE SignatureDate IS NULL AND SignatureStatus = 'WAITING_APPROVAL'");
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
