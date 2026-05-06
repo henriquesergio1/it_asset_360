@@ -20,7 +20,8 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
 
   // Usa a primeira URL para determinar o tipo se não for múltiplo
   const primaryUrl = urls[0];
-  const isPDF = !isMultiple && (primaryUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || primaryUrl.startsWith('blob:'));
+  const isPDF = !isMultiple && (primaryUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || (primaryUrl.startsWith('blob:') && !fileName.toLowerCase().endsWith('.html')));
+  const isHTML = !isMultiple && (primaryUrl.includes('text/html') || fileName.toLowerCase().endsWith('.html'));
   const isImage = isMultiple || primaryUrl.startsWith('data:image/') || fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
 
   const handleDownload = () => {
@@ -158,6 +159,13 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
                   </button>
                 </div>
               </object>
+            ) : isHTML ? (
+              <iframe
+                src={primaryUrl}
+                className="w-full h-full rounded-lg bg-white border-0"
+                onLoad={() => setLoading(false)}
+                title="HTML Preview"
+              />
             ) : isImage ? (
               <div className="relative inline-block transition-transform duration-200 ease-out" style={{ transform: `scale(${scale})` }}>
                 <img 

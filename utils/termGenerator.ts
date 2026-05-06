@@ -96,10 +96,10 @@ const getFixedLayout = (
   `;
 };
 
-export const generateAndPrintTerm = ({ 
+export const getTermHtml = ({ 
   user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFiles,
   digitalSignature, docPhoto, selfiePhoto, signatureInfo
-}: GenerateTermProps) => {
+}: GenerateTermProps): string => {
   
   let config = {
     delivery: { declaration: '', clauses: '' },
@@ -139,8 +139,8 @@ export const generateAndPrintTerm = ({
 
   // 1. Tabela do Usuário
   let sectorCode = user.internalCode || '-';
-  if ('internalCode' in asset && asset.internalCode) {
-    sectorCode = asset.internalCode;
+  if ('internalCode' in asset && (asset as any).internalCode) {
+    sectorCode = (asset as any).internalCode;
   }
 
   const userTable = `
@@ -406,13 +406,7 @@ export const generateAndPrintTerm = ({
     `;
   }
 
-  const printWindow = window.open('', '_blank', 'width=1000,height=900');
-  if (!printWindow) {
-    alert('Permita popups para imprimir o termo.');
-    return;
-  }
-
-  const html = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -430,17 +424,33 @@ export const generateAndPrintTerm = ({
         ${finalHtml}
         ${legalEvidenceHtml}
         ${evidenceHtml}
-        <script>
-          window.onload = function() { 
-            setTimeout(function(){ 
-              window.print(); 
-            }, 800); 
-          }
-        </script>
       </body>
     </html>
   `;
+};
+
+export const generateAndPrintTerm = (props: GenerateTermProps) => {
+  const html = getTermHtml(props);
+  const printWindow = window.open('', '_blank', 'width=1000,height=900');
+  
+  if (!printWindow) {
+    alert('Permita popups para imprimir o termo.');
+    return;
+  }
 
   printWindow.document.write(html);
+  
+  // Script para auto-print
+  const printScript = `
+    <script>
+      window.onload = function() { 
+        setTimeout(function(){ 
+          window.print(); 
+        }, 800); 
+      }
+    </script>
+  `;
+  
+  printWindow.document.write(printScript);
   printWindow.document.close();
 };

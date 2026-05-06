@@ -20,7 +20,7 @@ import { DataTable, Column } from './DataTable';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
-import { generateAndPrintTerm } from '../utils/termGenerator';
+import { generateAndPrintTerm, getTermHtml } from '../utils/termGenerator';
 import FilePreviewModal from './FilePreviewModal';
 import { useRef } from 'react';
 
@@ -110,6 +110,8 @@ const UserManager: React.FC = () => {
     users, 
     sectors, 
     models, 
+    brands,
+    assetTypes,
     devices, 
     sims, 
     fetchData,
@@ -443,7 +445,7 @@ const UserManager: React.FC = () => {
   const handleViewTerm = async (term: Term) => {
     let url = term.fileUrl || (term as any).filebinary;
     
-    if (!url && term.hasFile) {
+    if (!url && !!term.hasFile) {
       try {
         url = await getTermFile(term.id);
       } catch (err) {
@@ -454,12 +456,68 @@ const UserManager: React.FC = () => {
     if (url && url !== '#') {
       setPreviewData({ 
         url, 
-        name: `termo_${term.type.toLowerCase()}_${editingId || 'document'}.${url.includes('pdf') ? 'pdf' : 'jpg'}` 
+        name: `termo_${term.type.toLowerCase()}_${editingId || 'document'}.${(url.includes('pdf') || url.includes('application/pdf')) ? 'pdf' : 'jpg'}` 
       });
       setIsPreviewOpen(true);
     } else {
-      // Se não tem arquivo, apenas abre o gerador de impressão como era antes ou informa
-      handleDownloadTerm(term);
+      // Se não tem arquivo assinado, vamos pré-visualizar o termo gerado agora
+      try {
+        const user = users.find(u => u.id === editingId);
+        if (!user) throw new Error("Usuário não encontrado");
+
+        let asset: any = null;
+        if (term.assetId) {
+          asset = devices.find(d => d.id === term.assetId) || sims.find(s => s.id === term.assetId);
+        }
+
+        if (!asset) {
+          // Fallback para tentar pelo serial ou outro dado se assetId falhar
+          asset = devices.find(d => (term.assetDetails || '').includes(d.serialNumber)) || 
+                  sims.find(s => (term.assetDetails || '').includes(s.phoneNumber));
+        }
+
+        if (!asset) {
+          // Se ainda não achar, abre o download/impressão legado
+          handleDownloadTerm(term);
+          return;
+        }
+
+        const model = models.find(m => m.id === asset.modelId);
+        const brand = brands.find(b => b.id === model?.brandId);
+        const type = assetTypes.find(t => t.id === model?.typeId);
+        const sector = sectors.find(s => s.id === user.sectorId);
+
+        // Gera o HTML do termo
+        const html = getTermHtml({
+          user,
+          asset,
+          settings,
+          model,
+          brand,
+          type,
+          actionType: term.type as any,
+          sectorName: sector?.name,
+          checklist: (term as any).checklist,
+          notes: term.notes,
+          digitalSignature: (term as any).digitalSignature || null,
+          docPhoto: (term as any).docPhoto || null,
+          selfiePhoto: (term as any).selfiePhoto || null,
+          signatureInfo: (term as any).signatureInfo || null
+        });
+
+        // Cria um Blob HTML para visualização
+        const blob = new Blob([html], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        setPreviewData({ 
+          url: blobUrl, 
+          name: `previa_termo_${term.type.toLowerCase()}_${editingId}.html` 
+        });
+        setIsPreviewOpen(true);
+      } catch (err) {
+        console.error("Erro na pré-visualização do termo:", err);
+        handleDownloadTerm(term);
+      }
     }
   };
 
@@ -1364,7 +1422,7 @@ const UserManager: React.FC = () => {
                             >
                               <Edit2 size={16} />
                             </button>
-                            {(term.fileUrl || term.hasFile) && (
+                            {!!(term.fileUrl || term.hasFile) && (
                               <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
@@ -1412,7 +1470,7 @@ const UserManager: React.FC = () => {
                              )}
 
                              {/* Evidências Jurídicas Avançadas */}
-                             {(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto) && (
+                             {!!(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto) && (
                                <div className="flex gap-2">
                                  <button 
                                    onClick={async (e) => {
