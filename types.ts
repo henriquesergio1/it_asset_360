@@ -175,6 +175,7 @@ export interface Term {
   hasSignatureCanvas?: boolean;
   hasSignaturePhoto?: boolean;
   hasSignatureSelfiePhoto?: boolean;
+  signatureStatus?: 'WAITING_APPROVAL' | 'APPROVED' | 'REJECTED';
 }
 
 export type ReturnChecklist = Record<string, boolean>;

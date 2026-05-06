@@ -618,6 +618,29 @@ const UserManager: React.FC = () => {
       if (!linkedSim && !isSim && asset && asset.linkedSimId) {
         linkedSim = sims.find(s => s.id === asset.linkedSimId);
       }
+
+      // Se for assinado digitalmente e APROVADO, busca dados para inclusão no PDF
+      let digitalSignature = null;
+      let docPhoto = null;
+      let selfiePhoto = null;
+      let signatureInfo = null;
+
+      if (term.signatureDate && (term.signatureStatus === 'APPROVED' || !term.signatureStatus)) {
+        try {
+          const res = await fetch(`/api/terms/${term.id}/signature-data`);
+          const data = await res.json();
+          digitalSignature = data.signatureCanvas;
+          docPhoto = data.documentPhoto;
+          selfiePhoto = data.selfiePhoto;
+          signatureInfo = {
+            date: term.signatureDate,
+            ip: term.signatureIp || '0.0.0.0',
+            locAddress: term.signatureLocation || 'Localização não informada',
+            token: term.signatureToken || 'TOKEN-LEGACY',
+            hash: term.signatureHash || 'HASH-LEGACY'
+          };
+        } catch(err) { console.error("Erro ao carregar dados da assinatura digital:", err); }
+      }
       
       generateAndPrintTerm({
         user,
@@ -630,7 +653,11 @@ const UserManager: React.FC = () => {
         notes: term.notes,
         condition: term.condition,
         damageDescription: term.damageDescription,
-        evidenceFiles: evidenceFiles
+        evidenceFiles: evidenceFiles,
+        digitalSignature,
+        docPhoto,
+        selfiePhoto,
+        signatureInfo
       });
     }
   };
@@ -680,6 +707,74 @@ const UserManager: React.FC = () => {
     if (editingId && window.confirm('Deseja realmente remover o arquivo deste termo? Esta ação permitirá o reenvio.')) {
       deleteTermFile(termId, editingId, 'Remoção de arquivo do termo para reenvio', authUser?.name || 'Admin');
     }
+  };
+
+  const handleApproveSignature = async (termId: string) => {
+    if(!window.confirm('Deseja aprovar esta assinatura digital?')) return;
+    try {
+      const res = await fetch(`/api/terms/${termId}/approve-signature`, { method: 'POST' });
+      if(res.ok) {
+        showToast('Assinatura aprovada com sucesso', 'success');
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      }
+    } catch(err) { console.error(err); }
+  };
+
+  const handleRejectSignature = async (termId: string) => {
+    if(!window.confirm('Deseja rejeitar esta assinatura? O colaborador precisará assinar novamente.')) return;
+    try {
+      const res = await fetch(`/api/terms/${termId}/reject-signature`, { method: 'POST' });
+      if(res.ok) {
+        showToast('Assinatura rejeitada', 'info');
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      }
+    } catch(err) { console.error(err); }
+  };
+
+  const renderSignatureStatus = (term: Term) => {
+    if (!term.signatureDate) return null;
+    
+    const status = term.signatureStatus || 'APPROVED';
+    
+    if (status === 'WAITING_APPROVAL') {
+      return (
+        <div className="flex flex-col gap-2 p-3 bg-blue-900/10 border border-blue-500/20 rounded-xl mt-2 animate-pulse">
+           <div className="flex items-center justify-between">
+             <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase">
+               <Clock size={12} /> Aguardando Validação
+             </div>
+             <div className="flex gap-2">
+               <button 
+                 onClick={(e) => { e.stopPropagation(); handleApproveSignature(term.id); }}
+                 className="p-1 px-2 bg-emerald-500 text-white rounded text-[9px] font-bold hover:bg-emerald-600 transition-all flex items-center gap-1"
+               >
+                 <Check size={10} /> Aprovar
+               </button>
+               <button 
+                 onClick={(e) => { e.stopPropagation(); handleRejectSignature(term.id); }}
+                 className="p-1 px-2 bg-red-500 text-white rounded text-[9px] font-bold hover:bg-red-600 transition-all flex items-center gap-1"
+               >
+                 <X size={10} /> Rejeitar
+               </button>
+             </div>
+           </div>
+        </div>
+      );
+    }
+    
+    if (status === 'REJECTED') {
+      return (
+        <div className="flex items-center gap-2 bg-red-900/10 border border-red-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-red-400 mt-2">
+          <AlertCircle size={10} /> Assinatura Rejeitada
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 bg-emerald-900/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-emerald-400 mt-2">
+        <ShieldCheck size={10} /> Digitalmente Validado
+      </div>
+    );
   };
 
   const columns: Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>[] = [
@@ -1225,9 +1320,11 @@ const UserManager: React.FC = () => {
                                 ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' 
                                 : (term.fileUrl || term.hasFile) 
                                   ? 'bg-emerald-900 text-emerald-400' 
-                                  : 'bg-orange-900 text-orange-400'
+                                  : term.signatureStatus === 'WAITING_APPROVAL'
+                                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 animate-pulse'
+                                    : 'bg-orange-900 text-orange-400'
                             }`} title={term.isManual ? `Resolvido Manualmente: ${term.resolutionReason || 'Sem motivo'}` : ''}>
-                              {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile ? 'Assinado' : 'Pendente')}
+                              {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile ? 'Assinado' : (term.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
                             </span>
                             {term.isManual && (
                               <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">Resolução Manual</div>
@@ -1294,9 +1391,7 @@ const UserManager: React.FC = () => {
                             )}
 
                              {term.signatureDate && (
-                               <div className="flex items-center gap-2 bg-emerald-900/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-emerald-400">
-                                 <ShieldCheck size={10} /> Assinado Digitalmente
-                               </div>
+                               renderSignatureStatus(term)
                              )}
 
                              {/* Evidências Jurídicas Avançadas */}

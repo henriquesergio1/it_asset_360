@@ -5,7 +5,7 @@ import {
   Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, 
   ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, 
   Info, Clock, X, ClipboardList, ChevronRight, Package, TrendingUp, 
-  Activity, CheckCircle2, LayoutDashboard
+  Activity, CheckCircle2, LayoutDashboard, FileSignature
 } from 'lucide-react';
 import { DeviceStatus, AccountType, Task, TaskStatus } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
@@ -62,6 +62,7 @@ const Dashboard = () => {
   } = useData();
   const { isAdmin, user: authUser } = useAuth();
   const [isTermsExpanded, setIsTermsExpanded] = useState(true);
+  const [isValidationExpanded, setIsValidationExpanded] = useState(true);
   const [isExpedienteExpanded, setIsExpedienteExpanded] = useState(true);
   const [isTasksExpanded, setIsTasksExpanded] = useState(true);
   const [isConsumablesExpanded, setIsConsumablesExpanded] = useState(true);
@@ -87,6 +88,16 @@ const Dashboard = () => {
         user: u
       }))
     ).sort((a, b) => new Date(b.term.date).getTime() - new Date(a.term.date).getTime());
+  }, [users]);
+
+  // Filtra assinaturas aguardando validação
+  const pendingApprovalSignatures = useMemo(() => {
+    return users.flatMap(u => 
+      (u.terms || []).filter(t => t.signatureStatus === 'WAITING_APPROVAL').map(t => ({
+        term: t,
+        user: u
+      }))
+    ).sort((a, b) => new Date(b.term.signatureDate || 0).getTime() - new Date(a.term.signatureDate || 0).getTime());
   }, [users]);
 
   // Alertas de Consumíveis
@@ -488,19 +499,26 @@ const Dashboard = () => {
                       
                       <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
                         {pendingTerms.slice(0, isTermsExpanded ? pendingTerms.length : 5).map(({term, user}) => {
+                          const isWaitingApproval = term.signatureStatus === 'WAITING_APPROVAL';
                           return (
-                            <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-orange-900/30 flex flex-col gap-2 group hover:border-orange-700 transition-all">
+                            <div key={term.id} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-900/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 rounded-full bg-orange-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-orange-400">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isWaitingApproval ? 'bg-blue-600 text-white shadow-lg' : 'bg-orange-900/40 text-orange-400'}`}>
                                     {user.fullName.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
-                                      <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0">
-                                        Pendente
-                                      </span>
+                                      {isWaitingApproval ? (
+                                        <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-500/30">
+                                          Assinado (Validar)
+                                        </span>
+                                      ) : (
+                                        <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0">
+                                          Pendente
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                       <button 
@@ -512,10 +530,9 @@ const Dashboard = () => {
                                       </button>
                                       <Link 
                                         to={`/users?userId=${user.id}&tab=terms`}
-                                        className="p-1.5 hover:bg-orange-900/40 text-slate-400 hover:text-orange-400 rounded-lg transition-colors"
-                                        title="Ver detalhes do termo e colaborador"
+                                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-3 text-[10px] font-black uppercase ${isWaitingApproval ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' : 'hover:bg-orange-900/40 text-slate-400 hover:text-orange-400'}`}
                                       >
-                                        <FileText size={16} />
+                                        {isWaitingApproval ? <>Analisar <ArrowRight size={14} /></> : <FileText size={16} />}
                                       </Link>
                                     </div>
                                   </div>
@@ -540,6 +557,71 @@ const Dashboard = () => {
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 4º Alerta de Assinaturas Aguardando Validação */}
+              {pendingApprovalSignatures.length > 0 && (
+                <div className="bg-slate-900 border-l-4 border-l-blue-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-900/30 text-blue-400 rounded-lg shrink-0">
+                      <FileSignature size={20} />
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-center mb-1">
+                        <h3 className="text-sm font-bold text-slate-100">
+                          Validações Pendentes
+                          <span className="ml-2 bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                            {pendingApprovalSignatures.length}
+                          </span>
+                        </h3>
+                        <button 
+                          onClick={() => setIsValidationExpanded(!isValidationExpanded)}
+                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                        >
+                          {isValidationExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Assinaturas digitais que aguardam aprovação do jurídico/TI.
+                      </p>
+                      
+                      <div className={`space-y-3 transition-all duration-300 ${isValidationExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
+                        {pendingApprovalSignatures.map(({term, user}) => (
+                            <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-blue-900/30 flex flex-col gap-2 group hover:border-blue-700 transition-all">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 rounded-full bg-blue-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-blue-400">
+                                    {user.fullName.charAt(0)}
+                                  </div>
+                                  <div className="flex-1 flex items-center justify-between min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                      <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
+                                      <span className="bg-blue-900/20 text-blue-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 animate-pulse">
+                                        Validar
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Link 
+                                        to={`/users?userId=${user.id}&tab=terms`}
+                                        className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-400 transition-all text-[10px] font-black uppercase flex items-center gap-2 px-3"
+                                      >
+                                        Analisar <ArrowRight size={14} />
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
+                                <span className="uppercase tracking-tighter truncate flex-1" title={term.assetDetails}>{term.assetDetails}</span>
+                                <span className="text-slate-600 shrink-0">|</span>
+                                <span className="uppercase tracking-tighter shrink-0">Assinado em: {new Date(term.signatureDate!).toLocaleString('pt-BR')}</span>
+                              </div>
+                            </div>
+                        ))}
                       </div>
                     </div>
                   </div>

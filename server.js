@@ -417,7 +417,8 @@ async function initializeDatabase() {
                         { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureSelfiePhoto', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
-                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' }
+                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SignatureStatus', type: "NVARCHAR(50) DEFAULT 'WAITING_APPROVAL'" }
                     ];
 
                     for (const col of signatureCols) {
@@ -427,6 +428,9 @@ async function initializeDatabase() {
                             await pool.request().query(`ALTER TABLE Terms ADD ${col.name} ${col.type}`);
                         }
                     }
+                    
+                    // Migração: Termos já assinados mas sem status definido (nulos) devem ir para WAITING_APPROVAL
+                    await pool.request().query("UPDATE Terms SET SignatureStatus = 'WAITING_APPROVAL' WHERE SignatureDate IS NOT NULL AND (SignatureStatus IS NULL OR SignatureStatus = 'APPROVED')");
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
@@ -642,7 +646,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.37.4', 
+            version: '3.37.6', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -685,7 +689,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -732,7 +736,7 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -1516,7 +1520,8 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                         SignatureDocumentPhoto = @Photo,
                         SignatureSelfiePhoto = @Selfie,
                         SignatureHash = @Hash,
-                        Notes = @Notes
+                        Notes = @Notes,
+                        SignatureStatus = 'WAITING_APPROVAL'
                     WHERE SignatureToken = @Token
                 `);
 
@@ -1542,6 +1547,37 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 documentPhoto: row.SignatureDocumentPhoto ? getBase64FromBuffer(row.SignatureDocumentPhoto) : null,
                 selfiePhoto: row.SignatureSelfiePhoto ? getBase64FromBuffer(row.SignatureSelfiePhoto) : null
             });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/terms/:id/approve-signature', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('Id', sql.Int, req.params.id)
+                .query("UPDATE Terms SET SignatureStatus = 'APPROVED' WHERE Id = @Id");
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/terms/:id/reject-signature', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('Id', sql.Int, req.params.id)
+                .query(`
+                    UPDATE Terms SET 
+                        SignatureStatus = 'REJECTED',
+                        SignatureDate = NULL,
+                        SignatureIp = NULL,
+                        SignatureLocation = NULL,
+                        SignatureCanvasBinary = NULL,
+                        SignatureDocumentPhoto = NULL,
+                        SignatureSelfiePhoto = NULL,
+                        SignatureHash = NULL
+                    WHERE Id = @Id
+                `);
+            res.json({ success: true });
         } catch (err) { res.status(500).send(err.message); }
     });
 

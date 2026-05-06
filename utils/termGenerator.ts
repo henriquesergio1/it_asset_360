@@ -16,6 +16,16 @@ interface GenerateTermProps {
   condition?: string;
   damageDescription?: string;
   evidenceFiles?: string[];
+  digitalSignature?: string | null;
+  docPhoto?: string | null;
+  selfiePhoto?: string | null;
+  signatureInfo?: {
+    date: string;
+    ip: string;
+    locAddress: string;
+    token: string;
+    hash: string;
+  } | null;
 }
 
 // Layout Fixo Profissional Otimizado para A4 (Versão 2.10.15 - Bold Label & Smart Field)
@@ -87,7 +97,8 @@ const getFixedLayout = (
 };
 
 export const generateAndPrintTerm = ({ 
-  user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFiles
+  user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFiles,
+  digitalSignature, docPhoto, selfiePhoto, signatureInfo
 }: GenerateTermProps) => {
   
   let config = {
@@ -266,14 +277,76 @@ export const generateAndPrintTerm = ({
       <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São José dos Campos, ${today}</p>
       
       <div style="width: 60%; margin: 0 auto; text-align: center;">
+        ${digitalSignature ? `
+          <div style="margin-bottom: -20px; position: relative; z-index: 2;">
+            <img src="${digitalSignature}" style="max-height: 80px; max-width: 100%; object-fit: contain;" alt="Assinatura Digital"/>
+          </div>
+        ` : ''}
         <div style="border-top: 1.5px solid #000; padding-top: 6px;">
           <strong style="font-size: 11px; color: #000; text-transform: uppercase;">${user.fullName}</strong><br>
           <span style="font-size: 9px; color: #000; font-weight: bold;">Assinatura do Colaborador</span><br>
           <span style="font-size: 9px; color: #000; font-family: monospace;">Documento de Identificação (CPF): ${user.cpf}</span>
+          ${signatureInfo ? `
+            <div style="margin-top: 5px; font-size: 7px; color: #475569; text-align: center; border: 1px dashed #cbd5e1; padding: 4px; border-radius: 4px; background: #f8fafc;">
+              <strong>AUTENTICAÇÃO DIGITAL:</strong> ${signatureInfo.hash.toUpperCase()}<br>
+              IP: ${signatureInfo.ip} | DATA: ${new Date(signatureInfo.date).toLocaleString('pt-BR')}<br>
+              LOCAL: ${signatureInfo.locAddress}
+            </div>
+          ` : ''}
         </div>
       </div>
     </div>
   `;
+
+  // 4. Página de Evidências Jurídicas (Documento + Selfie)
+  let legalEvidenceHtml = '';
+  if (docPhoto || selfiePhoto) {
+    legalEvidenceHtml = `
+      <div style="page-break-before: always; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; padding: 10px 30px;">
+        <h2 style="font-size: 14px; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 25px; color: #1e293b;">
+          Anexo de Validação: Identidade Digital
+        </h2>
+        
+        <p style="font-size: 10px; color: #64748b; margin-bottom: 20px; text-align: justify; line-height: 1.4;">
+          As imagens abaixo foram capturadas no ato da assinatura digital e servem como prova de autoria e integridade deste documento, em conformidade com as políticas de segurança de TI da <strong>${settings.appName || 'empresa'}</strong>.
+        </p>
+
+        <div style="display: flex; gap: 30px; justify-content: center; align-items: start;">
+          ${docPhoto ? `
+            <div style="width: 45%; text-align: center;">
+              <div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #fff; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <img src="${docPhoto}" style="width: 100%; max-height: 400px; border-radius: 8px; object-fit: contain;" alt="Foto do Documento"/>
+              </div>
+              <p style="font-size: 10px; font-weight: bold; margin-top: 10px; text-transform: uppercase; color: #475569;">Documento de Identidade</p>
+            </div>
+          ` : ''}
+          
+          ${selfiePhoto ? `
+            <div style="width: 45%; text-align: center;">
+              <div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 10px; background: #fff; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <img src="${selfiePhoto}" style="width: 100%; max-height: 400px; border-radius: 8px; object-fit: contain;" alt="Selfie de Validação"/>
+              </div>
+              <p style="font-size: 10px; font-weight: bold; margin-top: 10px; text-transform: uppercase; color: #475569;">Selfie do Colaborador</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="margin-top: 40px; padding: 15px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0;">
+          <h4 style="margin: 0 0 8px 0; font-size: 9px; text-transform: uppercase; color: #334155;">Informações de Rastreabilidade</h4>
+          <table style="width: 100%; font-size: 8px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 4px 0; border-bottom: 1px solid #cbd5e1; color: #64748b;"><strong>Token:</strong> ${signatureInfo?.token || 'N/A'}</td>
+              <td style="padding: 4px 0; border-bottom: 1px solid #cbd5e1; color: #64748b;"><strong>Hash SHA-256:</strong> ${signatureInfo?.hash || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; color: #64748b;"><strong>IP Origem:</strong> ${signatureInfo?.ip || 'N/A'}</td>
+              <td style="padding: 4px 0; color: #64748b;"><strong>Data/Hora:</strong> ${signatureInfo?.date ? new Date(signatureInfo.date).toLocaleString('pt-BR') : 'N/A'}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    `;
+  }
 
   const finalHtml = getFixedLayout(settings, {
     headerTitle: actionType === 'ENTREGA' ? 'Termo de Responsabilidade' : 'Termo de Devolução',
@@ -355,6 +428,7 @@ export const generateAndPrintTerm = ({
       </head>
       <body>
         ${finalHtml}
+        ${legalEvidenceHtml}
         ${evidenceHtml}
         <script>
           window.onload = function() { 
