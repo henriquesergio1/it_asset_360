@@ -117,6 +117,7 @@ const DB_SCHEMAS = {
         SignatureDate DATETIME NULL,
         SignatureLocation NVARCHAR(MAX) NULL,
         SignatureDocumentPhoto VARBINARY(MAX) NULL,
+        SignatureSelfiePhoto VARBINARY(MAX) NULL,
         SignatureCanvasBinary VARBINARY(MAX) NULL,
         SignatureHash NVARCHAR(MAX) NULL
     )`,
@@ -407,21 +408,24 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Terms ADD AssetId NVARCHAR(255) NULL, AssetType NVARCHAR(100) NULL');
                     }
 
-                    // v3.36.0 - Colunas para Assinatura Digital
-                    const checkSigToken = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = 'SignatureToken'`);
-                    if (checkSigToken.recordset.length === 0) {
-                        console.log('- Adicionando colunas de Assinatura Digital em Terms...');
-                        await pool.request().query(`
-                            ALTER TABLE Terms ADD 
-                            SignatureToken NVARCHAR(255) NULL,
-                            SignatureIp NVARCHAR(50) NULL,
-                            SignatureDate DATETIME NULL,
-                            SignatureLocation NVARCHAR(MAX) NULL,
-                            SignatureDocumentPhoto VARBINARY(MAX) NULL,
-                            SignatureSelfiePhoto VARBINARY(MAX) NULL,
-                            SignatureCanvasBinary VARBINARY(MAX) NULL,
-                            SignatureHash NVARCHAR(MAX) NULL
-                        `);
+                    // v3.36.0 - Colunas para Assinatura Digital (Granular)
+                    const signatureCols = [
+                        { name: 'SignatureToken', type: 'NVARCHAR(255) NULL' },
+                        { name: 'SignatureIp', type: 'NVARCHAR(50) NULL' },
+                        { name: 'SignatureDate', type: 'DATETIME NULL' },
+                        { name: 'SignatureLocation', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureSelfiePhoto', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' }
+                    ];
+
+                    for (const col of signatureCols) {
+                        const checkCol = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Terms' AND COLUMN_NAME = '${col.name}'`);
+                        if (checkCol.recordset.length === 0) {
+                            console.log(`- Adicionando coluna faltante ${col.name} em Terms...`);
+                            await pool.request().query(`ALTER TABLE Terms ADD ${col.name} ${col.type}`);
+                        }
                     }
                 }
                 if (table === 'AssetTypes') {
@@ -638,7 +642,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.36.5', 
+            version: '3.37.1', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
