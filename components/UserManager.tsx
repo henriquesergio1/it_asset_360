@@ -259,7 +259,7 @@ const UserManager: React.FC = () => {
 
     if (showPendingOnly) {
       // Se estiver no modo de termos pendentes, mostra todos (ativos, inativos, afastados) que tenham pendência
-      result = result.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile));
+      result = result.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED'));
     } else {
       // Caso contrário, aplica o filtro de status (Ativos/Inativos/Afastados)
       result = result.filter(u => {
@@ -504,7 +504,8 @@ const UserManager: React.FC = () => {
           digitalSignature: (term as any).digitalSignature || (hasSignatureInfo ? (term as any).digitalSignature : null),
           docPhoto: (term as any).docPhoto || null,
           selfiePhoto: (term as any).selfiePhoto || null,
-          signatureInfo: (term as any).signatureInfo || null
+          signatureInfo: (term as any).signatureInfo || null,
+          evidenceFiles: (term as any).evidenceFiles || []
         });
 
         const blob = new Blob([html], { type: 'text/html' });
@@ -942,7 +943,7 @@ const UserManager: React.FC = () => {
         <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-orange-500/30 group">
           <div>
             <span className="text-[11px] font-black text-orange-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Termos Pend.</span>
-            <p className="text-2xl font-black text-slate-100">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}</p>
+            <p className="text-2xl font-black text-slate-100">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}</p>
           </div>
           <div className="h-12 w-12 bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-400 border border-orange-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
         </div>
@@ -975,7 +976,7 @@ const UserManager: React.FC = () => {
         >
           Termos Pendentes
           <span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">
-            {users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile)).length}
+            {users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}
           </span>
         </button>
       </div>
@@ -1036,7 +1037,7 @@ const UserManager: React.FC = () => {
           onSelectAll={handleSelectAll}
           renderRow={(u) => {
             const sector = sectors.find(s => s.id === u.sectorId);
-            const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile);
+            const hasPending = (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED');
 
             return (
               <tr 
