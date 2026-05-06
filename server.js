@@ -642,7 +642,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.37.1', 
+            version: '3.37.2', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1423,15 +1423,36 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             if (!term) return res.status(404).send("Termo não encontrado ou link expirado");
             if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado digitalmente");
 
-            // Buscar declarações e cláusulas do template
-            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate FROM SystemSettings");
+            // Buscar declarações e cláusulas do template e dados da empresa
+            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate, AppName, Cnpj FROM SystemSettings");
             const settings = settingsRes.recordset[0];
             let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
+            
             try {
                 if (settings && settings.TermTemplate) {
                     template = JSON.parse(settings.TermTemplate);
                 }
             } catch (e) {}
+
+            const selectedTemplate = term.Type === 'ENTREGA' ? template.delivery : template.return;
+            const companyName = settings?.AppName || 'A Empresa';
+            const companyCnpj = settings?.Cnpj || '00.000.000/0000-00';
+
+            // Processar tags nas strings do template
+            const processTags = (text) => {
+                if (!text) return '';
+                return text
+                    .replace(/\{NOME_EMPRESA\}/g, companyName)
+                    .replace(/\{CNPJ\}/g, companyCnpj)
+                    .replace(/\{NOME_COLABORADOR\}/g, term.UserName)
+                    .replace(/\{CPF_COLABORADOR\}/g, term.UserCpf)
+                    .replace(/\{DATA\}/g, new Date(term.Date).toLocaleDateString('pt-BR'));
+            };
+
+            const finalizedTemplate = {
+                declaration: processTags(selectedTemplate.declaration),
+                clauses: processTags(selectedTemplate.clauses)
+            };
 
             res.json({
                 id: term.Id,
@@ -1442,7 +1463,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
                 accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
-                template: term.Type === 'ENTREGA' ? template.delivery : template.return
+                template: finalizedTemplate
             });
         } catch (err) { res.status(500).send(err.message); }
     });

@@ -143,6 +143,11 @@ const DigitalSignature = () => {
             <div className="w-full max-w-xl space-y-6 pt-4 pb-20">
                 
                 {/* Header Contexto */}
+                <style dangerouslySetInnerHTML={{ __html: `
+                    .html-content h3 { font-size: 13px; font-weight: 900; color: #f8fafc; margin-top: 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+                    .html-content strong { color: #fff; font-weight: 700; }
+                    .html-content br { margin-bottom: 8px; }
+                `}} />
                 <div className="text-center mb-8">
                     <p className="text-blue-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Segurança Jurídica IT 360</p>
                     <h1 className="text-2xl font-black tracking-tight">{step === 1 ? 'Leia o Contrato' : step === 2 ? 'Foto do Documento' : step === 3 ? 'Sua Selfie' : 'Assinatura'}</h1>
@@ -182,7 +187,10 @@ const DigitalSignature = () => {
 
                                     <div className="space-y-3">
                                         <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Declaração de Recebimento</h3>
-                                        <p className="text-xs text-slate-300 leading-relaxed italic">{termData.template?.declaration}</p>
+                                        <div 
+                                            className="text-xs text-slate-300 leading-relaxed italic"
+                                            dangerouslySetInnerHTML={{ __html: termData.template?.declaration }}
+                                        />
                                     </div>
 
                                     <div className="bg-slate-800/20 p-4 rounded-2xl border border-slate-700/30">
@@ -199,9 +207,10 @@ const DigitalSignature = () => {
 
                                     <div className="space-y-4 pt-4 border-t border-white/5">
                                         <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Cláusulas e Condições</h3>
-                                        <div className="text-[11px] text-slate-400 leading-relaxed whitespace-pre-wrap font-medium">
-                                            {termData.template?.clauses}
-                                        </div>
+                                        <div 
+                                            className="text-[11px] text-slate-400 leading-relaxed whitespace-pre-wrap font-medium html-content"
+                                            dangerouslySetInnerHTML={{ __html: termData.template?.clauses }}
+                                        />
                                     </div>
                                 </div>
                             </div>
