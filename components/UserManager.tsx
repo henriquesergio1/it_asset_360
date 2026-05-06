@@ -101,7 +101,7 @@ const UserManager: React.FC = () => {
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<{ [key: string]: boolean }>({});
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewData, setPreviewData] = useState({ url: '', name: '' });
+  const [previewData, setPreviewData] = useState<{ url: string | string[]; name: string }>({ url: '', name: '' });
   const [generatedSignatureLink, setGeneratedSignatureLink] = useState<string | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
@@ -739,7 +739,7 @@ const UserManager: React.FC = () => {
     if (status === 'WAITING_APPROVAL') {
       return (
         <div className="flex flex-col gap-1 items-center animate-pulse">
-           <div className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/10">
+           <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/10">
               Validar Assinatura
            </div>
            <div className="flex gap-2 mt-1">
@@ -763,7 +763,7 @@ const UserManager: React.FC = () => {
     if (status === 'REJECTED') {
       return (
         <div className="flex flex-col items-center gap-0.5">
-          <div className="bg-red-600/20 text-red-400 border border-red-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+          <div className="bg-red-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/10">
             Rejeitada
           </div>
           <span className="text-[8px] text-red-500/70 font-bold uppercase">Repetir Processo</span>
@@ -773,7 +773,7 @@ const UserManager: React.FC = () => {
 
     return (
       <div className="flex flex-col items-center gap-0.5">
-        <div className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+        <div className="bg-emerald-600 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10">
           Validado
         </div>
         <span className="text-[8px] text-emerald-500/70 font-bold uppercase">Digitalmente</span>
@@ -1319,14 +1319,14 @@ const UserManager: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                            <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-lg ${
                               term.isManual 
-                                ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' 
-                                : (term.fileUrl || term.hasFile) 
-                                  ? 'bg-emerald-900 text-emerald-400' 
-                                  : (term.signatureStatus === 'APPROVED' || !term.signatureStatus)
-                                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                                    : 'bg-orange-900 text-orange-400'
+                                ? 'bg-orange-600 text-white shadow-orange-500/20' 
+                                : (term.fileUrl || term.hasFile || (term.signatureDate && term.signatureStatus === 'APPROVED')) 
+                                  ? 'bg-emerald-600 text-white shadow-emerald-500/20' 
+                                  : term.signatureStatus === 'WAITING_APPROVAL'
+                                    ? 'bg-blue-600 text-white animate-pulse shadow-blue-500/20'
+                                    : 'bg-orange-600 text-white shadow-orange-500/20'
                             }`} title={term.isManual ? `Resolvido Manualmente: ${term.resolutionReason || 'Sem motivo'}` : ''}>
                               {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile || (term.signatureDate && term.signatureStatus === 'APPROVED') ? 'Assinado' : (term.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
                             </span>
@@ -1374,25 +1374,38 @@ const UserManager: React.FC = () => {
                                 <Eye size={16} />
                               </button>
                             )}
-                            <button 
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
-                              className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
-                              title={term.fileUrl || term.hasFile ? 'Baixar Assinado' : 'Gerar Termo'}
-                            >
-                              <Download size={16} />
-                            </button>
+                             {term.signatureDate && (
+                               <button 
+                                 type="button"
+                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
+                                 className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                 title="Visualizar Comprovante Digital"
+                               >
+                                 <Eye size={16} />
+                               </button>
+                             )}
 
-                            {!(term.fileUrl || term.hasFile) && !term.signatureDate && (
-                              <button 
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(term.id); }}
-                                className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:text-blue-300 transition-all border border-blue-900/40"
-                                title="Gerar Link de Assinatura"
-                              >
-                                <Share2 size={16} />
-                              </button>
-                            )}
+                             {!(term.fileUrl || term.hasFile) && !term.signatureDate && (
+                               <div className="flex gap-2">
+                                 <button 
+                                   type="button"
+                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
+                                   className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
+                                   title="Gerar Termo"
+                                 >
+                                   <Download size={16} />
+                                 </button>
+
+                                 <button 
+                                   type="button"
+                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(term.id); }}
+                                   className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:text-blue-300 transition-all border border-blue-900/40"
+                                   title="Gerar Link de Assinatura"
+                                 >
+                                   <Share2 size={16} />
+                                 </button>
+                               </div>
+                             )}
 
                              {term.signatureDate && (
                                renderSignatureStatus(term)
@@ -1407,18 +1420,18 @@ const UserManager: React.FC = () => {
                                      try {
                                        const res = await fetch(`/api/terms/${term.id}/signature-data`);
                                        const data = await res.json();
-                                       // Abre a foto do documento por padrão se existir
-                                       if(data.documentPhoto) {
-                                         setPreviewData({ url: data.documentPhoto, name: `DOC_${term.id}.jpg` });
-                                         setIsPreviewOpen(true);
-                                       } else if(data.selfiePhoto) {
-                                         setPreviewData({ url: data.selfiePhoto, name: `SELFIE_${term.id}.jpg` });
+                                       const evidenceUrls = [];
+                                       if(data.documentPhoto) evidenceUrls.push(data.documentPhoto);
+                                       if(data.selfiePhoto) evidenceUrls.push(data.selfiePhoto);
+                                       
+                                       if(evidenceUrls.length > 0) {
+                                         setPreviewData({ url: evidenceUrls, name: `EVIDENCIAS_${term.id}.jpg` });
                                          setIsPreviewOpen(true);
                                        }
                                      } catch(err) { console.error(err); }
                                    }}
                                    className="p-1.5 bg-slate-900 border border-slate-700/50 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
-                                   title="Ver Evidências de Identidade"
+                                   title="Ver Evidências de Identidade (Doc + Selfie)"
                                  >
                                    <Camera size={14} className="text-blue-400" />
                                    <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>

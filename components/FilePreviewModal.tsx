@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface FilePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fileUrl: string;
+  fileUrl: string | string[]; // Suporte para um ou mais arquivos
   fileName: string;
 }
 
@@ -15,16 +15,23 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
 
   if (!isOpen) return null;
 
-  const isPDF = fileUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || fileUrl.startsWith('blob:');
-  const isImage = fileUrl.startsWith('data:image/') || fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
+  const urls = Array.isArray(fileUrl) ? fileUrl : [fileUrl];
+  const isMultiple = urls.length > 1;
+
+  // Usa a primeira URL para determinar o tipo se não for múltiplo
+  const primaryUrl = urls[0];
+  const isPDF = !isMultiple && (primaryUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || primaryUrl.startsWith('blob:'));
+  const isImage = isMultiple || primaryUrl.startsWith('data:image/') || fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    urls.forEach((url, index) => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = urls.length > 1 ? `${index + 1}_${fileName}` : fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   };
 
   return (
@@ -57,12 +64,14 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               </div>
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-slate-100 truncate uppercase tracking-widest">{fileName}</h3>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter shrink-0">Pré-visualização do documento</p>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter shrink-0">
+                  {isMultiple ? `Visualizando ${urls.length} arquivos` : 'Pré-visualização do documento'}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {isImage && (
+              {isImage && !isMultiple && (
                 <>
                   <button 
                     onClick={() => setScale(s => Math.max(0.5, s - 0.2))}
@@ -91,7 +100,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               <button 
                 onClick={handleDownload}
                 className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/20 rounded-lg transition-all flex items-center gap-2"
-                title="Baixar Arquivo"
+                title="Baixar Arquivo(s)"
               >
                 <Download size={18} />
                 <span className="hidden sm:inline text-[10px] font-black uppercase">Baixar</span>
@@ -107,7 +116,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
           </div>
 
           {/* Content Body */}
-          <div className="flex-1 overflow-auto bg-slate-950 p-4 flex items-center justify-center relative custom-scrollbar">
+          <div className="flex-1 overflow-auto bg-slate-950 p-4 flex flex-col items-center gap-6 relative custom-scrollbar">
             {loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 bg-slate-950">
                 <Loader2 size={40} className="text-emerald-500 animate-spin" />
@@ -115,9 +124,25 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               </div>
             )}
 
-            {isPDF ? (
+            {isMultiple ? (
+              <div className="w-full flex flex-col gap-8 py-4 items-center">
+                {urls.map((url, i) => (
+                  <div key={i} className="flex flex-col items-center gap-3 w-full max-w-4xl">
+                    <span className="bg-slate-800 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                       Arquivo {i + 1}
+                    </span>
+                    <img 
+                      src={url} 
+                      alt={`Evidence ${i + 1}`}
+                      className="w-full h-auto rounded-xl shadow-2xl border border-slate-800"
+                      onLoad={() => i === urls.length - 1 && setLoading(false)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : isPDF ? (
               <object
-                data={fileUrl}
+                data={primaryUrl}
                 type="application/pdf"
                 className="w-full h-full rounded-lg"
                 onLoad={() => setLoading(false)}
@@ -136,14 +161,14 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
             ) : isImage ? (
               <div className="relative inline-block transition-transform duration-200 ease-out" style={{ transform: `scale(${scale})` }}>
                 <img 
-                  src={fileUrl} 
+                  src={primaryUrl} 
                   alt={fileName} 
                   className="max-w-full max-h-full rounded-lg shadow-2xl"
                   onLoad={() => setLoading(false)}
                 />
               </div>
             ) : (
-              <div className="text-center p-10">
+              <div className="text-center p-10 w-full h-full flex flex-col items-center justify-center">
                 <AlertCircle size={48} className="mx-auto text-red-500 mb-4 opacity-50" />
                 <p className="text-slate-300 font-bold mb-4">Formato de arquivo não suportado para visualização direta.</p>
                 <button 
@@ -157,7 +182,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
           </div>
 
           {/* Footer - Info */}
-          <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center">
+          <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center shrink-0">
              <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase">
                 <span className="flex items-center gap-1.5"><Maximize2 size={12}/> Suporte a Zoom</span>
                 <span className="flex items-center gap-1.5"><FileText size={12}/> PDF / Imagem</span>
@@ -169,5 +194,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
     </AnimatePresence>
   );
 };
+
 
 export default FilePreviewModal;
