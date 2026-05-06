@@ -464,48 +464,138 @@ const UserManager: React.FC = () => {
     } else {
       // Caso contrário, gera a pré-visualização HTML dinâmica usando os dados de assinatura se houver
       try {
-        const user = users.find(u => u.id === editingId);
+        const user = users.find(u => u.id === editingId || u.id === term.userId);
         if (!user) throw new Error("Usuário não encontrado");
 
+        let evidenceFiles = term.evidenceFiles || [];
+        if (evidenceFiles.length === 0 && term.hasEvidence) {
+          try {
+            evidenceFiles = await getTermEvidences(term.id);
+          } catch (err) {
+            console.error("Erro ao buscar evidências do termo:", err);
+          }
+        }
+        
+        const isSim = term.assetDetails.includes('[CHIP:');
         let asset: any = null;
-        if (term.assetId) {
-          asset = devices.find(d => d.id === term.assetId) || sims.find(s => s.id === term.assetId);
+        let modelData: any = null;
+        let modelName = '';
+        
+        const rawAssetId = (term as any).assetId;
+        const rawAssetType = (term as any).assetType;
+
+        if (isSim || rawAssetType === 'Sim' || term.assetDetails.includes('[CHIP:')) {
+          const contentMatch = term.assetDetails.match(/\[CHIP:\s*(.*?)\]/);
+          const content = contentMatch ? contentMatch[1] : '';
+          const parts = content.split('|').map(p => p.trim());
+          let phoneNumber = parts[0] || '';
+          if (!phoneNumber && term.assetDetails.includes('CHIP:')) {
+            phoneNumber = term.assetDetails.split('CHIP:')[1].trim().replace(']', '');
+          }
+
+          const realSim = sims.find(s => s.id === rawAssetId || (phoneNumber && s.phoneNumber === phoneNumber));
+          if (realSim) {
+            asset = { ...realSim };
+          } else {
+            asset = term.linkedSim || {
+              operator: 'Operadora',
+              iccid: 'N/A',
+              phoneNumber: phoneNumber || 'N/A'
+            };
+          }
+        } else {
+          const contentMatch = term.assetDetails.match(/\[(.*?)\s*-\s*(.*?)\]/);
+          let assetTag = '';
+          let serialNumber = '';
+          let imei = '';
+          if (contentMatch) {
+            const p1 = contentMatch[1].trim();
+            const p2 = contentMatch[2].trim();
+            if (p1.length > 5) { serialNumber = p1; assetTag = p2; }
+            else { assetTag = p1; serialNumber = p2; }
+          } else {
+            serialNumber = term.assetDetails;
+          }
+          
+          if (term.assetDetails.includes('IMEI:')) {
+            imei = term.assetDetails.split('IMEI:')[1].split('|')[0].trim();
+          }
+
+          const realDevice = devices.find(d => 
+            d.id === rawAssetId || 
+            (serialNumber && d.serialNumber === serialNumber) || 
+            (assetTag && d.assetTag === assetTag)
+          );
+
+          if (realDevice) {
+            asset = { ...realDevice };
+            if (term.accessories && term.accessories.length > 0) {
+              asset.accessories = term.accessories;
+            }
+            modelData = models.find(m => m.id === realDevice.modelId);
+          } else {
+            asset = {
+              assetTag: assetTag || 'Desconhecido',
+              serialNumber: serialNumber || 'Não Localizado',
+              imei: imei || '',
+              accessories: term.accessories || []
+            };
+          }
         }
 
-        if (!asset) {
-          asset = devices.find(d => (term.assetDetails || '').includes(d.serialNumber)) || 
-                  sims.find(s => (term.assetDetails || '').includes(s.phoneNumber));
-        }
-
-        if (!asset) {
-          handleDownloadTerm(term);
-          return;
-        }
-
-        const model = models.find(m => m.id === asset.modelId);
-        const brand = brands.find(b => b.id === model?.brandId);
-        const type = assetTypes.find(t => t.id === model?.typeId);
         const sector = sectors.find(s => s.id === user.sectorId);
+
+        let linkedSim = term.linkedSim;
+        if (!linkedSim && !isSim && asset && asset.linkedSimId) {
+          linkedSim = sims.find(s => s.id === asset.linkedSimId);
+        }
 
         // Se o termo estiver aprovado ou tiver data de assinatura, ele DEVE mostrar a assinatura
         const hasSignatureInfo = !!(term.signatureDate || term.signatureStatus === 'APPROVED');
+        let digitalSignature = (term as any).digitalSignature;
+        let docPhoto = (term as any).docPhoto;
+        let selfiePhoto = (term as any).selfiePhoto;
+        let signatureInfo = (term as any).signatureInfo;
+
+        // Se tiver informação de assinatura mas não tiver os dados binários no objeto term, busca na API
+        if (hasSignatureInfo && !digitalSignature) {
+          try {
+            const response = await fetch(`/api/terms/${term.id}/signature-data`);
+            if (response.ok) {
+              const sigData = await response.json();
+              digitalSignature = sigData.signatureCanvas;
+              docPhoto = sigData.documentPhoto;
+              selfiePhoto = sigData.selfiePhoto;
+              signatureInfo = {
+                date: term.signatureDate,
+                ip: term.signatureIp || '0.0.0.0',
+                locAddress: term.signatureLocation || 'Localização não informada',
+                token: term.signatureToken || 'TOKEN-LEGACY',
+                hash: term.signatureHash || 'HASH-LEGACY'
+              };
+            }
+          } catch (err) {
+            console.error("Erro ao buscar dados de assinatura:", err);
+          }
+        }
 
         const html = getTermHtml({
           user,
           asset,
           settings,
-          model,
-          brand,
-          type,
-          actionType: term.type as any,
+          model: modelData || { name: modelName },
+          actionType: term.type as 'ENTREGA' | 'DEVOLUCAO',
           sectorName: sector?.name,
+          linkedSim,
           checklist: (term as any).checklist,
           notes: term.notes,
-          digitalSignature: (term as any).digitalSignature || (hasSignatureInfo ? (term as any).digitalSignature : null),
-          docPhoto: (term as any).docPhoto || null,
-          selfiePhoto: (term as any).selfiePhoto || null,
-          signatureInfo: (term as any).signatureInfo || null,
-          evidenceFiles: (term as any).evidenceFiles || []
+          condition: term.condition,
+          damageDescription: term.damageDescription,
+          digitalSignature,
+          docPhoto,
+          selfiePhoto,
+          signatureInfo,
+          evidenceFiles
         });
 
         const blob = new Blob([html], { type: 'text/html' });

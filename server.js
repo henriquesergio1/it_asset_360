@@ -921,6 +921,10 @@ app.put('/api/terms/file/:id', async (req, res) => {
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
 
         await logAction(term.UserId, 'User', 'Atualização', _adminUser, userName, `Digitalização anexada ao termo: ${term.AssetDetails}`);
+        
+        // v3.37.14: Atualiza status de pendência do colaborador
+        await updateUserPendingStatus(pool, term.UserId);
+
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -942,6 +946,10 @@ app.delete('/api/terms/:id/file', async (req, res) => {
         const userName = userRes.recordset[0]?.FullName || 'Colaborador';
 
         await logAction(term.UserId, 'User', 'Atualização', _adminUser, userName, `Anexo removido do termo (${term.AssetDetails}). Motivo: ${reason || 'Não informado'}`);
+        
+        // v3.37.14: Atualiza status de pendência do colaborador
+        await updateUserPendingStatus(pool, term.UserId);
+
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -968,6 +976,9 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
 
         // Log no Colaborador
         await logAction(term.UserId, 'User', 'Resolução Manual', _adminUser, userName, `Pendência de termo resolvida manualmente. Motivo: ${reason}`);
+        
+        // v3.37.14: Atualiza status de pendência do colaborador
+        await updateUserPendingStatus(pool, term.UserId);
         
         // Log no Sistema (Administração)
         await logAction('system', 'System', 'Resolução Manual', _adminUser, 'Administração', `Termo de ${userName} resolvido sem anexo. Motivo: ${reason}`);
@@ -1060,6 +1071,31 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             .input('Next', sql.NVarChar, newData ? (typeof newData === 'string' ? newData : JSON.stringify(newData)) : null)
             .query(`INSERT INTO AuditLogs (Id, AssetId, AssetType, Action, AdminUser, TargetName, Notes, BackupData, PreviousData, NewData) VALUES (@Id, @AssetId, @AssetType, @Action, @AdminUser, @TargetName, @Notes, @BackupData, @Prev, @Next)`);
     } catch (e) { console.error('Erro de Log:', e); }
+}
+
+// v3.37.14: Nova função auxiliar para sincronizar o bit de pendência do colaborador no banco
+async function updateUserPendingStatus(pool, userId) {
+    if (!userId) return;
+    try {
+        const result = await pool.request()
+            .input('UserId', sql.NVarChar, userId)
+            .query(`
+                SELECT COUNT(*) as PendingCount 
+                FROM Terms 
+                WHERE UserId = @UserId 
+                AND FileBinary IS NULL 
+                AND (IsManual = 0 OR IsManual IS NULL) 
+                AND (SignatureStatus <> 'APPROVED' OR SignatureStatus IS NULL)
+            `);
+        const pendingCount = result.recordset[0].PendingCount;
+        await pool.request()
+            .input('UserId', sql.NVarChar, userId)
+            .input('HasPending', sql.Bit, pendingCount > 0 ? 1 : 0)
+            .query("UPDATE Users SET HasPendingIssues = @HasPending WHERE Id = @UserId");
+        console.log(`[PendingStatus] Usuário ${userId}: ${pendingCount} pendência(s). HasPendingIssues atualizado para ${pendingCount > 0 ? 1 : 0}`);
+    } catch (err) {
+        console.error(`[PendingStatus] Erro ao atualizar status do colaborador ${userId}:`, err);
+    }
 }
 
 // ... (código das rotas movido para dentro de startServer)
@@ -1291,6 +1327,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
             await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
+            
+            // v3.37.14: Atualiza status de pendência do colaborador
+            await updateUserPendingStatus(pool, userId);
+
             res.json({success: true, termId});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -1380,6 +1420,10 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             
             const richNotes = `Origem: ${userName}\nStatus: 'Em Uso' ➔ 'Disponível'${notes ? `\nObservação: ${notes}` : ''}${condition && condition !== 'Perfeito' ? `\nCondição: ${condition}\nDescrição do Dano: ${damageDescription || 'N/A'}` : ''}`;
             await logAction(assetId, assetType, 'Devolução', _adminUser, targetIdStr, richNotes, null, { status: 'Em Uso', currentUserId: userId, userName: userName }, { status: 'Disponível', currentUserId: null, timestamp: new Date().toISOString() });
+            
+            // v3.37.14: Atualiza status de pendência do colaborador
+            if (userId) await updateUserPendingStatus(pool, userId);
+
             res.json({success: true, termId: userId ? termId : null});
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -1553,9 +1597,17 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     app.post('/api/terms/:id/approve-signature', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            
+            // v3.37.14: Buscar UserId antes de atualizar para recalcular pendência
+            const termRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId FROM Terms WHERE Id=@Id");
+            const term = termRes.recordset[0];
+
             await pool.request()
                 .input('Id', sql.NVarChar, req.params.id)
                 .query("UPDATE Terms SET SignatureStatus = 'APPROVED' WHERE Id = @Id");
+            
+            if (term) await updateUserPendingStatus(pool, term.UserId);
+
             res.json({ success: true });
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -1563,6 +1615,11 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
     app.post('/api/terms/:id/reject-signature', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+
+            // v3.37.14: Buscar UserId antes de atualizar
+            const termRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT UserId FROM Terms WHERE Id=@Id");
+            const term = termRes.recordset[0];
+
             await pool.request()
                 .input('Id', sql.NVarChar, req.params.id)
                 .query(`
@@ -1577,6 +1634,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                         SignatureHash = NULL
                     WHERE Id = @Id
                 `);
+            
+            if (term) await updateUserPendingStatus(pool, term.UserId);
+
             res.json({ success: true });
         } catch (err) { res.status(500).send(err.message); }
     });

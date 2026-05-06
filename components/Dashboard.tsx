@@ -83,7 +83,7 @@ const Dashboard = () => {
   // Filtra termos pendentes
   const pendingTerms = useMemo(() => {
     return users.flatMap(u => 
-      (u.terms || []).filter(t => !t.fileUrl && !t.hasFile).map(t => ({
+      (u.terms || []).filter(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED').map(t => ({
         term: t,
         user: u
       }))
