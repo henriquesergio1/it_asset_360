@@ -3,9 +3,9 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceStatus, Device, SimCard, ReturnChecklist, DeviceAccessory } from '../types';
-import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX, Upload, Trash2, Share2 } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle, Smartphone, User as UserIcon, FileText, Printer, Search, ChevronDown, X, CheckSquare, RefreshCw, AlertCircle, ArrowLeft, Cpu, Package, UserX, Upload, Trash2, Share2, Copy, Info } from 'lucide-react';
 import { generateAndPrintTerm } from '../utils/termGenerator';
-import { normalizeString } from '../utils/stringUtils';
+import { normalizeString, copyToClipboard } from '../utils/stringUtils';
 
 type OperationType = 'CHECKOUT' | 'CHECKIN';
 type AssetType = 'Device' | 'Sim';
@@ -111,6 +111,8 @@ const Operations = () => {
  const { user: currentUser } = useAuth();
  
  const [activeTab, setActiveTab] = useState<OperationType>('CHECKOUT');
+ const [generatedSignatureLink, setGeneratedSignatureLink] = useState<string | null>(null);
+ const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
  const [assetType, setAssetType] = useState<AssetType>('Device');
  const [selectedAssetId, setSelectedAssetId] = useState('');
  const [selectedUserId, setSelectedUserId] = useState('');
@@ -331,8 +333,8 @@ const Operations = () => {
   try {
    const token = await generateSignatureToken(createdTermId);
    const link = `${window.location.origin}/#/sign-term/${token}`;
-   await navigator.clipboard.writeText(link);
-   alert('Link de assinatura digital copiado!');
+   setGeneratedSignatureLink(link);
+   setIsLinkModalOpen(true);
   } catch (e) {
    alert('Erro ao gerar link');
   } finally {
@@ -398,9 +400,10 @@ const Operations = () => {
  setInactivateAfterReturn(false);
  };
 
- if (isProcessed) {
- return (
- <div className="max-w-2xl mx-auto mt-20 p-10 bg-slate-900 rounded-3xl border-2 border-blue-50 border-slate-800 text-center animate-scale-up">
+  if (isProcessed) {
+  return (
+  <>
+  <div className="max-w-2xl mx-auto mt-20 p-10 bg-slate-900 rounded-3xl border-2 border-blue-50 border-slate-800 text-center animate-scale-up">
  <div className="h-24 w-24 bg-emerald-900/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
  <CheckCircle size={48} />
  </div>
@@ -417,12 +420,61 @@ const Operations = () => {
   </button>
  )}
  <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-700 transition-all">
- <ArrowLeft size={20}/> Nova Operação
- </button>
- </div>
- </div>
- );
- }
+   <ArrowLeft size={20}/> Nova Operação
+  </button>
+  </div>
+  </div>
+
+  {isLinkModalOpen && generatedSignatureLink && (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[501] p-4 animate-fade-in text-left">
+      <div className="bg-slate-900 rounded-3xl p-8 w-full max-w-xl border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-12 w-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+            <Share2 size={24} />
+          </div>
+          <button onClick={() => setIsLinkModalOpen(false)} className="text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-xl">
+            <X size={20} />
+          </button>
+        </div>
+        <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Link de Assinatura Gerado</h3>
+        <p className="text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
+        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 group transition-all hover:border-emerald-500/30">
+          <div className="flex items-center justify-between gap-4">
+            <div className="truncate text-emerald-400 font-mono text-sm">{generatedSignatureLink}</div>
+            <button onClick={async () => {
+              const ok = await copyToClipboard(generatedSignatureLink);
+              if (ok) {
+                alert('Link copiado com sucesso!');
+              } else {
+                alert('Não foi possível copiar automaticamente. Selecione e copie o link manualmente.');
+              }
+            }} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 active:scale-95">
+              <Copy size={16} /> Copiar
+            </button>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+            <div className="flex gap-3 items-start">
+              <div className="bg-blue-500/10 p-2 rounded-lg text-blue-400 shrink-0">
+                <Info size={16} />
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
+                Este link é único para este termo. Caso o colaborador não consiga copiar, você pode enviar o link acima manualmente por e-mail ou WhatsApp.
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setIsLinkModalOpen(false)} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
+            Fechar Janela
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+  </>
+  );
+  }
 
  return (
  <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
