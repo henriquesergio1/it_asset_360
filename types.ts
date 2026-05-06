@@ -174,6 +174,7 @@ export interface Term {
   signatureHash?: string;
   hasSignatureCanvas?: boolean;
   hasSignaturePhoto?: boolean;
+  hasSignatureSelfiePhoto?: boolean;
 }
 
 export type ReturnChecklist = Record<string, boolean>;

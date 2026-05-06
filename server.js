@@ -418,6 +418,7 @@ async function initializeDatabase() {
                             SignatureDate DATETIME NULL,
                             SignatureLocation NVARCHAR(MAX) NULL,
                             SignatureDocumentPhoto VARBINARY(MAX) NULL,
+                            SignatureSelfiePhoto VARBINARY(MAX) NULL,
                             SignatureCanvasBinary VARBINARY(MAX) NULL,
                             SignatureHash NVARCHAR(MAX) NULL
                         `);
@@ -680,7 +681,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -727,7 +728,7 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -1418,6 +1419,16 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             if (!term) return res.status(404).send("Termo não encontrado ou link expirado");
             if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado digitalmente");
 
+            // Buscar declarações e cláusulas do template
+            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate FROM SystemSettings");
+            const settings = settingsRes.recordset[0];
+            let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
+            try {
+                if (settings && settings.TermTemplate) {
+                    template = JSON.parse(settings.TermTemplate);
+                }
+            } catch (e) {}
+
             res.json({
                 id: term.Id,
                 type: term.Type,
@@ -1426,19 +1437,20 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 userName: term.UserName,
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
-                accessories: term.Accessories ? JSON.parse(term.Accessories) : []
+                accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
+                template: term.Type === 'ENTREGA' ? template.delivery : template.return
             });
         } catch (err) { res.status(500).send(err.message); }
     });
 
     app.post('/api/public/terms-to-sign/:token/sign', async (req, res) => {
         try {
-            const { signatureCanvas, documentPhoto, location, ip } = req.body;
+            const { signatureCanvas, documentPhoto, selfiePhoto, location, ip, observations } = req.body;
             const pool = await sql.connect(dbConfig);
             
             const checkRes = await pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
-                .query("SELECT Id, SignatureDate FROM Terms WHERE SignatureToken = @Token");
+                .query("SELECT Id, SignatureDate, Notes FROM Terms WHERE SignatureToken = @Token");
             
             const term = checkRes.recordset[0];
             if (!term) return res.status(404).send("Termo não encontrado");
@@ -1447,7 +1459,15 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const sigDate = new Date();
             const canvasBuffer = signatureCanvas ? getBufferFromBase64(signatureCanvas) : null;
             const photoBuffer = documentPhoto ? getBufferFromBase64(documentPhoto) : null;
+            const selfieBuffer = selfiePhoto ? getBufferFromBase64(selfiePhoto) : null;
             
+            // Concatenar observações se já existirem
+            let finalNotes = term.Notes || '';
+            if (observations) {
+                const userObs = `\n[Obs. Colaborador na Assinatura Digital]: ${observations}`;
+                finalNotes = finalNotes ? `${finalNotes}\n${userObs}` : userObs;
+            }
+
             // Gerar Hash de integridade
             const hashInput = `${term.Id}-${sigDate.toISOString()}-${ip}-${location}`;
             const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
@@ -1459,7 +1479,9 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                 .input('Loc', sql.NVarChar, location)
                 .input('Canvas', sql.VarBinary, canvasBuffer)
                 .input('Photo', sql.VarBinary, photoBuffer)
+                .input('Selfie', sql.VarBinary, selfieBuffer)
                 .input('Hash', sql.NVarChar, hash)
+                .input('Notes', sql.NVarChar, finalNotes)
                 .query(`
                     UPDATE Terms SET 
                         SignatureDate = @Date,
@@ -1467,12 +1489,17 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
                         SignatureLocation = @Loc,
                         SignatureCanvasBinary = @Canvas,
                         SignatureDocumentPhoto = @Photo,
-                        SignatureHash = @Hash
+                        SignatureSelfiePhoto = @Selfie,
+                        SignatureHash = @Hash,
+                        Notes = @Notes
                     WHERE SignatureToken = @Token
                 `);
 
             res.json({ success: true, hash, signatureDate: sigDate });
-        } catch (err) { res.status(500).send(err.message); }
+        } catch (err) { 
+            console.error('[Sign] Error:', err);
+            res.status(500).send(err.message); 
+        }
     });
 
     app.get('/api/terms/:id/signature-data', async (req, res) => {
@@ -1480,14 +1507,15 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
             const pool = await sql.connect(dbConfig);
             const result = await pool.request()
                 .input('Id', sql.NVarChar, req.params.id)
-                .query("SELECT SignatureCanvasBinary, SignatureDocumentPhoto FROM Terms WHERE Id = @Id");
+                .query("SELECT SignatureCanvasBinary, SignatureDocumentPhoto, SignatureSelfiePhoto FROM Terms WHERE Id = @Id");
             
             const row = result.recordset[0];
             if (!row) return res.status(404).send("Dados não encontrados");
             
             res.json({
                 signatureCanvas: row.SignatureCanvasBinary ? getBase64FromBuffer(row.SignatureCanvasBinary) : null,
-                documentPhoto: row.SignatureDocumentPhoto ? getBase64FromBuffer(row.SignatureDocumentPhoto) : null
+                documentPhoto: row.SignatureDocumentPhoto ? getBase64FromBuffer(row.SignatureDocumentPhoto) : null,
+                selfiePhoto: row.SignatureSelfiePhoto ? getBase64FromBuffer(row.SignatureSelfiePhoto) : null
             });
         } catch (err) { res.status(500).send(err.message); }
     });

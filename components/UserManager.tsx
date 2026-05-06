@@ -4,7 +4,8 @@ import {
   ChevronLeft, ChevronRight, Download, Filter, 
   FilterX, MoreHorizontal, UserPlus, Info, 
   MapPin, Phone, Mail, CreditCard, Hash, FileText, 
-  ExternalLink, Power, History, Shield, Smartphone, 
+  ExternalLink, Power, History, Shield, 
+  Smartphone, Camera, UserCheck,
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, ShieldCheck,   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
   Save, Eye, EyeOff, Key, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle, Copy
 } from 'lucide-react';
@@ -1295,6 +1296,52 @@ const UserManager: React.FC = () => {
                              {term.signatureDate && (
                                <div className="flex items-center gap-2 bg-emerald-900/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-emerald-400">
                                  <ShieldCheck size={10} /> Assinado Digitalmente
+                               </div>
+                             )}
+
+                             {/* Evidências Jurídicas Avançadas */}
+                             {(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto) && (
+                               <div className="flex gap-2 mt-2">
+                                 {term.hasSignaturePhoto && (
+                                   <button 
+                                     onClick={async (e) => {
+                                       e.stopPropagation();
+                                       try {
+                                         const res = await fetch(`/api/terms/${term.id}/signature-data`);
+                                         const data = await res.json();
+                                         if(data.documentPhoto) {
+                                           setPreviewData({ url: data.documentPhoto, name: `DOC_${term.id}.jpg` });
+                                           setIsPreviewOpen(true);
+                                         }
+                                       } catch(err) { console.error(err); }
+                                     }}
+                                     className="p-1.5 bg-blue-900/10 border border-blue-500/20 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-1.5"
+                                     title="Ver Foto do Documento"
+                                   >
+                                     <Camera size={12} />
+                                     <span className="text-[9px] font-bold uppercase">Doc</span>
+                                   </button>
+                                 )}
+                                 {term.hasSignatureSelfiePhoto && (
+                                   <button 
+                                     onClick={async (e) => {
+                                       e.stopPropagation();
+                                       try {
+                                         const res = await fetch(`/api/terms/${term.id}/signature-data`);
+                                         const data = await res.json();
+                                         if(data.selfiePhoto) {
+                                           setPreviewData({ url: data.selfiePhoto, name: `SELFIE_${term.id}.jpg` });
+                                           setIsPreviewOpen(true);
+                                         }
+                                       } catch(err) { console.error(err); }
+                                     }}
+                                     className="p-1.5 bg-emerald-900/10 border border-emerald-500/20 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5"
+                                     title="Ver Selfie do Colaborador"
+                                   >
+                                     <UserCheck size={12} />
+                                     <span className="text-[9px] font-bold uppercase">Selfie</span>
+                                   </button>
+                                 )}
                                </div>
                              )}
                              
