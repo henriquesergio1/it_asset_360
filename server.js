@@ -646,7 +646,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.37.6', 
+            version: '3.37.7', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1554,7 +1554,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         try {
             const pool = await sql.connect(dbConfig);
             await pool.request()
-                .input('Id', sql.Int, req.params.id)
+                .input('Id', sql.NVarChar, req.params.id)
                 .query("UPDATE Terms SET SignatureStatus = 'APPROVED' WHERE Id = @Id");
             res.json({ success: true });
         } catch (err) { res.status(500).send(err.message); }
@@ -1564,7 +1564,7 @@ async function logAction(assetId, assetType, action, adminUser, targetName, note
         try {
             const pool = await sql.connect(dbConfig);
             await pool.request()
-                .input('Id', sql.Int, req.params.id)
+                .input('Id', sql.NVarChar, req.params.id)
                 .query(`
                     UPDATE Terms SET 
                         SignatureStatus = 'REJECTED',
