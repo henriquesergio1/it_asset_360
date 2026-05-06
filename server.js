@@ -428,9 +428,6 @@ async function initializeDatabase() {
                             await pool.request().query(`ALTER TABLE Terms ADD ${col.name} ${col.type}`);
                         }
                     }
-                    
-                    // Migração: Termos já assinados mas sem status definido (nulos) devem ir para WAITING_APPROVAL
-                    await pool.request().query("UPDATE Terms SET SignatureStatus = 'WAITING_APPROVAL' WHERE SignatureDate IS NOT NULL AND (SignatureStatus IS NULL OR SignatureStatus = 'APPROVED')");
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);

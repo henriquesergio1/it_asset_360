@@ -429,28 +429,30 @@ export const getTermHtml = ({
   `;
 };
 
-export const generateAndPrintTerm = (props: GenerateTermProps) => {
+export const generateAndPrintTerm = (props: GenerateTermProps, autoPrint: boolean = true) => {
   const html = getTermHtml(props);
   const printWindow = window.open('', '_blank', 'width=1000,height=900');
   
   if (!printWindow) {
-    alert('Permita popups para imprimir o termo.');
+    alert('Permita popups para imprimir/visualizar o termo.');
     return;
   }
 
   printWindow.document.write(html);
   
-  // Script para auto-print
-  const printScript = `
-    <script>
-      window.onload = function() { 
-        setTimeout(function(){ 
-          window.print(); 
-        }, 800); 
-      }
-    </script>
-  `;
+  if (autoPrint) {
+    // Script para auto-print
+    const printScript = `
+      <script>
+        window.onload = function() { 
+          setTimeout(function(){ 
+            window.print(); 
+          }, 800); 
+        }
+      </script>
+    `;
+    printWindow.document.write(printScript);
+  }
   
-  printWindow.document.write(printScript);
   printWindow.document.close();
 };

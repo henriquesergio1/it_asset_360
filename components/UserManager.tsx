@@ -579,7 +579,7 @@ const UserManager: React.FC = () => {
           }
         }
 
-        const html = getTermHtml({
+        generateAndPrintTerm({
           user,
           asset,
           settings,
@@ -596,16 +596,7 @@ const UserManager: React.FC = () => {
           selfiePhoto,
           signatureInfo,
           evidenceFiles
-        });
-
-        const blob = new Blob([html], { type: 'text/html' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        setPreviewData({ 
-          url: blobUrl, 
-          name: `previa_termo_${term.id}.html` 
-        });
-        setIsPreviewOpen(true);
+        }, false);
       } catch (err) {
         console.error("Erro na pré-visualização:", err);
         handleDownloadTerm(term);
