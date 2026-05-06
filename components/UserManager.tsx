@@ -738,25 +738,23 @@ const UserManager: React.FC = () => {
     
     if (status === 'WAITING_APPROVAL') {
       return (
-        <div className="flex flex-col gap-2 p-3 bg-blue-900/10 border border-blue-500/20 rounded-xl mt-2 animate-pulse">
-           <div className="flex items-center justify-between">
-             <div className="flex items-center gap-2 text-blue-400 text-[10px] font-black uppercase">
-               <Clock size={12} /> Aguardando Validação
-             </div>
-             <div className="flex gap-2">
-               <button 
-                 onClick={(e) => { e.stopPropagation(); handleApproveSignature(term.id); }}
-                 className="p-1 px-2 bg-emerald-500 text-white rounded text-[9px] font-bold hover:bg-emerald-600 transition-all flex items-center gap-1"
-               >
-                 <Check size={10} /> Aprovar
-               </button>
-               <button 
-                 onClick={(e) => { e.stopPropagation(); handleRejectSignature(term.id); }}
-                 className="p-1 px-2 bg-red-500 text-white rounded text-[9px] font-bold hover:bg-red-600 transition-all flex items-center gap-1"
-               >
-                 <X size={10} /> Rejeitar
-               </button>
-             </div>
+        <div className="flex flex-col gap-1 items-center animate-pulse">
+           <div className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/10">
+              Validar Assinatura
+           </div>
+           <div className="flex gap-2 mt-1">
+             <button 
+               onClick={(e) => { e.stopPropagation(); handleApproveSignature(term.id); }}
+               className="p-1 px-3 bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase hover:bg-emerald-500 transition-all flex items-center gap-1 shadow-lg"
+             >
+               <Check size={10} /> Aprovar
+             </button>
+             <button 
+               onClick={(e) => { e.stopPropagation(); handleRejectSignature(term.id); }}
+               className="p-1 px-3 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase hover:bg-red-500 transition-all flex items-center gap-1 shadow-lg"
+             >
+               <X size={10} /> Rejeitar
+             </button>
            </div>
         </div>
       );
@@ -764,15 +762,21 @@ const UserManager: React.FC = () => {
     
     if (status === 'REJECTED') {
       return (
-        <div className="flex items-center gap-2 bg-red-900/10 border border-red-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-red-400 mt-2">
-          <AlertCircle size={10} /> Assinatura Rejeitada
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="bg-red-600/20 text-red-400 border border-red-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+            Rejeitada
+          </div>
+          <span className="text-[8px] text-red-500/70 font-bold uppercase">Repetir Processo</span>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center gap-2 bg-emerald-900/10 border border-emerald-500/20 px-2 py-1 rounded-lg text-[9px] font-black uppercase text-emerald-400 mt-2">
-        <ShieldCheck size={10} /> Digitalmente Validado
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+          Validado
+        </div>
+        <span className="text-[8px] text-emerald-500/70 font-bold uppercase">Digitalmente</span>
       </div>
     );
   };
@@ -1320,11 +1324,11 @@ const UserManager: React.FC = () => {
                                 ? 'bg-orange-600/20 text-orange-400 border border-orange-500/30' 
                                 : (term.fileUrl || term.hasFile) 
                                   ? 'bg-emerald-900 text-emerald-400' 
-                                  : term.signatureStatus === 'WAITING_APPROVAL'
-                                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 animate-pulse'
+                                  : (term.signatureStatus === 'APPROVED' || !term.signatureStatus)
+                                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
                                     : 'bg-orange-900 text-orange-400'
                             }`} title={term.isManual ? `Resolvido Manualmente: ${term.resolutionReason || 'Sem motivo'}` : ''}>
-                              {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile ? 'Assinado' : (term.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
+                              {term.isManual ? 'Manual' : (term.fileUrl || term.hasFile || (term.signatureDate && term.signatureStatus === 'APPROVED') ? 'Assinado' : (term.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
                             </span>
                             {term.isManual && (
                               <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">Resolução Manual</div>
@@ -1396,47 +1400,29 @@ const UserManager: React.FC = () => {
 
                              {/* Evidências Jurídicas Avançadas */}
                              {(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto) && (
-                               <div className="flex gap-2 mt-2">
-                                 {term.hasSignaturePhoto && (
-                                   <button 
-                                     onClick={async (e) => {
-                                       e.stopPropagation();
-                                       try {
-                                         const res = await fetch(`/api/terms/${term.id}/signature-data`);
-                                         const data = await res.json();
-                                         if(data.documentPhoto) {
-                                           setPreviewData({ url: data.documentPhoto, name: `DOC_${term.id}.jpg` });
-                                           setIsPreviewOpen(true);
-                                         }
-                                       } catch(err) { console.error(err); }
-                                     }}
-                                     className="p-1.5 bg-blue-900/10 border border-blue-500/20 rounded-lg text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-1.5"
-                                     title="Ver Foto do Documento"
-                                   >
-                                     <Camera size={12} />
-                                     <span className="text-[9px] font-bold uppercase">Doc</span>
-                                   </button>
-                                 )}
-                                 {term.hasSignatureSelfiePhoto && (
-                                   <button 
-                                     onClick={async (e) => {
-                                       e.stopPropagation();
-                                       try {
-                                         const res = await fetch(`/api/terms/${term.id}/signature-data`);
-                                         const data = await res.json();
-                                         if(data.selfiePhoto) {
-                                           setPreviewData({ url: data.selfiePhoto, name: `SELFIE_${term.id}.jpg` });
-                                           setIsPreviewOpen(true);
-                                         }
-                                       } catch(err) { console.error(err); }
-                                     }}
-                                     className="p-1.5 bg-emerald-900/10 border border-emerald-500/20 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition-all flex items-center gap-1.5"
-                                     title="Ver Selfie do Colaborador"
-                                   >
-                                     <UserCheck size={12} />
-                                     <span className="text-[9px] font-bold uppercase">Selfie</span>
-                                   </button>
-                                 )}
+                               <div className="flex gap-2">
+                                 <button 
+                                   onClick={async (e) => {
+                                     e.stopPropagation();
+                                     try {
+                                       const res = await fetch(`/api/terms/${term.id}/signature-data`);
+                                       const data = await res.json();
+                                       // Abre a foto do documento por padrão se existir
+                                       if(data.documentPhoto) {
+                                         setPreviewData({ url: data.documentPhoto, name: `DOC_${term.id}.jpg` });
+                                         setIsPreviewOpen(true);
+                                       } else if(data.selfiePhoto) {
+                                         setPreviewData({ url: data.selfiePhoto, name: `SELFIE_${term.id}.jpg` });
+                                         setIsPreviewOpen(true);
+                                       }
+                                     } catch(err) { console.error(err); }
+                                   }}
+                                   className="p-1.5 bg-slate-900 border border-slate-700/50 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                   title="Ver Evidências de Identidade"
+                                 >
+                                   <Camera size={14} className="text-blue-400" />
+                                   <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
+                                 </button>
                                </div>
                              )}
                              
