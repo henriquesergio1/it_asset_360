@@ -443,6 +443,7 @@ const UserManager: React.FC = () => {
   };
 
   const handleViewTerm = async (term: Term) => {
+    // Prioriza arquivo fixo se existir (manual ou gerado após aprovação)
     let url = term.fileUrl || (term as any).filebinary;
     
     if (!url && !!term.hasFile) {
@@ -453,6 +454,7 @@ const UserManager: React.FC = () => {
       }
     }
     
+    // Se temos uma URL de arquivo assinado/finalizado
     if (url && url !== '#') {
       setPreviewData({ 
         url, 
@@ -460,7 +462,7 @@ const UserManager: React.FC = () => {
       });
       setIsPreviewOpen(true);
     } else {
-      // Se não tem arquivo assinado, vamos pré-visualizar o termo gerado agora
+      // Caso contrário, gera a pré-visualização HTML dinâmica usando os dados de assinatura se houver
       try {
         const user = users.find(u => u.id === editingId);
         if (!user) throw new Error("Usuário não encontrado");
@@ -471,13 +473,11 @@ const UserManager: React.FC = () => {
         }
 
         if (!asset) {
-          // Fallback para tentar pelo serial ou outro dado se assetId falhar
           asset = devices.find(d => (term.assetDetails || '').includes(d.serialNumber)) || 
                   sims.find(s => (term.assetDetails || '').includes(s.phoneNumber));
         }
 
         if (!asset) {
-          // Se ainda não achar, abre o download/impressão legado
           handleDownloadTerm(term);
           return;
         }
@@ -487,7 +487,9 @@ const UserManager: React.FC = () => {
         const type = assetTypes.find(t => t.id === model?.typeId);
         const sector = sectors.find(s => s.id === user.sectorId);
 
-        // Gera o HTML do termo
+        // Se o termo estiver aprovado ou tiver data de assinatura, ele DEVE mostrar a assinatura
+        const hasSignatureInfo = !!(term.signatureDate || term.signatureStatus === 'APPROVED');
+
         const html = getTermHtml({
           user,
           asset,
@@ -499,23 +501,22 @@ const UserManager: React.FC = () => {
           sectorName: sector?.name,
           checklist: (term as any).checklist,
           notes: term.notes,
-          digitalSignature: (term as any).digitalSignature || null,
+          digitalSignature: (term as any).digitalSignature || (hasSignatureInfo ? (term as any).digitalSignature : null),
           docPhoto: (term as any).docPhoto || null,
           selfiePhoto: (term as any).selfiePhoto || null,
           signatureInfo: (term as any).signatureInfo || null
         });
 
-        // Cria um Blob HTML para visualização
         const blob = new Blob([html], { type: 'text/html' });
         const blobUrl = URL.createObjectURL(blob);
 
         setPreviewData({ 
           url: blobUrl, 
-          name: `previa_termo_${term.type.toLowerCase()}_${editingId}.html` 
+          name: `previa_termo_${term.id}.html` 
         });
         setIsPreviewOpen(true);
       } catch (err) {
-        console.error("Erro na pré-visualização do termo:", err);
+        console.error("Erro na pré-visualização:", err);
         handleDownloadTerm(term);
       }
     }
@@ -774,6 +775,8 @@ const UserManager: React.FC = () => {
       if(res.ok) {
         showToast('Assinatura aprovada com sucesso', 'success');
         queryClient.invalidateQueries({ queryKey: ['users'] });
+        // Pequeno delay para o banco processar e atualiza localmente
+        setTimeout(() => fetchData(true), 500);
       }
     } catch(err) { console.error(err); }
   };
@@ -785,6 +788,7 @@ const UserManager: React.FC = () => {
       if(res.ok) {
         showToast('Assinatura rejeitada', 'info');
         queryClient.invalidateQueries({ queryKey: ['users'] });
+        setTimeout(() => fetchData(true), 500);
       }
     } catch(err) { console.error(err); }
   };
@@ -1422,26 +1426,16 @@ const UserManager: React.FC = () => {
                             >
                               <Edit2 size={16} />
                             </button>
-                            {!!(term.fileUrl || term.hasFile) && (
+                            {!!(term.fileUrl || term.hasFile || term.signatureDate) && (
                               <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
                                 className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
-                                title="Visualizar Assinado"
+                                title={!!(term.fileUrl || term.hasFile) ? "Visualizar Arquivo Assinado" : "Visualizar Comprovante Digital"}
                               >
                                 <Eye size={16} />
                               </button>
                             )}
-                             {term.signatureDate && (
-                               <button 
-                                 type="button"
-                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
-                                 className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
-                                 title="Visualizar Comprovante Digital"
-                               >
-                                 <Eye size={16} />
-                               </button>
-                             )}
 
                              {!(term.fileUrl || term.hasFile) && !term.signatureDate && (
                                <div className="flex gap-2">
