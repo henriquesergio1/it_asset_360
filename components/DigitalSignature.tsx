@@ -359,8 +359,28 @@ const DigitalSignature = () => {
                                     Assinatura Digital OBRIGATÓRIA
                                     <button onClick={() => sigCanvas.current?.clear()} className="text-red-500">Limpar</button>
                                 </h3>
-                                <div className="bg-white rounded-2xl border-4 border-slate-800 overflow-hidden h-40 shadow-inner">
-                                    <SignatureCanvas ref={sigCanvas} penColor='black' canvasProps={{ className: 'w-full h-full touch-none' }} />
+                                <div 
+                                    className="bg-white rounded-2xl border-4 border-slate-800 overflow-hidden h-40 shadow-inner cursor-crosshair"
+                                    onClick={(e) => e.currentTarget.focus()}
+                                    onBlur={(e) => e.currentTarget.blur()}
+                                    tabIndex={-1}
+                                    style={{ touchAction: 'none' }}
+                                >
+                                    <SignatureCanvas 
+                                        ref={sigCanvas} 
+                                        penColor='black' 
+                                        canvasProps={{ 
+                                            className: 'w-full h-full touch-none',
+                                            onMouseDown: (e: any) => e.preventDefault(),
+                                            onTouchStart: (e: any) => {
+                                                if (e.cancelable) e.preventDefault();
+                                                // Prevenir foco em qualquer input que possa abrir teclado
+                                                if (document.activeElement instanceof HTMLElement) {
+                                                    document.activeElement.blur();
+                                                }
+                                            }
+                                        }} 
+                                    />
                                 </div>
                             </div>
                         </div>
