@@ -1526,6 +1526,7 @@ async function updateUserPendingStatus(pool, userId) {
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
                 accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
+                notes: term.Notes,
                 template: finalizedTemplate,
                 company: {
                     name: companyName,

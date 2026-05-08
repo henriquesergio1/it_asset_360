@@ -234,23 +234,23 @@ const DigitalSignature = () => {
                                     </div>
 
                                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                                        <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-2">1. Detalhes do Ativo</h3>
+                                        <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-2">1. Detalhes do Equipamento</h3>
                                         <p className="text-sm font-black text-slate-900 mb-1">{termData.assetDetails}</p>
-                                        <p className="text-[10px] text-slate-500 font-medium">Equipamento conferido e testado conforme padrões da companhia.</p>
                                         
                                         {termData.accessories && termData.accessories.length > 0 && (
-                                            <div className="mt-4 pt-4 border-t border-slate-200">
-                                                <h4 className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">Acessórios Co-entregues:</h4>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {termData.accessories.map((a:any, i:number) => (
-                                                        <div key={i} className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-xl shadow-sm">
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                                                            <span className="text-[10px] text-slate-700 font-bold uppercase tracking-tight">{a}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                            <p className="text-[10px] text-slate-500 font-medium italic mt-1">
+                                                Acessórios: {termData.accessories.join(', ')}
+                                            </p>
+                                        )}
+
+                                        {termData.notes && (
+                                            <div className="mt-4 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                                                <h4 className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1">Observações:</h4>
+                                                <p className="text-[11px] text-amber-900 font-medium leading-tight">{termData.notes}</p>
                                             </div>
                                         )}
+                                        
+                                        <p className="text-[10px] text-slate-400 font-medium mt-4 pt-3 border-t border-slate-100">Equipamento conferido e testado conforme padrões da companhia.</p>
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t border-slate-100">
