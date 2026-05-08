@@ -1486,7 +1486,7 @@ async function updateUserPendingStatus(pool, userId) {
             if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado digitalmente");
 
             // Buscar declarações e cláusulas do template e dados da empresa
-            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate, AppName, Cnpj FROM SystemSettings");
+            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate, AppName, Cnpj, LogoUrl FROM SystemSettings");
             const settings = settingsRes.recordset[0];
             let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
             
@@ -1499,6 +1499,7 @@ async function updateUserPendingStatus(pool, userId) {
             const selectedTemplate = term.Type === 'ENTREGA' ? template.delivery : template.return;
             const companyName = settings?.AppName || 'A Empresa';
             const companyCnpj = settings?.Cnpj || '00.000.000/0000-00';
+            const logoUrl = settings?.LogoUrl || '';
 
             // Processar tags nas strings do template
             const processTags = (text) => {
@@ -1525,7 +1526,12 @@ async function updateUserPendingStatus(pool, userId) {
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
                 accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
-                template: finalizedTemplate
+                template: finalizedTemplate,
+                company: {
+                    name: companyName,
+                    cnpj: companyCnpj,
+                    logoUrl
+                }
             });
         } catch (err) { res.status(500).send(err.message); }
     });
