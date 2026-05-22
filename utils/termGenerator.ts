@@ -189,8 +189,12 @@ export const getTermHtml = ({
 
     idCode = `<strong>Patrimônio / IMEI:</strong> ${displayId}`;
 
-    if (asset.accessories && asset.accessories.length > 0) {
-      accessories = asset.accessories.map(a => a.name).join(', ');
+    if (asset.accessories && Array.isArray(asset.accessories) && asset.accessories.length > 0) {
+      accessories = asset.accessories.map(a => {
+        if (!a) return '';
+        if (typeof a === 'object') return a.name || a.Name || '';
+        return String(a);
+      }).filter(Boolean).join(', ');
     }
   } else {
     assetName = `Chip SIM Card - ${asset.operator}`;

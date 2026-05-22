@@ -221,22 +221,22 @@ const DigitalSignature = () => {
                                 <div className="space-y-4">
                                     <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/85">
                                         <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-1.5">Identificação do Colaborador</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs">
-                                            <div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3 gap-x-6 text-xs">
+                                            <div className="md:col-span-2">
                                                 <span className="font-bold text-slate-500">Colaborador:</span>{' '}
-                                                <span className="font-black text-slate-900">{termData.userName}</span>
+                                                <span className="font-black text-slate-900 block sm:inline">{termData.userName}</span>
                                             </div>
                                             <div>
                                                 <span className="font-bold text-slate-500">CPF:</span>{' '}
-                                                <span className="font-mono font-bold text-slate-900">{termData.userCpf}</span>
+                                                <span className="font-mono font-bold text-slate-900 block sm:inline">{termData.userCpf}</span>
                                             </div>
-                                            <div>
+                                            <div className="md:col-span-2">
                                                 <span className="font-bold text-slate-500">Cargo / Função:</span>{' '}
-                                                <span className="font-bold text-slate-900">{termData.sectorName || 'Não Informado'}</span>
+                                                <span className="font-bold text-slate-900 block sm:inline">{termData.sectorName || 'Não Informado'}</span>
                                             </div>
                                             <div>
                                                 <span className="font-bold text-slate-500">Setor:</span>{' '}
-                                                <span className="font-bold text-slate-900">{termData.userCode || '-'}</span>
+                                                <span className="font-bold text-slate-900 block sm:inline">{termData.userCode || '-'}</span>
                                             </div>
                                         </div>
                                     </div>

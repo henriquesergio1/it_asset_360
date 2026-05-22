@@ -518,10 +518,24 @@ const UserManager: React.FC = () => {
           modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
           const realDevice = devices.find(d => d.id === rawAssetId || (assetTag && d.assetTag === assetTag) || (imei && d.imei === imei));
 
+          // Parse accessories defensively from JSON string or array
+          let parsedAccessories = [];
+          if (term.accessories) {
+            if (typeof term.accessories === 'string') {
+              try {
+                parsedAccessories = JSON.parse(term.accessories);
+              } catch (e) {
+                console.error("Erro ao converter acessórios", e);
+              }
+            } else if (Array.isArray(term.accessories)) {
+              parsedAccessories = term.accessories;
+            }
+          }
+
           if (realDevice) {
             asset = { ...realDevice };
-            if (term.accessories && term.accessories.length > 0) {
-              asset.accessories = term.accessories;
+            if (parsedAccessories && parsedAccessories.length > 0) {
+              asset.accessories = parsedAccessories;
             }
             modelData = models.find(m => m.id === realDevice.modelId);
           } else {
@@ -529,7 +543,7 @@ const UserManager: React.FC = () => {
               assetTag: assetTag || 'Desconhecido',
               serialNumber: serialNumber || 'Não Localizado',
               imei: imei || '',
-              accessories: term.accessories || []
+              accessories: parsedAccessories
             };
           }
         }
@@ -728,10 +742,24 @@ const UserManager: React.FC = () => {
         modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
         const realDevice = devices.find(d => d.id === rawAssetId || (assetTag && d.assetTag === assetTag) || (imei && d.imei === imei));
         
+        // Parse accessories defensively from JSON string or array
+        let parsedAccessories = [];
+        if (term.accessories) {
+          if (typeof term.accessories === 'string') {
+            try {
+              parsedAccessories = JSON.parse(term.accessories);
+            } catch (e) {
+              console.error("Erro ao converter acessórios", e);
+            }
+          } else if (Array.isArray(term.accessories)) {
+            parsedAccessories = term.accessories;
+          }
+        }
+        
         if (realDevice) {
            asset = { ...realDevice };
-           if (term.accessories && term.accessories.length > 0) {
-             asset.accessories = term.accessories;
+           if (parsedAccessories && parsedAccessories.length > 0) {
+             asset.accessories = parsedAccessories;
            }
            modelData = models.find(m => m.id === realDevice.modelId);
         } else {
@@ -739,7 +767,7 @@ const UserManager: React.FC = () => {
              assetTag: assetTag || 'Desconhecido',
              serialNumber: serialNumber || 'Não Localizado',
              imei: imei || '',
-             accessories: term.accessories || []
+             accessories: parsedAccessories
            };
         }
       }

@@ -1429,6 +1429,14 @@ async function updateUserPendingStatus(pool, userId) {
                 const ev2 = evidenceFiles && evidenceFiles.length > 1 ? getBufferFromBase64(evidenceFiles[1]) : null;
                 const ev3 = evidenceFiles && evidenceFiles.length > 2 ? getBufferFromBase64(evidenceFiles[2]) : null;
                 
+                let accNames = null;
+                if (assetType === 'Device') {
+                    const accRes = await pool.request().input('Did', assetId).query("SELECT Name FROM DeviceAccessories WHERE DeviceId=@Did");
+                    if (accRes.recordset.length > 0) {
+                        accNames = JSON.stringify(accRes.recordset.map(a => ({ name: a.Name || a.name || a })));
+                    }
+                }
+
                 await pool.request()
                     .input('I', termId)
                     .input('U', userId)
@@ -1444,7 +1452,8 @@ async function updateUserPendingStatus(pool, userId) {
                     .input('ResR', resolutionReason || null)
                     .input('AssetId', assetId)
                     .input('AssetType', assetType)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType)");
+                    .input('Acc', accNames)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
