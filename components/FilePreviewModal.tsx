@@ -20,18 +20,71 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
 
   // Usa a primeira URL para determinar o tipo se não for múltiplo
   const primaryUrl = urls[0];
-  const isPDF = !isMultiple && (primaryUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || (primaryUrl.startsWith('blob:') && !fileName.toLowerCase().endsWith('.html')));
+  const isDataImage = primaryUrl.startsWith('data:image/');
+  const isDataPDF = primaryUrl.startsWith('data:application/pdf');
+
+  const isPDF = !isMultiple && (
+    isDataPDF || 
+    (!isDataImage && (primaryUrl.includes('application/pdf') || fileName.toLowerCase().endsWith('.pdf') || (primaryUrl.startsWith('blob:') && !fileName.toLowerCase().endsWith('.html'))))
+  );
   const isHTML = !isMultiple && (primaryUrl.includes('text/html') || fileName.toLowerCase().endsWith('.html'));
-  const isImage = isMultiple || primaryUrl.startsWith('data:image/') || fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/);
+  const isImage = isMultiple || isDataImage || (!isPDF && !isHTML && (fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) || primaryUrl.startsWith('data:image/')));
 
   const handleDownload = () => {
     urls.forEach((url, index) => {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = urls.length > 1 ? `${index + 1}_${fileName}` : fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const currentFileName = urls.length > 1 ? `${index + 1}_${fileName}` : fileName;
+      if (url.startsWith('data:')) {
+        try {
+          const parts = url.split(',');
+          const contentType = parts[0].split(':')[1].split(';')[0];
+          const byteCharacters = atob(parts[1]);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, { type: contentType });
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          
+          let finalFileName = currentFileName;
+          const ext = contentType.includes('pdf') ? 'pdf' : (contentType.includes('png') ? 'png' : 'jpg');
+          if (finalFileName.toLowerCase().endsWith('.pdf') && !contentType.includes('pdf')) {
+            finalFileName = finalFileName.substring(0, finalFileName.lastIndexOf('.')) + '.' + ext;
+          } else if (!finalFileName.toLowerCase().endsWith('.pdf') && contentType.includes('pdf')) {
+            finalFileName = finalFileName.substring(0, finalFileName.lastIndexOf('.')) + '.pdf';
+          }
+          
+          link.download = finalFileName;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+          }, 100);
+        } catch (err) {
+          console.error("Erro ao converter base64 para blob:", err);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = currentFileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = currentFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     });
   };
 

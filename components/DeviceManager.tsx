@@ -622,7 +622,13 @@ const DeviceManager = () => {
   try {
   const fileUrl = type === 'DEVICE' ? await getDeviceInvoice(id) : await getMaintenanceInvoice(id);
   if (fileUrl) {
-    setPreviewData({ url: fileUrl, name: fileName || (type === 'DEVICE' ? `Nota_Fiscal_${id}.pdf` : `Manutencao_${id}.pdf`) });
+    let detectedExt = 'pdf';
+    if (fileUrl.startsWith('data:')) {
+      const mime = fileUrl.split(',')[0].split(':')[1].split(';')[0];
+      detectedExt = mime.includes('pdf') ? 'pdf' : (mime.includes('png') ? 'png' : 'jpg');
+    }
+    const defaultName = type === 'DEVICE' ? `Nota_Fiscal_${id}.${detectedExt}` : `Manutencao_${id}.${detectedExt}`;
+    setPreviewData({ url: fileUrl, name: fileName || defaultName });
     setIsPreviewOpen(true);
   }
   else alert("Documento não encontrado no servidor.");
@@ -634,7 +640,12 @@ const DeviceManager = () => {
   return;
   }
   if (url) {
-    setPreviewData({ url, name: fileName || 'Documento.pdf' });
+    let detectedExt = 'pdf';
+    if (url.startsWith('data:')) {
+      const mime = url.split(',')[0].split(':')[1].split(';')[0];
+      detectedExt = mime.includes('pdf') ? 'pdf' : (mime.includes('png') ? 'png' : 'jpg');
+    }
+    setPreviewData({ url, name: fileName || `Documento.${detectedExt}` });
     setIsPreviewOpen(true);
   }
  };
