@@ -1198,7 +1198,83 @@ const DeviceManager = () => {
  <button type="button"onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Cadeia de Custódia</button>
  <button type="button"onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-400 bg-slate-900 ' : 'border-transparent hover:text-slate-600 hover:text-slate-300'}`}>Auditoria</button>
  </div>
- <form id="devForm"onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden"><div className="flex-1 overflow-y-auto p-8 bg-slate-900">{activeTab === 'GENERAL' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-8">{isViewOnly && (<div className="md:col-span-2 bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 flex items-center gap-3"><Info className="text-blue-400"size={20}/><p className="text-xs font-bold text-blue-200">Modo de visualização. Clique no botão azul"Habilitar Edição"abaixo para editar os dados.</p></div>)}{editingId && (<div className="md:col-span-2 bg-slate-800/40 p-5 rounded-2xl border-2 border-dashed border-slate-700 flex items-center justify-between"><div className="flex items-center gap-4"><div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center text-blue-50 border border-slate-800"><Users size={24}/></div><div><span className="text-[11px] font-black uppercase tracking-widest">Responsável Atual</span><p className="text-sm font-black text-slate-100">{formData.currentUserId ? users.find(u => u.id === formData.currentUserId)?.fullName : 'LIVRE NO ESTOQUE'}</p></div></div>{formData.currentUserId && (<button type="button"onClick={() => navigate(`/users?userId=${formData.currentUserId}`)} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-black uppercase text-blue-400 hover:bg-blue-900/30 transition-all flex items-center gap-2">Ver Perfil <ChevronRight size={14}/></button>)}</div>)}<div className="md:col-span-2 space-y-4">
+ <form id="devForm"onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden"><div className="flex-1 overflow-y-auto p-8 bg-slate-900">{activeTab === 'GENERAL' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-8">{isViewOnly && (<div className="md:col-span-2 bg-blue-900/20 p-4 rounded-xl border border-blue-900/40 flex items-center gap-3"><Info className="text-blue-400"size={20}/><p className="text-xs font-bold text-blue-200">Modo de visualização. Clique no botão azul"Habilitar Edição"abaixo para editar os dados.</p></div>)}{editingId && (() => {
+                  const primaryUser = formData.currentUserId ? users.find(u => u.id === formData.currentUserId) : null;
+                  const additionalUsersList = (formData.additionalUserIds || [])
+                    .map(id => users.find(u => u.id === id))
+                    .filter(Boolean) as User[];
+                  
+                  return (
+                    <div className="md:col-span-2 bg-slate-800/40 p-5 rounded-2xl border border-slate-800 space-y-4">
+                      {/* Primary User Row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-slate-900 flex items-center justify-center text-blue-50 border border-slate-800 shrink-0">
+                            <Users size={24}/>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">Responsável Atual (Principal)</span>
+                              {additionalUsersList.length > 0 && (
+                                <span className="bg-blue-900/40 border border-blue-800/50 text-blue-400 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                                  Uso Compartilhado
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-black text-slate-100">
+                              {primaryUser ? primaryUser.fullName : 'LIVRE NO ESTOQUE'}
+                            </p>
+                          </div>
+                        </div>
+                        {primaryUser && (
+                          <button 
+                            type="button"
+                            onClick={() => navigate(`/users?userId=${primaryUser.id}`)} 
+                            className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-black uppercase text-blue-400 hover:bg-blue-900/30 transition-all flex items-center gap-2 self-start sm:self-center cursor-pointer"
+                          >
+                            Ver Perfil <ChevronRight size={14}/>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Additional Users Row(s) */}
+                      {additionalUsersList.length > 0 && (
+                        <div className="border-t border-slate-800/80 pt-4 mt-2">
+                          <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2.5 block">
+                            Compartilhado com {additionalUsersList.length} colaborador{additionalUsersList.length > 1 ? 'es' : ''} adicional{additionalUsersList.length > 1 ? 'is' : ''}:
+                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {additionalUsersList.map(au => (
+                              <div 
+                                key={au.id} 
+                                className="flex items-center justify-between p-3 bg-slate-950/50 rounded-xl border border-slate-800/60"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="h-7 w-7 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 border border-slate-800 shrink-0">
+                                    <Users size={12}/>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-slate-300 truncate">{au.fullName}</p>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
+                                      ({au.internalCode || 'S/ Cód'})
+                                    </span>
+                                  </div>
+                                </div>
+                                <button 
+                                  type="button"
+                                  onClick={() => navigate(`/users?userId=${au.id}`)} 
+                                  className="px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-[9px] font-bold uppercase text-slate-400 hover:bg-blue-900/20 hover:text-blue-400 hover:border-blue-900/30 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                                >
+                                  Perfil <ChevronRight size={10}/>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}<div className="md:col-span-2 space-y-4">
  <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-800 shadow-inner transition-colors">
  <label className={UI_LABEL_SMALL}>Catálogo de Modelos (A-Z)</label>
  <SearchableDropdown 
