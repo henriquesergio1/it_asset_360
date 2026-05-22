@@ -239,7 +239,7 @@ const DigitalSignature = () => {
                                         
                                         {termData.accessories && termData.accessories.length > 0 && (
                                             <p className="text-[10px] text-slate-500 font-medium italic mt-1">
-                                                Acessórios: {termData.accessories.join(', ')}
+                                                Acessórios: {termData.accessories.map(a => typeof a === 'object' && a !== null ? (a.name || a.Name) : a).join(', ')}
                                             </p>
                                         )}
 

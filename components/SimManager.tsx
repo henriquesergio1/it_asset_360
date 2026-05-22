@@ -261,7 +261,7 @@ const SimManager = () => {
             <button onClick={() => handleExport('pdf')} className="p-2.5 hover:bg-slate-800 text-slate-400 hover:text-blue-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
           </div>
 
-          <div className="relative" ref={columnRef}>
+          <div className={`relative ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
             <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
               <SlidersHorizontal size={18} /> Colunas
             </button>

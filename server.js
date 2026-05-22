@@ -687,7 +687,7 @@ app.get('/api/bootstrap', async (req, res) => {
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
             consumablesRes, auditsRes
         ] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
@@ -717,7 +717,7 @@ app.get('/api/bootstrap', async (req, res) => {
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
             };
         }));
 
@@ -740,7 +740,7 @@ app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
@@ -761,7 +761,7 @@ app.get('/api/sync', async (req, res) => {
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
             };
         }));
 
@@ -1336,8 +1336,26 @@ async function updateUserPendingStatus(pool, userId) {
                     await pool.request().input('I', acc.id).input('Did', assetId).input('At', acc.accessoryTypeId).input('N', acc.name).query("INSERT INTO DeviceAccessories (Id, DeviceId, AccessoryTypeId, Name) VALUES (@I, @Did, @At, @N)");
                 }
             }
+
+            let accNames = null;
+            if (accessories && Array.isArray(accessories)) {
+                accNames = JSON.stringify(accessories.map(a => ({ name: a.name || a })));
+            }
+
             const termId = Math.random().toString(36).substr(2, 9);
-            await pool.request().input('I', termId).input('U', userId).input('T', 'ENTREGA').input('Ad', assetDetails).query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date) VALUES (@I, @U, @T, @Ad, GETDATE())");
+            await pool.request()
+                .input('I', termId)
+                .input('U', userId)
+                .input('T', 'ENTREGA')
+                .input('Ad', assetDetails)
+                .input('Notes', notes || null)
+                .input('Acc', accNames)
+                .input('AssetId', assetId)
+                .input('AssetType', assetType)
+                .query(`
+                    INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Notes, Accessories, AssetId, AssetType) 
+                    VALUES (@I, @U, @T, @Ad, GETDATE(), @Notes, @Acc, @AssetId, @AssetType)
+                `);
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
             await logAction(assetId, assetType, 'Entrega', _adminUser, targetIdStr, richNotes, null, prev, { status: 'Em Uso', currentUserId: userId, userName: userName, timestamp: new Date().toISOString() });
@@ -1424,7 +1442,9 @@ async function updateUserPendingStatus(pool, userId) {
                     .input('Evid3', sql.VarBinary, ev3)
                     .input('IsM', isManual ? 1 : 0)
                     .input('ResR', resolutionReason || null)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR)");
+                    .input('AssetId', assetId)
+                    .input('AssetType', assetType)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
@@ -1797,7 +1817,7 @@ async function updateUserPendingStatus(pool, userId) {
                 if (key.toLowerCase() === 'id') continue;
                 if (key.endsWith('Binary')) continue;
 
-                const val = (key === 'customFieldIds' || key === 'customData') ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (key === 'customFieldIds' || key === 'customData' || key === 'additionalUserIds') ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
                 if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
@@ -1826,7 +1846,7 @@ async function updateUserPendingStatus(pool, userId) {
                 if (prev) {
                     let oldVal = prev[dbKey];
                     let newVal = req.body[key];
-                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds'].includes(key)) newVal = JSON.stringify(newVal);
+                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds', 'additionalUserIds'].includes(key)) newVal = JSON.stringify(newVal);
                     
                     if (String(oldVal || '') !== String(newVal || '')) {
                         diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);

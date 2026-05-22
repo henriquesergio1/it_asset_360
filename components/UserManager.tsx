@@ -967,7 +967,7 @@ const UserManager: React.FC = () => {
             <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
           </div>
 
-          <div className="relative shrink-0" ref={columnRef}>
+          <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
             <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
               <SlidersHorizontal size={18} /> Colunas
             </button>
