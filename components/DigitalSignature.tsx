@@ -219,10 +219,26 @@ const DigitalSignature = () => {
                             
                             <div className="p-6 h-[50vh] overflow-y-auto custom-scrollbar space-y-8 bg-white">
                                 <div className="space-y-4">
-                                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                                        <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-2">Colaborador</h3>
-                                        <p className="text-sm font-bold text-slate-900">{termData.userName}</p>
-                                        <p className="text-[11px] text-slate-500">CPF: {termData.userCpf} | Matrícula: {termData.userCode}</p>
+                                    <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/85">
+                                        <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-1.5">Identificação do Colaborador</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                                            <div>
+                                                <span className="font-bold text-slate-500">Colaborador:</span>{' '}
+                                                <span className="font-black text-slate-900">{termData.userName}</span>
+                                            </div>
+                                            <div>
+                                                <span className="font-bold text-slate-500">CPF:</span>{' '}
+                                                <span className="font-mono font-bold text-slate-900">{termData.userCpf}</span>
+                                            </div>
+                                            <div>
+                                                <span className="font-bold text-slate-500">Cargo / Função:</span>{' '}
+                                                <span className="font-bold text-slate-900">{termData.sectorName || 'Não Informado'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="font-bold text-slate-500">Setor:</span>{' '}
+                                                <span className="font-bold text-slate-900">{termData.userCode || '-'}</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-3">
@@ -235,7 +251,36 @@ const DigitalSignature = () => {
 
                                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                                         <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-2">1. Detalhes do Equipamento</h3>
-                                        <p className="text-sm font-black text-slate-900 mb-1">{termData.assetDetails}</p>
+                                        <p className="text-sm font-black text-slate-900 mb-1">
+                                            {(() => {
+                                                const details = termData.assetDetails || '';
+                                                const bracketsMatch = details.match(/^\[(.*?)\]\s*(.*)$/);
+                                                if (bracketsMatch) {
+                                                    const [_, content, modelName] = bracketsMatch;
+                                                    const parts = content.split('|').map(p => p.trim());
+                                                    const cleanedParts = parts.filter(p => {
+                                                        if (p.toUpperCase().startsWith('TAG:')) {
+                                                            const tagValue = p.substring(4).trim();
+                                                            return tagValue && !['S/T', 'S/I', 'N/A', '---', '', 'DESCONHECIDO', 'S/S'].includes(tagValue.toUpperCase());
+                                                        }
+                                                        if (p.toUpperCase().startsWith('S/N:')) {
+                                                            const snValue = p.substring(4).trim();
+                                                            return snValue && !['S/S', 'S/N', 'N/A', '---', '', 'DESCONHECIDO'].includes(snValue.toUpperCase());
+                                                        }
+                                                        if (p.toUpperCase().startsWith('IMEI:')) {
+                                                            const imeiValue = p.substring(5).trim();
+                                                            return imeiValue && !['S/I', 'S/T', 'N/A', '---', '', 'DESCONHECIDO'].includes(imeiValue.toUpperCase());
+                                                        }
+                                                        return true;
+                                                    });
+                                                    if (cleanedParts.length > 0) {
+                                                        return `[${cleanedParts.join(' | ')}] ${modelName.trim()}`;
+                                                    }
+                                                    return modelName.trim();
+                                                }
+                                                return details;
+                                            })()}
+                                        </p>
                                         
                                         {termData.accessories && termData.accessories.length > 0 && (
                                             <p className="text-[10px] text-slate-500 font-medium italic mt-1">

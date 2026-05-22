@@ -504,28 +504,19 @@ const UserManager: React.FC = () => {
             };
           }
         } else {
-          const contentMatch = term.assetDetails.match(/\[(.*?)\s*-\s*(.*?)\]/);
-          let assetTag = '';
+          const contentMatch = term.assetDetails.match(/\[TAG:\s*(.*?)\]/);
+          const content = contentMatch ? contentMatch[1] : '';
+          const parts = content.split('|').map(p => p.trim());
+          let assetTag = parts[0] || '';
           let serialNumber = '';
           let imei = '';
-          if (contentMatch) {
-            const p1 = contentMatch[1].trim();
-            const p2 = contentMatch[2].trim();
-            if (p1.length > 5) { serialNumber = p1; assetTag = p2; }
-            else { assetTag = p1; serialNumber = p2; }
-          } else {
-            serialNumber = term.assetDetails;
-          }
-          
-          if (term.assetDetails.includes('IMEI:')) {
-            imei = term.assetDetails.split('IMEI:')[1].split('|')[0].trim();
-          }
+          parts.forEach(p => {
+            if (p.startsWith('S/N:')) serialNumber = p.replace('S/N:', '').trim();
+            else if (p.startsWith('IMEI:')) imei = p.replace('IMEI:', '').trim();
+          });
 
-          const realDevice = devices.find(d => 
-            d.id === rawAssetId || 
-            (serialNumber && d.serialNumber === serialNumber) || 
-            (assetTag && d.assetTag === assetTag)
-          );
+          modelName = term.assetDetails.replace(/\[.*?\]\s*/, '').trim();
+          const realDevice = devices.find(d => d.id === rawAssetId || (assetTag && d.assetTag === assetTag) || (imei && d.imei === imei));
 
           if (realDevice) {
             asset = { ...realDevice };

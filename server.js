@@ -1495,9 +1495,10 @@ async function updateUserPendingStatus(pool, userId) {
             const result = await pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
                 .query(`
-                    SELECT t.*, u.FullName as UserName, u.Cpf as UserCpf, u.InternalCode as UserCode
+                    SELECT t.*, u.FullName as UserName, u.Cpf as UserCpf, u.InternalCode as UserCode, s.Name as SectorName
                     FROM Terms t
                     JOIN Users u ON u.Id = t.UserId
+                    LEFT JOIN Sectors s ON s.Id = u.SectorId
                     WHERE t.SignatureToken = @Token
                 `);
             
@@ -1545,6 +1546,7 @@ async function updateUserPendingStatus(pool, userId) {
                 userName: term.UserName,
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
+                sectorName: term.SectorName || 'Não Informado',
                 accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
                 notes: term.Notes,
                 template: finalizedTemplate,
