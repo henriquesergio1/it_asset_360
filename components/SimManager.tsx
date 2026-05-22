@@ -246,7 +246,7 @@ const SimManager = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl relative z-30">
         <div>
           <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
             <Signal className="text-blue-500" size={28} />

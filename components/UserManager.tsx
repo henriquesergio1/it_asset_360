@@ -952,7 +952,7 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl relative z-30">
         <div className="min-w-0 flex-1">
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2 truncate">
             <UserIcon className="text-emerald-500 shrink-0" size={24} />
