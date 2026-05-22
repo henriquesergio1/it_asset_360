@@ -12,6 +12,7 @@ const DigitalSignature = () => {
     const [signed, setSigned] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [location, setLocation] = useState<string>('Capturando...');
+    const [geoStatus, setGeoStatus] = useState<'pending' | 'granted' | 'denied' | 'unsupported'>('pending');
     const [ip, setIp] = useState<string>('Capturando...');
     
     // Evidências
@@ -30,6 +31,36 @@ const DigitalSignature = () => {
 
     const isSecureContext = window.isSecureContext || window.location.hostname === 'localhost';
 
+    const requestLocation = () => {
+        setGeoStatus('pending');
+        setLocation('Capturando...');
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setLocation(`${pos.coords.latitude}, ${pos.coords.longitude}`);
+                    setGeoStatus('granted');
+                },
+                (err) => {
+                    console.error('[Geolocalização] Erro do navegador:', err);
+                    setGeoStatus('denied');
+                    if (err.code === err.PERMISSION_DENIED) {
+                        setLocation('Não autorizado');
+                    } else if (err.code === err.POSITION_UNAVAILABLE) {
+                        setLocation('Indisponível');
+                    } else if (err.code === err.TIMEOUT) {
+                        setLocation('Tempo limite esgotado');
+                    } else {
+                        setLocation('Erro na captura');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
+        } else {
+            setGeoStatus('unsupported');
+            setLocation('Não suportado');
+        }
+    };
+
     useEffect(() => {
         const fetchTermData = async () => {
             try {
@@ -47,15 +78,8 @@ const DigitalSignature = () => {
                     .then(j => setIp(j.ip))
                     .catch(() => setIp('IP Oculto/Privado'));
 
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => setLocation(`${pos.coords.latitude}, ${pos.coords.longitude}`),
-                        () => setLocation('Não autorizado'),
-                        { timeout: 5000 }
-                    );
-                } else {
-                    setLocation('Não suportado');
-                }
+                // Requisitar localização
+                requestLocation();
 
             } catch (err: any) {
                 setError(err.message);
@@ -124,6 +148,10 @@ const DigitalSignature = () => {
     };
 
     const handleSubmit = async () => {
+        if (geoStatus !== 'granted' || !location || location.startsWith('Capturando') || location.includes('não') || location.includes('Erro') || location.includes('suportado') || location.includes('negado') || location.includes('Indisponível')) {
+            alert('A coleta da sua geolocalização exata é um requisito de segurança obrigatório para assinar o termo com validade jurídica.');
+            return;
+        }
         if (!documentPhoto || !selfiePhoto) { 
             alert('Fotos de evidência (Documento e Selfie) são obrigatórias para validade jurídica.'); 
             return; 
@@ -399,20 +427,69 @@ const DigitalSignature = () => {
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-slate-50 border-t border-slate-100">
-                                <label className="flex items-start gap-4 cursor-pointer group">
+                            <div className="p-6 bg-slate-50 border-t border-slate-100 space-y-4">
+                                {geoStatus === 'pending' && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex flex-col gap-2">
+                                        <div className="flex items-center gap-2 text-blue-700">
+                                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full font-bold uppercase" />
+                                            <span className="font-bold text-xs uppercase tracking-wider">Obtendo Geolocalização Obrigatória...</span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 font-medium">Por favor, se o seu navegador solicitar, permita o acesso à localização em tempo real para fins de validade jurídica.</p>
+                                    </div>
+                                )}
+
+                                {geoStatus !== 'granted' && geoStatus !== 'pending' && (
+                                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-red-700">
+                                            <AlertTriangle size={18} />
+                                            <span className="font-black text-xs uppercase tracking-wider">Localização Bloqueada ou Indisponível</span>
+                                        </div>
+                                        <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider leading-relaxed">
+                                            A coleta da sua geolocalização exata é um requisito de segurança obrigatório para conferência e assinatura jurídica deste termo.
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 font-medium">
+                                            Para resolver, certifique-se de que a localização do seu dispositivo está ativa e que o acesso está permitido nas permissões do site ou pelo cadeado 🔒 na barra de endereços do navegador.
+                                        </p>
+                                        <button 
+                                            onClick={requestLocation}
+                                            className="w-full py-3 bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-700 transition-colors shadow-md shadow-red-600/20 active:scale-95"
+                                        >
+                                            Autorizar e Tentar Novamente
+                                        </button>
+                                    </div>
+                                )}
+
+                                {geoStatus === 'granted' && (
+                                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500 text-white rounded-xl">
+                                            <MapPin size={16} />
+                                        </div>
+                                        <div>
+                                            <span className="font-black text-[10px] text-emerald-800 uppercase tracking-widest block">Geolocalização Ativa e Validada</span>
+                                            <span className="text-[10px] font-mono font-bold text-slate-600">{location}</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <label className={`flex items-start gap-4 cursor-pointer group pt-2 ${geoStatus !== 'granted' ? 'opacity-40 pointer-events-none' : ''}`}>
                                     <div className={`mt-0.5 h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${acceptedTerms ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-600/30' : 'bg-white border-slate-300'}`}>
                                         {acceptedTerms && <X className="text-white rotate-45" size={16} strokeWidth={4} />}
-                                        <input type="checkbox" className="hidden" checked={acceptedTerms} onChange={() => setAcceptedTerms(!acceptedTerms)} />
+                                        <input 
+                                            type="checkbox" 
+                                            className="hidden" 
+                                            checked={acceptedTerms} 
+                                            disabled={geoStatus !== 'granted'} 
+                                            onChange={() => setAcceptedTerms(!acceptedTerms)} 
+                                        />
                                     </div>
                                     <span className="text-xs text-slate-500 font-bold leading-relaxed group-hover:text-slate-900 transition-colors">
                                         Li integralmente e aceito todas as condições e termos de responsabilidade descritos.
                                     </span>
                                 </label>
                                 <button 
-                                    disabled={!acceptedTerms}
+                                    disabled={!acceptedTerms || geoStatus !== 'granted'}
                                     onClick={() => setStep(2)}
-                                    className="w-full mt-6 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] disabled:opacity-30 shadow-xl shadow-blue-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    className="w-full mt-2 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] disabled:opacity-30 shadow-xl shadow-blue-600/30 active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
                                     Prosseguir para Evidências <ChevronRight size={18} />
                                 </button>
