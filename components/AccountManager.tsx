@@ -342,10 +342,38 @@ const AccountManager = () => {
 
   const filteredAccounts = sortedAccounts.filter(acc => {
     const searchNormalized = normalizeString(searchTerm);
-    const matchesSearch = normalizeString(acc.name).includes(searchNormalized) ||
+    let matchesSearch = normalizeString(acc.name).includes(searchNormalized) ||
       normalizeString(acc.login).includes(searchNormalized) ||
       normalizeString(acc.accessUrl || '').includes(searchNormalized) ||
       normalizeString(acc.notes || '').includes(searchNormalized);
+    
+    if (!matchesSearch && acc.userIds && acc.userIds.length > 0) {
+      matchesSearch = acc.userIds.some(uid => {
+        const u = users.find(user => user.id === uid);
+        if (!u) return false;
+        return normalizeString(u.fullName).includes(searchNormalized) ||
+          normalizeString(u.cpf || '').includes(searchNormalized) ||
+          normalizeString(u.email || '').includes(searchNormalized) ||
+          normalizeString(u.internalCode || '').includes(searchNormalized);
+      });
+    }
+
+    if (!matchesSearch && acc.deviceIds && acc.deviceIds.length > 0) {
+      matchesSearch = acc.deviceIds.some(did => {
+        const d = devices.find(dev => dev.id === did);
+        if (!d) return false;
+        const model = models.find(m => m.id === d.modelId);
+        const modelName = model ? model.name : '';
+        const brand = model ? brands.find(b => b.id === model.brandId) : null;
+        const brandName = brand ? brand.name : '';
+        return normalizeString(d.assetTag || '').includes(searchNormalized) ||
+          normalizeString(d.serialNumber || '').includes(searchNormalized) ||
+          normalizeString(d.imei || '').includes(searchNormalized) ||
+          normalizeString(d.internalCode || '').includes(searchNormalized) ||
+          normalizeString(modelName).includes(searchNormalized) ||
+          normalizeString(brandName).includes(searchNormalized);
+      });
+    }
     
     const matchesType = activeFilter === 'ALL' || acc.type === activeFilter;
     
