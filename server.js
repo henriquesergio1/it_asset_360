@@ -1565,6 +1565,111 @@ async function updateUserPendingStatus(pool, userId) {
                 clauses: processTags(selectedTemplate.clauses)
             };
 
+            // DINAMISMO ROBUSTO: Recuperar acessórios e chip se nulos ou vazios
+            let parsedAccessories = [];
+            if (term.Accessories) {
+                try {
+                    parsedAccessories = JSON.parse(term.Accessories);
+                } catch (e) {}
+            }
+
+            let parsedLinkedSim = null;
+            if (term.LinkedSimData) {
+                try {
+                    parsedLinkedSim = JSON.parse(term.LinkedSimData);
+                } catch (e) {}
+            }
+
+            // Tentar identificar o ID do dispositivo pelas informações no termo
+            let foundAssetId = term.AssetId;
+            let foundAssetType = term.AssetType || 'Device';
+
+            if (!foundAssetId && term.AssetDetails) {
+                let tag = '';
+                let serial = '';
+                let imei = '';
+                const bracketsMatch = term.AssetDetails.match(/^\[(.*?)\]\s*(.*)$/);
+                if (bracketsMatch) {
+                    const [_, content] = bracketsMatch;
+                    const parts = content.split('|').map(p => p.trim());
+                    parts.forEach(p => {
+                        if (p.toUpperCase().startsWith('TAG:')) {
+                            tag = p.substring(4).trim();
+                        } else if (p.toUpperCase().startsWith('S/N:') || p.toUpperCase().startsWith('SERIAL:')) {
+                            serial = p.substring(p.indexOf(':') + 1).trim();
+                        } else if (p.toUpperCase().startsWith('IMEI:')) {
+                            imei = p.substring(5).trim();
+                        }
+                    });
+                }
+
+                const isTagValid = tag && !['S/T', 'S/I', 'N/A', '---', '', 'DESCONHECIDO', 'S/S'].includes(tag.toUpperCase());
+                const isSerialValid = serial && !['S/S', 'S/N', 'N/A', '---', '', 'DESCONHECIDO'].includes(serial.toUpperCase());
+                const isImeiValid = imei && !['S/I', 'S/T', 'N/A', '---', '', 'DESCONHECIDO'].includes(imei.toUpperCase());
+
+                if (isTagValid || isSerialValid || isImeiValid) {
+                    try {
+                        const reqDev = pool.request();
+                        let queryStr = `SELECT TOP 1 Id FROM Devices WHERE 1=0`;
+                        if (isTagValid) {
+                            reqDev.input('Tag', sql.NVarChar, tag);
+                            queryStr += ` OR AssetTag = @Tag`;
+                        }
+                        if (isSerialValid) {
+                            reqDev.input('Serial', sql.NVarChar, serial);
+                            queryStr += ` OR SerialNumber = @Serial`;
+                        }
+                        if (isImeiValid) {
+                            reqDev.input('Imei', sql.NVarChar, imei);
+                            queryStr += ` OR Imei = @Imei`;
+                        }
+                        const devSearchRes = await reqDev.query(queryStr);
+                        if (devSearchRes.recordset[0]) {
+                            foundAssetId = devSearchRes.recordset[0].Id;
+                            foundAssetType = 'Device';
+                        }
+                    } catch (err) {
+                        console.error('[Signature Fallback] Erro ao buscar ID do ativo:', err.message);
+                    }
+                }
+            }
+
+            // Se identificamos o ID do dispositivo e for Device, carregar seus acessórios e chip diretamente das tabelas
+            if (foundAssetId && foundAssetType === 'Device') {
+                try {
+                    if (!parsedAccessories || parsedAccessories.length === 0) {
+                        const accRes = await pool.request()
+                            .input('AssetId', sql.NVarChar, foundAssetId)
+                            .query("SELECT Name as name FROM DeviceAccessories WHERE DeviceId = @AssetId");
+                        if (accRes.recordset.length > 0) {
+                            parsedAccessories = accRes.recordset.map(r => ({ name: r.name }));
+                        }
+                    }
+
+                    if (!parsedLinkedSim) {
+                        const devRes = await pool.request()
+                            .input('AssetId', sql.NVarChar, foundAssetId)
+                            .query("SELECT LinkedSimId FROM Devices WHERE Id = @AssetId");
+                        if (devRes.recordset[0] && devRes.recordset[0].LinkedSimId) {
+                            const simRes = await pool.request()
+                                .input('Sid', sql.NVarChar, devRes.recordset[0].LinkedSimId)
+                                .query("SELECT * FROM SimCards WHERE Id = @Sid");
+                            if (simRes.recordset[0]) {
+                                const sim = simRes.recordset[0];
+                                parsedLinkedSim = {
+                                    id: sim.Id,
+                                    operator: sim.Operator,
+                                    phoneNumber: sim.PhoneNumber,
+                                    iccid: sim.Iccid
+                                };
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('[Signature Fallback] Erro ao buscar acessórios/chip adicionais:', err.message);
+                }
+            }
+
             res.json({
                 id: term.Id,
                 type: term.Type,
@@ -1574,8 +1679,8 @@ async function updateUserPendingStatus(pool, userId) {
                 userCpf: term.UserCpf,
                 userCode: term.UserCode,
                 sectorName: term.SectorName || 'Não Informado',
-                accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
-                linkedSim: term.LinkedSimData ? JSON.parse(term.LinkedSimData) : null,
+                accessories: parsedAccessories,
+                linkedSim: parsedLinkedSim,
                 notes: term.Notes,
                 template: finalizedTemplate,
                 company: {
