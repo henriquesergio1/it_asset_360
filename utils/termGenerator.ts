@@ -192,7 +192,7 @@ export const getTermHtml = ({
     if (asset.accessories && Array.isArray(asset.accessories) && asset.accessories.length > 0) {
       accessories = asset.accessories.map(a => {
         if (!a) return '';
-        if (typeof a === 'object') return a.name || a.Name || '';
+        if (typeof a === 'object') return (a as any).name || (a as any).Name || '';
         return String(a);
       }).filter(Boolean).join(', ');
     }

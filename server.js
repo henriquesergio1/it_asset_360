@@ -1339,7 +1339,15 @@ async function updateUserPendingStatus(pool, userId) {
 
             let accNames = null;
             if (accessories && Array.isArray(accessories)) {
-                accNames = JSON.stringify(accessories.map(a => ({ name: a.name || a })));
+                accNames = JSON.stringify(accessories.map(a => ({ name: a.name || a.Name || a })));
+            }
+
+            let linkedSimData = null;
+            if (assetType === 'Device' && prev && prev.LinkedSimId) {
+                const simRes = await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("SELECT * FROM SimCards WHERE Id=@Sid");
+                if (simRes.recordset[0]) {
+                    linkedSimData = JSON.stringify(simRes.recordset[0]);
+                }
             }
 
             const termId = Math.random().toString(36).substr(2, 9);
@@ -1350,11 +1358,12 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Ad', assetDetails)
                 .input('Notes', notes || null)
                 .input('Acc', accNames)
+                .input('Sim', linkedSimData)
                 .input('AssetId', assetId)
                 .input('AssetType', assetType)
                 .query(`
-                    INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Notes, Accessories, AssetId, AssetType) 
-                    VALUES (@I, @U, @T, @Ad, GETDATE(), @Notes, @Acc, @AssetId, @AssetType)
+                    INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Notes, Accessories, LinkedSimData, AssetId, AssetType) 
+                    VALUES (@I, @U, @T, @Ad, GETDATE(), @Notes, @Acc, @Sim, @AssetId, @AssetType)
                 `);
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
@@ -1437,6 +1446,14 @@ async function updateUserPendingStatus(pool, userId) {
                     }
                 }
 
+                let linkedSimData = null;
+                if (assetType === 'Device' && prev && prev.LinkedSimId) {
+                    const simRes = await pool.request().input('Sid', sql.NVarChar, prev.LinkedSimId).query("SELECT * FROM SimCards WHERE Id=@Sid");
+                    if (simRes.recordset[0]) {
+                        linkedSimData = JSON.stringify(simRes.recordset[0]);
+                    }
+                }
+
                 await pool.request()
                     .input('I', termId)
                     .input('U', userId)
@@ -1453,7 +1470,8 @@ async function updateUserPendingStatus(pool, userId) {
                     .input('AssetId', assetId)
                     .input('AssetType', assetType)
                     .input('Acc', accNames)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc)");
+                    .input('Sim', linkedSimData)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc, @Sim)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
@@ -1557,6 +1575,7 @@ async function updateUserPendingStatus(pool, userId) {
                 userCode: term.UserCode,
                 sectorName: term.SectorName || 'Não Informado',
                 accessories: term.Accessories ? JSON.parse(term.Accessories) : [],
+                linkedSim: term.LinkedSimData ? JSON.parse(term.LinkedSimData) : null,
                 notes: term.Notes,
                 template: finalizedTemplate,
                 company: {
