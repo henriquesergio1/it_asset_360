@@ -22,6 +22,7 @@ import Reports from './components/Reports';
 import TaskManager from './components/TaskManager';
 import Consumables from './components/Consumables';
 import DigitalSignature from './components/DigitalSignature';
+import { NotificationCenter } from './components/NotificationCenter';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -141,6 +142,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
           
           <div className="flex items-center space-x-4 ml-auto">
+            <NotificationCenter />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-100">{user?.name}</p>
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>

@@ -5,7 +5,7 @@ import {
   AlertCircle, CheckCircle2, XCircle, MoreVertical,
   Calendar, User, Tag, ChevronDown, ArrowUpDown,
   Repeat, Paperclip, Trash2, ExternalLink, FileText,
-  Smartphone, Bell, Wrench, ShieldCheck, CheckSquare,
+  Smartphone, Bell, BellOff, Wrench, ShieldCheck, CheckSquare,
   Download, FileSpreadsheet, FileJson, Check, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
@@ -36,6 +36,31 @@ interface TaskManagerProps {
 export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, devices, models, assetTypes, onAddTask, onUpdateTask, currentUser, isAdmin }) => {
  const { showToast } = useToast();
  const [search, setSearch] = useState('');
+
+ // Gerenciador de alertas por tarefa (sininho)
+ const [disabledTaskAlerts, setDisabledTaskAlerts] = useState<string[]>(() => {
+   try {
+     const saved = localStorage.getItem('task_alerts_disabled');
+     return saved ? JSON.parse(saved) : [];
+   } catch {
+     return [];
+   }
+ });
+
+ const toggleTaskAlert = (taskId: string) => {
+   const isCurrentlyDisabled = disabledTaskAlerts.includes(taskId);
+   let updated: string[];
+   if (isCurrentlyDisabled) {
+     updated = disabledTaskAlerts.filter(id => id !== taskId);
+     showToast('Alertas ativados para esta tarefa', 'success');
+   } else {
+     updated = [...disabledTaskAlerts, taskId];
+     showToast('Alertas desativados para esta tarefa', 'success');
+   }
+   setDisabledTaskAlerts(updated);
+   localStorage.setItem('task_alerts_disabled', JSON.stringify(updated));
+   window.dispatchEvent(new Event('app-alerts-updated'));
+ };
  const [activeTab, setActiveTab] = useState<'Ativas' | 'Concluídas' | 'Canceladas'>('Ativas');
  const [typeFilter, setTypeFilter] = useState<TaskType | 'All'>('All');
  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -558,15 +583,29 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button 
-                    className="p-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-800/50 shadow-inner group/btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedTaskId(task.id);
-                    }}
-                  >
-                    <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
-                  </button>
+                  <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                    {task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.CANCELED && (
+                      <button
+                        title={!disabledTaskAlerts.includes(task.id) ? "Alertas Habilitados (clique para desativar)" : "Alertas Desabilitados (clique para ativar)"}
+                        onClick={() => toggleTaskAlert(task.id)}
+                        className={`p-2 rounded-xl transition-all border shadow-inner ${
+                          !disabledTaskAlerts.includes(task.id)
+                            ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-900/30'
+                            : 'bg-slate-950 text-slate-600 border-slate-800 hover:bg-slate-800'
+                        }`}
+                      >
+                        {!disabledTaskAlerts.includes(task.id) ? <Bell size={16} /> : <BellOff size={16} />}
+                      </button>
+                    )}
+                    <button 
+                      className="p-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-800/50 shadow-inner group/btn"
+                      onClick={() => {
+                        setSelectedTaskId(task.id);
+                      }}
+                    >
+                      <ExternalLink size={16} className="group-hover/btn:scale-110 transition-transform" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText, ArrowUp, ArrowDown, Download, FileSpreadsheet, SlidersHorizontal, CheckCircle, Check } from 'lucide-react';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash2, ArrowUpRight, ArrowDownRight, TrendingDown, X, History, FileText, ArrowUp, ArrowDown, Download, FileSpreadsheet, SlidersHorizontal, CheckCircle, Check, Bell, BellOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { SortableResizableHeader } from './SortableResizableHeader';
@@ -25,6 +25,31 @@ const Consumables = () => {
     const [consumables, setConsumables] = useState<Consumable[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Gerenciamento de alertas de estoque crítico por insumo (sininho)
+    const [disabledConsumableAlerts, setDisabledConsumableAlerts] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('consumable_alerts_disabled');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const toggleConsumableAlert = (id: string, name: string) => {
+        const isCurrentlyDisabled = disabledConsumableAlerts.includes(id);
+        let updated: string[];
+        if (isCurrentlyDisabled) {
+            updated = disabledConsumableAlerts.filter(cid => cid !== id);
+        } else {
+            updated = [...disabledConsumableAlerts, id];
+        }
+        setDisabledConsumableAlerts(updated);
+        localStorage.setItem('consumable_alerts_disabled', JSON.stringify(updated));
+        
+        // Emite o evento global para a central de alertas atualizar em tempo real
+        window.dispatchEvent(new Event('app-alerts-updated'));
+    };
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
     const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
@@ -490,6 +515,17 @@ const Consumables = () => {
                                                         <ArrowDown size={16} />
                                                     </button>
                                                     <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                                                    <button
+                                                        onClick={() => toggleConsumableAlert(c.Id, c.Name)}
+                                                        className={`p-2 rounded-xl transition-all border shadow-inner ${
+                                                            !disabledConsumableAlerts.includes(c.Id)
+                                                                ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-900/30'
+                                                                : 'bg-slate-950 text-slate-600 border-slate-800 hover:bg-slate-800'
+                                                        }`}
+                                                        title={!disabledConsumableAlerts.includes(c.Id) ? "Alertas de Insumo Habilitados (clique para desabilitar)" : "Alertas de Insumo Desabilitados (clique para ativar)"}
+                                                    >
+                                                        {!disabledConsumableAlerts.includes(c.Id) ? <Bell size={16} /> : <BellOff size={16} />}
+                                                    </button>
                                                     <button onClick={() => openEditModal(c)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-xl transition-all" title="Editar">
                                                         <Edit size={16} />
                                                     </button>
