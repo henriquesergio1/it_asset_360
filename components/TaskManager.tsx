@@ -14,6 +14,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
+import { getNextOccurrence, getRecurrenceDescription } from './recurrenceUtils';
 import { useToast } from '../contexts/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -261,7 +262,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  e.preventDefault();
  try {
  const taskToSave = { ...newTask };
- if (!taskToSave.hasDueDate) {
+ if (taskToSave.isRecurring) {
+ taskToSave.hasDueDate = true;
+ taskToSave.status = TaskStatus.IN_PROGRESS;
+ const firstDueDate = getNextOccurrence(taskToSave.recurrenceConfig, new Date());
+ taskToSave.dueDate = firstDueDate.toISOString().split('T')[0];
+ } else if (!taskToSave.hasDueDate) {
  taskToSave.dueDate = undefined;
  }
  
@@ -480,9 +486,16 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-100 tracking-tight group-hover:text-indigo-400 transition-colors">
-                      {task.title}
-                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-100 tracking-tight group-hover:text-indigo-400 transition-colors">
+                        {task.title}
+                      </span>
+                      {task.isRecurring && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-indigo-400 bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-800/20">
+                          <Repeat size={10} /> {getRecurrenceDescription(task.recurrenceConfig)}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
                       {task.description}
                     </span>

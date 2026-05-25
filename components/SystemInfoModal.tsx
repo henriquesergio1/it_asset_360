@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.40.0',
+    date: 'Hoje',
+    title: 'Gestão Inteligente de Tarefas Recorrentes',
+    changes: [
+      'Recorrente: Cálculo automático do prazo de vigência correspondente ao criar a tarefa no painel.',
+      'Status: Tarefa recorrente agora inicia automaticamente como "Em Curso".',
+      'Confirmação: Mini painel interativo para confirmação prática e objetiva de execução individual.',
+      'Histórico: Registro transparente de logs na timeline e avanço dinâmico para a próxima ocorrência.'
+    ]
+  },
+  {
     version: '3.35.0',
     date: 'Hoje',
     title: 'Auditoria Técnica & Verificações Locais',

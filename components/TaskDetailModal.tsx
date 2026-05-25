@@ -10,6 +10,8 @@ import FilePreviewModal from './FilePreviewModal';
 import { Task, TaskLog, TaskStatus, SystemUser, TaskType, MaintenanceType, Device, DeviceModel } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
+import { getNextOccurrence, getRecurrenceDescription } from './recurrenceUtils';
+import { Repeat, Check, Calendar } from 'lucide-react';
 
 interface TaskDetailModalProps {
  task: Task;
@@ -51,6 +53,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  const [editIsRecurring, setEditIsRecurring] = useState(task.isRecurring || false);
  const [editRecurrenceConfig, setEditRecurrenceConfig] = useState<any>(task.recurrenceConfig || { type: 'Nenhuma' as any });
  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+ const [recurrenceNote, setRecurrenceNote] = useState('');
  const [previewData, setPreviewData] = useState({ url: '', name: '' });
  const [editMaintenanceItems, setEditMaintenanceItems] = useState(task.maintenanceItems || []);
  const [searchTerm, setSearchTerm] = useState('');
@@ -349,6 +352,38 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  }
  };
 
+ const handleConfirmOccurrence = async () => {
+ if (!task.dueDate) return;
+ setUpdating(true);
+ try {
+ const currentOccurrenceDate = new Date(task.dueDate);
+ const nextOccurrenceDate = getNextOccurrence(task.recurrenceConfig, currentOccurrenceDate);
+ const formattedCurrent = currentOccurrenceDate.toLocaleDateString('pt-BR');
+ const formattedNext = nextOccurrenceDate.toLocaleDateString('pt-BR');
+
+ const actionNote = `Execução realizada com sucesso para a ocorrência do dia ${formattedCurrent}.${recurrenceNote.trim() ? ` Anotação: ${recurrenceNote.trim()}` : ''} Próxima execução programada para ${formattedNext}.`;
+ 
+ const updates = {
+ dueDate: nextOccurrenceDate.toISOString().split('T')[0],
+ hasDueDate: true,
+ _adminUser: currentUser,
+ _actionNote: actionNote
+ };
+
+ await onUpdate(task.id, updates);
+ setRecurrenceNote('');
+ showToast(`Execução de ${formattedCurrent} confirmada! Próxima data: ${formattedNext}`);
+ 
+ const res = await fetch(`/api/tasks/${task.id}/logs`);
+ if (res.ok) setLogs(await res.json());
+ } catch (err) {
+ console.error('Erro ao confirmar recorrência:', err);
+ showToast('Erro ao confirmar execução.', 'error');
+ } finally {
+ setUpdating(false);
+ }
+ };
+
  const handleAddDeviceToMaintenance = (device: Device) => {
  if (editMaintenanceItems.some(i => i.deviceId === device.id)) {
  showToast('Este dispositivo já está na lista.', 'info');
@@ -521,6 +556,57 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
  {/* Main Info */}
  <div className="flex-1 overflow-y-auto p-4 space-y-6 border-r border-slate-800 bg-slate-900">
+ {task.isRecurring && (
+ <div className="bg-indigo-950/20 rounded-3xl border border-indigo-900/40 p-5 space-y-4 shadow-lg shadow-indigo-950/30">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-2">
+ <div className="p-1.5 bg-indigo-950 rounded-xl text-indigo-400 border border-indigo-900/50">
+ <Repeat size={16} />
+ </div>
+ <div>
+ <h4 className="text-sm font-black uppercase text-indigo-300 tracking-wider">Tarefa Recorrente</h4>
+ <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">
+ {getRecurrenceDescription(task.recurrenceConfig)}
+ </p>
+ </div>
+ </div>
+ 
+ {task.dueDate && (
+ <div className="text-right">
+ <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Execução Pendente</p>
+ <div className="text-xs font-black text-indigo-300 bg-indigo-950 border border-indigo-900 px-3 py-1 rounded-full mt-1 inline-flex items-center gap-1.5 animate-pulse">
+ <Calendar size={12} />
+ {new Date(task.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+ </div>
+ </div>
+ )}
+ </div>
+
+ {task.status !== TaskStatus.CANCELED && (
+ <div className="bg-slate-900/60 p-4 rounded-2xl border border-indigo-900/30 space-y-3">
+ <label className="block text-[11px] font-black uppercase text-slate-400 tracking-wider">
+ Anotações para o Histórico de Execução (Opcional):
+ </label>
+ <textarea
+ value={recurrenceNote}
+ onChange={(e) => setRecurrenceNote(e.target.value)}
+ placeholder="Ex: Executado de acordo com o padrão e revisado."
+ className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl focus:ring-1 focus:ring-indigo-500 outline-none text-xs text-slate-300 min-h-[60px] resize-none"
+ />
+
+ <div className="flex items-center justify-end gap-2 pt-1 border-t border-indigo-900/30">
+ <button
+ onClick={handleConfirmOccurrence}
+ disabled={updating}
+ className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl border border-indigo-500 shadow-md shadow-indigo-900/20 transition-all disabled:opacity-50"
+ >
+ <Check size={14} /> Confirmar Execução Realizada
+ </button>
+ </div>
+ </div>
+ )}
+ </div>
+ )}
  <section>
  <h3 className="text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
  <FileText size={16} /> Descrição
