@@ -285,7 +285,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  try {
  if (isFinalizingWithNote) {
  // Se estiver no fluxo de finalização com nota, conclui a tarefa usando a nota
- await handleStatusChange(TaskStatus.COMPLETED, true);
+ if (task.isRecurring) { await handleConfirmOccurrence(newNote); } else { await handleStatusChange(TaskStatus.COMPLETED, true) }
  setIsFinalizingWithNote(false);
  } else {
  // Fluxo normal de adicionar nota
@@ -352,7 +352,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  }
  };
 
- const handleConfirmOccurrence = async () => {
+ const handleConfirmOccurrence = async (customNote?: string) => {
  if (!task.dueDate) return;
  setUpdating(true);
  try {
@@ -361,7 +361,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  const formattedCurrent = currentOccurrenceDate.toLocaleDateString('pt-BR');
  const formattedNext = nextOccurrenceDate.toLocaleDateString('pt-BR');
 
- const actionNote = `Execução realizada com sucesso para a ocorrência do dia ${formattedCurrent}.${recurrenceNote.trim() ? ` Anotação: ${recurrenceNote.trim()}` : ''} Próxima execução programada para ${formattedNext}.`;
+ const noteToUse = customNote !== undefined ? customNote : recurrenceNote;
+  const actionNote = `Execução realizada com sucesso para a ocorrência do dia ${formattedCurrent}.${noteToUse.trim() ? ` Anotação: ${noteToUse.trim()}` : ''} Próxima execução programada para ${formattedNext}.`;
  
  const updates = {
  dueDate: nextOccurrenceDate.toISOString().split('T')[0],
@@ -596,7 +597,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 
  <div className="flex items-center justify-end gap-2 pt-1 border-t border-indigo-900/30">
  <button
- onClick={handleConfirmOccurrence}
+ onClick={() => handleConfirmOccurrence()}
  disabled={updating}
  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl border border-indigo-500 shadow-md shadow-indigo-900/20 transition-all disabled:opacity-50"
  >
@@ -918,9 +919,9 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {task.isRecurring ? (
  <div className="flex items-center gap-2 text-indigo-400 font-bold">
  <History size={16} />
- {task.recurrenceConfig?.type} 
- {task.recurrenceConfig?.dayOfMonth &&`(Dia ${task.recurrenceConfig.dayOfMonth})`}
- {task.recurrenceConfig?.intervalMonths &&`(A cada ${task.recurrenceConfig.intervalMonths} meses)`}
+ {getRecurrenceDescription(task.recurrenceConfig)} 
+ 
+ 
  </div>
  ) : 'Não recorrente'}
  </div>
@@ -981,7 +982,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  >
  <div className="flex items-center justify-between">
  <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-2">
- <MessageSquare size={14} /> Finalizar Tarefa
+ <MessageSquare size={14} /> {task.isRecurring ? 'Confirmar Execução' : 'Finalizar Tarefa'}
  </h4>
  <button onClick={() => {
  setShowCompletionNotePrompt(false);
@@ -990,17 +991,17 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <X size={14} />
  </button>
  </div>
- <p className="text-sm text-slate-300">Deseja acrescentar mais alguma informação ao histórico de ações antes de finalizar?</p>
+ <p className="text-sm text-slate-300">Deseja acrescentar mais alguma informação ao histórico de ações antes de {task.isRecurring ? 'confirmar a execução' : 'finalizar'}?</p>
  <div className="flex justify-end gap-2">
  <button 
  onClick={() => {
  setShowCompletionNotePrompt(false);
- handleStatusChange(TaskStatus.COMPLETED, true);
+ if (task.isRecurring) { handleConfirmOccurrence(); } else { handleStatusChange(TaskStatus.COMPLETED, true); }
  }}
  disabled={updating}
  className="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all"
  >
- Não, finalizar agora
+ {task.isRecurring ? 'Não, confirmar agora' : 'Não, finalizar agora'}
  </button>
  <button 
  onClick={() => {
@@ -1049,7 +1050,11 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {task.status === TaskStatus.IN_PROGRESS && (
  <button 
  onClick={() => {
- if (task.type === TaskType.MAINTENANCE && task.maintenanceItems) {
+ if (task.isRecurring) {
+  setShowCompletionNotePrompt(true);
+  return;
+  }
+  if (task.type === TaskType.MAINTENANCE && task.maintenanceItems) {
  const allDone = task.maintenanceItems.every(i => i.status === 'Concluído');
  if (!allDone) {
  alert('Todos os dispositivos devem ser concluídos antes de finalizar a tarefa.');
@@ -1061,7 +1066,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  disabled={updating}
  className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-emerald-200 shadow-none transition-all disabled:opacity-50"
  >
- <CheckCircle2 size={18} /> Finalizar Tarefa
+ <CheckCircle2 size={18} /> {task.isRecurring ? 'Concluir Ocorrência do Dia' : 'Finalizar Tarefa'}
  </button>
  )}
 

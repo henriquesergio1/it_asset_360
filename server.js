@@ -147,7 +147,10 @@ const DB_SCHEMAS = {
         DeviceId NVARCHAR(255),
         MaintenanceType NVARCHAR(100),
         MaintenanceCost FLOAT,
-        MaintenanceItems NVARCHAR(MAX)
+        MaintenanceItems NVARCHAR(MAX),
+        HasDueDate BIT DEFAULT 0,
+        IsRecurring BIT DEFAULT 0,
+        RecurrenceConfig NVARCHAR(MAX)
     )`,
     TaskLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -489,6 +492,24 @@ async function initializeDatabase() {
                         console.log(`- Coluna MaintenanceItems não encontrada em Tasks. Adicionando...`);
                         await pool.request().query('ALTER TABLE Tasks ADD MaintenanceItems NVARCHAR(MAX) NULL');
                     }
+
+                    const checkHasDueDate = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'HasDueDate'`);
+                    if (checkHasDueDate.recordset.length === 0) {
+                        console.log(`- Coluna HasDueDate não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD HasDueDate BIT DEFAULT 0 NULL');
+                    }
+
+                    const checkIsRecurring = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'IsRecurring'`);
+                    if (checkIsRecurring.recordset.length === 0) {
+                        console.log(`- Coluna IsRecurring não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD IsRecurring BIT DEFAULT 0 NULL');
+                    }
+
+                    const checkRecurrenceConfig = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'RecurrenceConfig'`);
+                    if (checkRecurrenceConfig.recordset.length === 0) {
+                        console.log(`- Coluna RecurrenceConfig não encontrada em Tasks. Adicionando...`);
+                        await pool.request().query('ALTER TABLE Tasks ADD RecurrenceConfig NVARCHAR(MAX) NULL');
+                    }
                 }
             }
         }
@@ -660,7 +681,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.37.11', 
+            version: '3.40.1', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -729,7 +750,7 @@ app.get('/api/bootstrap', async (req, res) => {
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), logs: format(logsRes), taskLogs: format(taskLogsRes),
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -770,7 +791,7 @@ app.get('/api/sync', async (req, res) => {
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']),
+            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']),
             logs: format(logsRes),
             consumables: format(consumablesRes),
             audits: format(auditsRes)
@@ -2200,7 +2221,7 @@ async function updateUserPendingStatus(pool, userId) {
 
             const result = await request.query(query);
             
-            const formattedTasks = format(result, ['EvidenceUrls', 'ManualAttachments']);
+            const formattedTasks = format(result, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']);
 
             // Lógica de Alertas de Prazo (Injetada na listagem)
             const now = new Date();
@@ -2225,7 +2246,7 @@ async function updateUserPendingStatus(pool, userId) {
     app.post('/api/tasks', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, deviceId, maintenanceType, maintenanceCost, maintenanceItems, _adminUser } = req.body;
+            const { id, title, description, type, status, dueDate, assignedTo, instructions, manualAttachments, deviceId, maintenanceType, maintenanceCost, maintenanceItems, hasDueDate, isRecurring, recurrenceConfig, _adminUser } = req.body;
             
             await pool.request()
                 .input('id', sql.NVarChar, id)
@@ -2241,8 +2262,11 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('maintenanceType', sql.NVarChar, maintenanceType || null)
                 .input('maintenanceCost', sql.Float, maintenanceCost || 0)
                 .input('maintenanceItems', sql.NVarChar, maintenanceItems ? JSON.stringify(maintenanceItems) : null)
-                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems) 
-                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments, @deviceId, @maintenanceType, @maintenanceCost, @maintenanceItems)`);
+                .input('hasDueDate', sql.Bit, hasDueDate ? 1 : 0)
+                .input('isRecurring', sql.Bit, isRecurring ? 1 : 0)
+                .input('recurrenceConfig', sql.NVarChar, recurrenceConfig ? JSON.stringify(recurrenceConfig) : null)
+                .query(`INSERT INTO Tasks (Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Instructions, ManualAttachments, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig) 
+                        VALUES (@id, @title, @description, @type, @status, GETDATE(), @dueDate, @assignedTo, @instructions, @manualAttachments, @deviceId, @maintenanceType, @maintenanceCost, @maintenanceItems, @hasDueDate, @isRecurring, @recurrenceConfig)`);
 
             // Log de Auditoria Imutável
             await pool.request()
@@ -2271,9 +2295,12 @@ async function updateUserPendingStatus(pool, userId) {
             const processedKeys = new Set();
             
             for (let key in req.body) {
-                if (key.startsWith('_') || IGexternal_CRUD_KEYS.includes(key)) continue;
+                if (key.startsWith('_') || (key !== 'hasDueDate' && key !== 'isRecurring' && key !== 'recurrenceConfig' && IGexternal_CRUD_KEYS.includes(key))) continue;
                 
-                const val = (key === 'evidenceUrls' || key === 'manualAttachments' || key === 'maintenanceItems') ? JSON.stringify(req.body[key]) : req.body[key];
+                let val = req.body[key];
+                if (key === 'evidenceUrls' || key === 'manualAttachments' || key === 'maintenanceItems' || key === 'recurrenceConfig') {
+                    val = val ? JSON.stringify(val) : null;
+                }
                 if (val === undefined) continue;
 
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
