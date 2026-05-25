@@ -743,6 +743,20 @@ const DeviceManager = () => {
  const device = devices.find(d => d.id === deviceId);
  if (device) handleOpenModal(device, true, tabParam);
  }
+
+ const statusParam = params.get('status');
+ if (statusParam) {
+ const normalized = statusParam.toLowerCase();
+ if (normalized === 'em manutenção' || normalized === 'manutenção' || normalized === 'maintenance') {
+ setViewStatus(DeviceStatus.MAINTENANCE);
+ } else if (normalized === 'disponível' || normalized === 'disponivel' || normalized === 'available') {
+ setViewStatus(DeviceStatus.AVAILABLE);
+ } else if (normalized === 'em uso' || normalized === 'in_use') {
+ setViewStatus(DeviceStatus.IN_USE);
+ } else if (normalized === 'descartado' || normalized === 'retired') {
+ setViewStatus(DeviceStatus.RETIRED);
+ }
+ }
  }, [location, devices]);
 
  const adminName = currentUser?.name || 'Sistema';
