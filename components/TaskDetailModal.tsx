@@ -10,7 +10,7 @@ import FilePreviewModal from './FilePreviewModal';
 import { Task, TaskLog, TaskStatus, SystemUser, TaskType, MaintenanceType, Device, DeviceModel } from '../types';
 import { useToast } from '../contexts/ToastContext';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
-import { getNextOccurrence, getRecurrenceDescription } from './recurrenceUtils';
+import { getNextOccurrence, getRecurrenceDescription, parseLocalDate, formatLocalDate } from './recurrenceUtils';
 import { Repeat, Check, Calendar } from 'lucide-react';
 
 interface TaskDetailModalProps {
@@ -356,7 +356,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  if (!task.dueDate) return;
  setUpdating(true);
  try {
- const currentOccurrenceDate = new Date(task.dueDate);
+ const currentOccurrenceDate = parseLocalDate(task.dueDate);
  const nextOccurrenceDate = getNextOccurrence(task.recurrenceConfig, currentOccurrenceDate);
  const formattedCurrent = currentOccurrenceDate.toLocaleDateString('pt-BR');
  const formattedNext = nextOccurrenceDate.toLocaleDateString('pt-BR');
@@ -365,7 +365,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const actionNote = `Execução realizada com sucesso para a ocorrência do dia ${formattedCurrent}.${noteToUse.trim() ? ` Anotação: ${noteToUse.trim()}` : ''} Próxima execução programada para ${formattedNext}.`;
  
  const updates = {
- dueDate: nextOccurrenceDate.toISOString().split('T')[0],
+ dueDate: formatLocalDate(nextOccurrenceDate),
  hasDueDate: true,
  _adminUser: currentUser,
  _actionNote: actionNote
@@ -470,7 +470,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <h1>${task.title}</h1>
  <div class="meta">
  <p><strong>Atribuído a:</strong> ${task.assignedTo || 'Geral'}</p>
- <p><strong>Prazo:</strong> ${task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</p>
+ <p><strong>Prazo:</strong> ${task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}</p>
  <p><strong>Status:</strong> ${task.status}</p>
  </div>
  <h2>Manual / Passo a Passo</h2>
@@ -817,7 +817,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  ' bg-slate-800 border-slate-700 text-slate-300'
  }`}>
  <div className="text-lg font-bold">
- {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
+ {task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
  </div>
  {task.isOverdue && (
  <div className="text-xs font-medium mt-1 flex items-center gap-1">

@@ -681,7 +681,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.40.1', 
+            version: '3.40.2', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -2230,7 +2230,12 @@ async function updateUserPendingStatus(pool, userId) {
                 let isNearDue = false;
 
                 if (task.dueDate) {
-                    const dueDate = new Date(task.dueDate);
+                    const dueDate = (() => {
+                        const parts = task.dueDate.split('-');
+                        return parts.length === 3 
+                            ? new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 23, 59, 59, 999)
+                            : (() => { const d = new Date(task.dueDate); d.setHours(23, 59, 59, 999); return d; })();
+                    })();
                     isOverdue = task.status !== 'Concluída' && task.status !== 'Cancelada' && dueDate < now;
                     const diffDays = (dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24);
                     isNearDue = task.status !== 'Concluída' && task.status !== 'Cancelada' && !isOverdue && diffDays <= 2;

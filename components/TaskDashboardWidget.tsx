@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardList, Clock } from 'lucide-react';
+import { parseLocalDate } from './recurrenceUtils';
 import { UI_ICON_SIZE_SMALL } from '../constants';
 import { Task, TaskStatus, SystemUser } from '../types';
 
@@ -73,7 +74,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                 'text-slate-500'
               }`}>
                 <Clock size={UI_ICON_SIZE_SMALL} />
-                {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
+                {task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
               </div>
               <div className={`w-2 h-2 rounded-full ${
                 task.isOverdue ? 'bg-red-500 animate-pulse' : 

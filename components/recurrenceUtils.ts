@@ -19,9 +19,29 @@ export function getRecurrenceDescription(config?: TaskRecurrenceConfig): string 
   }
 }
 
+export function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    return new Date(year, month, day, 12, 0, 0, 0);
+  }
+  const d = new Date(dateStr);
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
+
+export function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function getNextOccurrence(config?: TaskRecurrenceConfig, fromDate: Date = new Date()): Date {
   const result = new Date(fromDate);
-  result.setHours(0, 0, 0, 0);
+  result.setHours(12, 0, 0, 0);
 
   if (!config || config.type === RecurrenceType.NONE) {
     return result;
@@ -68,7 +88,7 @@ export function getNextOccurrence(config?: TaskRecurrenceConfig, fromDate: Date 
 }
 
 function findNthWeekdayOfMonth(year: number, month: number, n: number, dayOfWeek: number): Date {
-  const date = new Date(year, month, 1);
+  const date = new Date(year, month, 1, 12, 0, 0, 0);
   const days: Date[] = [];
   while (date.getMonth() === month) {
     if (date.getDay() === dayOfWeek) {
@@ -77,7 +97,11 @@ function findNthWeekdayOfMonth(year: number, month: number, n: number, dayOfWeek
     date.setDate(date.getDate() + 1);
   }
   if (n === 5) {
-    return days[days.length - 1] || new Date(year, month, 1);
+    const last = days[days.length - 1] || new Date(year, month, 1, 12, 0, 0, 0);
+    last.setHours(12, 0, 0, 0);
+    return last;
   }
-  return days[n - 1] || days[days.length - 1] || new Date(year, month, 1);
+  const selected = days[n - 1] || days[days.length - 1] || new Date(year, month, 1, 12, 0, 0, 0);
+  selected.setHours(12, 0, 0, 0);
+  return selected;
 }

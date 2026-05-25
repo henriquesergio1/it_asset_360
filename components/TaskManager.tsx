@@ -14,7 +14,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Task, TaskStatus, TaskType, SystemUser, RecurrenceType, TaskRecurrenceConfig, Device, DeviceModel, MaintenanceType, DeviceStatus, AssetType, MaintenanceItem } from '../types';
 import { TaskDetailModal } from './TaskDetailModal';
-import { getNextOccurrence, getRecurrenceDescription } from './recurrenceUtils';
+import { getNextOccurrence, getRecurrenceDescription, formatLocalDate, parseLocalDate } from './recurrenceUtils';
 import { useToast } from '../contexts/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -200,7 +200,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  'Tipo': t.type,
  'Status': t.status,
  'Responsável': systemUsers.find(u => u.id === t.assignedTo)?.name || t.assignedTo || 'Geral',
- 'Prazo': t.dueDate ? new Date(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
+ 'Prazo': t.dueDate ? parseLocalDate(t.dueDate).toLocaleDateString('pt-BR') : 'N/A',
  'Descrição': t.description
  }));
 
@@ -266,7 +266,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  taskToSave.hasDueDate = true;
  taskToSave.status = TaskStatus.IN_PROGRESS;
  const firstDueDate = getNextOccurrence(taskToSave.recurrenceConfig, new Date());
- taskToSave.dueDate = firstDueDate.toISOString().split('T')[0];
+ taskToSave.dueDate = formatLocalDate(firstDueDate);
  } else if (!taskToSave.hasDueDate) {
  taskToSave.dueDate = undefined;
  }
