@@ -577,7 +577,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">Execução Pendente</p>
  <div className="text-xs font-black text-indigo-300 bg-indigo-950 border border-indigo-900 px-3 py-1 rounded-full mt-1 inline-flex items-center gap-1.5 animate-pulse">
  <Calendar size={12} />
- {new Date(task.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+ {parseLocalDate(task.dueDate).toLocaleDateString('pt-BR')}
  </div>
  </div>
  )}

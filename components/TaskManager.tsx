@@ -153,7 +153,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  filtered.sort((a, b) => {
  if (!a.dueDate) return 1;
  if (!b.dueDate) return -1;
- return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+ return parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime();
  });
  }
  return filtered;
@@ -551,7 +551,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                       ' bg-slate-950 text-slate-500 border-slate-800'
                     }`}>
                       <Calendar size={12} />
-                      {new Date(task.dueDate!).toLocaleDateString('pt-BR')}
+                      {parseLocalDate(task.dueDate!).toLocaleDateString('pt-BR')}
                     </div>
                   ) : (
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Sem prazo</span>
