@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { AssetType, DeviceBrand, DeviceModel, AccessoryType, CustomField, UserSector } from '../types';
-import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown, Search, Briefcase } from 'lucide-react';
+import { Plus, Trash2, X, Image as ImageIcon, Save, Tag, Box, Layers, Plug, Edit2, List, RefreshCw, ChevronUp, ChevronDown, Search, Briefcase, AlertTriangle } from 'lucide-react';
 import { normalizeString } from '../utils/stringUtils';
 
 interface ModelSettingsProps {
@@ -11,6 +11,7 @@ interface ModelSettingsProps {
 }
 
 const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
  const { 
  assetTypes, addAssetType, updateAssetType, deleteAssetType,
  brands, addBrand, updateBrand, deleteBrand,
@@ -214,15 +215,24 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <button onClick={() => setActiveTab('SECTORS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'SECTORS' ? ' bg-blue-900/40 text-blue-400 ' : ' hover:bg-slate-900'}`}><Briefcase size={18} /> Cargos e Funções</button>
  <button onClick={() => setActiveTab('BRANDS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'BRANDS' ? ' bg-blue-900/40 text-blue-400 ' : ' hover:bg-slate-900'}`}><Box size={18} /> Marcas</button>
  <button onClick={() => setActiveTab('ACCESSORIES')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'ACCESSORIES' ? ' bg-blue-900/40 text-blue-400 ' : ' hover:bg-slate-900'}`}><Plug size={18} /> Acessórios</button>
- <button onClick={() => setActiveTab('MODELS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'MODELS' ? ' bg-blue-900/40 text-blue-400 ' : ' hover:bg-slate-900'}`}><Layers size={18} /> Catálogo / Fotos</button>
+ <button onClick={() => setActiveTab('MODELS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'MODELS' ? ' bg-blue-900/40 text-blue-400 ' : ' hover:bg-slate-900'}`}><Layers size={18} /> Modelos / Fotos</button>
  </div>
 
- <div className="flex-1 p-8 overflow-y-auto bg-slate-900 transition-colors">
+ <div ref={scrollContainerRef} className="flex-1 p-8 overflow-y-auto bg-slate-900 transition-colors">
  {activeTab === 'MODELS' && (
  <div className="space-y-6">
  <h4 className="text-xl font-bold text-slate-100">Catálogo de Modelos</h4>
  <form onSubmit={handleModelSubmit} className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 mb-8 transition-colors">
  <h5 className="font-bold text-slate-200 mb-4 uppercase text-xs tracking-widest">{modelForm.id ? 'Editando Modelo' : 'Cadastrar Novo Modelo'}</h5>
+  {modelForm.id && (
+    <div className="mb-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl flex items-start gap-2.5 text-amber-300 text-xs animate-fade-in">
+      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+      <div>
+        <span className="font-bold uppercase tracking-wider block mb-0.5 text-[10px]">Aviso de Impacto</span>
+        As alterações feitas neste modelo (como nome, marca, tipo ou imagem) serão aplicadas automaticamente a todos os dispositivos vinculados a ele.
+      </div>
+    </div>
+  )}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Nome do Modelo</label><input required type="text"className="w-full border border-slate-700 rounded-lg p-3 text-sm bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.name || ''} onChange={e => setModelForm({...modelForm, name: e.target.value})}/></div>
  <div>
@@ -289,7 +299,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  </div>
  </div>
  <div className="flex gap-1">
- <button onClick={() => setModelForm(m)} className="p-2 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors"><Edit2 size={18}/></button>
+ <button onClick={() => { setModelForm(m); scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar"><Edit2 size={18}/></button>
  <button onClick={() => confirmDelete('Modelo', m.id, m.name, deleteModel)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={18}/></button>
  </div>
  </div>
