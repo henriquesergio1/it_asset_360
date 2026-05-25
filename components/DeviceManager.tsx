@@ -446,7 +446,7 @@ const DeviceManager = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const deviceColumns: Column<Device>[] = [
-    { key: 'modelId', label: 'Foto/Modelo', minWidth: '200px', sortable: true },
+    { key: 'modelId', label: 'Foto/Dispositivo', minWidth: '200px', sortable: true },
     ...(visibleColumns.includes('assetTag') ? [{ key: 'assetTag', label: 'Patrimônio', minWidth: '120px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('imei') ? [{ key: 'imei', label: 'IMEI', minWidth: '150px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('serial') ? [{ key: 'serialNumber', label: 'S/N', minWidth: '120px', sortable: true } as Column<Device>] : []),
@@ -1139,18 +1139,22 @@ const DeviceManager = () => {
                 <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 shadow-inner shrink-0 ring-1 ring-white/5">
                   {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" referrerPolicy="no-referrer" /> : <ImageIcon className="text-slate-300" size={16}/>}
                 </div>
-                <div className="min-w-0">
-                  <div className="font-bold text-slate-100 text-xs group-hover:text-blue-400 transition-colors uppercase tracking-tight flex items-center gap-1.5">
-                    {model?.name}
+                <div className="min-w-0 flex flex-col gap-0.5">
+                  <div className="text-xs group-hover:text-blue-400 transition-colors uppercase tracking-tight flex items-center gap-1.5 flex-wrap">
+                    <span className="font-black text-amber-400">{brand?.name || '---'}</span>
+                    <span className="text-slate-400">-</span>
+                    <span className="font-bold text-slate-150 text-slate-100">{model?.name || '---'}</span>
                     {type?.allowMultipleUsers && (
-                      <span className="bg-amber-900/40 text-amber-400 text-[8px] px-1.5 py-0.5 rounded border border-amber-800/50 flex items-center gap-1" title="Dispositivo Compartilhado">
+                      <span className="bg-amber-900/40 text-amber-400 text-[8px] px-1.5 py-0.5 rounded border border-amber-800/50 flex items-center gap-1 shrink-0" title="Dispositivo Compartilhado">
                         <Users size={8}/> COMPARTILHADO
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-col">
-                    <div className="text-[11px] font-black uppercase tracking-tighter text-slate-500">{brand?.name}</div>
-                    <div className="text-[11px] font-bold uppercase text-blue-400/80">{assetTypes.find(t => t.id === model?.typeId)?.name}</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    {type?.name || '---'}
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-blue-400/95 tracking-wide uppercase">
+                    {d.imei || d.assetTag || '---'}
                   </div>
                 </div>
               </div>
