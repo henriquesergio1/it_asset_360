@@ -136,7 +136,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-slate-900 z-10 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-800">
+        <header className="bg-slate-900 z-40 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-800">
           <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-400 hover:text-slate-200">
             <Menu size={24} />
           </button>
