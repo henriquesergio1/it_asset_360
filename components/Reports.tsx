@@ -560,7 +560,40 @@ const Reports = () => {
     return { totalPurchase, totalMaint, totalLCC, criticalCount };
   }, [financialReportData]);
 
-  const [auditSubTab, setAuditSubTab] = useState<'HISTORY' | 'NO_AUDIT'>('HISTORY');
+  const [auditSubTab, setAuditSubTab] = useState<'HISTORY' | 'NO_AUDIT' | 'ATTENDANCE'>('HISTORY');
+
+  const attendanceReportData = useMemo(() => {
+    const devicesInUse = devices.filter(d => d.status === 'Em Uso');
+    const searchNormalized = normalizeString(searchTerm);
+
+    const result = devicesInUse.map(d => {
+      const user = users.find(u => u.id === d.currentUserId);
+      const sector = sectors.find(s => s.id === user?.sectorId);
+      const model = models.find(m => m.id === d.modelId);
+      return {
+        device: d,
+        user: user,
+        sector: sector,
+        sectorName: sector?.name || 'Sem Setor',
+        userName: user?.fullName || 'Desconhecido',
+        modelName: model?.name || '---',
+      };
+    }).filter(item => {
+      if (!searchTerm) return true;
+      return normalizeString(item.userName).includes(searchNormalized) || 
+             normalizeString(item.sectorName).includes(searchNormalized) || 
+             normalizeString(item.modelName).includes(searchNormalized) ||
+             normalizeString(item.device.imei || '').includes(searchNormalized) ||
+             normalizeString(item.device.serialNumber || '').includes(searchNormalized) ||
+             normalizeString(item.device.assetTag || '').includes(searchNormalized);
+    });
+
+    return result.sort((a, b) => {
+      if (a.sectorName < b.sectorName) return -1;
+      if (a.sectorName > b.sectorName) return 1;
+      return a.userName.localeCompare(b.userName);
+    });
+  }, [devices, users, sectors, models, searchTerm]);
 
   const auditsReportData = useMemo(() => {
     if (!audits) return [];
@@ -691,7 +724,7 @@ const Reports = () => {
         });
         fileName = `historico_auditorias_${new Date().toISOString().split('T')[0]}`;
         pdfTitle = 'Histórico de Auditorias Técnicas';
-      } else {
+      } else if (auditSubTab === 'NO_AUDIT') {
         headers = ['Patrimônio', 'S/N', 'Tipo', 'Marca', 'Modelo', 'Usuário Atual', 'Status Ativo'];
         data = devicesWithoutAuditData.map(d => ({
           'Patrimônio': d.assetTag || 'S/T',
@@ -704,6 +737,17 @@ const Reports = () => {
         }));
         fileName = `ativos_sem_auditoria_${new Date().toISOString().split('T')[0]}`;
         pdfTitle = 'Ativos sem Auditoria Realizada';
+      } else if (auditSubTab === 'ATTENDANCE') {
+        headers = ['Check', 'Setor / Cargo', 'Usuário', 'Modelo', 'Identificação'];
+        data = attendanceReportData.map(d => ({
+          'Check': '[   ]',
+          'Setor / Cargo': d.sectorName,
+          'Usuário': d.userName,
+          'Modelo': d.modelName,
+          'Identificação': getSmartId(d.device.id)
+        }));
+        fileName = `lista_auditoria_${new Date().toISOString().split('T')[0]}`;
+        pdfTitle = 'Lista de Presença - Auditoria';
       }
     }
 
@@ -928,7 +972,7 @@ const Reports = () => {
                   {activeTab === 'CONSUMABLES' && 'Histórico de Consumo de Insumos'}
                   {activeTab === 'ASSETS' && 'Resumo de Ativos por Modelo'}
                   {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
-                  {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : 'Ativos sem Auditoria Realizada')}
+                  {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : auditSubTab === 'NO_AUDIT' ? 'Ativos sem Auditoria Realizada' : 'Lista de Presença - Auditoria')}
                 </h2>
                 <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-1 opacity-70">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
@@ -937,7 +981,8 @@ const Reports = () => {
                   {activeTab === 'FINANCIAL' && 'Análise de investimento total, custos de manutenção e alertas de obsolescência.'}
                   {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' 
                     ? 'Listagem cronológica de todas as auditorias técnicas realizadas nos aparelhos.' 
-                    : 'Identificação de aparelhos que ainda não possuem nenhum registro de auditoria técnica.')}
+                    : auditSubTab === 'NO_AUDIT' ? 'Identificação de aparelhos que ainda não possuem nenhum registro de auditoria técnica.'
+                    : 'Lista de aparelhos em uso para conferência manual (tique no papel).')}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -954,6 +999,12 @@ const Reports = () => {
                       className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
                     >
                       Sem Auditoria
+                    </button>
+                    <button 
+                      onClick={() => setAuditSubTab('ATTENDANCE')}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'ATTENDANCE' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      Lista Presença
                     </button>
                   </div>
                 )}
@@ -1484,6 +1535,51 @@ const Reports = () => {
                       )}
                     </tbody>
                   </table>
+                ) : auditSubTab === 'ATTENDANCE' ? (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-800/50">
+                      <tr className="border-b border-slate-800">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 w-12 text-center">OK</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Setor / Cargo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Usuário</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Modelo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Identificação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {attendanceReportData.length > 0 ? (
+                        attendanceReportData.map(d => (
+                          <tr 
+                            key={d.device.id} 
+                            className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all font-medium text-slate-300"
+                          >
+                            <td className="px-6 py-4 text-center">
+                              <div className="w-5 h-5 border-2 border-slate-500 rounded flex items-center justify-center mx-auto bg-slate-900 print:border-slate-800 print:bg-white">
+                                {/* Quadrado vazio para ticar na caneta */}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 uppercase text-xs">{d.sectorName}</td>
+                            <td className="px-6 py-4">
+                              <span className="font-bold text-slate-100">{d.userName}</span>
+                            </td>
+                            <td className="px-6 py-4 uppercase text-[10px]">{d.modelName}</td>
+                            <td className="px-6 py-4 text-[10px] uppercase font-mono tracking-wider">
+                              {getSmartId(d.device.id)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                             <div className="flex flex-col items-center justify-center">
+                              <CheckCircle size={48} className="mb-4 text-slate-300"/>
+                              <p className="text-sm font-bold">Nenhum aparelho entregue no momento.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 ) : (
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-800/50">
@@ -1563,7 +1659,7 @@ const Reports = () => {
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
               activeTab === 'ASSETS' ? assetsSummaryData.length :
               activeTab === 'FINANCIAL' ? financialReportData.length :
-              auditSubTab === 'HISTORY' ? auditsReportData.length : devicesWithoutAuditData.length
+              auditSubTab === 'HISTORY' ? auditsReportData.length : auditSubTab === 'ATTENDANCE' ? attendanceReportData.length : devicesWithoutAuditData.length
             }</span>
             <span className="print:hidden">Relatório gerado em {new Date().toLocaleDateString('pt-BR')}</span>
           </div>
