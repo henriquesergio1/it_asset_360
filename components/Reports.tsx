@@ -602,12 +602,14 @@ const Reports = () => {
         sectorName: sector?.name || 'Sem Setor',
         userName: user?.fullName || 'Desconhecido',
         modelName: model?.name || '---',
+        internalCode: d.internalCode || '---',
       };
     }).filter(item => {
       if (!searchTerm) return true;
       return normalizeString(item.userName).includes(searchNormalized) || 
              normalizeString(item.sectorName).includes(searchNormalized) || 
              normalizeString(item.modelName).includes(searchNormalized) ||
+             normalizeString(item.internalCode).includes(searchNormalized) ||
              normalizeString(item.device.imei || '').includes(searchNormalized) ||
              normalizeString(item.device.serialNumber || '').includes(searchNormalized) ||
              normalizeString(item.device.assetTag || '').includes(searchNormalized);
@@ -799,9 +801,10 @@ const Reports = () => {
         fileName = `ativos_sem_auditoria_${new Date().toISOString().split('T')[0]}`;
         pdfTitle = 'Ativos sem Auditoria Realizada';
       } else if (auditSubTab === 'ATTENDANCE') {
-        headers = ['Check', 'Setor / Cargo', 'Usuário', 'Modelo', 'Identificação'];
+        headers = ['Check', 'Cód.', 'Setor / Cargo', 'Usuário', 'Modelo', 'Identificação'];
         data = attendanceReportData.map(d => ({
           'Check': '[   ]',
+          'Cód.': d.internalCode,
           'Setor / Cargo': d.sectorName,
           'Usuário': d.userName,
           'Modelo': d.modelName,
@@ -1601,6 +1604,7 @@ const Reports = () => {
                     <thead className="bg-slate-800/50">
                       <tr className="border-b border-slate-800">
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 w-12 text-center">OK</th>
+                        <SortableResizableHeader label="Cód." sortKey="internalCode" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="80px" width={columnWidths['att_internalCode']} onResize={(x, w) => handleResize('att_internalCode', x, w)} />
                         <SortableResizableHeader label="Setor / Cargo" sortKey="sectorName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_sectorName']} onResize={(x, w) => handleResize('att_sectorName', x, w)} />
                         <SortableResizableHeader label="Usuário" sortKey="userName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_userName']} onResize={(x, w) => handleResize('att_userName', x, w)} />
                         <SortableResizableHeader label="Modelo" sortKey="modelName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_modelName']} onResize={(x, w) => handleResize('att_modelName', x, w)} />
@@ -1619,6 +1623,7 @@ const Reports = () => {
                                 {/* Quadrado vazio para ticar na caneta */}
                               </div>
                             </td>
+                            <td className="px-6 py-4 text-xs font-mono font-bold">{d.internalCode}</td>
                             <td className="px-6 py-4 uppercase text-xs">{d.sectorName}</td>
                             <td className="px-6 py-4">
                               <span className="font-bold text-slate-100">{d.userName}</span>
