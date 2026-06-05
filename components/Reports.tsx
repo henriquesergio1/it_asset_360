@@ -1076,7 +1076,7 @@ const Reports = () => {
                 />
               </div>
               
-              {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && auditSubTab === 'HISTORY')) && (
+              {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' || auditSubTab === 'ATTENDANCE'))) && (
                 <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-[11px] font-black uppercase text-slate-400 ml-2">De:</span>
