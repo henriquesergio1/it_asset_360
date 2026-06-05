@@ -563,10 +563,25 @@ const Reports = () => {
   const [auditSubTab, setAuditSubTab] = useState<'HISTORY' | 'NO_AUDIT' | 'ATTENDANCE'>('HISTORY');
 
   const attendanceReportData = useMemo(() => {
-    const devicesInUse = devices.filter(d => d.status === 'Em Uso');
+    let targetDevices = devices.filter(d => d.status === 'Em Uso');
+
+    if (startDate || endDate) {
+      let filteredAudits = audits || [];
+      if (startDate) {
+        filteredAudits = filteredAudits.filter(a => new Date(a.auditDate) >= new Date(startDate));
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        filteredAudits = filteredAudits.filter(a => new Date(a.auditDate) <= end);
+      }
+      const auditedDeviceIds = new Set(filteredAudits.map(a => a.deviceId));
+      targetDevices = targetDevices.filter(d => auditedDeviceIds.has(d.id));
+    }
+
     const searchNormalized = normalizeString(searchTerm);
 
-    const result = devicesInUse.map(d => {
+    const result = targetDevices.map(d => {
       const user = users.find(u => u.id === d.currentUserId);
       const sector = sectors.find(s => s.id === user?.sectorId);
       const model = models.find(m => m.id === d.modelId);
@@ -593,7 +608,7 @@ const Reports = () => {
       if (a.sectorName > b.sectorName) return 1;
       return a.userName.localeCompare(b.userName);
     });
-  }, [devices, users, sectors, models, searchTerm]);
+  }, [devices, users, sectors, models, searchTerm, audits, startDate, endDate]);
 
   const auditsReportData = useMemo(() => {
     if (!audits) return [];
