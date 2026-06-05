@@ -562,6 +562,16 @@ const Reports = () => {
 
   const [auditSubTab, setAuditSubTab] = useState<'HISTORY' | 'NO_AUDIT' | 'ATTENDANCE'>('HISTORY');
 
+  const [attendanceSortConfig, setAttendanceSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const requestAttendanceSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (attendanceSortConfig && attendanceSortConfig.key === key && attendanceSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setAttendanceSortConfig({ key, direction });
+  };
+
   const attendanceReportData = useMemo(() => {
     let targetDevices = devices.filter(d => d.status === 'Em Uso');
 
@@ -603,12 +613,48 @@ const Reports = () => {
              normalizeString(item.device.assetTag || '').includes(searchNormalized);
     });
 
-    return result.sort((a, b) => {
-      if (a.sectorName < b.sectorName) return -1;
-      if (a.sectorName > b.sectorName) return 1;
-      return a.userName.localeCompare(b.userName);
-    });
-  }, [devices, users, sectors, models, searchTerm, audits, startDate, endDate]);
+    if (attendanceSortConfig !== null) {
+      result.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+        switch (attendanceSortConfig.key) {
+          case 'sectorName':
+            aValue = a.sectorName;
+            bValue = b.sectorName;
+            break;
+          case 'userName':
+            aValue = a.userName;
+            bValue = b.userName;
+            break;
+          case 'modelName':
+            aValue = a.modelName;
+            bValue = b.modelName;
+            break;
+          case 'smartId':
+            aValue = getSmartId(a.device.id);
+            bValue = getSmartId(b.device.id);
+            break;
+          default:
+            aValue = a[attendanceSortConfig.key as keyof typeof a];
+            bValue = b[attendanceSortConfig.key as keyof typeof b];
+        }
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+        if (aValue < bValue) return attendanceSortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return attendanceSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      result.sort((a, b) => {
+        if (a.sectorName < b.sectorName) return -1;
+        if (a.sectorName > b.sectorName) return 1;
+        return a.userName.localeCompare(b.userName);
+      });
+    }
+
+    return result;
+  }, [devices, users, sectors, models, searchTerm, audits, startDate, endDate, attendanceSortConfig]);
 
   const auditsReportData = useMemo(() => {
     if (!audits) return [];
@@ -1555,10 +1601,10 @@ const Reports = () => {
                     <thead className="bg-slate-800/50">
                       <tr className="border-b border-slate-800">
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 w-12 text-center">OK</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Setor / Cargo</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Usuário</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Modelo</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Identificação</th>
+                        <SortableResizableHeader label="Setor / Cargo" sortKey="sectorName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_sectorName']} onResize={(x, w) => handleResize('att_sectorName', x, w)} />
+                        <SortableResizableHeader label="Usuário" sortKey="userName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_userName']} onResize={(x, w) => handleResize('att_userName', x, w)} />
+                        <SortableResizableHeader label="Modelo" sortKey="modelName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_modelName']} onResize={(x, w) => handleResize('att_modelName', x, w)} />
+                        <SortableResizableHeader label="Identificação" sortKey="smartId" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_smartId']} onResize={(x, w) => handleResize('att_smartId', x, w)} />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
