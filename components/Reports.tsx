@@ -568,12 +568,12 @@ const Reports = () => {
     if (startDate || endDate) {
       let filteredAudits = audits || [];
       if (startDate) {
-        filteredAudits = filteredAudits.filter(a => new Date(a.auditDate) >= new Date(startDate));
+        filteredAudits = filteredAudits.filter(a => new Date(a.date) >= new Date(startDate));
       }
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        filteredAudits = filteredAudits.filter(a => new Date(a.auditDate) <= end);
+        filteredAudits = filteredAudits.filter(a => new Date(a.date) <= end);
       }
       const auditedDeviceIds = new Set(filteredAudits.map(a => a.deviceId));
       targetDevices = targetDevices.filter(d => auditedDeviceIds.has(d.id));
