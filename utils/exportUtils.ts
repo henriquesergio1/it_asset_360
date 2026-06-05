@@ -24,13 +24,15 @@ export const exportToPDF = (headers: string[], data: any[][], fileName: string, 
  
  doc.setFontSize(18);
  doc.text(title, 14, 22);
- doc.setFontSize(11);
+ doc.setFontSize(10);
  doc.setTextColor(100);
+ const dataStr = `Gerado em: ${new Date().toLocaleString('pt-BR')}`;
+ doc.text(dataStr, 14, 28);
  
  autoTable(doc, {
  head: [headers],
  body: data,
- startY: 30,
+ startY: 32,
  styles: { fontSize: 8, cellPadding: 2 },
  headStyles: { fillColor: [63, 81, 181] },
  alternateRowStyles: { fillColor: [245, 245, 245] },
