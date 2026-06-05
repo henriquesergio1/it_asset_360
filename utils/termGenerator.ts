@@ -224,8 +224,8 @@ export const getTermHtml = ({
         </td>
       </tr>
       <tr>
-        <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>Número:</strong> ${linkedSim.phoneNumber} (${linkedSim.operator})</td>
-        <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>ICCID:</strong> ${linkedSim.iccid}</td>
+        <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>Número:</strong> ${linkedSim.phoneNumber || linkedSim.PhoneNumber || 'N/A'} (${linkedSim.operator || linkedSim.Operator || 'N/A'})</td>
+        <td style="padding: 6px; border: 1px solid #d1d5db; color: #000; font-size: 10px;"><strong>ICCID:</strong> ${linkedSim.iccid || linkedSim.Iccid || 'N/A'}</td>
       </tr>
     `;
   }
