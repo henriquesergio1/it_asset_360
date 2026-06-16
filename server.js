@@ -1183,7 +1183,11 @@ async function updateUserPendingStatus(pool, userId) {
                     continue;
                 }
 
-                request.input(dbKey, val);
+                if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
+                    request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else {
+                    request.input(dbKey, val);
+                }
                 columns.push(dbKey);
                 values.push('@' + dbKey);
             }
@@ -1246,7 +1250,11 @@ async function updateUserPendingStatus(pool, userId) {
                     continue;
                 }
 
-                request.input(dbKey, val);
+                if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
+                    request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else {
+                    request.input(dbKey, val);
+                }
                 sets.push(`${dbKey}=@${dbKey}`);
 
                 if (prev) {
@@ -1886,7 +1894,11 @@ async function updateUserPendingStatus(pool, userId) {
                     continue;
                 }
 
-                request.input(dbKey, val);
+                if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
+                    request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else {
+                    request.input(dbKey, val);
+                }
                 columns.push(dbKey);
                 values.push('@' + dbKey);
             }
@@ -1930,7 +1942,11 @@ async function updateUserPendingStatus(pool, userId) {
                     const val = updates[key];
                     const dbKey = key.charAt(0).toUpperCase() + key.slice(1);
                     
-                    request.input(dbKey, val);
+                    if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
+                        request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                    } else {
+                        request.input(dbKey, val);
+                    }
                     sets.push(`${dbKey}=@${dbKey}`);
 
                     const oldVal = prev[dbKey];
@@ -1996,7 +2012,11 @@ async function updateUserPendingStatus(pool, userId) {
                     continue;
                 }
 
-                request.input(dbKey, val);
+                if (dbKey === 'Cost' || dbKey === 'PurchaseCost') {
+                    request.input(dbKey, sql.Float, val ? parseFloat(val) : 0);
+                } else {
+                    request.input(dbKey, val);
+                }
                 sets.push(`${dbKey}=@${dbKey}`);
 
                 if (prev) {
