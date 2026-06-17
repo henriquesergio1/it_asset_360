@@ -439,6 +439,7 @@ const DeviceManager = () => {
  const [filterNoPulsusId, setFilterNoPulsusId] = useState(false);
  const [filterNoInvoice, setFilterNoInvoice] = useState(false);
  const [filterAssetType, setFilterAssetType] = useState<string>('');
+ const [filterSector, setFilterSector] = useState<string>('');
  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
  const [previewData, setPreviewData] = useState({ url: '', name: '' });
 
@@ -450,13 +451,13 @@ const DeviceManager = () => {
     ...(visibleColumns.includes('assetTag') ? [{ key: 'assetTag', label: 'Patrimônio', minWidth: '120px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('imei') ? [{ key: 'imei', label: 'IMEI', minWidth: '150px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('serial') ? [{ key: 'serialNumber', label: 'S/N', minWidth: '120px', sortable: true } as Column<Device>] : []),
-    ...(visibleColumns.includes('sectorCode') ? [{ key: 'sectorId', label: 'Cód. Setor', minWidth: '100px', sortable: true } as Column<Device>] : []),
-    ...(visibleColumns.includes('sectorName') ? [{ key: 'sectorId', label: 'Cargo / Função', minWidth: '150px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('sectorCode') ? [{ key: 'sectorCode', label: 'Cód. Setor', minWidth: '100px', sortable: true } as Column<Device>] : []),
+    ...(visibleColumns.includes('sectorName') ? [{ key: 'sectorName', label: 'Cargo / Função', minWidth: '150px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('pulsusId') ? [{ key: 'pulsusId', label: 'Pulsus ID', minWidth: '100px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('linkedSim') ? [{ key: 'linkedSimId', label: 'Chip', minWidth: '150px', sortable: true } as Column<Device>] : []),
     ...(visibleColumns.includes('purchaseInfo') ? [{ key: 'purchaseDate', label: 'Aquisição', minWidth: '120px', sortable: true } as Column<Device>] : []),
     { key: 'status', label: 'Status', minWidth: '120px', sortable: true },
-    { key: 'currentUserId', label: 'Responsável Atual', minWidth: '180px', sortable: true },
+    { key: 'currentUserId', label: 'Usuário', minWidth: '180px', sortable: true },
     { key: 'actions', label: 'Ações', minWidth: '150px', sortable: false }
   ];
 
@@ -541,6 +542,7 @@ const DeviceManager = () => {
  setFilterNoPulsusId(false);
  setFilterNoInvoice(false);
  setFilterAssetType('');
+ setFilterSector('');
  };
 
  useEffect(() => {
@@ -820,10 +822,15 @@ const DeviceManager = () => {
  // Filtro por tipo de dispositivo
  if (filterAssetType && model?.typeId !== filterAssetType) return false;
  
+ // Filtro por cargo / função (setor)
+ if (filterSector && d.sectorId !== filterSector) return false;
+ 
  const sectorName = sectors.find(s => s.id === d.sectorId)?.name || '';
- const userName = users.find(u => u.id === d.currentUserId)?.fullName || '';
+ const user = users.find(u => u.id === d.currentUserId);
+ const userName = user?.fullName || '';
+ const userEmail = user?.email || '';
  const chipNumber = sims.find(s => s.id === d.linkedSimId)?.phoneNumber || '';
- const searchString = normalizeString(`${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${chipNumber}`);
+ const searchString = normalizeString(`${model?.name} ${brand?.name} ${d.assetTag || ''} ${d.internalCode || ''} ${d.imei || ''} ${d.serialNumber || ''} ${sectorName} ${userName} ${userEmail} ${chipNumber}`);
  return searchString.includes(normalizeString(searchTerm));
  }).sort((a, b) => {
  if (sortConfig) {
@@ -833,7 +840,10 @@ const DeviceManager = () => {
  if (sortConfig.key === 'modelId') {
  aValue = models.find(m => m.id === a.modelId)?.name || '';
  bValue = models.find(m => m.id === b.modelId)?.name || '';
- } else if (sortConfig.key === 'sectorId') {
+ } else if (sortConfig.key === 'sectorCode') {
+ aValue = a.internalCode || '';
+ bValue = b.internalCode || '';
+ } else if (sortConfig.key === 'sectorName') {
  aValue = sectors.find(s => s.id === a.sectorId)?.name || '';
  bValue = sectors.find(s => s.id === b.sectorId)?.name || '';
  } else if (sortConfig.key === 'currentUserId') {
@@ -1069,11 +1079,22 @@ const DeviceManager = () => {
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
  <div className="relative flex-1">
  <Search className="absolute left-4 top-3.5"size={20} />
- <input type="text"placeholder="Pesquisar por modelo, tag, IMEI, S/N, responsável..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-slate-900 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+ <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-slate-900 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
  </div>
  <div className="flex items-center justify-end gap-4 bg-slate-900 p-2 rounded-xl">
- <span className="text-[11px] font-black uppercase tracking-widest">Filtros:</span>
+ <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
  
+ <select 
+ value={filterSector} 
+ onChange={(e) => setFilterSector(e.target.value)}
+ className="bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all hidden md:inline"
+ >
+ <option value="">Todos Cargos / Funções</option>
+ {sectors.map(sector => (
+ <option key={sector.id} value={sector.id}>{sector.name}</option>
+ ))}
+ </select>
+
  <select 
  value={filterAssetType} 
  onChange={(e) => setFilterAssetType(e.target.value)}
