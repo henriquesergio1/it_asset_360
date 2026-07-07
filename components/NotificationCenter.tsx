@@ -92,7 +92,7 @@ export const NotificationCenter: React.FC = () => {
       return localUser && localUser.active && !hasActiveOverride;
     }).map(alert => ({
       id: `expediente-${alert.codigo}`,
-      title: 'Espediente Incorreto (ERP)',
+      title: 'Expediente Incorreto (ERP)',
       message: `Colaborador ${alert.nome} está marcado como fora do expediente no ERP.`,
       type: 'expediente' as const,
       timestamp: new Date()
