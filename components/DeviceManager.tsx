@@ -1076,18 +1076,18 @@ const DeviceManager = () => {
  ))}
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
- <div className="relative flex-1">
+ <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center w-full">
+ <div className="relative flex-1 w-full">
  <Search className="absolute left-4 top-3.5"size={20} />
  <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
  </div>
- <div className="flex items-center justify-end gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
+ <div className="flex flex-wrap items-center justify-end gap-3 xl:gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
  <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
  
  <select 
  value={filterSector} 
  onChange={(e) => setFilterSector(e.target.value)}
- className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all hidden md:inline"
+ className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
  >
  <option value="">Todos Cargos / Funções</option>
  {sectors.map(sector => (
