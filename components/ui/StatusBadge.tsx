@@ -13,7 +13,7 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {
-  let colorClass = 'bg-slate-800 text-slate-300 border-slate-700';
+  let colorClass = 'bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
   let label = status;
 
   // Normalize status string for matching
@@ -27,7 +27,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'ATIVO':
     case 'COMPLETED':
     case 'CONCLUÍDA':
-      colorClass = 'bg-emerald-900/30 text-emerald-400 border-emerald-900/50';
+      colorClass = 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30';
       if (normalizedStatus === 'AVAILABLE') label = 'Disponível';
       if (normalizedStatus === 'ACTIVE') label = 'Ativo';
       if (normalizedStatus === 'COMPLETED') label = 'Concluída';
@@ -38,7 +38,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'EM USO':
     case 'IN_PROGRESS':
     case 'EM ANDAMENTO':
-      colorClass = 'bg-blue-900/30 text-blue-400 border-blue-900/50';
+      colorClass = 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-sky-500/30';
       if (normalizedStatus === 'IN_USE') label = 'Em Uso';
       if (normalizedStatus === 'IN_PROGRESS') label = 'Em Andamento';
       break;
@@ -52,7 +52,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'SUSPENDED':
     case 'SUSPENSO':
     case 'AFASTADO':
-      colorClass = 'bg-amber-900/30 text-amber-400 border-amber-900/50';
+      colorClass = 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30';
       if (normalizedStatus === 'MAINTENANCE') label = 'Manutenção';
       if (normalizedStatus === 'PENDING') label = 'Pendente';
       if (normalizedStatus === 'SUSPENDED') label = 'Suspenso';
@@ -67,14 +67,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'CANCELLED':
     case 'CANCELADA':
     case 'ERROR':
-      colorClass = 'bg-rose-900/30 text-rose-400 border-rose-900/50';
+      colorClass = 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30';
       if (normalizedStatus === 'RETIRED') label = 'Aposentado';
       if (normalizedStatus === 'INACTIVE') label = 'Inativo';
       if (normalizedStatus === 'CANCELLED') label = 'Cancelada';
       break;
       
     default:
-      colorClass = 'bg-slate-800 text-slate-300 border-slate-700';
+      colorClass = 'bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
   }
 
   return (

@@ -53,7 +53,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  onClick={() => !disabled && setIsOpen(!isOpen)}
  className={`w-full p-3 border rounded-xl flex items-center justify-between transition-all
- ${disabled ? 'bg-slate-900 cursor-not-allowed border-slate-800 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-700'}
+ ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-300 dark:border-slate-600'}
  ${isOpen ? 'ring-4 ring-blue-900/20 border-blue-500' : ''}
 `}
  >
@@ -62,7 +62,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div className="flex flex-col truncate">
  {selectedOption ? (
  <>
- <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-100'}`}>{selectedOption.label}</span>
+ <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-900 dark:text-white'}`}>{selectedOption.label}</span>
  {selectedOption.subLabel && <span className={`text-[11px] truncate font-mono uppercase tracking-tighter ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
  </>
  ) : (
@@ -74,12 +74,12 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  </div>
 
  {isOpen && !disabled && (
- <div className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl max-h-64 overflow-hidden flex flex-col animate-fade-in">
- <div className="p-2 border-b border-slate-700 bg-slate-900 flex items-center gap-2 sticky top-0">
+ <div className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-64 overflow-hidden flex flex-col animate-fade-in">
+ <div className="p-2 border-b border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 flex items-center gap-2 sticky top-0">
  <Search size={14} className="ml-2"/>
  <input 
  type="text"
- className="flex-1 bg-transparent outline-none text-sm text-slate-100 placeholder-slate-400 py-1"
+ className="flex-1 bg-transparent outline-none text-sm text-slate-900 dark:text-white placeholder-slate-400 py-1"
  placeholder="Buscar por IMEI, Tag, Modelo ou Linha..."
  autoFocus
  value={searchTerm}
@@ -91,9 +91,9 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  key={opt.value}
  onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
- className={`px-4 py-3 cursor-pointer hover:bg-blue-900/30 border-b border-slate-700 last:border-0 ${value === opt.value ? 'bg-blue-900/20' : ''}`}
+ className={`px-4 py-3 cursor-pointer hover:bg-blue-100 dark:bg-sky-500/20 border-b border-slate-300 dark:border-slate-600 last:border-0 ${value === opt.value ? 'bg-blue-50 dark:bg-sky-500/20' : ''}`}
  >
- <div className="font-bold text-slate-100 text-sm">{opt.label}</div>
+ <div className="font-bold text-slate-900 dark:text-white text-sm">{opt.label}</div>
  {opt.subLabel && <div className="text-[11px] font-mono uppercase mt-0.5">{opt.subLabel}</div>}
  </div>
  )) : (
@@ -403,8 +403,8 @@ const Operations = () => {
   if (isProcessed) {
   return (
   <>
-  <div className="max-w-2xl mx-auto mt-20 p-10 bg-slate-900 rounded-3xl border-2 border-blue-50 border-slate-800 text-center animate-scale-up">
- <div className="h-24 w-24 bg-emerald-900/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+  <div className="max-w-2xl mx-auto mt-20 p-10 bg-white dark:bg-slate-800 rounded-3xl border-2 border-blue-50 border-slate-200 dark:border-slate-700 text-center animate-scale-up">
+ <div className="h-24 w-24 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
  <CheckCircle size={48} />
  </div>
  <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Operação Realizada!</h2>
@@ -415,11 +415,11 @@ const Operations = () => {
  <Printer size={20}/> Imprimir Termo
  </button>
  {createdTermId && (
-  <button onClick={handleGenerateLink} disabled={generatingLink} className="flex items-center justify-center gap-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-blue-600/30 transition-all">
+  <button onClick={handleGenerateLink} disabled={generatingLink} className="flex items-center justify-center gap-3 bg-blue-600/20 text-blue-600 dark:text-sky-400 border border-blue-500/30 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-blue-600/30 transition-all">
    <Share2 size={20}/> {generatingLink ? 'Gerando...' : 'Link Assinatura Digital'}
   </button>
  )}
- <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-700 transition-all">
+ <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-700 dark:text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all">
    <ArrowLeft size={20}/> Nova Operação
   </button>
   </div>
@@ -427,21 +427,21 @@ const Operations = () => {
 
   {isLinkModalOpen && generatedSignatureLink && (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[501] p-4 animate-fade-in text-left">
-      <div className="bg-slate-900 rounded-3xl p-8 w-full max-w-xl border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 w-full max-w-xl border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
         <div className="flex justify-between items-center mb-6">
           <div className="h-12 w-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20">
             <Share2 size={24} />
           </div>
-          <button onClick={() => setIsLinkModalOpen(false)} className="text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-xl">
+          <button onClick={() => setIsLinkModalOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">
             <X size={20} />
           </button>
         </div>
         <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Link de Assinatura Gerado</h3>
-        <p className="text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
-        <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 group transition-all hover:border-emerald-500/30">
+        <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
+        <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6 group transition-all hover:border-emerald-500/30">
           <div className="flex items-center justify-between gap-4">
-            <div className="truncate text-emerald-400 font-mono text-sm">{generatedSignatureLink}</div>
+            <div className="truncate text-emerald-600 dark:text-emerald-400 font-mono text-sm">{generatedSignatureLink}</div>
             <button onClick={async () => {
               const ok = await copyToClipboard(generatedSignatureLink);
               if (ok) {
@@ -455,17 +455,17 @@ const Operations = () => {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-300 dark:border-slate-600/50">
             <div className="flex gap-3 items-start">
-              <div className="bg-blue-500/10 p-2 rounded-lg text-blue-400 shrink-0">
+              <div className="bg-blue-500/10 p-2 rounded-lg text-blue-600 dark:text-sky-400 shrink-0">
                 <Info size={16} />
               </div>
-              <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
                 Este link é único para este termo. Caso o colaborador não consiga copiar, você pode enviar o link acima manualmente por e-mail ou WhatsApp.
               </p>
             </div>
           </div>
-          <button onClick={() => setIsLinkModalOpen(false)} className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
+          <button onClick={() => setIsLinkModalOpen(false)} className="w-full py-4 bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
             Fechar Janela
           </button>
         </div>
@@ -480,17 +480,17 @@ const Operations = () => {
  <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
  <div className="flex justify-between items-end">
  <div>
- <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Painel de Operações</h1>
+ <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Painel de Operações</h1>
  <p className="font-medium">Gestão centralizada de Entregas e Devoluções.</p>
  </div>
  </div>
 
- <div className="bg-slate-900 rounded-3xl overflow-hidden border border-slate-800">
- <div className="flex bg-slate-950 p-2 gap-2 transition-colors border-b border-slate-800">
- <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
+ <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700">
+ <div className="flex bg-slate-50 dark:bg-slate-900 p-2 gap-2 transition-colors border-b border-slate-200 dark:border-slate-700">
+ <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKOUT' ? 'rotate-0' : 'rotate-180'}/> Entrega
  </button>
- <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'}`}>
+ <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKIN' ? 'rotate-180' : 'rotate-0'}/> Devolução
  </button>
  </div>
@@ -503,11 +503,11 @@ const Operations = () => {
  </div>
 
  <div className="flex gap-4">
- <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
+ <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
  <Smartphone size={32}/>
  <span className="font-bold uppercase text-[11px] tracking-wider">Dispositivo / Equipamento</span>
  </button>
- <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-900/30 text-blue-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-800 hover:border-slate-700 text-slate-300'}`}>
+ <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
  <Cpu size={32}/>
  <span className="font-bold uppercase text-[11px] tracking-wider">Chip SIM Card</span>
  </button>
@@ -538,14 +538,14 @@ const Operations = () => {
  placeholder="Pesquise o colaborador pelo nome ou CPF..."
  icon={<UserIcon size={18}/>}
  />
- <div className="flex items-center gap-3 p-4 bg-blue-900/20 rounded-2xl border border-blue-900/40">
- <input type="checkbox"id="sync"checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded border-slate-700"/>
+ <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-sky-500/20 rounded-2xl border border-blue-300 dark:border-sky-700/40">
+ <input type="checkbox"id="sync"checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded border-slate-300 dark:border-slate-600"/>
  <label htmlFor="sync"className="text-xs font-bold text-blue-200 cursor-pointer">Sincronizar cargo do colaborador automaticamente com o ativo</label>
  </div>
  </div>
 
  {assetType === 'Device' && selectedAssetId && (
- <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-800">
+ <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-200 dark:border-slate-700">
  <div className="flex items-center gap-4">
  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold">3</div>
  <h3 className="text-lg font-bold text-white uppercase tracking-tight">Acessórios Entregues</h3>
@@ -555,9 +555,9 @@ const Operations = () => {
  <button 
  key={acc.id} 
  onClick={() => toggleAccessory(acc.id)}
- className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-900/30 border-blue-500 text-blue-100 ' : ' bg-slate-800 border-slate-700 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-100 dark:bg-sky-500/20 border-blue-500 text-blue-100 ' : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
  >
- <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-white' : ' bg-slate-700 text-slate-300 '}`}>
+ <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-white' : ' bg-slate-700 text-slate-700 dark:text-slate-300 '}`}>
  {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
  </div>
  <span className="text-[11px] font-black uppercase truncate">{acc.name}</span>
@@ -585,7 +585,7 @@ const Operations = () => {
  <button 
  key={u.id}
  onClick={() => setReturningUserId(u.id)}
- className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-800 border-slate-700 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
  >
  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${returningUserId === u.id ? ' bg-orange-900/40 text-orange-400' : ' bg-slate-700 '}`}>
  <UserIcon size={20}/>
@@ -616,7 +616,7 @@ const Operations = () => {
  <button 
  key={item} 
  onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
- className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-slate-800 border-orange-500 text-orange-100' : 'bg-slate-100/50 bg-slate-900/50 border-slate-800 opacity-70'}`}
+ className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-slate-800 border-orange-500 text-orange-100' : 'bg-slate-100/50 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-70'}`}
  >
  <div className="flex items-center gap-3">
  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-900/50 text-orange-400' : ' bg-slate-700 '}`}>
@@ -632,7 +632,7 @@ const Operations = () => {
  )}
 
  {/* NOVO: OPÇÃO DE DESLIGAMENTO (INATIVAÇÃO AUTOMÁTICA) */}
- <div className="space-y-4 pt-4 border-t border-slate-800">
+ <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
  <div className="flex items-center gap-4">
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-orange-600`}>
  {assetType === 'Device' ? (holders.length > 1 ? '4' : '3') : '2'}
@@ -642,7 +642,7 @@ const Operations = () => {
  <button 
  onClick={() => setInactivateAfterReturn(!inactivateAfterReturn)}
  className={`w-full flex items-center gap-4 p-6 rounded-3xl border-2 transition-all text-left group
- ${inactivateAfterReturn ? 'border-red-500 bg-red-900/20 ' : ' border-slate-800 bg-slate-900 hover:border-red-200'}`}
+ ${inactivateAfterReturn ? 'border-red-500 bg-red-900/20 ' : ' border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-red-200'}`}
  >
  <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors
  ${inactivateAfterReturn ? ' bg-red-900/40 text-red-400' : ' bg-slate-800 group-hover:text-red-400'}`}>
@@ -672,7 +672,7 @@ const Operations = () => {
  <h3 className="text-lg font-bold text-white uppercase tracking-tight">Observações Adicionais</h3>
  </div>
  <textarea 
- className="w-full border-2 border-slate-800 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-700 outline-none transition-all shadow-inner bg-slate-800 text-slate-100 placeholder:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
  rows={4} 
  placeholder="Descreva aqui qualquer detalhe importante (ex: tela riscada, entrega via motoboy, etc)..."
  value={notes}
@@ -681,7 +681,7 @@ const Operations = () => {
  </div>
 
  {activeTab === 'CHECKIN' && (
- <div className="space-y-6 pt-6 border-t border-slate-800">
+ <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-700">
  <div className="flex items-center gap-4">
  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-red-600">
  {assetType === 'Device' ? (holders.length > 1 ? '6' : '5') : '4'}
@@ -695,7 +695,7 @@ const Operations = () => {
  <select 
  value={condition} 
  onChange={e => setCondition(e.target.value)}
- className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-700 outline-none transition-all bg-slate-800 text-slate-100"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all bg-slate-800 text-slate-900 dark:text-white"
  >
  <option value="Perfeito">Perfeito Estado</option>
  <option value="Bom">Bom Estado (Marcas de Uso)</option>
@@ -709,7 +709,7 @@ const Operations = () => {
  <label className="text-xs font-bold uppercase tracking-wider">Evidências (Máx 3)</label>
  <div className="grid grid-cols-3 gap-2">
  {evidenceFiles.map((file, idx) => (
- <div key={idx} className="relative h-20 rounded-xl overflow-hidden border border-slate-700 group">
+ <div key={idx} className="relative h-20 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 group">
  <img src={file} alt="Evidência"className="w-full h-full object-cover"/>
  <button 
  onClick={() => setEvidenceFiles(prev => prev.filter((_, i) => i !== idx))}
@@ -720,7 +720,7 @@ const Operations = () => {
  </div>
  ))}
  {evidenceFiles.length < 3 && (
- <label className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-xl cursor-pointer hover:bg-slate-800/50 transition-all">
+ <label className="h-20 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-all">
  <Upload size={16} className=""/>
  <input 
  type="file"
@@ -748,7 +748,7 @@ const Operations = () => {
  <div className="space-y-2">
  <label className="text-xs font-bold uppercase tracking-wider">Descrição Detalhada do Dano / Ocorrência</label>
  <textarea 
- className="w-full border-2 border-slate-800 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-700 outline-none transition-all shadow-inner bg-slate-800 text-slate-100 placeholder:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
  rows={3} 
  placeholder="Descreva o dano físico (ex: tela trincada, carcaça amassada) ou detalhes do BO em caso de furto..."
  value={damageDescription}
@@ -759,7 +759,7 @@ const Operations = () => {
  </div>
  )}
 
- <div className="pt-6 border-t border-slate-800">
+ <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
  <button 
  onClick={handleExecute}
  disabled={isExecuting || !selectedAssetId || (activeTab === 'CHECKOUT' && !selectedUserId)}

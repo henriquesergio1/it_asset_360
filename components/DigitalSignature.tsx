@@ -185,9 +185,9 @@ const DigitalSignature = () => {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center"><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></motion.div><p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Autenticando vínculo...</p></div>;
+    if (loading) return <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center"><motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></motion.div><p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px]">Autenticando vínculo...</p></div>;
     
-    if (error) return <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center"><div className="bg-white p-8 rounded-3xl border border-slate-200 max-w-md shadow-xl"><AlertTriangle className="text-amber-500 mx-auto mb-4" size={40} /><h2 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-tight">Acesso Restrito</h2><p className="text-slate-500 text-sm leading-relaxed">{error}</p><div className="mt-6 pt-6 border-t border-slate-100"><p className="text-[10px] font-bold text-slate-400">Se você já assinou este termo, aguarde a validação do administrador. Para novas assinaturas, solicite um novo link caso tenha sido rejeitado.</p></div></div></div>;
+    if (error) return <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center"><div className="bg-white p-8 rounded-3xl border border-slate-200 max-w-md shadow-xl"><AlertTriangle className="text-amber-500 mx-auto mb-4" size={40} /><h2 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-tight">Acesso Restrito</h2><p className="text-slate-400 dark:text-slate-500 text-sm leading-relaxed">{error}</p><div className="mt-6 pt-6 border-t border-slate-100"><p className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Se você já assinou este termo, aguarde a validação do administrador. Para novas assinaturas, solicite um novo link caso tenha sido rejeitado.</p></div></div></div>;
     
     if (signed) return <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center"><motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white p-10 rounded-[40px] border border-slate-200 max-w-md shadow-2xl relative overflow-hidden"><div className="absolute top-0 right-0 p-4 opacity-5 text-slate-900"><ShieldCheck size={120} /></div><div className="bg-emerald-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20"><CheckCircle2 className="text-white" size={32} /></div><h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tighter">Assinatura Digital Concluída</h2><p className="text-slate-600 text-sm font-medium leading-relaxed mb-8">O termo foi registrado com sucesso. O selo de integridade e fotos de evidência foram anexados ao seu log jurídico.</p><div className="pt-6 border-t border-slate-100"><p className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-600">Sistema IT Asset 360 Secure Signature</p></div></motion.div></div>;
 
@@ -237,7 +237,7 @@ const DigitalSignature = () => {
                                 <div className="flex justify-between items-start gap-4">
                                     <div>
                                         <h2 className="text-lg font-black text-slate-900 leading-tight">Termo de {termData.type}</h2>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {termData.id || 'Draft'}</p>
+                                        <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {termData.id || 'Draft'}</p>
                                     </div>
                                     <div className="p-2 bg-blue-600/10 text-blue-600 rounded-xl">
                                         <Smartphone size={20} />
@@ -251,26 +251,26 @@ const DigitalSignature = () => {
                                         <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-1.5">Identificação do Colaborador</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-y-3 gap-x-6 text-xs">
                                             <div className="md:col-span-2">
-                                                <span className="font-bold text-slate-500">Colaborador:</span>{' '}
+                                                <span className="font-bold text-slate-400 dark:text-slate-500">Colaborador:</span>{' '}
                                                 <span className="font-black text-slate-900 block sm:inline">{termData.userName}</span>
                                             </div>
                                             <div>
-                                                <span className="font-bold text-slate-500">CPF:</span>{' '}
+                                                <span className="font-bold text-slate-400 dark:text-slate-500">CPF:</span>{' '}
                                                 <span className="font-mono font-bold text-slate-900 block sm:inline">{termData.userCpf}</span>
                                             </div>
                                             <div className="md:col-span-2">
-                                                <span className="font-bold text-slate-500">Cargo / Função:</span>{' '}
+                                                <span className="font-bold text-slate-400 dark:text-slate-500">Cargo / Função:</span>{' '}
                                                 <span className="font-bold text-slate-900 block sm:inline">{termData.sectorName || 'Não Informado'}</span>
                                             </div>
                                             <div>
-                                                <span className="font-bold text-slate-500">Setor:</span>{' '}
+                                                <span className="font-bold text-slate-400 dark:text-slate-500">Setor:</span>{' '}
                                                 <span className="font-bold text-slate-900 block sm:inline">{termData.userCode || '-'}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3">
-                                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Declaração de Recebimento</h3>
+                                        <h3 className="text-[9px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Declaração de Recebimento</h3>
                                         <div 
                                             className="text-xs text-slate-600 leading-relaxed italic"
                                             dangerouslySetInnerHTML={{ __html: termData.template?.declaration }}
@@ -280,13 +280,13 @@ const DigitalSignature = () => {
                                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                                         <div className="bg-slate-50 border-b border-slate-100 p-4">
                                             <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">1. Detalhes do Equipamento</h3>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Especificações técnicas e identificação jurídica do ativo.</p>
+                                            <p className="text-[9px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Especificações técnicas e identificação jurídica do ativo.</p>
                                         </div>
                                         
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
-                                                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                                                         <th className="p-4 w-7/12">Descrição do Item</th>
                                                         <th className="p-4 w-5/12">Identificação</th>
                                                     </tr>
@@ -349,27 +349,27 @@ const DigitalSignature = () => {
                                                                 <td className="p-4 text-xs">
                                                                     <p className="font-bold text-slate-900 text-sm">{assetName}</p>
                                                                     {isSim ? (
-                                                                        <p className="text-[10px] text-slate-500 font-medium italic mt-1">Chip Físico</p>
+                                                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic mt-1">Chip Físico</p>
                                                                     ) : (
                                                                         termData.accessories && termData.accessories.length > 0 ? (
-                                                                            <p className="text-[10px] text-slate-500 font-medium italic mt-1">
+                                                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic mt-1">
                                                                                 Acessórios: {termData.accessories.map(a => typeof a === 'object' && a !== null ? (a.name || a.Name) : a).join(', ')}
                                                                             </p>
                                                                         ) : (
-                                                                            <p className="text-[10px] text-slate-400 font-medium italic mt-1">Nenhum acessório vinculado</p>
+                                                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium italic mt-1">Nenhum acessório vinculado</p>
                                                                         )
                                                                     )}
                                                                 </td>
                                                                 <td className="p-4 space-y-1">
                                                                     {isSim ? (
                                                                         <>
-                                                                            <p className="text-slate-500 font-semibold text-[11px]">Número: <span className="font-mono text-slate-900 font-bold block sm:inline">{phone}</span></p>
-                                                                            <p className="text-slate-500 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{iccid}</span></p>
+                                                                            <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">Número: <span className="font-mono text-slate-900 font-bold block sm:inline">{phone}</span></p>
+                                                                            <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{iccid}</span></p>
                                                                         </>
                                                                     ) : (
                                                                         <>
-                                                                            <p className="text-slate-500 font-semibold text-[11px]">Patrimônio / IMEI: <span className="font-mono text-slate-900 font-bold block sm:inline">{displayId}</span></p>
-                                                                            <p className="text-slate-500 font-semibold text-[11px]">Serial: <span className="font-mono text-slate-700 block sm:inline">{serial || 'N/A'}</span></p>
+                                                                            <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">Patrimônio / IMEI: <span className="font-mono text-slate-900 font-bold block sm:inline">{displayId}</span></p>
+                                                                            <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">Serial: <span className="font-mono text-slate-700 block sm:inline">{serial || 'N/A'}</span></p>
                                                                         </>
                                                                     )}
                                                                 </td>
@@ -392,8 +392,8 @@ const DigitalSignature = () => {
                                                                     <p className="text-[10px] text-blue-500 font-medium italic mt-1">Chip Vinculado ao Dispositivo</p>
                                                                 </td>
                                                                 <td className="p-4 space-y-1">
-                                                                    <p className="text-slate-500 font-semibold text-[11px]">Número: <span className="font-mono font-bold text-slate-900 block sm:inline">{termData.linkedSim.phoneNumber || termData.linkedSim.PhoneNumber}</span></p>
-                                                                    <p className="text-slate-500 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{termData.linkedSim.iccid || termData.linkedSim.Iccid}</span></p>
+                                                                    <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">Número: <span className="font-mono font-bold text-slate-900 block sm:inline">{termData.linkedSim.phoneNumber || termData.linkedSim.PhoneNumber}</span></p>
+                                                                    <p className="text-slate-400 dark:text-slate-500 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{termData.linkedSim.iccid || termData.linkedSim.Iccid}</span></p>
                                                                 </td>
                                                             </tr>
                                                         </>
@@ -413,12 +413,12 @@ const DigitalSignature = () => {
 
                                         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
                                             <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                                            <p className="text-[10px] text-slate-400 font-medium">Equipamento conferido e testado conforme padrões da companhia.</p>
+                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Equipamento conferido e testado conforme padrões da companhia.</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t border-slate-100">
-                                        <h3 className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Cláusulas e Condições</h3>
+                                        <h3 className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Cláusulas e Condições</h3>
                                         <div 
                                             className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap font-medium html-content"
                                             dangerouslySetInnerHTML={{ __html: termData.template?.clauses }}
@@ -434,7 +434,7 @@ const DigitalSignature = () => {
                                             <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }} className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full font-bold uppercase" />
                                             <span className="font-bold text-xs uppercase tracking-wider">Obtendo Geolocalização Obrigatória...</span>
                                         </div>
-                                        <p className="text-[10px] text-slate-500 font-medium">Por favor, se o seu navegador solicitar, permita o acesso à localização em tempo real para fins de validade jurídica.</p>
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Por favor, se o seu navegador solicitar, permita o acesso à localização em tempo real para fins de validade jurídica.</p>
                                     </div>
                                 )}
 
@@ -447,7 +447,7 @@ const DigitalSignature = () => {
                                         <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider leading-relaxed">
                                             A coleta da sua geolocalização exata é um requisito de segurança obrigatório para conferência e assinatura jurídica deste termo.
                                         </p>
-                                        <p className="text-[10px] text-slate-500 font-medium">
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                                             Para resolver, certifique-se de que a localização do seu dispositivo está ativa e que o acesso está permitido nas permissões do site ou pelo cadeado 🔒 na barra de endereços do navegador.
                                         </p>
                                         <button 
@@ -482,7 +482,7 @@ const DigitalSignature = () => {
                                             onChange={() => setAcceptedTerms(!acceptedTerms)} 
                                         />
                                     </div>
-                                    <span className="text-xs text-slate-500 font-bold leading-relaxed group-hover:text-slate-900 transition-colors">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-bold leading-relaxed group-hover:text-slate-900 transition-colors">
                                         Li integralmente e aceito todas as condições e termos de responsabilidade descritos.
                                     </span>
                                 </label>
@@ -503,7 +503,7 @@ const DigitalSignature = () => {
                     <motion.div key="step2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
                         <div className="text-center mb-4">
                             <h2 className="text-lg font-black text-slate-900">Validar Identidade</h2>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Capture uma foto nítida do seu documento (RG/CNH)</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Capture uma foto nítida do seu documento (RG/CNH)</p>
                         </div>
                         
                         <div className="bg-white p-6 rounded-[40px] border border-slate-200 flex flex-col items-center shadow-xl">
@@ -515,7 +515,7 @@ const DigitalSignature = () => {
                                     <button onClick={() => setDocumentPhoto(null)} className="w-full py-4 text-xs font-black text-red-600 uppercase tracking-widest border-2 border-red-500/10 rounded-2xl hover:bg-red-50 transition-all">Refazer Foto</button>
                                 </div>
                             ) : (
-                                <button onClick={() => startCamera('document')} className="w-full aspect-[4/3] border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-4 text-slate-400 group hover:border-blue-500/50 hover:text-blue-500 transition-all">
+                                <button onClick={() => startCamera('document')} className="w-full aspect-[4/3] border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-4 text-slate-600 dark:text-slate-400 group hover:border-blue-500/50 hover:text-blue-500 transition-all">
                                     <div className="p-6 bg-slate-50 rounded-full group-hover:bg-blue-600 group-hover:text-white transition-all shadow-inner">
                                         <Camera size={40} />
                                     </div>
@@ -525,7 +525,7 @@ const DigitalSignature = () => {
                         </div>
 
                         <div className="flex gap-4">
-                            <button onClick={() => setStep(1)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl font-black uppercase text-xs tracking-widest text-slate-500 shadow-sm">Voltar</button>
+                            <button onClick={() => setStep(1)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl font-black uppercase text-xs tracking-widest text-slate-400 dark:text-slate-500 shadow-sm">Voltar</button>
                             <button disabled={!documentPhoto} onClick={() => setStep(3)} className="flex-[2] py-4 bg-blue-600 rounded-2xl font-black uppercase text-xs tracking-[0.2em] disabled:opacity-30 shadow-lg shadow-blue-600/30 active:scale-95 transition-all text-white">Continuar</button>
                         </div>
                     </motion.div>
@@ -536,7 +536,7 @@ const DigitalSignature = () => {
                     <motion.div key="step3" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
                         <div className="text-center mb-4">
                             <h2 className="text-lg font-black text-slate-900">Prova de Vida</h2>
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Posicione seu rosto frontalmente para a selfie</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Posicione seu rosto frontalmente para a selfie</p>
                         </div>
                         
                         <div className="bg-white p-6 rounded-[40px] border border-slate-200 flex flex-col items-center shadow-xl">
@@ -548,7 +548,7 @@ const DigitalSignature = () => {
                                     <button onClick={() => setSelfiePhoto(null)} className="w-full py-4 text-xs font-black text-red-600 uppercase tracking-widest border-2 border-red-500/10 rounded-2xl hover:bg-red-50 transition-all">Regravar Selfie</button>
                                 </div>
                             ) : (
-                                <button onClick={() => startCamera('selfie')} className="w-full aspect-[3/4] border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-4 text-slate-400 group hover:border-purple-500/50 hover:text-purple-500 transition-all max-w-xs">
+                                <button onClick={() => startCamera('selfie')} className="w-full aspect-[3/4] border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-4 text-slate-600 dark:text-slate-400 group hover:border-purple-500/50 hover:text-purple-500 transition-all max-w-xs">
                                     <div className="p-6 bg-slate-50 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all shadow-inner">
                                         <UserCheck size={40} />
                                     </div>
@@ -558,7 +558,7 @@ const DigitalSignature = () => {
                         </div>
 
                         <div className="flex gap-4">
-                            <button onClick={() => setStep(2)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl font-black uppercase text-xs tracking-widest text-slate-500 shadow-sm">Voltar</button>
+                            <button onClick={() => setStep(2)} className="flex-1 py-4 bg-white border border-slate-200 rounded-2xl font-black uppercase text-xs tracking-widest text-slate-400 dark:text-slate-500 shadow-sm">Voltar</button>
                             <button disabled={!selfiePhoto} onClick={() => setStep(4)} className="flex-[2] py-4 bg-blue-600 rounded-2xl font-black uppercase text-xs tracking-[0.2em] disabled:opacity-30 shadow-lg shadow-blue-600/30 active:scale-95 transition-all text-white">Ir para Assinatura</button>
                         </div>
                     </motion.div>
@@ -569,7 +569,7 @@ const DigitalSignature = () => {
                     <motion.div key="step4" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="space-y-6">
                         <div className="bg-white rounded-[32px] border border-slate-200 p-6 space-y-6 shadow-2xl">
                             <div>
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <h3 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                                     <Info size={14} className="text-blue-500" /> Alguma observação ou ressalva?
                                 </h3>
                                 <textarea 
@@ -581,7 +581,7 @@ const DigitalSignature = () => {
                             </div>
                             
                             <div className="space-y-3">
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                <h3 className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest flex items-center justify-between">
                                     Assinatura Digital OBRIGATÓRIA
                                     <button onClick={() => sigCanvas.current?.clear()} className="text-red-500 hover:text-red-600 transition-colors">Limpar</button>
                                 </h3>
@@ -613,13 +613,13 @@ const DigitalSignature = () => {
 
                         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex gap-3">
                             <ShieldCheck className="text-blue-600 shrink-0 mt-0.5" size={20} />
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-relaxed">
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider leading-relaxed">
                                 Ao finalizar, você assina eletronicamente este termo com validade jurídica, integrando localização, IP, fotos e biometria facial ao registro de IT Asset 360.
                             </p>
                         </div>
 
                         <div className="flex gap-4">
-                            <button onClick={() => setStep(3)} className="flex-1 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-xs tracking-widest text-slate-500 shadow-sm">Voltar</button>
+                            <button onClick={() => setStep(3)} className="flex-1 py-5 bg-white border border-slate-200 rounded-3xl font-black uppercase text-xs tracking-widest text-slate-400 dark:text-slate-500 shadow-sm">Voltar</button>
                             <button 
                                 disabled={submitting}
                                 onClick={handleSubmit}
@@ -653,7 +653,7 @@ const DigitalSignature = () => {
                                 onClick={handleCapturePhoto}
                                 className="h-20 w-20 bg-white rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all-slow border-[6px] border-white/30 p-1"
                             >
-                                <div className="h-full w-full bg-slate-900 rounded-full flex items-center justify-center text-white">
+                                <div className="h-full w-full bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-white">
                                     <Camera size={24} />
                                 </div>
                             </button>
@@ -663,7 +663,7 @@ const DigitalSignature = () => {
             </AnimatePresence>
 
             {/* Metadados visíveis (Estilo Segurança) */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md flex justify-around text-[8px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100 pointer-events-none">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md flex justify-around text-[8px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest border-t border-slate-100 pointer-events-none">
                 <div className="flex items-center gap-1"><Clock size={10} /> {new Date().toLocaleTimeString()}</div>
                 <div className="flex items-center gap-1"><Hash size={10} /> {ip}</div>
                 <div className="flex items-center gap-1"><MapPin size={10} /> {location.substring(0, 15)}...</div>

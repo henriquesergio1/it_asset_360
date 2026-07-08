@@ -98,7 +98,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
       >
         {/* Backdrop */}
         <div 
-          className="absolute inset-0 bg-slate-950/90 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-50 dark:bg-slate-900/90 backdrop-blur-md"
           onClick={onClose}
         />
 
@@ -107,18 +107,18 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="relative w-full max-w-6xl h-full max-h-[90vh] bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full max-w-6xl h-full max-h-[90vh] bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/50">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
-                {isPDF ? <FileText size={20} className="text-red-400" /> : <ImageIcon size={20} className="text-emerald-400" />}
+              <div className="h-10 w-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0">
+                {isPDF ? <FileText size={20} className="text-red-400" /> : <ImageIcon size={20} className="text-emerald-600 dark:text-emerald-400" />}
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-bold text-slate-100 truncate uppercase tracking-widest">{fileName}</h3>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-tighter shrink-0">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate uppercase tracking-widest">{fileName}</h3>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tighter shrink-0">
                   {isMultiple ? `Visualizando ${urls.length} arquivos` : 'Pré-visualização do documento'}
                 </p>
               </div>
@@ -129,21 +129,21 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
                 <>
                   <button 
                     onClick={() => setScale(s => Math.max(0.5, s - 0.2))}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                    className="p-2 text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
                     title="Diminuir Zoom"
                   >
                     <ZoomOut size={18} />
                   </button>
                   <button 
                     onClick={() => setScale(1)}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all text-[10px] font-bold"
+                    className="p-2 text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all text-[10px] font-bold"
                     title="Redefinir"
                   >
                     100%
                   </button>
                   <button 
                     onClick={() => setScale(s => Math.min(3, s + 0.2))}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                    className="p-2 text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all"
                     title="Aumentar Zoom"
                   >
                     <ZoomIn size={18} />
@@ -153,7 +153,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               <div className="h-6 w-px bg-slate-800 mx-1" />
               <button 
                 onClick={handleDownload}
-                className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/20 rounded-lg transition-all flex items-center gap-2"
+                className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 hover:bg-emerald-50 dark:bg-emerald-500/20 rounded-lg transition-all flex items-center gap-2"
                 title="Baixar Arquivo(s)"
               >
                 <Download size={18} />
@@ -161,7 +161,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               </button>
               <button 
                 onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white hover:bg-red-900/40 rounded-lg transition-all ml-2"
+                className="p-2 text-slate-600 dark:text-slate-400 hover:text-white hover:bg-red-900/40 rounded-lg transition-all ml-2"
                 title="Fechar"
               >
                 <X size={20} />
@@ -170,11 +170,11 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
           </div>
 
           {/* Content Body */}
-          <div className="flex-1 overflow-auto bg-slate-950 p-4 flex flex-col items-center gap-6 relative custom-scrollbar">
+          <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900 p-4 flex flex-col items-center gap-6 relative custom-scrollbar">
             {loading && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 bg-slate-950">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-10 bg-slate-50 dark:bg-slate-900">
                 <Loader2 size={40} className="text-emerald-500 animate-spin" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Carregando conteúdo...</span>
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Carregando conteúdo...</span>
               </div>
             )}
 
@@ -182,13 +182,13 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               <div className="w-full flex flex-col gap-8 py-4 items-center">
                 {urls.map((url, i) => (
                   <div key={i} className="flex flex-col items-center gap-3 w-full max-w-4xl">
-                    <span className="bg-slate-800 text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <span className="bg-slate-800 text-slate-600 dark:text-slate-400 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
                        Arquivo {i + 1}
                     </span>
                     <img 
                       src={url} 
                       alt={`Evidence ${i + 1}`}
-                      className="w-full h-auto rounded-xl shadow-2xl border border-slate-800"
+                      className="w-full h-auto rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700"
                       onLoad={() => i === urls.length - 1 && setLoading(false)}
                     />
                   </div>
@@ -203,7 +203,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
               >
                 <div className="text-center p-10">
                   <FileWarning size={48} className="mx-auto text-amber-500 mb-4 opacity-50" />
-                  <p className="text-slate-300 font-bold mb-4">Não foi possível exibir o PDF diretamente.</p>
+                  <p className="text-slate-700 dark:text-slate-300 font-bold mb-4">Não foi possível exibir o PDF diretamente.</p>
                   <button 
                     onClick={handleDownload} 
                     className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs"
@@ -231,7 +231,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
             ) : (
               <div className="text-center p-10 w-full h-full flex flex-col items-center justify-center">
                 <AlertCircle size={48} className="mx-auto text-red-500 mb-4 opacity-50" />
-                <p className="text-slate-300 font-bold mb-4">Formato de arquivo não suportado para visualização direta.</p>
+                <p className="text-slate-700 dark:text-slate-300 font-bold mb-4">Formato de arquivo não suportado para visualização direta.</p>
                 <button 
                   onClick={handleDownload} 
                   className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold uppercase text-xs"
@@ -243,8 +243,8 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
           </div>
 
           {/* Footer - Info */}
-          <div className="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex justify-between items-center shrink-0">
-             <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase">
+          <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 flex justify-between items-center shrink-0">
+             <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">
                 <span className="flex items-center gap-1.5"><Maximize2 size={12}/> Suporte a Zoom</span>
                 <span className="flex items-center gap-1.5"><FileText size={12}/> PDF / Imagem</span>
              </div>

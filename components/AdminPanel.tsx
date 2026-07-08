@@ -55,7 +55,7 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  }, [logId, getLogDetail, onClose, showToast]);
 
  const resolveFriendlyValue = (key: string, val: any): any => {
- if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-300 italic text-[11px]">vazio</span>;
+ if (val === null || val === undefined || val === '---' || val === '') return <span className="text-slate-700 dark:text-slate-300 italic text-[11px]">vazio</span>;
  
  if (key.toLowerCase().includes('date') || (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val))) {
  try { return new Date(val).toLocaleDateString('pt-BR'); } catch (e) { return val; }
@@ -92,8 +92,8 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  };
 
  if (loading) return (
- <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center backdrop-blur-md">
- <div className="bg-slate-900 p-8 rounded-3xl flex flex-col items-center gap-4">
+ <div className="fixed inset-0 bg-white dark:bg-slate-800/60 z-[200] flex items-center justify-center backdrop-blur-md">
+ <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl flex flex-col items-center gap-4">
  <Loader2 size={40} className="animate-spin"/>
  <p className="text-xs font-black uppercase tracking-widest">Carregando Auditoria...</p>
  </div>
@@ -118,52 +118,52 @@ const AuditDetailModal = ({ logId, onClose }: { logId: string, onClose: () => vo
  } catch (e) {}
 
  return (
- <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
- <div className="bg-slate-900 rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[85vh] border border-slate-800">
- <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center shrink-0">
+ <div className="fixed inset-0 bg-white dark:bg-slate-800/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+ <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[85vh] border border-slate-200 dark:border-slate-700">
+ <div className="bg-white dark:bg-slate-800 bg-black px-8 py-5 flex justify-between items-center shrink-0">
  <div>
  <h3 className="text-lg font-bold text-white uppercase tracking-tight">Detalhes da Auditoria</h3>
  <p className="text-[11px] font-bold uppercase tracking-widest">{log.action} em {new Date(log.timestamp).toLocaleString()}</p>
  </div>
  <button onClick={onClose} className="hover:text-white transition-colors"><X size={24}/></button>
  </div>
- <div className="p-8 overflow-y-auto bg-slate-900">
+ <div className="p-8 overflow-y-auto bg-white dark:bg-slate-800">
  <div className="mb-6 grid grid-cols-2 gap-4">
- <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
+ <div className="bg-slate-800 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
  <span className="block text-[11px] font-bold uppercase mb-1">Realizado por</span>
- <span className="font-bold text-slate-100 text-sm">{log.adminUser}</span>
+ <span className="font-bold text-slate-900 dark:text-white text-sm">{log.adminUser}</span>
  </div>
- <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
+ <div className="bg-slate-800 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
  <span className="block text-[11px] font-bold uppercase mb-1">Item Afetado</span>
- <span className="font-bold text-slate-100 text-sm">[{log.assetType}] {log.targetName}</span>
+ <span className="font-bold text-slate-900 dark:text-white text-sm">[{log.assetType}] {log.targetName}</span>
  </div>
  </div>
  {diffs.length > 0 ? (
- <div className="border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
+ <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-inner">
  <table className="w-full text-xs text-left">
- <thead className="bg-slate-800 text-[11px] uppercase font-bold border-b border-slate-700">
+ <thead className="bg-slate-800 text-[11px] uppercase font-bold border-b border-slate-300 dark:border-slate-600">
  <tr><th className="px-4 py-3">Campo</th><th className="px-4 py-3">Valor Anterior</th><th className="px-4 py-3">Novo Valor</th></tr>
  </thead>
  <tbody className="divide-y divide-slate-800">
  {diffs.map((d, i) => (
- <tr key={i} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:border-l-blue-500 hover:bg-slate-800/60 bg-slate-900">
- <td className="px-4 py-3 font-bold text-slate-300">{d.field}</td>
+ <tr key={i} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:border-l-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700/60 bg-white dark:bg-slate-800">
+ <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{d.field}</td>
  <td className="px-4 py-3 text-red-400 bg-red-50/30 bg-red-900/10 line-through decoration-red-300 decoration-red-700">{resolveFriendlyValue(d.rawKey, d.old)}</td>
- <td className="px-4 py-3 text-emerald-400 bg-emerald-50/30 bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
+ <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 bg-emerald-900/10 font-bold">{resolveFriendlyValue(d.rawKey, d.new)}</td>
  </tr>
  ))}
  </tbody>
  </table>
  </div>
  ) : (
- <div className="text-center py-10 bg-slate-950 rounded-2xl border-2 border-dashed border-slate-800">
- <Info size={32} className="mx-auto text-slate-300 mb-2"/>
+ <div className="text-center py-10 bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+ <Info size={32} className="mx-auto text-slate-700 dark:text-slate-300 mb-2"/>
  <p className="text-xs font-bold uppercase tracking-widest italic">Nenhuma mudança de valor detectada nos campos principais.</p>
  {log.notes && <p className="mt-4 text-xs font-medium whitespace-pre-wrap">Observação: {log.notes}</p>}
  </div>
  )}
  </div>
- <div className="bg-slate-950 px-8 py-5 border-t border-slate-800 flex justify-end shrink-0 transition-colors">
+ <div className="bg-slate-50 dark:bg-slate-900 px-8 py-5 border-t border-slate-200 dark:border-slate-700 flex justify-end shrink-0 transition-colors">
  <button onClick={onClose} className="px-8 py-3 bg-slate-800 bg-slate-700 text-white rounded-xl font-bold uppercase text-[11px] tracking-wider hover:bg-black hover:bg-slate-600 transition-all">Fechar</button>
  </div>
  </div>
@@ -487,36 +487,36 @@ const AdminPanel = () => {
  <div className="space-y-6">
  <div className="flex justify-between items-end">
  <div>
- <h1 className="text-2xl font-bold text-slate-100">Administração do Sistema</h1>
+ <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Administração do Sistema</h1>
  <p className="text-sm">Gerencie acessos, configurações e auditoria estruturada.</p>
  </div>
  </div>
 
- <div className="flex border-b border-slate-800 overflow-x-auto bg-slate-900 px-2 pt-2 rounded-t-xl transition-colors">
- <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Shield size={16} /> Acesso</button>
- <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Settings size={16} /> Geral</button>
- <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
- <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
- <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
- <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
- <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-900/20' : ' hover:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
+ <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-2 pt-2 rounded-t-xl transition-colors">
+ <button onClick={() => setActiveTab('USERS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'USERS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Shield size={16} /> Acesso</button>
+ <button onClick={() => setActiveTab('SETTINGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'SETTINGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Settings size={16} /> Geral</button>
+ <button onClick={() => setActiveTab('IMPORT')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'IMPORT' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><UploadCloud size={16} /> Importação</button>
+ <button onClick={() => setActiveTab('ERP')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ERP' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Database size={16} /> Integração ERP</button>
+ <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
+ <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
+ <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
  </div>
 
  <div className="p-1 animate-fade-in">
  {activeTab === 'USERS' && (
- <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-   <div className="flex border-b border-slate-800 bg-slate-950/40 px-4 pt-2 gap-2">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+   <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-4 pt-2 gap-2">
      <button 
        type="button"
        onClick={() => setAcessoSubTab('OPERADORES')} 
-       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'OPERADORES' ? 'border-blue-600 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'OPERADORES' ? 'border-blue-600 text-blue-600 dark:text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-200'}`}
      >
        Operadores ({systemUsers.length})
      </button>
      <button 
        type="button"
        onClick={() => setAcessoSubTab('PERFIS')} 
-       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'PERFIS' ? 'border-blue-600 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'PERFIS' ? 'border-blue-600 text-blue-600 dark:text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-200'}`}
      >
        Perfis de Acesso (RBAC) ({profiles.length})
      </button>
@@ -524,8 +524,8 @@ const AdminPanel = () => {
 
    {acessoSubTab === 'OPERADORES' && (
      <div>
-       <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-         <h3 className="font-bold text-slate-100 flex items-center gap-2"><UserCheck size={18} className=""/> Usuários com Acesso ao Sistema</h3>
+       <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800">
+         <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2"><UserCheck size={18} className=""/> Usuários com Acesso ao Sistema</h3>
          <button onClick={() => handleOpenModal()} className="text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"><Plus size={14}/> Novo Operador</button>
        </div>
        <div className="overflow-x-auto">
@@ -545,11 +545,11 @@ const AdminPanel = () => {
                const profileName = userProfile ? userProfile.Nome : (u.role === SystemRole.ADMIN ? 'Administrador (Legado)' : 'Operador (Legado)');
                const isProfileActive = userProfile ? userProfile.Ativo : true;
                return (
-                 <tr key={u.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
-                   <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
+                 <tr key={u.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-blue-500 bg-white dark:bg-slate-800">
+                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{u.name}</td>
                    <td className="px-6 py-4 font-medium">{u.email}</td>
                    <td className="px-6 py-4">
-                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${(u.role === SystemRole.ADMIN || userProfile?.Permissoes?.admin) ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>
+                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${(u.role === SystemRole.ADMIN || userProfile?.Permissoes?.admin) ? ' bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 ' : ' bg-slate-800 '}`}>
                        {profileName} {!isProfileActive && '(Inativo)'}
                      </span>
                    </td>
@@ -570,10 +570,10 @@ const AdminPanel = () => {
 
    {acessoSubTab === 'PERFIS' && (
      <div>
-       <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+       <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800">
          <div>
-           <h3 className="font-bold text-slate-100 flex items-center gap-2"><Shield size={18}/> Perfis de Acesso (RBAC)</h3>
-           <p className="text-xs text-slate-400 mt-1">Crie perfis com permissões customizadas de Leitura e Escrita por módulo.</p>
+           <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2"><Shield size={18}/> Perfis de Acesso (RBAC)</h3>
+           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Crie perfis com permissões customizadas de Leitura e Escrita por módulo.</p>
          </div>
          <button onClick={() => handleOpenProfileModal()} className="text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"><Plus size={14}/> Novo Perfil</button>
        </div>
@@ -593,19 +593,19 @@ const AdminPanel = () => {
                const permsSummary = p.Permissoes?.admin ? 'Acesso Total (Admin)' : (activePerms.length === 0 ? 'Nenhuma' : activePerms.map(k => k.replace('_leitura', ' (L)').replace('_escrita', ' (E)')).join(', '));
                
                return (
-                 <tr key={p.ID_Perfil} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all hover:bg-slate-800/60 bg-slate-900">
-                   <td className="px-6 py-4 font-bold text-slate-100">{p.Nome}</td>
+                 <tr key={p.ID_Perfil} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all hover:bg-slate-100 dark:hover:bg-slate-700/60 bg-white dark:bg-slate-800">
+                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{p.Nome}</td>
                    <td className="px-6 py-4">
-                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.Ativo ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
+                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.Ativo ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
                        {p.Ativo ? 'Ativo' : 'Inativo'}
                      </span>
                    </td>
-                   <td className="px-6 py-4 text-xs font-mono text-slate-400 max-w-xs truncate" title={permsSummary}>
+                   <td className="px-6 py-4 text-xs font-mono text-slate-600 dark:text-slate-400 max-w-xs truncate" title={permsSummary}>
                      {permsSummary}
                    </td>
                    <td className="px-6 py-4 text-right">
                      <div className="flex justify-end gap-2">
-                       <button onClick={() => handleOpenProfileModal(p)} className="p-1.5 hover:bg-blue-900/40 rounded-lg text-slate-300" title="Editar Perfil"><Edit2 size={16}/></button>
+                       <button onClick={() => handleOpenProfileModal(p)} className="p-1.5 hover:bg-blue-900/40 rounded-lg text-slate-700 dark:text-slate-300" title="Editar Perfil"><Edit2 size={16}/></button>
                        {p.ID_Perfil !== 1 && (
                          <button onClick={() => handleDeleteProfile(p.ID_Perfil)} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg" title="Excluir Perfil"><Trash2 size={16}/></button>
                        )}
@@ -623,27 +623,27 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'SETTINGS' && (
- <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
  <form onSubmit={handleSettingsSubmit} className="max-w-2xl space-y-6">
- <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-4"><Layout size={20} className=""/> Personalização do App</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4"><Layout size={20} className=""/> Personalização do App</h3>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div className="md:col-span-2">
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome da Aplicação</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
  </div>
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">CNPJ da Empresa</label>
- <input className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-mono"value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
+ <input className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-mono"value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
  </div>
  <div className="md:col-span-2">
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">URL do Logotipo</label>
  <div className="flex gap-4 items-center">
- <input className="flex-1 border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 text-sm"value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
+ <input className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white text-sm"value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
  {settingsForm.logoUrl && <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain rounded border p-1"alt="Logo Preview"/>}
  </div>
  </div>
  </div>
- <div className="pt-4 border-t border-slate-800 flex justify-end">
+ <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
  <button type="submit"className="text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"><Save size={18}/> Salvar Configurações</button>
  </div>
  </form>
@@ -651,38 +651,38 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'TEMPLATE' && (
- <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
  <form onSubmit={handleTermTemplateSubmit} className="space-y-10">
  <div>
- <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-2"><Globe size={20} className=""/> Termo de Entrega</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2"><Globe size={20} className=""/> Termo de Entrega</h3>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Declaração (Topo)</label>
- <textarea rows={4} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={termConfig.delivery.declaration} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, declaration: e.target.value}})}/>
+ <textarea rows={4} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={termConfig.delivery.declaration} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, declaration: e.target.value}})}/>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Cláusulas e Condições</label>
- <textarea rows={4} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={termConfig.delivery.clauses} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, clauses: e.target.value}})}/>
+ <textarea rows={4} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={termConfig.delivery.clauses} onChange={e => setTermConfig({...termConfig, delivery: {...termConfig.delivery, clauses: e.target.value}})}/>
  </div>
  </div>
  </div>
  <div>
- <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-2"><RotateCcw size={20} className=""/> Termo de Devolução</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-2"><RotateCcw size={20} className=""/> Termo de Devolução</h3>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Declaração (Topo)</label>
- <textarea rows={4} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={termConfig.return.declaration} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, declaration: e.target.value}})}/>
+ <textarea rows={4} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={termConfig.return.declaration} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, declaration: e.target.value}})}/>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Cláusulas e Condições</label>
- <textarea rows={4} className="w-full border-2 border-slate-800 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={termConfig.return.clauses} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, clauses: e.target.value}})}/>
+ <textarea rows={4} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={termConfig.return.clauses} onChange={e => setTermConfig({...termConfig, return: {...termConfig.return, clauses: e.target.value}})}/>
  </div>
  </div>
  </div>
- <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-900/30 text-[11px] text-blue-300 font-bold uppercase tracking-widest">
+ <div className="bg-blue-50 dark:bg-sky-500/20 p-4 rounded-xl border border-blue-300 dark:border-sky-700/30 text-[11px] text-blue-300 font-bold uppercase tracking-widest">
  Variáveis Disponíveis: {'{NOME_EMPRESA}, {CNPJ}, {NOME_COLABORADOR}, {CPF}, {RG}'}
  </div>
- <div className="flex justify-end pt-4 border-t border-slate-800">
+ <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
  <button type="submit"className="text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"><Save size={18}/> Salvar Templates</button>
  </div>
  </form>
@@ -692,10 +692,10 @@ const AdminPanel = () => {
  {activeTab === 'IMPORT' && <DataImporter />}
 
  {activeTab === 'LICENSE' && (
- <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 animate-fade-in">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 animate-fade-in">
  <div className="flex items-center gap-3 mb-8">
  <ShieldCheck size={24} className="text-blue-500" />
- <h3 className="text-xl font-black text-slate-100 uppercase tracking-tighter">Status da Licença</h3>
+ <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Status da Licença</h3>
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -703,18 +703,18 @@ const AdminPanel = () => {
  <div className={`p-8 rounded-3xl border-2 transition-all ${licenseStatus?.status === 'ACTIVE' ? 'bg-emerald-900/10 border-emerald-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
  <div className="space-y-6">
  <div>
- <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Situação</p>
- <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-400' : 'text-red-400'}`}>
+ <p className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-widest mb-1">Situação</p>
+ <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-400'}`}>
  {licenseStatus?.status === 'ACTIVE' ? 'ATIVA' : 'EXPIRADA / INVÁLIDA'}
  </p>
  </div>
  <div>
- <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Cliente</p>
- <p className="text-lg font-bold text-slate-100">{licenseStatus?.client || '---'}</p>
+ <p className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-widest mb-1">Cliente</p>
+ <p className="text-lg font-bold text-slate-900 dark:text-white">{licenseStatus?.client || '---'}</p>
  </div>
  <div>
- <p className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-1">Vencimento</p>
- <p className="text-lg font-bold text-slate-100">
+ <p className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-widest mb-1">Vencimento</p>
+ <p className="text-lg font-bold text-slate-900 dark:text-white">
  {licenseStatus?.expiresAt ? new Date(licenseStatus.expiresAt).toLocaleDateString('pt-BR') : '---'}
  </p>
  </div>
@@ -722,13 +722,13 @@ const AdminPanel = () => {
  </div>
 
  {/* Lado Direito: Ativação */}
- <div className="bg-slate-800/30 p-8 rounded-3xl border border-slate-700/50">
- <h4 className="text-sm font-black uppercase text-slate-100 tracking-widest mb-6">Ativar Licença</h4>
+ <div className="bg-slate-800/30 p-8 rounded-3xl border border-slate-300 dark:border-slate-600/50">
+ <h4 className="text-sm font-black uppercase text-slate-900 dark:text-white tracking-widest mb-6">Ativar Licença</h4>
  <form onSubmit={handleLicenseSubmit} className="space-y-6">
  <div className="relative">
  <textarea
  rows={4}
- className="w-full border-2 border-slate-700 rounded-2xl p-4 text-sm focus:border-blue-500 outline-none bg-slate-900/50 text-slate-100 font-mono resize-none transition-all"
+ className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-2xl p-4 text-sm focus:border-blue-500 outline-none bg-white dark:bg-slate-800/50 text-slate-900 dark:text-white font-mono resize-none transition-all"
  placeholder="Cole a chave aqui..."
  value={licenseKeyInput}
  onChange={e => setLicenseKeyInput(e.target.value)}
@@ -755,10 +755,10 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'ERP' && (
- <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
  <form onSubmit={(e) => { e.preventDefault(); updateExternalDbConfig(erpForm, currentUser?.name || 'Admin'); alert('Configurações salvas!'); }} className="space-y-8">
  <div className="flex justify-between items-center">
- <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2"><Database size={20} className=""/> Configuração de Banco de Dados Externo</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Database size={20} className=""/> Configuração de Banco de Dados Externo</h3>
  <div className="flex gap-3">
  <button 
  type="button"
@@ -771,7 +771,7 @@ const AdminPanel = () => {
  finally { setIsTestingConnection(false); }
  }}
  disabled={isTestingConnection}
- className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-700 transition-all disabled:opacity-50"
+ className="px-4 py-2 bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all disabled:opacity-50"
  >
  {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
  Testar Conexão
@@ -783,28 +783,28 @@ const AdminPanel = () => {
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
- <select className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
+ <select className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
  <option value="SQL Server">SQL Server</option>
  </select>
  </div>
  <div className="md:col-span-2">
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
  </div>
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
- <input required type="number"className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
+ <input required type="number"className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
  </div>
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
  <input 
  type="password"
  required 
- className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"
  value={isPasswordModified ? erpForm.password : (erpForm.password ? '********' : '')} 
  onChange={e => {
  setErpForm({...erpForm, password: e.target.value});
@@ -820,15 +820,15 @@ const AdminPanel = () => {
  </div>
  <div className="md:col-span-3">
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
  </div>
  <div className="md:col-span-3">
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL de Seleção</label>
  <div className="relative">
- <FileCode className="absolute left-3 top-3 text-slate-300"size={18}/>
+ <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300"size={18}/>
  <textarea 
  rows={8} 
- className="w-full border-2 border-slate-800 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"
  value={erpForm.selectionQuery} 
  onChange={e => setErpForm({...erpForm, selectionQuery: e.target.value})}
  placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
@@ -846,14 +846,14 @@ const AdminPanel = () => {
  <div className="flex flex-col md:flex-row gap-4 mb-2">
  <div className="relative flex-1">
  <Search className="absolute left-4 top-3.5"size={18}/>
- <input type="text"placeholder="Filtrar por Admin, Item, Ação..."className="w-full pl-12 pr-6 py-3.5 border-2 border-slate-800 rounded-2xl outline-none focus:border-blue-500 bg-slate-900 text-slate-100 font-medium text-sm transition-colors"value={logSearch} onChange={e => setLogSearch(e.target.value)}/>
+ <input type="text"placeholder="Filtrar por Admin, Item, Ação..."className="w-full pl-12 pr-6 py-3.5 border-2 border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:border-blue-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium text-sm transition-colors"value={logSearch} onChange={e => setLogSearch(e.target.value)}/>
  </div>
- <div className="bg-blue-900/20 border rounded-2xl px-6 py-3 flex items-center gap-3">
+ <div className="bg-blue-50 dark:bg-sky-500/20 border rounded-2xl px-6 py-3 flex items-center gap-3">
  <Activity size={20} className=""/>
- <div className="text-[11px] font-black uppercase text-blue-400">Auditoria: {totalLogs} eventos</div>
+ <div className="text-[11px] font-black uppercase text-blue-600 dark:text-sky-400">Auditoria: {totalLogs} eventos</div>
  </div>
  </div>
- <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+ <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-sm text-left">
  <thead className="text-[11px] font-black uppercase bg-slate-800 border-b tracking-widest">
@@ -865,11 +865,11 @@ const AdminPanel = () => {
  ) : filteredLogs.length === 0 ? (
  <tr><td colSpan={5} className="px-6 py-8 text-center">Nenhum log encontrado.</td></tr>
  ) : filteredLogs.map((log: AuditLog) => (
- <tr key={log.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
+ <tr key={log.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-blue-500 bg-white dark:bg-slate-800">
  <td className="px-6 py-4 whitespace-nowrap text-[11px] font-mono font-bold">{new Date(log.timestamp).toLocaleString()}</td>
- <td className="px-6 py-4 font-bold text-slate-100">{log.adminUser}</td>
- <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">{log.action}</span></td>
- <td className="px-6 py-4 font-bold text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
+ <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{log.adminUser}</td>
+ <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400">{log.action}</span></td>
+ <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 text-xs truncate max-w-[150px]">{log.targetName || log.assetId}</td>
  <td className="px-6 py-4 text-right">
  <button onClick={() => setSelectedLogId(log.id)} className={`px-3 py-1.5 rounded-xl ${UI_BUTTON_SECONDARY} text-[11px]`}>Detalhes</button>
  </td>
@@ -879,11 +879,11 @@ const AdminPanel = () => {
  </table>
  </div>
  {totalPages > 1 && (
- <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-800/50">
+ <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-800/50">
  <button 
  disabled={logPage === 1 || logsLoading} 
  onClick={() => setLogPage(p => Math.max(1, p - 1))}
- className="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-700 border border-slate-600 rounded-lg disabled:opacity-50"
+ className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-700 border border-slate-600 rounded-lg disabled:opacity-50"
  >
  Anterior
  </button>
@@ -891,7 +891,7 @@ const AdminPanel = () => {
  <button 
  disabled={logPage === totalPages || logsLoading} 
  onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
- className="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-700 border border-slate-600 rounded-lg disabled:opacity-50"
+ className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-700 border border-slate-600 rounded-lg disabled:opacity-50"
  >
  Próxima
  </button>
@@ -903,9 +903,9 @@ const AdminPanel = () => {
  </div>
 
  {isModalOpen && (
- <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
- <div className="bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden animate-scale-up border border-slate-800">
- <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
+ <div className="fixed inset-0 bg-white dark:bg-slate-800/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+ <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700">
+ <div className="bg-white dark:bg-slate-800 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
  <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingId ? 'Editar Operador' : 'Novo Operador'}</h3>
  <button onClick={() => setIsModalOpen(false)} className="hover:text-white"><X size={24}/></button>
  </div>
@@ -913,26 +913,26 @@ const AdminPanel = () => {
  <div className="space-y-4">
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome Completo</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})}/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={userForm.name || ''} onChange={e => setUserForm({...userForm, name: e.target.value})}/>
  </div>
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">E-mail de Acesso</label>
  <div className="relative">
- <Mail className="absolute left-3 top-3 text-slate-300"size={18}/>
- <input required type="email"className="w-full border-2 border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})}/>
+ <Mail className="absolute left-3 top-3 text-slate-700 dark:text-slate-300"size={18}/>
+ <input required type="email"className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={userForm.email || ''} onChange={e => setUserForm({...userForm, email: e.target.value})}/>
  </div>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
  <div className="relative">
- <Lock className="absolute left-3 top-3 text-slate-300"size={18}/>
- <input required={!editingId} type="password"placeholder={editingId ? '••••••••' : ''} className="w-full border-2 border-slate-800 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100"value={userForm.password || ''} onChange={e => setUserForm({...userForm, password: e.target.value})}/>
+ <Lock className="absolute left-3 top-3 text-slate-700 dark:text-slate-300"size={18}/>
+ <input required={!editingId} type="password"placeholder={editingId ? '••••••••' : ''} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white"value={userForm.password || ''} onChange={e => setUserForm({...userForm, password: e.target.value})}/>
  </div>
  </div>
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Perfil de Acesso (RBAC)</label>
  <select 
-   className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"
+   className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold"
    value={userForm.ID_Perfil || ''} 
    onChange={e => {
      const pId = Number(e.target.value);
@@ -956,7 +956,7 @@ const AdminPanel = () => {
  </select>
  </div>
  </div>
- <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+ <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
  <button type="button" onClick={() => setIsModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>
  <button type="submit" className={`px-8 py-3 rounded-xl ${UI_BUTTON_PRIMARY} text-xs uppercase`}>Salvar Operador</button>
  </div>
@@ -966,9 +966,9 @@ const AdminPanel = () => {
  )}
 
  {isProfileModalOpen && (
- <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
- <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-slate-800">
- <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
+ <div className="fixed inset-0 bg-white dark:bg-slate-800/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+ <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700">
+ <div className="bg-white dark:bg-slate-800 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
  <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingProfile ? 'Editar Perfil (RBAC)' : 'Novo Perfil (RBAC)'}</h3>
  <button onClick={() => setIsProfileModalOpen(false)} className="hover:text-white"><X size={24}/></button>
  </div>
@@ -976,7 +976,7 @@ const AdminPanel = () => {
  <div className="space-y-4">
  <div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Perfil</label>
- <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold" value={profileForm.Nome || ''} onChange={e => setProfileForm({...profileForm, Nome: e.target.value})}/>
+ <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={profileForm.Nome || ''} onChange={e => setProfileForm({...profileForm, Nome: e.target.value})}/>
  </div>
  
  <div className="flex items-center gap-2 py-2">
@@ -985,9 +985,9 @@ const AdminPanel = () => {
    type="checkbox" 
    checked={profileForm.Ativo} 
    onChange={e => setProfileForm({...profileForm, Ativo: e.target.checked})}
-   className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+   className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
  />
- <label htmlFor="profile-active" className="text-xs font-bold text-slate-300 uppercase select-none">Perfil Ativo</label>
+ <label htmlFor="profile-active" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase select-none">Perfil Ativo</label>
  </div>
 
  <div className="flex items-center gap-2 p-3 bg-indigo-950/20 border border-indigo-800/40 rounded-xl">
@@ -1004,19 +1004,19 @@ const AdminPanel = () => {
        }
      });
    }}
-   className="rounded border-slate-800 bg-slate-900 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+   className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
  />
- <label htmlFor="profile-admin" className="text-xs font-black text-indigo-400 uppercase select-none">Acesso Total (Administrador TI)</label>
+ <label htmlFor="profile-admin" className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase select-none">Acesso Total (Administrador TI)</label>
  </div>
 
  <div>
- <label className="block text-[11px] font-black uppercase mb-2 ml-1 text-slate-400">Matriz de Permissões</label>
- <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-800 space-y-3">
-   <div className="flex items-center justify-between p-2 border-b border-slate-800">
-     <span className="text-xs font-bold text-slate-400">Módulo</span>
+ <label className="block text-[11px] font-black uppercase mb-2 ml-1 text-slate-600 dark:text-slate-400">Matriz de Permissões</label>
+ <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+   <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
+     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Módulo</span>
      <div className="flex gap-8">
-       <span className="text-[10px] font-black uppercase text-slate-400 w-16 text-center">Leitura</span>
-       <span className="text-[10px] font-black uppercase text-slate-400 w-16 text-center">Escrita</span>
+       <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Leitura</span>
+       <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Escrita</span>
      </div>
    </div>
    {[
@@ -1031,8 +1031,8 @@ const AdminPanel = () => {
     { label: '🔄 Entrega / Devolução', readKey: 'entrega_leitura', writeKey: 'entrega_escrita' },
     { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' }
   ].map(m => (
-     <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-800/20 rounded-lg">
-       <span className="text-xs font-medium text-slate-300">{m.label}</span>
+     <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-100 dark:hover:bg-slate-700/20 rounded-lg">
+       <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
        <div className="flex gap-8">
          <div className="w-16 flex justify-center">
            <input 
@@ -1048,7 +1048,7 @@ const AdminPanel = () => {
                  }
                });
              }}
-             className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+             className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
            />
          </div>
          <div className="w-16 flex justify-center">
@@ -1065,7 +1065,7 @@ const AdminPanel = () => {
                  }
                });
              }}
-             className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+             className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
            />
          </div>
        </div>
@@ -1074,7 +1074,7 @@ const AdminPanel = () => {
  </div>
  </div>
  </div>
- <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+ <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
  <button type="button" onClick={() => setIsProfileModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>
  <button type="submit" className={`px-8 py-3 rounded-xl ${UI_BUTTON_PRIMARY} text-xs uppercase`}>Salvar Perfil</button>
  </div>

@@ -34,7 +34,7 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
 
   return (
     <th 
-      className="p-0 border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-400/80 group align-middle relative"
+      className="p-0 border-b border-slate-300 dark:border-slate-600 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 group align-middle relative"
       style={{ width: width ? `${width}px` : undefined, minWidth }}
     >
       <div className="flex items-center h-full min-h-[48px]">
@@ -45,9 +45,9 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
           <span className="truncate flex-1">{label}</span>
           {isSorted ? (
             isAsc ? (
-              <ArrowUp size={14} className="text-blue-400 shrink-0" />
+              <ArrowUp size={14} className="text-blue-600 dark:text-sky-400 shrink-0" />
             ) : (
-              <ArrowDown size={14} className="text-blue-400 shrink-0" />
+              <ArrowDown size={14} className="text-blue-600 dark:text-sky-400 shrink-0" />
             )
           ) : (
             <ArrowUpDown size={14} className="text-slate-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />

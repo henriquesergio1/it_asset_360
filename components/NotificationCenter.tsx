@@ -199,8 +199,8 @@ export const NotificationCenter: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
           allNotifications.length > 0 
-            ? 'bg-blue-900/10 border-blue-500/30 text-blue-400 hover:bg-blue-900/20' 
-            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            ? 'bg-blue-900/10 border-blue-500/30 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20' 
+            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
         }`}
       >
         <Bell size={18} className={allNotifications.length > 0 ? 'animate-bounce' : ''} />
@@ -223,13 +223,13 @@ export const NotificationCenter: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 mt-2 w-96 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl z-50 overflow-hidden"
+              className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl z-50 overflow-hidden"
             >
               {/* Header Central */}
-              <div className="p-5 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between">
+              <div className="p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-200">Central de Alertas</h3>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Sincronizado em tempo real</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">Sincronizado em tempo real</p>
                 </div>
                 {allNotifications.length > 0 && (
                   <span className="text-[10px] bg-red-950/50 border border-red-800/30 text-red-400 font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
@@ -239,10 +239,10 @@ export const NotificationCenter: React.FC = () => {
               </div>
 
               {/* Botão de configuração de notificação por browser */}
-              <div className="p-4 bg-slate-950/20 border-b border-slate-800/50 flex items-center justify-between gap-2">
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/20 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Shield size={14} className={browserPermission === 'granted' ? 'text-emerald-400' : 'text-slate-500'} />
-                  <span className="text-[11px] font-bold text-slate-300">Notificações no Desktop</span>
+                  <Shield size={14} className={browserPermission === 'granted' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'} />
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Notificações no Desktop</span>
                 </div>
                 {browserPermission !== 'granted' ? (
                   <button 
@@ -252,7 +252,7 @@ export const NotificationCenter: React.FC = () => {
                     Ativar
                   </button>
                 ) : (
-                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider flex items-center gap-0.5">
+                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-0.5">
                     <Check size={12} className="stroke-[3]" /> Permitido
                   </span>
                 )}
@@ -262,17 +262,17 @@ export const NotificationCenter: React.FC = () => {
               <div className="max-h-96 overflow-y-auto custom-scrollbar divide-y divide-slate-800/40">
                 {allNotifications.length === 0 ? (
                   <div className="p-10 text-center flex flex-col items-center justify-center space-y-3 opacity-50">
-                    <div className="p-4 bg-slate-950 rounded-full border border-slate-800">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-700">
                       <BellOff size={24} className="text-slate-600" />
                     </div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">Sem alertas ativos</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Sem alertas ativos</p>
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter mt-1">Sua infraestrutura está sob controle!</p>
                     </div>
                   </div>
                 ) : (
                   allNotifications.map(notif => (
-                    <div key={notif.id} className="p-4 hover:bg-slate-800/30 transition-all flex gap-3">
+                    <div key={notif.id} className="p-4 hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-all flex gap-3">
                       <div className="shrink-0 mt-0.5">
                         {notif.type === 'expediente' && (
                           <div className="p-1.5 bg-red-950/40 rounded-lg border border-red-800/30 text-red-400">
@@ -280,12 +280,12 @@ export const NotificationCenter: React.FC = () => {
                           </div>
                         )}
                         {notif.type === 'stock' && (
-                          <div className="p-1.5 bg-amber-950/40 rounded-lg border border-amber-800/30 text-amber-400">
+                          <div className="p-1.5 bg-amber-950/40 rounded-lg border border-amber-800/30 text-amber-600 dark:text-amber-400">
                             <Package size={14} />
                           </div>
                         )}
                         {notif.type === 'task' && (
-                          <div className="p-1.5 bg-blue-950/40 rounded-lg border border-blue-800/30 text-blue-400">
+                          <div className="p-1.5 bg-blue-950/40 rounded-lg border border-blue-800/30 text-blue-600 dark:text-sky-400">
                             <AlertCircle size={14} />
                           </div>
                         )}
@@ -296,7 +296,7 @@ export const NotificationCenter: React.FC = () => {
                             {notif.title}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-0.5 font-bold leading-normal">
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-bold leading-normal">
                           {notif.message}
                         </p>
                       </div>
@@ -318,7 +318,7 @@ export const NotificationCenter: React.FC = () => {
               initial={{ opacity: 0, x: 50, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 50, scale: 0.9 }}
-              className="pointer-events-auto bg-slate-900/95 border-l-4 border border-slate-800 rounded-2xl shadow-2xl p-4 flex gap-3 backdrop-blur-md"
+              className="pointer-events-auto bg-white dark:bg-slate-800/95 border-l-4 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 flex gap-3 backdrop-blur-md"
               style={{
                 borderLeftColor: 
                   toast.type === 'expediente' ? '#f87171' : 
@@ -327,8 +327,8 @@ export const NotificationCenter: React.FC = () => {
             >
               <div className="shrink-0">
                 {toast.type === 'expediente' && <Clock size={16} className="text-red-400 animate-pulse" />}
-                {toast.type === 'stock' && <Package size={16} className="text-amber-400 animate-pulse" />}
-                {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-400 animate-pulse" />}
+                {toast.type === 'stock' && <Package size={16} className="text-amber-600 dark:text-amber-400 animate-pulse" />}
+                {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-600 dark:text-sky-400 animate-pulse" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
@@ -337,12 +337,12 @@ export const NotificationCenter: React.FC = () => {
                   </span>
                   <button 
                     onClick={() => dismissToast(toast.id)}
-                    className="p-1 hover:bg-slate-800 rounded-full text-slate-500 hover:text-slate-300 transition-colors"
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 transition-colors"
                   >
                     <X size={12} />
                   </button>
                 </div>
-                <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-tight leading-normal">
+                <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-1 uppercase tracking-tight leading-normal">
                   {toast.message}
                 </p>
               </div>

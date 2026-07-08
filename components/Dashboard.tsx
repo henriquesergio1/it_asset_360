@@ -21,7 +21,7 @@ import FilePreviewModal from './FilePreviewModal';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, children }: any) => (
   <div 
-    className={`bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
+    className={`bg-white dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
     onClick={onClick}
   >
     <div className="flex items-start justify-between mb-4 z-10">
@@ -29,25 +29,25 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
         <Icon className="w-6 h-6" />
       </div>
       {trend && (
-        <div className="flex items-center gap-1 text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">
+        <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">
           <TrendingUp size={12} />
           {trend}
         </div>
       )}
     </div>
     <div className="z-10">
-      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500/80">{title}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-400 dark:text-slate-500/80">{title}</p>
       <div className="flex items-baseline gap-2">
-        <h3 className="text-3xl font-bold text-slate-100 tracking-tight">{value}</h3>
+        <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{value}</h3>
       </div>
-      {subtitle && <p className="text-[11px] mt-2 text-slate-400 font-medium italic">{subtitle}</p>}
+      {subtitle && <p className="text-[11px] mt-2 text-slate-600 dark:text-slate-400 font-medium italic">{subtitle}</p>}
     </div>
     
     {children && (
-      <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20 flex flex-col">
+      <div className="absolute inset-0 bg-white dark:bg-slate-800/95 backdrop-blur-md p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20 flex flex-col">
         <div className="flex items-center gap-2 mb-4">
           <Icon className={`w-4 h-4 ${color.replace('bg-', 'text-')}`} />
-          <h4 className="text-sm font-bold uppercase tracking-wider text-slate-100">{title} Detalhes</h4>
+          <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">{title} Detalhes</h4>
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
           {children}
@@ -625,16 +625,16 @@ const Dashboard = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             <LayoutDashboard className="text-blue-500" size={28} />
             Dashboard
           </h1>
-          <p className="text-slate-400 text-sm font-medium mt-1">Bem-vindo ao centro de controle do seu inventário de TI.</p>
+          <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mt-1">Bem-vindo ao centro de controle do seu inventário de TI.</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center gap-3">
+          <div className="px-4 py-2 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Sistema Online</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Sistema Online</span>
           </div>
         </div>
       </div>
@@ -651,14 +651,14 @@ const Dashboard = () => {
         >
           <div className="space-y-3">
             {devicesByType.map(([type, stats]) => (
-              <div key={type} className="flex flex-col gap-1 border-b border-slate-800/50 pb-2 last:border-0">
+              <div key={type} className="flex flex-col gap-1 border-b border-slate-200 dark:border-slate-700/50 pb-2 last:border-0">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-200">{type}</span>
-                  <span className="text-slate-400">{stats.total} total</span>
+                  <span className="text-slate-600 dark:text-slate-400">{stats.total} total</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] font-medium">
-                  <span className="text-emerald-400">{stats.available} disp.</span>
-                  <span className="text-blue-400">{stats.inUse} em uso</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">{stats.available} disp.</span>
+                  <span className="text-blue-600 dark:text-sky-400">{stats.inUse} em uso</span>
                 </div>
               </div>
             ))}
@@ -675,9 +675,9 @@ const Dashboard = () => {
         >
           <div className="space-y-2">
             {usersBySector.map(([sector, count]) => (
-              <div key={sector} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
-                <span className="font-bold text-slate-300 truncate pr-2">{sector}</span>
-                <span className="text-emerald-400 font-black bg-emerald-900/30 px-2 py-0.5 rounded">{count}</span>
+              <div key={sector} className="flex justify-between items-center text-xs border-b border-slate-200 dark:border-slate-700/50 pb-2 last:border-0">
+                <span className="font-bold text-slate-700 dark:text-slate-300 truncate pr-2">{sector}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-black bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 rounded">{count}</span>
               </div>
             ))}
           </div>
@@ -693,9 +693,9 @@ const Dashboard = () => {
         >
           <div className="space-y-2">
             {accountsByType.map(([type, count]) => (
-              <div key={type} className="flex justify-between items-center text-xs border-b border-slate-800/50 pb-2 last:border-0">
-                <span className="font-bold text-slate-300">{type}</span>
-                <span className="text-indigo-400 font-black bg-indigo-900/30 px-2 py-0.5 rounded">{count}</span>
+              <div key={type} className="flex justify-between items-center text-xs border-b border-slate-200 dark:border-slate-700/50 pb-2 last:border-0">
+                <span className="font-bold text-slate-700 dark:text-slate-300">{type}</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-black bg-indigo-100 dark:bg-indigo-500/20 px-2 py-0.5 rounded">{count}</span>
               </div>
             ))}
           </div>
@@ -718,7 +718,7 @@ const Dashboard = () => {
           {/* Alertas Críticos Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <AlertTriangle className="text-amber-500" size={20} />
                 Alertas do Sistema
               </h2>
@@ -727,14 +727,14 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 gap-4">
               {/* 1º Alerta de Expediente ERP */}
               {filteredExpedienteAlerts.length > 0 ? (
-                <div className="bg-slate-900 border-l-4 border-l-red-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
                       <Clock size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-sm font-bold text-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Alertas de Expediente
                           <span className="ml-2 bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {filteredExpedienteAlerts.length}
@@ -742,12 +742,12 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
                         >
                           {isExpedienteExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-400 mb-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                         Colaboradores com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
                       </p>
                       
@@ -757,16 +757,16 @@ const Dashboard = () => {
                           const now = new Date();
                           const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
                           return (
-                            <div key={alert.codigo} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-900/50 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
+                            <div key={alert.codigo} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-600 dark:text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
                                     {alert.nome.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
-                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-900/20 text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
+                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
                                         {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
                                       </span>
                                     </div>
@@ -778,7 +778,7 @@ const Dashboard = () => {
                                           observation: alert.observation || '',
                                           reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
                                         })}
-                                        className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                        className="p-1.5 hover:bg-blue-900/40 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 rounded-lg transition-colors"
                                         title="Adicionar Observação/Reativação"
                                       >
                                         <FileText size={16} />
@@ -786,7 +786,7 @@ const Dashboard = () => {
                                       {localUser && (
                                         <Link 
                                           to={`/users?userId=${localUser.id}`}
-                                          className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
+                                          className="p-1.5 hover:bg-blue-900/40 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 rounded-lg transition-colors"
                                           title="Ver Colaborador Local"
                                         >
                                           <ArrowRight size={16} />
@@ -796,7 +796,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium pl-11 w-full">
                                 {localUser ? (
                                   <>
                                     <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '150px'}} title={sectors.find(s => s.id === localUser.sectorId)?.name || 'Sem Setor'}>
@@ -815,7 +815,7 @@ const Dashboard = () => {
                                 <span className="uppercase tracking-tighter shrink-0">CPF: {alert.cpf}</span>
                               </div>
                               {hasActiveOverride && (
-                                <div className="mt-1 text-[11px] text-amber-400 bg-amber-900/20 p-2 rounded border border-amber-900/30 ml-11">
+                                <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/20 p-2 rounded border border-amber-900/30 ml-11">
                                   <span className="font-bold">Motivo:</span> {alert.observation} <br/>
                                   <span className="font-bold">Reativação:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
                                 </div>
@@ -828,17 +828,17 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-900 border-l-4 border-l-emerald-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-900/30 text-emerald-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                       <Clock size={20} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         Alertas de Expediente
-                        <span className="bg-emerald-900/40 text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                        <span className="bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1">Nenhum colaborador online no ERP divergente do local.</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Nenhum colaborador online no ERP divergente do local.</p>
                     </div>
                   </div>
                   <CheckCircle2 className="text-emerald-500" size={24} />
@@ -847,27 +847,27 @@ const Dashboard = () => {
 
               {/* 2º Alerta de Consumíveis */}
               {consumableAlerts.length > 0 ? (
-                <div className="bg-slate-900 border-l-4 border-l-amber-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-amber-900/30 text-amber-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg shrink-0">
                       <Package size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-sm font-bold text-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Estoque Crítico
-                          <span className="ml-2 bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                          <span className="ml-2 bg-amber-900/40 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {consumableAlerts.length}
                           </span>
                         </h3>
                         <button 
                           onClick={() => setIsConsumablesExpanded(!isConsumablesExpanded)}
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
                         >
                           {isConsumablesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-400 mb-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                         Itens que atingiram o estoque mínimo e precisam de reposição.
                       </p>
                       
@@ -880,7 +880,7 @@ const Dashboard = () => {
                                 <div className="flex-1 flex items-center justify-between min-w-0">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <p className="text-sm font-bold text-slate-200 truncate" title={item.name}>{item.name}</p>
-                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-900/20 text-amber-400'}`}>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
                                       {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
                                     </span>
                                   </div>
@@ -888,14 +888,14 @@ const Dashboard = () => {
                                     <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
                                       {item.currentStock} {item.unit}
                                     </p>
-                                    <Link to="/consumables" className="p-1.5 hover:bg-blue-900/40 text-slate-400 hover:text-blue-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Repor Estoque">
+                                    <Link to="/consumables" className="p-1.5 hover:bg-blue-900/40 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Repor Estoque">
                                       <ArrowRight size={16} />
                                     </Link>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-5">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium pl-5">
                               <span className="uppercase tracking-tighter">Estoque Mínimo: {item.minStock} {item.unit}</span>
                             </div>
                           </div>
@@ -905,17 +905,17 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-900 border-l-4 border-l-emerald-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-900/30 text-emerald-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                       <Package size={20} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         Estoque Crítico
-                        <span className="bg-emerald-900/40 text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                        <span className="bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
                       </h3>
-                      <p className="text-xs text-slate-400 mt-1">Não há itens apontando baixo estoque.</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Não há itens apontando baixo estoque.</p>
                     </div>
                   </div>
                   <CheckCircle2 className="text-emerald-500" size={24} />
@@ -924,14 +924,14 @@ const Dashboard = () => {
 
               {/* 3º Alerta de Termos Pendentes */}
               {pendingTerms.length > 0 && (
-                <div className="bg-slate-900 border-l-4 border-l-orange-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
                       <FileWarning size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-sm font-bold text-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Termos Pendentes
                           <span className="ml-2 bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {pendingTerms.length}
@@ -939,12 +939,12 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsTermsExpanded(!isTermsExpanded)}
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
                         >
                           {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-400 mb-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                         Colaboradores com dispositivos sem termo assinado.
                       </p>
                       
@@ -952,7 +952,7 @@ const Dashboard = () => {
                         {pendingTerms.slice(0, isTermsExpanded ? pendingTerms.length : 5).map(({term, user}) => {
                           const isWaitingApproval = term.signatureStatus === 'WAITING_APPROVAL';
                           return (
-                            <div key={term.id} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-900/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
+                            <div key={term.id} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-300 dark:border-sky-700/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isWaitingApproval ? 'bg-blue-600 text-white shadow-lg' : 'bg-orange-900/40 text-orange-400'}`}>
@@ -962,7 +962,7 @@ const Dashboard = () => {
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
                                       {isWaitingApproval ? (
-                                        <span className="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-500/30">
+                                        <span className="bg-blue-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-500/30">
                                           Assinado (Validar)
                                         </span>
                                       ) : (
@@ -974,14 +974,14 @@ const Dashboard = () => {
                                     <div className="flex items-center gap-1 shrink-0">
                                       <button 
                                         onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
-                                        className="p-1.5 hover:bg-red-900/40 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                        className="p-1.5 hover:bg-red-900/40 text-slate-600 dark:text-slate-400 hover:text-red-400 rounded-lg transition-colors"
                                         title="Resolver sem termo (Contingência)"
                                       >
                                         <AlertCircle size={16} />
                                       </button>
                                       <button 
                                         onClick={() => { setSelectedUserForModal(user); setActiveModalTab('TERMS'); }}
-                                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-3 text-[10px] font-black uppercase ${isWaitingApproval ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' : 'hover:bg-orange-900/40 text-slate-400 hover:text-orange-400'}`}
+                                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-3 text-[10px] font-black uppercase ${isWaitingApproval ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' : 'hover:bg-orange-900/40 text-slate-600 dark:text-slate-400 hover:text-orange-400'}`}
                                       >
                                         {isWaitingApproval ? <>Analisar <ArrowRight size={14} /></> : <FileText size={16} />}
                                       </button>
@@ -989,7 +989,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium pl-11 w-full">
                                 <span className="uppercase tracking-tighter truncate shrink-0" style={{maxWidth: '120px'}} title={sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}>
                                   {sectors.find(s => s.id === user.sectorId)?.name || 'Sem Setor'}
                                 </span>
@@ -1004,7 +1004,7 @@ const Dashboard = () => {
                           );
                         })}
                         {pendingTerms.length > 5 && !isTermsExpanded && (
-                          <button onClick={() => setIsTermsExpanded(true)} className="w-full py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-300 transition-colors">
+                          <button onClick={() => setIsTermsExpanded(true)} className="w-full py-2 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-700 dark:text-slate-300 transition-colors">
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}
@@ -1016,42 +1016,42 @@ const Dashboard = () => {
 
               {/* 4º Alerta de Assinaturas Aguardando Validação */}
               {pendingApprovalSignatures.length > 0 && (
-                <div className="bg-slate-900 border-l-4 border-l-blue-500 border-y border-r border-slate-800 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-900/30 text-blue-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 rounded-lg shrink-0">
                       <FileSignature size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-sm font-bold text-slate-100">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Validações Pendentes
-                          <span className="ml-2 bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                          <span className="ml-2 bg-blue-900/40 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {pendingApprovalSignatures.length}
                           </span>
                         </h3>
                         <button 
                           onClick={() => setIsValidationExpanded(!isValidationExpanded)}
-                          className="text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
                         >
                           {isValidationExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-400 mb-3">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                         Assinaturas digitais que aguardam aprovação do jurídico/TI.
                       </p>
                       
                       <div className={`space-y-3 transition-all duration-300 ${isValidationExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
                         {pendingApprovalSignatures.map(({term, user}) => (
-                            <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-blue-900/30 flex flex-col gap-2 group hover:border-blue-700 transition-all">
+                            <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-blue-300 dark:border-sky-700/30 flex flex-col gap-2 group hover:border-blue-700 transition-all">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 rounded-full bg-blue-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-blue-400">
+                                  <div className="w-8 h-8 rounded-full bg-blue-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-blue-600 dark:text-sky-400">
                                     {user.fullName.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
-                                      <span className="bg-blue-900/20 text-blue-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 animate-pulse">
+                                      <span className="bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 animate-pulse">
                                         Validar
                                       </span>
                                     </div>
@@ -1066,7 +1066,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium pl-11 w-full">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium pl-11 w-full">
                                 <span className="uppercase tracking-tighter truncate flex-1" title={term.assetDetails}>{term.assetDetails}</span>
                                 <span className="text-slate-600 shrink-0">|</span>
                                 <span className="uppercase tracking-tighter shrink-0">Assinado em: {new Date(term.signatureDate!).toLocaleString('pt-BR')}</span>
@@ -1097,10 +1097,10 @@ const Dashboard = () => {
               <Smartphone className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-500" />
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-700 text-white relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-300 dark:border-slate-600 text-white relative overflow-hidden group">
               <div className="relative z-10">
                 <h3 className="text-lg font-black uppercase tracking-widest mb-2">Relatórios</h3>
-                <p className="text-sm text-slate-400 mb-6 font-medium">Acesse dados financeiros, consumo e inventário completo.</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 font-medium">Acesse dados financeiros, consumo e inventário completo.</p>
                 <button 
                   onClick={() => navigate('/reports')}
                   className={`px-6 py-2 rounded-xl text-sm transition-all active:scale-95 ${UI_BUTTON_SECONDARY}`}
@@ -1115,15 +1115,15 @@ const Dashboard = () => {
 
         {/* Right Column: Tasks Widget */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-2xl flex flex-col h-full min-h-[600px]">
-            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col h-full min-h-[600px]">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
+                <div className="p-2 bg-blue-500/20 text-blue-600 dark:text-sky-400 rounded-lg">
                   <ClipboardList size={20} />
                 </div>
-                <h2 className="text-lg font-black text-slate-100 uppercase tracking-widest">Tarefas</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-widest">Tarefas</h2>
               </div>
-              <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-[11px] font-black uppercase">
+              <span className="bg-blue-500/20 text-blue-600 dark:text-sky-400 px-2 py-1 rounded-full text-[11px] font-black uppercase">
                 {tasks.filter(t => t.status !== TaskStatus.COMPLETED).length} Ativas
               </span>
             </div>
@@ -1136,7 +1136,7 @@ const Dashboard = () => {
                 currentUserId={localStorage.getItem('it_asset_user') ? JSON.parse(localStorage.getItem('it_asset_user')!).id : ''}
               />
             </div>
-            <div className="p-4 border-t border-slate-800">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
               <button 
                 onClick={() => navigate('/tasks')}
                 className={`w-full py-3 ${UI_BUTTON_SECONDARY} text-xs rounded-xl transition-all flex items-center justify-center gap-2`}
@@ -1151,17 +1151,17 @@ const Dashboard = () => {
       {/* Modals */}
       {resolvingTerm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in">
-          <div className="bg-slate-900 rounded-2xl p-8 w-full max-w-md border border-slate-800 shadow-2xl">
-            <h3 className="text-xl font-black text-slate-100 mb-4 uppercase tracking-tight">Resolver Pendência Manualmente</h3>
-            <p className="text-sm text-slate-400 mb-6 font-medium leading-relaxed">
-              Você está resolvendo a pendência de <span className="text-slate-100 font-bold">{resolvingTerm.userName}</span> sem anexo. 
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">Resolver Pendência Manualmente</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 font-medium leading-relaxed">
+              Você está resolvendo a pendência de <span className="text-slate-900 dark:text-white font-bold">{resolvingTerm.userName}</span> sem anexo. 
               Esta ação será registrada nos logs de auditoria.
             </p>
             <div className="mb-6">
-              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo da Resolução</label>
+              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Motivo da Resolução</label>
               <textarea
                 rows={4}
-                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="Descreva por que este termo está sendo resolvido sem anexo..."
                 value={resolveReason}
                 onChange={(e) => setResolveReason(e.target.value)}
@@ -1170,7 +1170,7 @@ const Dashboard = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => { setResolvingTerm(null); setResolveReason(''); }}
-                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-slate-400 hover:bg-slate-800 transition-all"
+                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
               >
                 Cancelar
               </button>
@@ -1204,21 +1204,21 @@ const Dashboard = () => {
 
       {editingExpediente && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in">
-          <div className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-800 shadow-2xl">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
-                <h2 className="text-lg font-black text-slate-100 uppercase tracking-tight">Ajuste de Expediente</h2>
-                <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-tighter">{editingExpediente.nome}</p>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Ajuste de Expediente</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mt-1 uppercase tracking-tighter">{editingExpediente.nome}</p>
               </div>
-              <button onClick={() => setEditingExpediente(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-500 hover:text-slate-200">
+              <button onClick={() => setEditingExpediente(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400 dark:text-slate-500 hover:text-slate-200">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo / Observação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Motivo / Observação</label>
                 <textarea 
-                  className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 placeholder-slate-600"
+                  className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white placeholder-slate-600"
                   rows={3}
                   placeholder="Ex: Férias, Licença Médica, etc."
                   value={editingExpediente.observation}
@@ -1226,19 +1226,19 @@ const Dashboard = () => {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Data para Reativação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Data para Reativação</label>
                 <input 
                   type="date"
-                  className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100"
+                  className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
                   value={editingExpediente.reactivationDate}
                   onChange={e => setEditingExpediente({...editingExpediente, reactivationDate: e.target.value})}
                 />
               </div>
             </div>
-            <div className="p-6 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+            <div className="p-6 bg-white dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3">
               <button 
                 onClick={() => setEditingExpediente(null)}
-                className="flex-1 py-3 text-sm font-black uppercase tracking-widest text-slate-400 hover:bg-slate-800 rounded-xl transition-all"
+                className="flex-1 py-3 text-sm font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all"
               >
                 Cancelar
               </button>
@@ -1262,70 +1262,70 @@ const Dashboard = () => {
 
       {/* MODAL DETALHES DO COLABORADOR */}
       {selectedUserForModal && (
-        <div className="fixed inset-0 bg-slate-950/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800 transition-colors">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
             <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
               <h3 className="text-lg font-bold text-white uppercase tracking-tight">Detalhes do Colaborador</h3>
               <button onClick={() => setSelectedUserForModal(null)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
             </div>
 
-            <div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
-              <button type="button" onClick={() => setActiveModalTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Dados Cadastrais</button>
-              <button type="button" onClick={() => setActiveModalTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
-              <button type="button" onClick={() => setActiveModalTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
-              <button type="button" onClick={() => setActiveModalTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
-              <button type="button" onClick={() => setActiveModalTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Histórico</button>
+            <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
+              <button type="button" onClick={() => setActiveModalTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'DATA' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Dados Cadastrais</button>
+              <button type="button" onClick={() => setActiveModalTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'ASSETS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'LICENSES' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'TERMS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'LOGS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Histórico</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 bg-slate-900 transition-colors">
+            <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-800 transition-colors">
               {activeModalTab === 'DATA' && (
                 <div className="space-y-6">
-                  <div className="bg-emerald-900/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
-                    <Info className="text-emerald-400" size={20} />
+                  <div className="bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
+                    <Info className="text-emerald-600 dark:text-emerald-400" size={20} />
                     <p className="text-xs font-bold text-emerald-200">Modo de visualização. As alterações de cadastro devem ser feitas na tela de colaboradores.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Nome Completo</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-bold outline-none" value={selectedUserForModal.fullName || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Nome Completo</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.fullName || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">CPF</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-mono outline-none" value={selectedUserForModal.cpf || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">CPF</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.cpf || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">RG</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-mono outline-none" value={selectedUserForModal.rg || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">RG</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.rg || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">PIS / PASEP</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-mono outline-none" value={selectedUserForModal.pis || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">PIS / PASEP</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.pis || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">E-mail Corporativo</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 outline-none" value={selectedUserForModal.email || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">E-mail Corporativo</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white outline-none" value={selectedUserForModal.email || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Cargo / Setor Atual</label>
-                      <select disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-bold outline-none" value={selectedUserForModal.sectorId || ''}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Cargo / Setor Atual</label>
+                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.sectorId || ''}>
                         <option value="">Selecione um cargo...</option>
                         {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Código Interno</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-bold outline-none" value={selectedUserForModal.internalCode || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Código Interno</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.internalCode || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Status do Colaborador</label>
-                      <select disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-bold outline-none" value={selectedUserForModal.active ? 'active' : 'inactive'}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Status do Colaborador</label>
+                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.active ? 'active' : 'inactive'}>
                         <option value="active">Ativo</option>
                         <option value="inactive">Inativo</option>
                       </select>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Endereço Residencial</label>
-                      <input disabled className="w-full border-2 border-slate-800 rounded-xl p-3 bg-slate-800/50 text-slate-100 font-bold outline-none" value={selectedUserForModal.address || 'Não cadastrado'} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Endereço Residencial</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.address || 'Não cadastrado'} />
                     </div>
                   </div>
                 </div>
@@ -1334,7 +1334,7 @@ const Dashboard = () => {
               {activeModalTab === 'ASSETS' && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
@@ -1343,7 +1343,7 @@ const Dashboard = () => {
                           <div 
                             key={d.id} 
                             onClick={() => { setSelectedUserForModal(null); navigate(`/devices?deviceId=${d.id}`); }}
-                            className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
+                            className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
                           >
                             <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
                               <Smartphone className="text-emerald-500" size={24}/>
@@ -1355,38 +1355,38 @@ const Dashboard = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <div className="text-[11px] font-bold text-slate-100 uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
+                                <div className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
                                 {isSharedResponsible && <span className="text-[11px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
                               </div>
-                              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
-                              <div className="text-[11px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
+                              <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
+                              <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
                             </div>
                           </div>
                         );
                       })}
-                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-800 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 uppercase">Nenhum dispositivo em posse</p></div>}
+                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhum dispositivo em posse</p></div>}
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userSims.map(sim => (
                         <div 
                           key={sim.id} 
                           onClick={() => { setSelectedUserForModal(null); navigate(`/sims?simId=${sim.id}`); }}
-                          className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
+                          className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
                         >
-                          <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-900/30 shrink-0">
+                          <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-300 dark:border-sky-700/30 shrink-0">
                             <Phone className="text-blue-500" size={24}/>
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase">{(sim as any).assetTag ? `Sim Card: ${(sim as any).assetTag}` : 'Sim Card S/N'}</div>
-                            <div className="mt-1"><span className="text-[11px] font-black bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
+                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase">{(sim as any).assetTag ? `Sim Card: ${(sim as any).assetTag}` : 'Sim Card S/N'}</div>
+                            <div className="mt-1"><span className="text-[11px] font-black bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
                           </div>
                         </div>
                       ))}
-                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-800 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 uppercase">Nenhuma linha associada</p></div>}
+                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhuma linha associada</p></div>}
                     </div>
                   </div>
                 </div>
@@ -1396,24 +1396,24 @@ const Dashboard = () => {
                 <div className="space-y-4">
                    <div className="grid grid-cols-1 gap-3">
                     {userAccounts.map(acc => (
-                      <div key={acc.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+                      <div key={acc.id} className="bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-700">
-                            <Mail className="text-emerald-400" size={24} />
+                          <div className="h-12 w-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-300 dark:border-slate-600">
+                            <Mail className="text-emerald-600 dark:text-emerald-400" size={24} />
                           </div>
                           <div>
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{acc.name}</div>
-                            <div className="text-xs font-bold text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{acc.name}</div>
+                            <div className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
                             {acc.password && (
                               <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                <Key size={12} className="text-slate-500"/>
-                                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-300">
+                                <Key size={12} className="text-slate-400 dark:text-slate-500"/>
+                                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-700 dark:text-slate-300">
                                   {visiblePasswords[acc.id] ? acc.password : '••••••••'}
                                 </span>
                                 <button 
                                   type="button"
                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
-                                  className="text-slate-500 hover:text-emerald-400 p-0.5 ml-1 transition-colors"
+                                  className="text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:text-emerald-400 p-0.5 ml-1 transition-colors"
                                   title={visiblePasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}
                                 >
                                   {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -1430,7 +1430,7 @@ const Dashboard = () => {
                                       showToast('Erro ao copiar senha', 'error');
                                     }
                                   }}
-                                  className="text-slate-500 hover:text-blue-400 p-0.5 transition-colors"
+                                  className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:text-sky-400 p-0.5 transition-colors"
                                   title="Copiar Senha"
                                 >
                                   <Copy size={11} />
@@ -1441,12 +1441,12 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center gap-6">
                            <div className="text-right">
-                              <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
-                              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
+                              <div className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
+                              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">Ativa</span>
                            </div>
                            <button 
                              onClick={() => { setSelectedUserForModal(null); navigate(`/accounts?accountId=${acc.id}`); }}
-                             className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800"
+                             className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-200 dark:border-slate-700"
                            >
                              <ExternalLink size={16} />
                            </button>
@@ -1454,9 +1454,9 @@ const Dashboard = () => {
                       </div>
                     ))}
                     {userAccounts.length === 0 && (
-                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                         <Mail className="mx-auto text-slate-800 mb-4" size={48} />
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma conta Microsoft/Google</h4>
+                        <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhuma conta Microsoft/Google</h4>
                         <p className="text-xs text-slate-600 mt-2">Este colaborador não possui licenças atribuídas no momento.</p>
                       </div>
                     )}
@@ -1468,18 +1468,18 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3">
                     {currentUserTerms.map(term => (
-                      <div key={term.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+                      <div key={term.id} className="bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-700">
-                            {term.type === 'ENTREGA' ? <FileSignature className="text-emerald-400" size={24} /> : <RefreshCw className="text-blue-400" size={24} />}
+                          <div className="h-12 w-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-300 dark:border-slate-600">
+                            {term.type === 'ENTREGA' ? <FileSignature className="text-emerald-600 dark:text-emerald-400" size={24} /> : <RefreshCw className="text-blue-600 dark:text-sky-400" size={24} />}
                           </div>
                           <div>
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
+                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-emerald-500/80">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
-                              <div className="text-[10px] text-slate-400 font-medium">
+                              <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                                 {term.assetDetails || '---'}
                               </div>
                             </div>
@@ -1527,7 +1527,7 @@ const Dashboard = () => {
                                 });
                               }} 
                               disabled={!!(term.fileUrl || term.hasFile)}
-                              className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
+                              className={`p-2 bg-white dark:bg-slate-800 rounded-lg transition-all border border-slate-200 dark:border-slate-700 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-400 dark:text-slate-500' : 'text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20'}`}
                             >
                               <Edit2 size={16} />
                             </button>
@@ -1535,7 +1535,7 @@ const Dashboard = () => {
                               <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
-                                className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                className="p-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
                                 title={!!(term.fileUrl || term.hasFile) ? "Visualizar Arquivo Assinado" : "Visualizar Comprovante Digital"}
                               >
                                 <Eye size={16} />
@@ -1547,7 +1547,7 @@ const Dashboard = () => {
                                  <button 
                                    type="button"
                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
-                                   className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
+                                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-all border border-slate-200 dark:border-slate-700"
                                    title="Gerar Termo"
                                  >
                                    <Download size={16} />
@@ -1556,7 +1556,7 @@ const Dashboard = () => {
                                  <button 
                                    type="button"
                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(term.id); }}
-                                   className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:text-blue-300 transition-all border border-blue-900/40"
+                                   className="p-2 bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 rounded-lg hover:text-blue-300 transition-all border border-blue-300 dark:border-sky-700/40"
                                    title="Gerar Link de Assinatura"
                                  >
                                    <Share2 size={16} />
@@ -1587,10 +1587,10 @@ const Dashboard = () => {
                                         }
                                      } catch(err) { console.error(err); }
                                    }}
-                                   className="p-1.5 bg-slate-900 border border-slate-700/50 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                   className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
                                    title="Ver Evidências de Identidade (Doc + Selfie)"
                                  >
-                                   <Camera size={14} className="text-blue-400" />
+                                   <Camera size={14} className="text-blue-600 dark:text-sky-400" />
                                    <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
                                  </button>
                                </div>
@@ -1602,13 +1602,13 @@ const Dashboard = () => {
                                   <button 
                                     type="button"
                                     onClick={() => setResolvingManualTerm(term)}
-                                    className="p-2 bg-slate-900 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-800"
+                                    className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                     title="Resolução Manual"
                                   >
                                     <CheckSquare size={16} />
                                   </button>
                                 )}
-                                <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
+                                <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
                                   <Upload size={16} />
                                   <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
                                 </label>
@@ -1617,7 +1617,7 @@ const Dashboard = () => {
                               <button 
                                 type="button"
                                 onClick={() => handleDeleteTermFile(term.id)}
-                                className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
+                                className="p-2 bg-white dark:bg-slate-800 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                 title="Excluir/Alterar"
                               >
                                 <Trash2 size={16} />
@@ -1628,9 +1628,9 @@ const Dashboard = () => {
                       </div>
                     ))}
                     {currentUserTerms.length === 0 && (
-                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                         <FileText className="mx-auto text-slate-800 mb-4" size={48} />
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum termo gerado</h4>
+                        <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhum termo gerado</h4>
                       </div>
                     )}
                   </div>
@@ -1639,7 +1639,7 @@ const Dashboard = () => {
 
               {activeModalTab === 'LOGS' && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-800">
+                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     {(() => {
                       const name = selectedUserForModal.fullName.toLowerCase().trim() || '';
                       const userLogs = logs.filter(l => {
@@ -1651,7 +1651,7 @@ const Dashboard = () => {
                                (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
                       });
                       return (
-                        <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
+                        <span className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
                       );
                     })()}
                   </div>
@@ -1669,30 +1669,30 @@ const Dashboard = () => {
 
                       if (userLogs.length === 0) {
                         return (
-                          <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                          <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                             <History className="mx-auto text-slate-800 mb-4" size={48} />
-                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
+                            <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
                           </div>
                         );
                       }
 
                       return userLogs.map(log => {
-                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-400' :
-                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-400' :
-                                           'bg-slate-800 text-slate-400';
+                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-600 dark:text-emerald-400' :
+                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-600 dark:text-sky-400' :
+                                           'bg-slate-800 text-slate-600 dark:text-slate-400';
                         return (
-                          <div key={log.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-2 group hover:border-slate-700 transition-all">
+                          <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-300 dark:border-slate-600 transition-all">
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-3">
                                 <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
                                   {log.action}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
-                            <div className="text-xs font-bold text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
-                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>
                           </div>
@@ -1709,22 +1709,22 @@ const Dashboard = () => {
 
       {/* MODAL LINK ASSINATURA */}
       {isLinkModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/90 z-[300] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-lg border border-slate-800 animate-scale-up shadow-2xl overflow-hidden">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[300] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
                 <h3 className="text-lg font-bold text-white uppercase tracking-tight">Assinatura Eletrônica</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">Sincronização Ativa</p>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Sincronização Ativa</p>
               </div>
-              <button onClick={() => setIsLinkModalOpen(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X size={20}/></button>
+              <button onClick={() => setIsLinkModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
             </div>
             <div className="p-8 space-y-6">
-              <div className="bg-blue-950/30 p-4 rounded-xl border border-blue-900/40 text-blue-400 text-xs font-bold leading-relaxed flex items-center gap-3">
+              <div className="bg-blue-950/30 p-4 rounded-xl border border-blue-300 dark:border-sky-700/40 text-blue-600 dark:text-sky-400 text-xs font-bold leading-relaxed flex items-center gap-3">
                 <Info size={24} className="shrink-0" />
                 <span>Envie o link abaixo para o colaborador realizar o processo de assinatura digital de forma autenticada.</span>
               </div>
               <div className="flex gap-2">
-                <input readOnly className="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-300 font-mono text-xs select-all outline-none" value={generatedSignatureLink} />
+                <input readOnly className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-700 dark:text-slate-300 font-mono text-xs select-all outline-none" value={generatedSignatureLink} />
                 <button 
                   onClick={() => {
                     navigator.clipboard.writeText(generatedSignatureLink);
@@ -1742,25 +1742,25 @@ const Dashboard = () => {
 
       {/* MODAL RESOLUÇÃO MANUAL DO TERMO */}
       {resolvingManualTerm && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden border border-slate-800 animate-scale-up">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-              <h3 className="text-md font-black text-slate-100 uppercase tracking-wider">Resolução Contingencial</h3>
-              <button onClick={() => setResolvingManualTerm(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X size={18}/></button>
+        <div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-up">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+              <h3 className="text-md font-black text-slate-900 dark:text-white uppercase tracking-wider">Resolução Contingencial</h3>
+              <button onClick={() => setResolvingManualTerm(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={18}/></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Motivo da Dispensa de Assinatura</label>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">Motivo da Dispensa de Assinatura</label>
                 <textarea 
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-200 outline-none focus:border-orange-500 min-h-[120px] text-xs font-bold" 
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-200 outline-none focus:border-orange-500 min-h-[120px] text-xs font-bold" 
                   value={resolveManualReason} 
                   onChange={e => setResolveManualReason(e.target.value)} 
                   placeholder="Justifique o motivo de não coletar a assinatura deste termo (Ex: Colaborador desligado, extravio coberto por seguro, decisão da diretoria...)"
                 />
               </div>
             </div>
-            <div className="p-6 bg-slate-950 border-t border-slate-800 flex gap-3">
-              <button onClick={() => setResolvingManualTerm(null)} className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-900 rounded-xl transition-all border border-slate-800">Cancelar</button>
+            <div className="p-6 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-3">
+              <button onClick={() => setResolvingManualTerm(null)} className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-white dark:bg-slate-800 rounded-xl transition-all border border-slate-200 dark:border-slate-700">Cancelar</button>
               <button onClick={handleConfirmResolveManual} className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest bg-orange-600 text-white rounded-xl shadow-lg hover:bg-orange-500 transition-all">Confirmar</button>
             </div>
           </div>
@@ -1769,34 +1769,34 @@ const Dashboard = () => {
 
       {/* MODAL DE EDICAO DE DETALHES DO TERMO */}
       {editingTerm && termEditData && (
-        <div className="fixed inset-0 bg-slate-950/90 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-2xl border border-slate-800 animate-scale-up shadow-2xl overflow-hidden">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter">Gerenciar Termo</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
               </div>
-              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X size={20}/></button>
+              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
             </div>
 
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-800 hover:border-slate-700'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
-                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-400' : 'border-slate-800 hover:border-slate-700'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
               </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Observações Detalhadas</label>
-                <textarea className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
+                <textarea className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
               </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Evidências (Fotos / B.O.) - Máx 3</label>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   {termEditData.evidenceFiles.map((file: string, index: number) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-700 group h-32">
+                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-300 dark:border-slate-600 group h-32">
                       <img src={file} alt={`Evidência ${index + 1}`} className="w-full h-full object-cover"/>
-                      <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-white dark:bg-slate-800/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button onClick={() => handleRemoveEvidence(index)} className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform" title="Remover Imagem">
                           <Trash2 size={16} />
                         </button>
@@ -1804,7 +1804,7 @@ const Dashboard = () => {
                     </div>
                   ))}
                   {termEditData.evidenceFiles.length < 3 && (
-                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:bg-slate-800/50 transition-colors">
+                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex flex-col items-center justify-center p-4 text-center">
                         <Upload className="w-6 h-6 mb-2"/>
                         <p className="text-xs">Adicionar</p>
@@ -1816,8 +1816,8 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-colors">Cancelar</button>
+            <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 flex gap-3 justify-end">
+              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
               <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-emerald-600 text-white transition-all">Salvar Alterações</button>
             </div>
           </div>

@@ -55,9 +55,9 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (status.status === 'LOADING') {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[9999]">
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center z-[9999]">
         <Loader2 className="text-blue-500 animate-spin mb-4" size={48} />
-        <p className="text-slate-400 font-medium animate-pulse">Validando Licença de Uso...</p>
+        <p className="text-slate-600 dark:text-slate-400 font-medium animate-pulse">Validando Licença de Uso...</p>
       </div>
     );
   }
@@ -83,14 +83,14 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="bg-slate-800 px-8 py-6 flex justify-between items-center border-b border-slate-700">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+          <div className="max-w-md w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <div className="bg-slate-800 px-8 py-6 flex justify-between items-center border-b border-slate-300 dark:border-slate-600">
               <div className="flex items-center gap-3">
-                <Key className="text-blue-400" size={20} />
+                <Key className="text-blue-600 dark:text-sky-400" size={20} />
                 <h3 className="text-lg font-black text-white uppercase tracking-tighter">Ativar Licença</h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white transition-colors">
+              <button onClick={() => setShowModal(false)} className="text-slate-600 dark:text-slate-400 hover:text-white transition-colors">
                 <Loader2 size={24} className="rotate-45" /> {/* Usando Loader2 rotacionado como X improvisado se não tiver X importado, mas vou importar X */}
               </button>
             </div>
@@ -98,9 +98,9 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
             <div className="p-8">
               <form onSubmit={handleUpdate} className="space-y-6">
                 <div>
-                  <label className="block text-[11px] font-black uppercase text-slate-500 tracking-widest mb-2 ml-1">Chave de Ativação (JWT)</label>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-2 ml-1">Chave de Ativação (JWT)</label>
                   <textarea
-                    className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 text-slate-100 text-sm focus:border-blue-500 outline-none transition-all min-h-[120px] resize-none font-mono"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-slate-900 dark:text-white text-sm focus:border-blue-500 outline-none transition-all min-h-[120px] resize-none font-mono"
                     placeholder="Cole aqui seu token de licença..."
                     value={licenseKey}
                     onChange={(e) => setLicenseKey(e.target.value)}
@@ -110,7 +110,7 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
 
                 {message && (
                   <div className={`p-4 rounded-xl flex items-center gap-3 text-xs font-bold animate-in slide-in-from-top-2 ${
-                    message.type === 'success' ? 'bg-emerald-900/20 text-emerald-400 border border-emerald-900/50' : 'bg-red-900/20 text-red-400 border border-red-900/50'
+                    message.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30' : 'bg-red-900/20 text-red-400 border border-red-900/50'
                   }`}>
                     {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                     {message.text}
@@ -121,7 +121,7 @@ export const LicenseGuard: React.FC<{ children: React.ReactNode }> = ({ children
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase text-[11px] tracking-widest py-4 rounded-2xl transition-all"
+                    className="flex-1 bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 font-black uppercase text-[11px] tracking-widest py-4 rounded-2xl transition-all"
                   >
                     Cancelar
                   </button>

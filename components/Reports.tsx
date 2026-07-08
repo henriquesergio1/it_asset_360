@@ -830,16 +830,16 @@ const Reports = () => {
     <>
       <div className="space-y-6 pb-20 animate-fade-in relative">
         {/* CABEÇALHO PADRONIZADO */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl">
           <div>
             <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
               <FileText className="text-cyan-500" size={28} />
               Central de Relatórios IT
             </h2>
-            <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Emissão, exportação e análise de indicadores do sistema</p>
+            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Emissão, exportação e análise de indicadores do sistema</p>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+          <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
             {(['USERS', 'CONSUMABLES', 'ASSETS', 'FINANCIAL', 'AUDITS'] as const).map((tab) => (
               <button
                 key={tab}
@@ -847,7 +847,7 @@ const Reports = () => {
                 className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   activeTab === tab 
                   ? ' bg-cyan-600 text-white shadow-lg shadow-cyan-900/40 ' 
-                  : ' text-slate-500 hover:text-slate-300 '
+                  : ' text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 '
                 }`}
               >
                 {tab === 'USERS' ? 'Colaboradores' :
@@ -863,182 +863,182 @@ const Reports = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {activeTab === 'USERS' && (
             <>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
                   <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Colaboradores</span>
-                  <p className="text-2xl font-black text-slate-100">{users.length}</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{users.length}</p>
                 </div>
                 <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><User size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Linha</span>
-                  <p className="text-2xl font-black text-slate-100">{users.filter(u => sims.some(s => s.currentUserId === u.id)).length}</p>
+                  <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Linha</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => sims.some(s => s.currentUserId === u.id)).length}</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Phone size={24}/></div>
+                <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Phone size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Dispositivo</span>
-                  <p className="text-2xl font-black text-slate-100">{users.filter(u => devices.some(d => d.currentUserId === u.id)).length}</p>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Dispositivo</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => devices.some(d => d.currentUserId === u.id)).length}</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
+                <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Pulsus</span>
-                  <p className="text-2xl font-black text-slate-100">{devices.filter(d => d.pulsusId && d.pulsusId.trim() !== '').length}</p>
+                  <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Pulsus</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.pulsusId && d.pulsusId.trim() !== '').length}</p>
                 </div>
-                <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><ShieldCheck size={24}/></div>
+                <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><ShieldCheck size={24}/></div>
               </div>
             </>
           )}
 
           {activeTab === 'CONSUMABLES' && (
             <>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
                   <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
-                  <p className="text-2xl font-black text-slate-100">{consumablesReportData.length}</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.length}</p>
                 </div>
                 <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Entradas</span>
-                  <p className="text-2xl font-black text-slate-100">{consumablesReportData.filter(t => t.type === 'IN').reduce((acc, t) => acc + t.quantity, 0)}</p>
+                  <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Entradas</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.filter(t => t.type === 'IN').reduce((acc, t) => acc + t.quantity, 0)}</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Plus size={24}/></div>
+                <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Plus size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Saídas</span>
-                  <p className="text-2xl font-black text-slate-100">{consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}</p>
+                  <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Saídas</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}</p>
                 </div>
-                <div className="h-12 w-12 bg-rose-900/20 rounded-2xl flex items-center justify-center text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
+                <div className="h-12 w-12 bg-rose-50 dark:bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Saldo Líquido</span>
-                  <p className="text-2xl font-black text-slate-100">{consumablesReportData.reduce((acc, t) => acc + (t.type === 'IN' ? t.quantity : -t.quantity), 0)}</p>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Saldo Líquido</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.reduce((acc, t) => acc + (t.type === 'IN' ? t.quantity : -t.quantity), 0)}</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Scale size={24}/></div>
+                <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Scale size={24}/></div>
               </div>
             </>
           )}
 
           {activeTab === 'ASSETS' && (
             <>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
                   <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
-                  <p className="text-2xl font-black text-slate-100">{devices.length}</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.length}</p>
                 </div>
                 <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Modelos</span>
-                  <p className="text-2xl font-black text-slate-100">{new Set(devices.map(d => d.modelId)).size}</p>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Modelos</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{new Set(devices.map(d => d.modelId)).size}</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Tag size={24}/></div>
+                <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Tag size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Categorias</span>
-                  <p className="text-2xl font-black text-slate-100">{new Set(devices.map(d => models.find(m => m.id === d.modelId)?.typeId)).size}</p>
+                  <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Categorias</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{new Set(devices.map(d => models.find(m => m.id === d.modelId)?.typeId)).size}</p>
                 </div>
-                <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><FileText size={24}/></div>
+                <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><FileText size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Disponíveis</span>
-                  <p className="text-2xl font-black text-slate-100">{devices.filter(d => d.status === DeviceStatus.AVAILABLE).length}</p>
+                  <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Disponíveis</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.filter(d => d.status === DeviceStatus.AVAILABLE).length}</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
+                <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
               </div>
             </>
           )}
 
           {activeTab === 'FINANCIAL' && (
             <>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
                   <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Investimento Total</span>
-                  <p className="text-2xl font-black text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalPurchase)}</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalPurchase)}</p>
                 </div>
                 <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><DollarSign size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenção</span>
-                  <p className="text-2xl font-black text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalMaint)}</p>
+                  <span className="text-[11px] font-black text-amber-600 dark:text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenção</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalMaint)}</p>
                 </div>
-                <div className="h-12 w-12 bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
+                <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">TCO / LCC Global</span>
-                  <p className="text-2xl font-black text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalLCC)}</p>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">TCO / LCC Global</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalLCC)}</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><TrendingUp size={24}/></div>
+                <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><TrendingUp size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Fim de Vida</span>
-                  <p className="text-2xl font-black text-slate-100">{financialSummary.criticalCount}</p>
+                  <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Fim de Vida</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{financialSummary.criticalCount}</p>
                 </div>
-                <div className="h-12 w-12 bg-rose-900/20 rounded-2xl flex items-center justify-center text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+                <div className="h-12 w-12 bg-rose-50 dark:bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
               </div>
             </>
           )}
 
           {activeTab === 'AUDITS' && (
             <>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
                   <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Cadastrados</span>
-                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalDevices}</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{auditMetrics.totalDevices}</p>
                 </div>
                 <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Auditoria</span>
-                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalWithAudit}</p>
+                  <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Com Auditoria</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{auditMetrics.totalWithAudit}</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
+                <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><CheckCircle size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Auditorias</span>
-                  <p className="text-2xl font-black text-slate-100">{auditMetrics.totalAudits}</p>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Auditorias</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{auditMetrics.totalAudits}</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
+                <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
               </div>
-              <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Cobertura Técnica</span>
-                  <p className="text-2xl font-black text-slate-100">{auditMetrics.coverage.toFixed(1)}%</p>
+                  <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Cobertura Técnica</span>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white">{auditMetrics.coverage.toFixed(1)}%</p>
                 </div>
-                <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><ShieldCheck size={24}/></div>
+                <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><ShieldCheck size={24}/></div>
               </div>
             </>
           )}
         </div>
 
-        <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
-          <div className="p-8 border-b border-slate-800/50 bg-slate-950/30">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
+          <div className="p-8 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/30">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
               <div>
-                <h2 className="text-xl font-bold text-slate-100 uppercase tracking-tight">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
                   {activeTab === 'USERS' && 'Relatório de Colaboradores'}
                   {activeTab === 'CONSUMABLES' && 'Histórico de Consumo de Insumos'}
                   {activeTab === 'ASSETS' && 'Resumo de Ativos por Modelo'}
                   {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
                   {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : auditSubTab === 'NO_AUDIT' ? 'Ativos sem Auditoria Realizada' : 'Lista de Presença - Auditoria')}
                 </h2>
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-1 opacity-70">
+                <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 opacity-70">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
                   {activeTab === 'CONSUMABLES' && 'Histórico detalhado de entradas e saídas de itens consumíveis.'}
                   {activeTab === 'ASSETS' && 'Contagem total de ativos agrupados por tipo, marca e modelo.'}
@@ -1051,22 +1051,22 @@ const Reports = () => {
               </div>
               <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                 {activeTab === 'AUDITS' && (
-                  <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner mr-2">
+                  <div className="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner mr-2">
                     <button 
                       onClick={() => setAuditSubTab('HISTORY')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'HISTORY' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'HISTORY' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Histórico
                     </button>
                     <button 
                       onClick={() => setAuditSubTab('NO_AUDIT')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Sem Auditoria
                     </button>
                     <button 
                       onClick={() => setAuditSubTab('ATTENDANCE')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'ATTENDANCE' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'ATTENDANCE' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Lista Presença
                     </button>
@@ -1075,21 +1075,21 @@ const Reports = () => {
                 {/* Botão Imprimir */}
                 <button 
                   onClick={handlePrint}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-950 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-inner"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-inner"
                 >
                   <Printer size={16} />
                   <span>Imprimir</span>
                 </button>
 
                 {/* Export Buttons */}
-                <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
-                  <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-cyan-400" title="Exportar CSV">
+                <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
+                  <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-cyan-400" title="Exportar CSV">
                     <FileText size={18}/>
                   </button>
-                  <button onClick={() => handleExport('excel')} className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-cyan-400" title="Exportar Excel">
+                  <button onClick={() => handleExport('excel')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-cyan-400" title="Exportar Excel">
                     <FileSpreadsheet size={18}/>
                   </button>
-                  <button onClick={() => handleExport('pdf')} className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-cyan-400" title="Exportar PDF">
+                  <button onClick={() => handleExport('pdf')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-cyan-400" title="Exportar PDF">
                     <Download size={18}/>
                   </button>
                 </div>
@@ -1098,7 +1098,7 @@ const Reports = () => {
                 {(activeTab === 'USERS' || activeTab === 'ASSETS' || activeTab === 'FINANCIAL') && (
                   <div className="flex items-center gap-2">
                     <div className="relative" ref={assetTypeRef}>
-                      <button onClick={() => setIsAssetTypeSelectorOpen(!isAssetTypeSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-400 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[10px] uppercase tracking-widest transition-all shadow-inner">
+                      <button onClick={() => setIsAssetTypeSelectorOpen(!isAssetTypeSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-black text-[10px] uppercase tracking-widest transition-all shadow-inner">
                         <Filter size={16} /> Tipos
                       </button>
                       {/* ... dropdown content remains same logic but styled ... */}
@@ -1119,30 +1119,30 @@ const Reports = () => {
                     activeTab === 'AUDITS' ? "Buscar por patrimônio, técnico ou descrição..." :
                     "Buscar por tipo, marca ou modelo..."
                   }
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
               {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' || auditSubTab === 'ATTENDANCE'))) && (
-                <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-300 dark:border-slate-600">
                   <div className="flex-1 flex items-center gap-2">
-                    <span className="text-[11px] font-black uppercase text-slate-400 ml-2">De:</span>
+                    <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 ml-2">De:</span>
                     <input 
                       type="date" 
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-slate-900 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div className="flex-1 flex items-center gap-2">
-                    <span className="text-[11px] font-black uppercase text-slate-400">Até:</span>
+                    <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400">Até:</span>
                     <input 
                       type="date" 
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="bg-slate-900 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>
@@ -1153,7 +1153,7 @@ const Reports = () => {
                   <div className="relative" ref={sectorRef}>
                     <button 
                       onClick={() => setIsSectorSelectorOpen(!isSectorSelectorOpen)} 
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-100 transition-all font-medium"
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all font-medium"
                     >
                       <span className="truncate">
                         {selectedSectors.length === 0 
@@ -1164,8 +1164,8 @@ const Reports = () => {
                     </button>
                     
                     {isSectorSelectorOpen && (
-                      <div className="absolute left-0 mt-2 w-full bg-slate-900 border border-slate-700 rounded-xl z-[80] overflow-hidden animate-fade-in">
-                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                      <div className="absolute left-0 mt-2 w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl z-[80] overflow-hidden animate-fade-in">
+                        <div className="bg-white dark:bg-slate-800 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                           <span className="text-[11px] font-black uppercase">Filtrar por Setor</span>
                           <button onClick={() => setIsSectorSelectorOpen(false)} className="hover:text-slate-600"><X size={14}/></button>
                         </div>
@@ -1174,7 +1174,7 @@ const Reports = () => {
                             <button 
                               key={s.id} 
                               onClick={() => toggleSector(s.id)} 
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedSectors.includes(s.id) ? ' bg-blue-900/30 text-blue-400' : ' hover:bg-slate-700'}`}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all ${selectedSectors.includes(s.id) ? ' bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}
                             >
                               <span className="truncate text-left">{s.name}</span>
                               {selectedSectors.includes(s.id) && <Check size={14} className="flex-shrink-0 ml-2"/>}
@@ -1185,7 +1185,7 @@ const Reports = () => {
                     )}
                   </div>
                   
-                  <div className="flex flex-col justify-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                  <div className="flex flex-col justify-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
                     <div className="grid grid-cols-2 gap-2">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input 
@@ -1221,7 +1221,7 @@ const Reports = () => {
             {activeTab === 'USERS' && (
               <table className="w-full text-sm text-left table-fixed">
                 <thead className="bg-slate-800/50">
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
                     <SortableResizableHeader label="Colaborador" sortKey="name" currentSort={sortConfig} requestSort={requestSort} minWidth="250px" width={columnWidths['name']} onResize={(x, w) => handleResize('name', x, w)} />
                     {visibleColumns.includes('sector') && (
                       <SortableResizableHeader label="Cargo / Setor" sortKey="sector" currentSort={sortConfig} requestSort={requestSort} minWidth="150px" width={columnWidths['sector']} onResize={(x, w) => handleResize('sector', x, w)} />
@@ -1243,18 +1243,18 @@ const Reports = () => {
                 <tbody className="divide-y divide-slate-800/50">
                   {reportData.length > 0 ? (
                     reportData.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
+                      <tr key={item.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-200 dark:border-slate-700/50">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-full bg-blue-900/30 text-blue-400 flex items-center justify-center font-bold text-xs">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 flex items-center justify-center font-bold text-xs">
                               {item.fullName.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-bold text-slate-100">{item.fullName}</span>
+                            <span className="font-bold text-slate-900 dark:text-white">{item.fullName}</span>
                           </div>
                         </td>
                         {visibleColumns.includes('sector') && (
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-xs font-medium">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
                               <Briefcase size={12} className=""/>
                               {item.sectorName}
                             </span>
@@ -1277,16 +1277,16 @@ const Reports = () => {
                         )}
                         {visibleColumns.includes('lines') && (
                           <td className="px-6 py-4">
-                            <span className={`flex items-center gap-2 text-xs font-bold ${item.hasLine ? ' text-emerald-400' : ''}`}>
-                              <Phone size={14} className={item.hasLine ? '' : 'text-slate-300'} />
+                            <span className={`flex items-center gap-2 text-xs font-bold ${item.hasLine ? ' text-emerald-600 dark:text-emerald-400' : ''}`}>
+                              <Phone size={14} className={item.hasLine ? '' : 'text-slate-700 dark:text-slate-300'} />
                               {item.lines}
                             </span>
                           </td>
                         )}
                         {visibleColumns.includes('pulsusId') && (
                           <td className="px-6 py-4">
-                            <span className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-400">
-                              <ShieldCheck size={14} className="text-indigo-400"/>
+                            <span className="flex items-center gap-2 text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                              <ShieldCheck size={14} className="text-indigo-600 dark:text-indigo-400"/>
                               {item.pulsusId}
                             </span>
                           </td>
@@ -1297,7 +1297,7 @@ const Reports = () => {
                     <tr>
                       <td colSpan={1 + visibleColumns.length} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
-                          <User size={48} className="mb-4 text-slate-300"/>
+                          <User size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                           <p className="text-sm font-bold">Nenhum contato encontrado</p>
                           <p className="text-xs mt-1">Tente ajustar os filtros de busca.</p>
                         </div>
@@ -1311,45 +1311,45 @@ const Reports = () => {
             {activeTab === 'CONSUMABLES' && (
               <div className="space-y-6 p-6">
                 <div className="space-y-4">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 flex items-center gap-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 flex items-center gap-2">
                     <Package size={14} /> Resumo por Item no Período
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {consumablesSummaryData.map(item => (
-                      <div key={item.id} className="bg-slate-800/20 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all">
+                      <div key={item.id} className="bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-slate-300 dark:border-slate-600 transition-all">
                         <div className="flex justify-between items-start mb-3">
-                          <span className="font-bold text-slate-100 truncate">{item.name}</span>
-                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${item.net >= 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                          <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${item.net >= 0 ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                             {item.net > 0 ? '+' : ''}{item.net}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase tracking-tighter">
                           <div className="flex flex-col">
-                            <span className="text-slate-500">Entradas</span>
-                            <span className="text-emerald-400">+{item.totalIn}</span>
+                            <span className="text-slate-400 dark:text-slate-500">Entradas</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">+{item.totalIn}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-slate-500">Saídas</span>
-                            <span className="text-rose-400">-{item.totalOut}</span>
+                            <span className="text-slate-400 dark:text-slate-500">Saídas</span>
+                            <span className="text-rose-600 dark:text-rose-400">-{item.totalOut}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                     {consumablesSummaryData.length === 0 && (
-                      <div className="col-span-full py-8 text-center text-xs text-slate-500 italic">
+                      <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 italic">
                         Nenhuma movimentação no período selecionado.
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-800">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 flex items-center gap-2">
+                <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 flex items-center gap-2">
                     <FileText size={14} /> Detalhamento de Movimentações
                   </h3>
                   <table className="w-full text-sm text-left table-fixed">
                     <thead className="bg-slate-800/50">
-                      <tr className="border-b border-slate-800">
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
                         <SortableResizableHeader label="Data" sortKey="date" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="150px" width={columnWidths['date']} onResize={(x, w) => handleResize('date', x, w)} />
                         <SortableResizableHeader label="Item" sortKey="consumableName" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="200px" width={columnWidths['consumableName']} onResize={(x, w) => handleResize('consumableName', x, w)} />
                         <SortableResizableHeader label="Tipo" sortKey="type" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="120px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
@@ -1361,15 +1361,15 @@ const Reports = () => {
                     <tbody className="divide-y divide-slate-800/50">
                       {consumablesReportData.length > 0 ? (
                         consumablesReportData.map(t => (
-                          <tr key={t.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
+                          <tr key={t.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-200 dark:border-slate-700/50">
                             <td className="px-6 py-4 text-xs">
                               {new Date(t.date).toLocaleString('pt-BR')}
                             </td>
-                            <td className="px-6 py-4 font-bold text-slate-100">
+                            <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                               {t.consumableName}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                                 {t.type === 'IN' ? 'Entrada' : 'Saída'}
                               </span>
                             </td>
@@ -1379,7 +1379,7 @@ const Reports = () => {
                             <td className="px-6 py-4 text-xs">
                               {t.adminUser}
                             </td>
-                            <td className="px-6 py-4 text-xs text-slate-400 italic">
+                            <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 italic">
                               {t.notes || '-'}
                             </td>
                           </tr>
@@ -1388,7 +1388,7 @@ const Reports = () => {
                         <tr>
                           <td colSpan={6} className="px-6 py-12 text-center">
                             <div className="flex flex-col items-center justify-center">
-                              <Package size={48} className="mb-4 text-slate-300"/>
+                              <Package size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                               <p className="text-sm font-bold">Nenhuma transação encontrada</p>
                             </div>
                           </td>
@@ -1403,7 +1403,7 @@ const Reports = () => {
             {activeTab === 'ASSETS' && (
               <table className="w-full text-sm text-left table-fixed">
                 <thead className="bg-slate-800/50">
-                  <tr className="border-b border-slate-800">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
                     <SortableResizableHeader label="Tipo" sortKey="type" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
                     <SortableResizableHeader label="Marca" sortKey="brand" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['brand']} onResize={(x, w) => handleResize('brand', x, w)} />
                     <SortableResizableHeader label="Modelo" sortKey="model" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="200px" width={columnWidths['model']} onResize={(x, w) => handleResize('model', x, w)} />
@@ -1413,21 +1413,21 @@ const Reports = () => {
                 <tbody className="divide-y divide-slate-800/50">
                   {assetsSummaryData.length > 0 ? (
                     assetsSummaryData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-800/50">
+                      <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-200 dark:border-slate-700/50">
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
                             <Tag size={12} />
                             {item.type}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-slate-100 font-medium">
+                        <td className="px-6 py-4 text-slate-900 dark:text-white font-medium">
                           {item.brand}
                         </td>
-                        <td className="px-6 py-4 font-bold text-slate-100">
+                        <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                           {item.model}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center justify-center h-8 w-12 rounded-lg bg-blue-900/30 text-blue-400 font-mono font-bold">
+                          <span className="inline-flex items-center justify-center h-8 w-12 rounded-lg bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-mono font-bold">
                             {item.count}
                           </span>
                         </td>
@@ -1437,7 +1437,7 @@ const Reports = () => {
                     <tr>
                       <td colSpan={4} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
-                          <Smartphone size={48} className="mb-4 text-slate-300"/>
+                          <Smartphone size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                           <p className="text-sm font-bold">Nenhum ativo encontrado</p>
                         </div>
                       </td>
@@ -1450,7 +1450,7 @@ const Reports = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left table-fixed">
                   <thead className="bg-slate-800/50">
-                    <tr className="border-b border-slate-800">
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
                       <SortableResizableHeader label="Ativo" sortKey="model" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="200px" width={columnWidths['model']} onResize={(x, w) => handleResize('model', x, w)} />
                       <SortableResizableHeader label="Tipo/Marca" sortKey="type" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
                       <SortableResizableHeader label="Aquisição" sortKey="purchaseCost" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="120px" width={columnWidths['purchaseCost']} onResize={(x, w) => handleResize('purchaseCost', x, w)} />
@@ -1464,25 +1464,25 @@ const Reports = () => {
                   <tbody className="divide-y divide-slate-800">
                     {financialReportData.length > 0 ? (
                       financialReportData.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
+                        <tr key={item.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer">
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="font-bold text-slate-100">{item.model}</span>
-                              <span className="text-[11px] text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
+                              <span className="font-bold text-slate-900 dark:text-white">{item.model}</span>
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-slate-300">{item.type}</span>
-                              <span className="text-[11px] text-slate-500 uppercase">{item.brand}</span>
+                              <span className="text-slate-700 dark:text-slate-300">{item.type}</span>
+                              <span className="text-[11px] text-slate-400 dark:text-slate-500 uppercase">{item.brand}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.purchaseCost)}</td>
-                          <td className="px-6 py-4 text-right font-medium text-amber-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalMaint)}</td>
-                          <td className="px-6 py-4 text-right font-bold text-slate-100">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.lcc)}</td>
+                          <td className="px-6 py-4 text-right font-medium text-amber-600 dark:text-amber-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalMaint)}</td>
+                          <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.lcc)}</td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col items-center gap-1">
-                              <span className={`text-xs font-bold ${item.ratio >= 0.6 ? 'text-red-400' : 'text-slate-300'}`}>
+                              <span className={`text-xs font-bold ${item.ratio >= 0.6 ? 'text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
                                 {(item.ratio * 100).toFixed(0)}%
                               </span>
                               <div className="w-12 bg-slate-800 h-1 rounded-full overflow-hidden">
@@ -1491,15 +1491,15 @@ const Reports = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className={`text-xs font-bold ${item.age >= 5 ? 'text-red-400' : 'text-slate-300'}`}>
+                            <span className={`text-xs font-bold ${item.age >= 5 ? 'text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
                               {item.age.toFixed(1)}a
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                              item.status === 'Disponível' ? 'bg-emerald-900/30 text-emerald-400' :
-                              item.status === 'Em Uso' ? 'bg-blue-900/30 text-blue-400' :
-                              'bg-amber-900/30 text-amber-400'
+                              item.status === 'Disponível' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
+                              item.status === 'Em Uso' ? 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' :
+                              'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
                             }`}>
                               {item.status}
                             </span>
@@ -1508,9 +1508,9 @@ const Reports = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                        <td colSpan={8} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                           <div className="flex flex-col items-center justify-center">
-                            <DollarSign size={48} className="mb-4 text-slate-300"/>
+                            <DollarSign size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                             <p className="text-sm font-bold">Nenhum dado financeiro encontrado</p>
                           </div>
                         </td>
@@ -1526,13 +1526,13 @@ const Reports = () => {
                 {auditSubTab === 'HISTORY' ? (
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-800/50">
-                      <tr className="border-b border-slate-800">
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Data</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Patrimônio</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Técnico</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Tipo</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Descrição</th>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Data</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Patrimônio</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Técnico</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Tipo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Status</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Descrição</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
@@ -1540,26 +1540,26 @@ const Reports = () => {
                         auditsReportData.map(a => {
                           const device = devices.find(d => d.id === a.deviceId);
                           return (
-                            <tr key={a.id} className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all">
-                              <td className="px-6 py-4 font-bold text-slate-300">{new Date(a.date).toLocaleDateString('pt-BR')}</td>
+                            <tr key={a.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-b border-slate-200 dark:border-slate-700/50 transition-all">
+                              <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{new Date(a.date).toLocaleDateString('pt-BR')}</td>
                               <td 
                                 onClick={() => handleDeviceClick(a.deviceId)}
                                 className="px-6 py-4 cursor-pointer group/cell"
                               >
                                 <div className="flex flex-col">
-                                  <span className="font-bold text-slate-100 group-hover/cell:text-blue-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(a.deviceId)}</span>
+                                  <span className="font-bold text-slate-900 dark:text-white group-hover/cell:text-blue-600 dark:text-sky-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(a.deviceId)}</span>
                                   {/* Mostrar SN se o smartId não for SN */}
                                   {(() => {
                                     const d = devices.find(dev => dev.id === a.deviceId);
                                     const sid = getSmartId(a.deviceId);
                                     if (d?.serialNumber && !sid.includes(d.serialNumber)) {
-                                      return <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber}</span>;
+                                      return <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.serialNumber}</span>;
                                     }
                                     return null;
                                   })()}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 font-medium text-slate-300">{a.technician}</td>
+                              <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">{a.technician}</td>
                               <td className="px-6 py-4">
                                 {(() => {
                                   const d = devices.find(dev => dev.id === a.deviceId);
@@ -1568,30 +1568,30 @@ const Reports = () => {
                                   const t = m ? assetTypes.find(type => type.id === m.typeId) : null;
                                   return (
                                     <div className="flex flex-col">
-                                      <span className="font-bold text-slate-100 text-[10px] uppercase">{m?.name || 'Desconhecido'}</span>
-                                      <span className="text-[9px] text-slate-500 uppercase font-black">{t?.name || '---'} • {b?.name || '---'}</span>
+                                      <span className="font-bold text-slate-900 dark:text-white text-[10px] uppercase">{m?.name || 'Desconhecido'}</span>
+                                      <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black">{t?.name || '---'} • {b?.name || '---'}</span>
                                     </div>
                                   );
                                 })()}
                               </td>
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                  a.status === 'Aprovado' ? 'bg-emerald-900/30 text-emerald-400' :
+                                  a.status === 'Aprovado' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
                                   a.status === 'Reprovado' ? 'bg-red-900/30 text-red-400' :
-                                  'bg-amber-900/30 text-amber-400'
+                                  'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
                                 }`}>
                                   {a.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-xs text-slate-400 max-w-xs truncate" title={a.description}>{a.description}</td>
+                              <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate" title={a.description}>{a.description}</td>
                             </tr>
                           );
                         })
                       ) : (
                         <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                          <td colSpan={6} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                              <div className="flex flex-col items-center justify-center">
-                              <History size={48} className="mb-4 text-slate-300"/>
+                              <History size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                               <p className="text-sm font-bold">Nenhum histórico de auditoria encontrado no período</p>
                             </div>
                           </td>
@@ -1602,8 +1602,8 @@ const Reports = () => {
                 ) : auditSubTab === 'ATTENDANCE' ? (
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-800/50">
-                      <tr className="border-b border-slate-800">
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 w-12 text-center">OK</th>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-12 text-center">OK</th>
                         <SortableResizableHeader label="Cód." sortKey="internalCode" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="80px" width={columnWidths['att_internalCode']} onResize={(x, w) => handleResize('att_internalCode', x, w)} />
                         <SortableResizableHeader label="Setor / Cargo" sortKey="sectorName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_sectorName']} onResize={(x, w) => handleResize('att_sectorName', x, w)} />
                         <SortableResizableHeader label="Usuário" sortKey="userName" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="150px" width={columnWidths['att_userName']} onResize={(x, w) => handleResize('att_userName', x, w)} />
@@ -1616,17 +1616,17 @@ const Reports = () => {
                         attendanceReportData.map(d => (
                           <tr 
                             key={d.device.id} 
-                            className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all font-medium text-slate-300"
+                            className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-b border-slate-200 dark:border-slate-700/50 transition-all font-medium text-slate-700 dark:text-slate-300"
                           >
                             <td className="px-6 py-4 text-center">
-                              <div className="w-5 h-5 border-2 border-slate-500 rounded flex items-center justify-center mx-auto bg-slate-900 print:border-slate-800 print:bg-white">
+                              <div className="w-5 h-5 border-2 border-slate-500 rounded flex items-center justify-center mx-auto bg-white dark:bg-slate-800 print:border-slate-200 dark:border-slate-700 print:bg-white">
                                 {/* Quadrado vazio para ticar na caneta */}
                               </div>
                             </td>
                             <td className="px-6 py-4 text-xs font-mono font-bold">{d.internalCode}</td>
                             <td className="px-6 py-4 uppercase text-xs">{d.sectorName}</td>
                             <td className="px-6 py-4">
-                              <span className="font-bold text-slate-100">{d.userName}</span>
+                              <span className="font-bold text-slate-900 dark:text-white">{d.userName}</span>
                             </td>
                             <td className="px-6 py-4 uppercase text-[10px]">{d.modelName}</td>
                             <td className="px-6 py-4 text-[10px] uppercase font-mono tracking-wider">
@@ -1636,9 +1636,9 @@ const Reports = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                          <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                              <div className="flex flex-col items-center justify-center">
-                              <CheckCircle size={48} className="mb-4 text-slate-300"/>
+                              <CheckCircle size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                               <p className="text-sm font-bold">Nenhum aparelho entregue no momento.</p>
                             </div>
                           </td>
@@ -1649,11 +1649,11 @@ const Reports = () => {
                 ) : (
                   <table className="w-full text-sm text-left">
                     <thead className="bg-slate-800/50">
-                      <tr className="border-b border-slate-800">
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Patrimônio / SN</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Tipo / Marca / Modelo</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400">Usuário Atual</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 text-center">Status Ativo</th>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Patrimônio / SN</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Tipo / Marca / Modelo</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Usuário Atual</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 text-center">Status Ativo</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
@@ -1662,16 +1662,16 @@ const Reports = () => {
                           <tr 
                             key={d.id} 
                             onClick={() => handleDeviceClick(d.id)}
-                            className="hover:bg-slate-800/60 border-b border-slate-800/50 transition-all cursor-pointer group"
+                            className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-b border-slate-200 dark:border-slate-700/50 transition-all cursor-pointer group"
                           >
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-100 group-hover:text-blue-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(d.id)}</span>
+                                <span className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:text-sky-400 transition-colors underline decoration-dotted decoration-slate-700 underline-offset-4">{getSmartId(d.id)}</span>
                                 {/* Mostrar SN se o smartId não for SN */}
                                 {(() => {
                                   const sid = getSmartId(d.id);
                                   if (d.serialNumber && !sid.includes(d.serialNumber)) {
-                                    return <span className="text-[10px] text-slate-500 uppercase">{d.serialNumber}</span>;
+                                    return <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.serialNumber}</span>;
                                   }
                                   return null;
                                 })()}
@@ -1679,23 +1679,23 @@ const Reports = () => {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <span className="font-bold text-slate-100 text-xs uppercase">{d.modelName}</span>
-                                <span className="text-[10px] text-slate-500 uppercase">{d.typeName} • {d.brandName}</span>
+                                <span className="font-bold text-slate-900 dark:text-white text-xs uppercase">{d.modelName}</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.typeName} • {d.brandName}</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                                  <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400">
                                     {d.currentUser.charAt(0)}
                                   </div>
-                                  <span className="font-medium text-slate-300 text-xs">{d.currentUser}</span>
+                                  <span className="font-medium text-slate-700 dark:text-slate-300 text-xs">{d.currentUser}</span>
                                 </div>
                             </td>
                             <td className="px-6 py-4 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                  d.status === 'Disponível' ? 'bg-emerald-900/30 text-emerald-400' :
-                                  d.status === 'Em Uso' ? 'bg-blue-900/30 text-blue-400' :
-                                  'bg-amber-900/30 text-amber-400'
+                                  d.status === 'Disponível' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
+                                  d.status === 'Em Uso' ? 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' :
+                                  'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
                                 }`}>
                                   {d.status}
                                 </span>
@@ -1704,9 +1704,9 @@ const Reports = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                          <td colSpan={4} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
                              <div className="flex flex-col items-center justify-center">
-                              <CheckCircle size={48} className="mb-4 text-emerald-400/50"/>
+                              <CheckCircle size={48} className="mb-4 text-emerald-600 dark:text-emerald-400/50"/>
                               <p className="text-sm font-bold">Excelente! Todos os ativos cadastrados possuem auditoria técnica.</p>
                             </div>
                           </td>
@@ -1719,7 +1719,7 @@ const Reports = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-slate-800 bg-slate-800/30 flex justify-between items-center text-xs font-bold">
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-800/30 flex justify-between items-center text-xs font-bold">
             <span>Total de registros: {
               activeTab === 'USERS' ? reportData.length :
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
@@ -1739,16 +1739,16 @@ const Reports = () => {
             .pb-10 {
               padding-bottom: 0;
             }
-            .bg-white, .dark\\:bg-slate-900 {
+            .bg-white, .dark\\:bg-white dark:bg-slate-800 {
               background-color: white !important;
             }
-            .border-slate-200, .dark\\:border-slate-800 {
+            .border-slate-200, .dark\\:border-slate-200 dark:border-slate-700 {
               border-color: #e2e8f0 !important;
             }
-            .text-slate-800, .dark\\:text-slate-100 {
+            .text-slate-800, .dark\\:text-slate-900 dark:text-white {
               color: #1e293b !important;
             }
-            .text-slate-500, .dark\\:text-slate-400 {
+            .text-slate-400 dark:text-slate-500, .dark\\:text-slate-600 dark:text-slate-400 {
               color: #64748b !important;
             }
             .bg-slate-50, .dark\\:bg-slate-800\\/50 {
@@ -1757,22 +1757,22 @@ const Reports = () => {
             .bg-blue-100, .dark\\:bg-blue-900\\/30 {
               background-color: #dbeafe !important;
             }
-            .text-blue-600, .dark\\:text-blue-400 {
+            .text-blue-600, .dark\\:text-blue-600 dark:text-sky-400 {
               color: #2563eb !important;
             }
             .bg-slate-100, .dark\\:bg-slate-800 {
               background-color: #f1f5f9 !important;
             }
-            .text-slate-600, .dark\\:text-slate-300 {
+            .text-slate-600, .dark\\:text-slate-700 dark:text-slate-300 {
               color: #475569 !important;
             }
-            .text-emerald-600, .dark\\:text-emerald-400 {
+            .text-emerald-600, .dark\\:text-emerald-600 dark:text-emerald-400 {
               color: #059669 !important;
             }
             .text-emerald-500 {
               color: #10b981 !important;
             }
-            .text-indigo-600, .dark\\:text-indigo-400 {
+            .text-indigo-600, .dark\\:text-indigo-600 dark:text-indigo-400 {
               color: #4f46e5 !important;
             }
             .print\\:hidden {

@@ -453,16 +453,16 @@ const DataImporter = () => {
  };
 
  return (
- <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 flex flex-col h-full animate-fade-in transition-colors">
+ <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col h-full animate-fade-in transition-colors">
  <div className="mb-6 flex justify-between items-start">
  <div>
- <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
- <Database className="text-blue-400"/> Importador de Dados
+ <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+ <Database className="text-blue-600 dark:text-sky-400"/> Importador de Dados
  </h3>
  <p className="text-sm">Mapeamento inteligente de cargos, funções e identificadores.</p>
  </div>
  {step !== 'UPLOAD' && (
- <button onClick={handleStartNew} className="text-sm text-blue-400 hover:underline flex items-center gap-1 font-bold">
+ <button onClick={handleStartNew} className="text-sm text-blue-600 dark:text-sky-400 hover:underline flex items-center gap-1 font-bold">
  <RefreshCw size={14}/> Recomeçar
  </button>
  )}
@@ -472,15 +472,15 @@ const DataImporter = () => {
  <div className="space-y-6">
  <div className="flex gap-4">
  {(['USERS', 'DEVICES', 'SIMS'] as ImportType[]).map(t => (
- <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-900/20 text-blue-400 scale-[1.02]' : ' hover:bg-slate-800 border-slate-700 '}`}>
+ <button key={t} onClick={() => setImportType(t)} className={`flex-1 py-5 border rounded-2xl flex flex-col items-center gap-2 transition-all ${importType === t ? 'border-blue-500 bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 scale-[1.02]' : ' hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600 '}`}>
  <span className="font-black text-lg uppercase tracking-tighter">{t === 'USERS' ? 'Colaboradores' : t === 'DEVICES' ? 'Dispositivos' : 'Chips'}</span>
  </button>
  ))}
  </div>
- <div className="bg-slate-950 border border-dashed border-slate-700 rounded-2xl p-12 flex flex-col items-center justify-center gap-6">
+ <div className="bg-slate-50 dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-12 flex flex-col items-center justify-center gap-6">
  <div className="flex gap-4">
- <button onClick={downloadTemplate} className="flex items-center gap-2 text-sm bg-slate-900 border border-slate-700 px-6 py-3 rounded-xl hover:bg-slate-800 font-bold text-slate-300 transition-all">
- <Download size={18} className="text-blue-400"/> Baixar Planilha Modelo
+ <button onClick={downloadTemplate} className="flex items-center gap-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-6 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-300 transition-all">
+ <Download size={18} className="text-blue-600 dark:text-sky-400"/> Baixar Planilha Modelo
  </button>
  <label className="flex items-center gap-2 text-sm text-white px-8 py-3 rounded-xl cursor-pointer transition-all font-bold">
  <Upload size={18}/> Selecionar Arquivo CSV
@@ -499,13 +499,13 @@ const DataImporter = () => {
  {step === 'ANALYSIS' && (
  <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
  <div className="flex gap-4 mb-4">
- <div className="bg-emerald-900/30 text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
- <div className="bg-amber-900/30 text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
+ <div className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
+ <div className="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
  {analyzedData.some(i => i.status === 'ERROR') && (
- <div className="bg-rose-900/30 text-rose-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
+ <div className="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
  )}
  </div>
- <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-slate-950 border-slate-800">
+ <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700">
  <table className="w-full text-xs text-left">
  <thead className="bg-slate-800 sticky top-0 z-10">
  <tr>
@@ -516,14 +516,14 @@ const DataImporter = () => {
  </thead>
  <tbody>
  {analyzedData.map((item, idx) => (
- <tr key={idx} className={`border-b border-slate-800 hover:bg-blue-50/30 hover:bg-blue-900/10 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20 bg-red-900/5' : ''}`}>
+ <tr key={idx} className={`border-b border-slate-200 dark:border-slate-700 hover:bg-blue-50/30 hover:bg-blue-900/10 transition-colors ${item.status === 'ERROR' ? 'bg-red-50/20 bg-red-900/5' : ''}`}>
  <td className="px-6 py-3 font-mono font-bold text-blue-300">
  {importType === 'USERS' ? item.row['CPF'] : 
  importType === 'DEVICES' ? (item.row['Patrimonio'] || item.row['IMEI']) : 
  item.row['Numero']}
  </td>
  <td className="px-6 py-3">
- <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] tracking-widest ${item.status === 'NEW' ? ' bg-emerald-900/30 text-emerald-400' : item.status === 'CONFLICT' ? ' bg-amber-900/30 text-amber-400' : ' bg-rose-900/30 text-rose-400'}`}>
+ <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] tracking-widest ${item.status === 'NEW' ? ' bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : item.status === 'CONFLICT' ? ' bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : ' bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
  {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
  </span>
  </td>
@@ -551,8 +551,8 @@ const DataImporter = () => {
  <div className="flex flex-col items-center justify-center flex-1 space-y-8">
  <Loader2 size={64} className="animate-spin"/>
  <div className="text-center">
- <h3 className="text-2xl font-black text-slate-100 uppercase tracking-tighter">Processando {progress.current} de {progress.total}</h3>
- <div className="w-64 bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-700 shadow-inner">
+ <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Processando {progress.current} de {progress.total}</h3>
+ <div className="w-64 bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner">
  <div className="h-full transition-all duration-300"style={{width:`${(progress.current/progress.total)*100}%`}}></div>
  </div>
  </div>
@@ -562,13 +562,13 @@ const DataImporter = () => {
  {step === 'DONE' && (
  <div className="flex flex-col items-center justify-center flex-1 space-y-6 text-center">
  <CheckCircle size={80} className="animate-bounce"/>
- <h3 className="text-3xl font-black text-slate-100 uppercase tracking-tighter leading-none">Importação Concluída</h3>
- <div className="grid grid-cols-3 gap-8 bg-slate-950 p-8 rounded-3xl border border-slate-800 shadow-inner transition-colors">
+ <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">Importação Concluída</h3>
+ <div className="grid grid-cols-3 gap-8 bg-slate-50 dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-inner transition-colors">
  <div><p className="text-3xl font-black text-green-400">{progress.created}</p><p className="text-[10px] font-bold uppercase">Criados</p></div>
  <div><p className="text-3xl font-black text-orange-400">{progress.updated}</p><p className="text-[10px] font-bold uppercase">Atualizados</p></div>
  <div><p className="text-3xl font-black text-red-400">{progress.errors}</p><p className="text-[10px] font-bold uppercase">Erros</p></div>
  </div>
- <button onClick={handleStartNew} className="bg-slate-900 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95">Nova Importação</button>
+ <button onClick={handleStartNew} className="bg-white dark:bg-slate-800 text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95">Nova Importação</button>
  {logs.length > 0 && (
  <div className="w-full max-w-xl bg-red-900/20 p-4 rounded-xl text-left text-xs text-red-400 border border-red-900/40 overflow-y-auto max-h-40 font-mono transition-colors">
  <p className="font-bold mb-2 uppercase text-[10px] tracking-widest">Logs de Erro Detalhados:</p>

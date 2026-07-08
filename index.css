@@ -1,214 +1,8 @@
 @import "tailwindcss";
-
 @variant dark (&:where(.dark, .dark *));
-
-:root {
-  --slate-50: #090d16;     /* text-slate-50 vira preto azulado escuro */
-  --slate-100: #0f172a;    /* text-slate-100 vira preto azulado */
-  --slate-200: #1e293b;    /* text-slate-200 vira azul escuro nítido */
-  --slate-300: #334155;    /* text-slate-300 vira cinza escuro nítido */
-  --slate-400: #475569;    /* text-slate-400 vira cinza nítido */
-  --slate-500: #556880;    /* text-slate-500 vira cinza-azul escuro */
-  --slate-600: #94a3b8;    /* cinza para bordas secundárias */
-  --slate-700: #cbd5e1;    /* cinza claro para bordas normais */
-  --slate-800: #f1f5f9;    /* cinza bem claro para fundos alternados/inputs */
-  --slate-900: #ffffff;    /* branco puro para cards */
-  --slate-950: #f8fafc;    /* fundo principal muito claro */
-}
-
-.dark {
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #cbd5e1;
-  --slate-300: #94a3b8;
-  --slate-400: #64748b;
-  --slate-500: #475569;
-  --slate-600: #334155;
-  --slate-700: #1e293b;
-  --slate-800: #0f172a;
-  --slate-900: #020617;
-  --slate-950: #090d16;
-}
-
-/* Regras de Contraste e Legibilidade do Tema Claro */
-html:not(.dark) {
-  /* Substituir textos brancos ou muito claros sobre fundo claro por tons escuros */
-  .text-white:not(
-    button, button *, a, a *, 
-    .bg-blue-600 *, .bg-emerald-600 *, .bg-red-600 *, .bg-amber-600 *, .bg-indigo-600 *, .bg-purple-600 *,
-    .bg-blue-600, .bg-emerald-600, .bg-red-600, .bg-amber-600, .bg-indigo-600, .bg-purple-600
-  ) {
-    color: #0f172a !important;
-  }
-  
-  .text-slate-50, .text-slate-100, .text-slate-200 {
-    color: #090d16 !important;
-  }
-
-  .text-blue-50 {
-    color: #090d16 !important;
-  }
-
-  .text-blue-200 {
-    color: #1e3a8a !important;
-  }
-
-  .text-emerald-200 {
-    color: #064e3b !important;
-  }
-
-  .text-slate-300 {
-    color: #1e293b !important;
-  }
-
-  .text-slate-400 {
-    color: #334155 !important;
-  }
-
-  .text-slate-500 {
-    color: #475569 !important;
-  }
-  
-  /* Textos coloridos do Tailwind com maior contraste no tema claro (para alertas e status) */
-  .text-blue-400 { color: #1e40af !important; }
-  .text-emerald-400 { color: #065f46 !important; }
-  .text-red-400 { color: #991b1b !important; }
-  .text-orange-400 { color: #9a3412 !important; }
-  .text-amber-400 { color: #92400e !important; }
-  .text-purple-400 { color: #6b21a8 !important; }
-  .text-indigo-400 { color: #3730a3 !important; }
-  .text-pink-400 { color: #9d174d !important; }
-  
-  .hover\:text-white:hover {
-    color: #0f172a !important;
-  }
-
-  /* Cabeçalhos de Modais (que usam bg-black ou bg-slate-950) devem ser cinza bem suave e texturizado */
-  .bg-black {
-    background-color: #f1f5f9 !important;
-    border-bottom: 1px solid #cbd5e1 !important;
-  }
-  .bg-black h3, .bg-black span, .bg-black div, .bg-black p {
-    color: #090d16 !important;
-  }
-  .bg-black .text-white {
-    color: #090d16 !important;
-  }
-
-  /* Abas dos modais (tabs) */
-  .bg-slate-950 {
-    background-color: #f8fafc !important;
-    border-bottom-color: #cbd5e1 !important;
-  }
-
-  /* Inputs, selects e textareas precisam de excelente contraste no claro (efeito de profundidade/esculpido) */
-  input, select, textarea {
-    background-color: #f8fafc !important;
-    color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
-    transition: all 0.2s ease-in-out;
-  }
-  input:focus, select:focus, textarea:focus {
-    background-color: #ffffff !important;
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-    outline: none !important;
-  }
-  
-  /* Garantir que placeholders de campos sejam visíveis mas discretos */
-  input::placeholder, textarea::placeholder {
-    color: #64748b !important;
-  }
-  
-  /* Bordas de tabela e elementos de divisão */
-  .border-slate-800, .border-slate-700, .border-white\/10 {
-    border-color: #cbd5e1 !important;
-  }
-  
-  /* Fundos de cabeçalho de tabela e divisões translúcidas */
-  thead, .bg-slate-950\/50, .bg-slate-900\/50 {
-    background-color: #f1f5f9 !important;
-  }
-
-  /* Tabelas */
-  table {
-    border-color: #e2e8f0 !important;
-  }
-  th, td {
-    border-color: #e2e8f0 !important;
-  }
-  thead tr {
-    background-color: #f1f5f9 !important;
-    color: #0f172a !important;
-    border-bottom: 2px solid #cbd5e1 !important;
-  }
-  tbody tr:nth-child(even) {
-    background-color: #f8fafc !important;
-  }
-  tbody tr:hover {
-    background-color: #f1f5f9 !important;
-  }
-  
-  /* Badges coloridas com fundo translúcido devem ter cores de fundo correspondentes mais suaves e textos bem escuros */
-  .bg-blue-900\/20 { background-color: #eff6ff !important; border: 1px solid #bfdbfe !important; color: #1e40af !important; }
-  .bg-emerald-900\/20 { background-color: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; color: #065f46 !important; }
-  .bg-red-900\/20 { background-color: #fef2f2 !important; border: 1px solid #fecaca !important; color: #991b1b !important; }
-  .bg-orange-900\/20 { background-color: #fffbeb !important; border: 1px solid #fef3c7 !important; color: #9a3412 !important; }
-  .bg-purple-900\/20 { background-color: #faf5ff !important; border: 1px solid #e9d5ff !important; color: #6b21a8 !important; }
-  .bg-indigo-900\/20 { background-color: #eef2ff !important; border: 1px solid #e0e7ff !important; color: #3730a3 !important; }
-  .bg-amber-900\/20 { background-color: #fffbeb !important; border: 1px solid #fef3c7 !important; color: #92400e !important; }
-
-  /* Elementos transparentes/translucidos (como botões de fechar e secundários) */
-  .bg-white\/5 {
-    background-color: rgba(15, 23, 42, 0.05) !important;
-    color: #334155 !important;
-  }
-  .hover\:bg-white\/10:hover {
-    background-color: rgba(15, 23, 42, 0.1) !important;
-    color: #0f172a !important;
-  }
-
-  /* Ajustar o shadow interno de botões e inputs */
-  .shadow-inner {
-    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06) !important;
-  }
-
-  /* Custom Scrollbar no modo claro */
-  ::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important; 
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8 !important; 
-  }
-}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-
-  --color-slate-50: var(--slate-50);
-  --color-slate-100: var(--slate-100);
-  --color-slate-200: var(--slate-200);
-  --color-slate-300: var(--slate-300);
-  --color-slate-400: var(--slate-400);
-  --color-slate-500: var(--slate-500);
-  --color-slate-600: var(--slate-600);
-  --color-slate-700: var(--slate-700);
-  --color-slate-800: var(--slate-800);
-  --color-slate-900: var(--slate-900);
-  --color-slate-950: var(--slate-950);
-
-  --color-blue-50: #eff6ff;
-  --color-blue-100: #dbeafe;
-  --color-blue-200: #bfdbfe;
-  --color-blue-300: #93c5fd;
-  --color-blue-400: #60a5fa;
-  --color-blue-500: #3b82f6;
-  --color-blue-600: #2563eb;
-  --color-blue-700: #1d4ed8;
-  --color-blue-800: #1e40af;
-  --color-blue-900: #1e3a8a;
-  --color-blue-950: #172554;
-
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-scale-up: scaleUp 0.2s ease-out;
 
@@ -216,6 +10,7 @@ html:not(.dark) {
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+
   @keyframes scaleUp {
     0% { transform: scale(0.95); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
@@ -227,19 +22,19 @@ html:not(.dark) {
     font-family: var(--font-sans);
   }
 
-  /* Custom Scrollbar for nicer tables */
+  /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent; 
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #334155; 
+    background: #475569; /* slate-600 */
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #475569; 
+    background: #64748b; /* slate-500 */
   }
 }

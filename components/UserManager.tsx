@@ -837,11 +837,11 @@ const UserManager: React.FC = () => {
 
   const getAvatarColor = (name: string) => {
     const colors = [
-      { bg: 'bg-blue-600/10', border: 'border-blue-500/20', text: 'text-blue-400' },
-      { bg: 'bg-emerald-600/10', border: 'border-emerald-500/20', text: 'text-emerald-400' },
+      { bg: 'bg-blue-600/10', border: 'border-blue-500/20', text: 'text-blue-600 dark:text-sky-400' },
+      { bg: 'bg-emerald-600/10', border: 'border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
       { bg: 'bg-violet-600/10', border: 'border-violet-500/20', text: 'text-violet-400' },
-      { bg: 'bg-amber-600/10', border: 'border-amber-500/20', text: 'text-amber-400' },
-      { bg: 'bg-rose-600/10', border: 'border-rose-500/20', text: 'text-rose-400' },
+      { bg: 'bg-amber-600/10', border: 'border-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
+      { bg: 'bg-rose-600/10', border: 'border-rose-500/20', text: 'text-rose-600 dark:text-rose-400' },
       { bg: 'bg-cyan-600/10', border: 'border-cyan-500/20', text: 'text-cyan-400' },
     ];
     let hash = 0;
@@ -971,34 +971,34 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl relative z-30">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
         <div className="min-w-0 flex-1">
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2 truncate">
             <UserIcon className="text-emerald-500 shrink-0" size={24} />
             Gestão de Colaboradores
           </h2>
-          <p className="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Total de {users.length} profissionais mapeados no ecossistema</p>
+          <p className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Total de {users.length} profissionais mapeados no ecossistema</p>
         </div>
         <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner shrink-0">
-            <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
-            <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
-            <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
+          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
+            <button onClick={() => handleExport('csv')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-2 sm:p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 transition-all" title="Exportar PDF"><Download size={18}/></button>
           </div>
 
           <div className={`relative shrink-0 ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-extrabold text-[10px] sm:text-[11px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px] whitespace-nowrap">
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
-                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
                 </div>
-                <div className="p-2 space-y-1 bg-slate-900/50">
+                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
                   {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-900/20 text-emerald-400' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}>
                       {col.label}
                       {visibleColumns.includes(col.id) && <Check size={14}/>}
                     </button>
@@ -1019,37 +1019,37 @@ const UserManager: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group">
           <div>
-            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos</span>
-            <p className="text-2xl font-black text-slate-100">{users.filter(u => u.active && (!u.status || u.status === UserStatus.ACTIVE)).length}</p>
+            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => u.active && (!u.status || u.status === UserStatus.ACTIVE)).length}</p>
           </div>
-          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
+          <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group">
           <div>
-            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Afastados</span>
-            <p className="text-2xl font-black text-slate-100">{users.filter(u => u.active && u.status === UserStatus.ON_LEAVE).length}</p>
+            <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Afastados</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => u.active && u.status === UserStatus.ON_LEAVE).length}</p>
           </div>
-          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
+          <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-slate-500/30 group">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-slate-500/30 group">
           <div>
-            <span className="text-[11px] font-black text-slate-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Inativos</span>
-            <p className="text-2xl font-black text-slate-100">{users.filter(u => !u.active).length}</p>
+            <span className="text-[11px] font-black text-slate-600 dark:text-slate-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Inativos</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => !u.active).length}</p>
           </div>
-          <div className="h-12 w-12 bg-slate-800/40 rounded-2xl flex items-center justify-center text-slate-400 border border-slate-700/30 group-hover:scale-110 transition-transform"><Briefcase size={24}/></div>
+          <div className="h-12 w-12 bg-slate-800/40 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600/30 group-hover:scale-110 transition-transform"><Briefcase size={24}/></div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-orange-500/30 group">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-orange-500/30 group">
           <div>
             <span className="text-[11px] font-black text-orange-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Termos Pend.</span>
-            <p className="text-2xl font-black text-slate-100">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}</p>
           </div>
           <div className="h-12 w-12 bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-400 border border-orange-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-slate-800 overflow-x-auto bg-slate-900 px-4 pt-2 rounded-t-xl transition-colors">
+      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-4 pt-2 rounded-t-xl transition-colors">
         {(['ACTIVE', 'INACTIVE', 'ON_LEAVE'] as const).map(mode => (
           <button 
             key={mode} 
@@ -1057,10 +1057,10 @@ const UserManager: React.FC = () => {
               setViewMode(mode);
               setShowPendingOnly(false);
             }} 
-            className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && viewMode === mode) ? 'border-emerald-600 text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && viewMode === mode) ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
           >
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
-            <span className="ml-2 bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">
+            <span className="ml-2 bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded text-[10px]">
               {users.filter(u => {
                 if (mode === 'ACTIVE') return u.active && (!u.status || u.status === UserStatus.ACTIVE);
                 if (mode === 'INACTIVE') return !u.active;
@@ -1072,7 +1072,7 @@ const UserManager: React.FC = () => {
         ))}
         <button 
           onClick={() => setShowPendingOnly(true)} 
-          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-500 hover:text-orange-400'}`}
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-orange-400'}`}
         >
           Termos Pendentes
           <span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">
@@ -1086,7 +1086,7 @@ const UserManager: React.FC = () => {
         <input 
           type="text" 
           placeholder="Pesquisar por Nome, CPF, E-mail, RG ou PIS..." 
-          className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-200 bg-slate-900 transition-colors" 
+          className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-200 bg-white dark:bg-slate-800 transition-colors" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)}
         />
@@ -1125,7 +1125,7 @@ const UserManager: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <DataTable
           columns={columns}
           data={enrichedUsers}
@@ -1143,12 +1143,12 @@ const UserManager: React.FC = () => {
               <tr 
                 key={u.id} 
                 onClick={() => handleOpenModal(u, true)} 
-                className={`border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-emerald-500 bg-slate-900 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-900/20 border-l-emerald-500' : ''}`}
+                className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-emerald-500 bg-white dark:bg-slate-800 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-50 dark:bg-emerald-500/20 border-l-emerald-500' : ''}`}
               >
                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   <input 
                     type="checkbox"
-                    className="rounded border-slate-700 bg-slate-800 focus:ring-emerald-500"
+                    className="rounded border-slate-300 dark:border-slate-600 bg-slate-800 focus:ring-emerald-500"
                     checked={selectedIds.includes(u.id)}
                     onChange={(e) => { e.stopPropagation(); handleSelectOne(u.id); }}
                   />
@@ -1166,15 +1166,15 @@ const UserManager: React.FC = () => {
                       );
                     })()}
                     <div className="min-w-0">
-                      <div className="font-semibold text-slate-100 text-[13px]">{u.fullName}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white text-[13px]">{u.fullName}</div>
                       <div className="flex gap-1 mt-0.5">
                         {u.status === UserStatus.ON_LEAVE && (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-blue-900/30 text-blue-400">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400">
                             Afastado
                           </span>
                         )}
                         {hasPending && (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-900/30 text-amber-400">
+                          <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
                             Pendente
                           </span>
                         )}
@@ -1194,7 +1194,7 @@ const UserManager: React.FC = () => {
                 )}
                 {visibleColumns.includes('assetsCount') && (
                   <td className="px-6 py-4 text-center truncate">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${u.assetsCount > 0 ? ' bg-blue-900/30 text-blue-400' : ' bg-slate-800 text-slate-400'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${u.assetsCount > 0 ? ' bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                       {u.assetsCount}
                     </span>
                   </td>
@@ -1206,7 +1206,7 @@ const UserManager: React.FC = () => {
                     <button 
                       onClick={() => handleOpenModal(u, false)} 
                       disabled={isReadOnly} 
-                      className={`p-1.5 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`p-1.5 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                       title="Editar"
                     >
                       <Edit2 size={16} />
@@ -1214,7 +1214,7 @@ const UserManager: React.FC = () => {
                     <button 
                       onClick={() => !isReadOnly && handleToggleClick(u)} 
                       disabled={isReadOnly} 
-                      className={`p-1.5 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : (u.active ? ' hover:bg-orange-900/30' : ' hover:bg-emerald-900/30')}`} 
+                      className={`p-1.5 rounded-lg transition-all ${isReadOnly ? 'opacity-50 cursor-not-allowed' : (u.active ? ' hover:bg-orange-900/30' : ' hover:bg-emerald-100 dark:bg-emerald-500/20')}`} 
                       title={u.active ? 'Inativar' : 'Reativar'}
                     >
                       {u.active ? <Power size={16} /> : <RefreshCw size={16} />}
@@ -1225,12 +1225,12 @@ const UserManager: React.FC = () => {
             );
           }}
         />
-        <div className="bg-slate-900 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wider">Exibir:</span>
               <select 
-                className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                className="bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                 value={itemsPerPage} 
                 onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
               >
@@ -1244,86 +1244,86 @@ const UserManager: React.FC = () => {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
-              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 cursor-not-allowed' : ' text-emerald-400 hover:bg-emerald-900/30'}`}><ChevronLeft size={18}/></button>
-              <div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-300 bg-emerald-900/40 px-3 py-1.5 rounded-lg">{currentPage}</span><span className="text-xs font-bold uppercase mx-1">de</span><span className="text-xs font-black text-slate-300">{totalPages}</span></div>
-              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 cursor-not-allowed' : ' text-emerald-400 hover:bg-emerald-900/30'}`}><ChevronRight size={18}/></button>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-700 dark:text-slate-300 cursor-not-allowed' : ' text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:bg-emerald-500/20'}`}><ChevronLeft size={18}/></button>
+              <div className="flex items-center gap-1"><span className="text-xs font-black text-emerald-300 bg-emerald-900/40 px-3 py-1.5 rounded-lg">{currentPage}</span><span className="text-xs font-bold uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-700 dark:text-slate-300 cursor-not-allowed' : ' text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:bg-emerald-500/20'}`}><ChevronRight size={18}/></button>
             </div>
           )}
         </div>
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-800 transition-colors">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
             <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
               <h3 className="text-lg font-bold text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
             </div>
 
-            <div className="flex bg-slate-950 border-b border-slate-800 overflow-x-auto shrink-0 px-4 pt-2">
-              <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Dados Cadastrais</button>
-              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
-              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
-              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
-              <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-400 bg-slate-900 ' : 'border-transparent hover:text-slate-300'}`}>Histórico</button>
+            <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
+              <button type="button" onClick={() => setActiveTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'DATA' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Dados Cadastrais</button>
+              <button type="button" onClick={() => setActiveTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'ASSETS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
+              <button type="button" onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'LICENSES' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'TERMS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
+              <button type="button" onClick={() => setActiveTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Histórico</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 bg-slate-900 transition-colors">
+            <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-800 transition-colors">
               {activeTab === 'DATA' && (
                 <form id="userForm" onSubmit={handleSubmit} className="space-y-6">
                   {isViewOnly && (
-                    <div className="md:col-span-2 bg-emerald-900/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
-                      <Info className="text-emerald-400" size={20} />
+                    <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
+                      <Info className="text-emerald-600 dark:text-emerald-400" size={20} />
                       <p className="text-xs font-bold text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p>
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Nome Completo</label>
-                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Nome Completo</label>
+                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-900 dark:text-white" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">CPF</label>
-                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">CPF</label>
+                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-900 dark:text-white" value={formData.cpf || ''} onChange={e => setFormData({...formData, cpf: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">RG</label>
-                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">RG</label>
+                      <input disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-900 dark:text-white" value={formData.rg || ''} onChange={e => setFormData({...formData, rg: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">PIS / PASEP</label>
-                      <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-100" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="Somente números" />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">PIS / PASEP</label>
+                      <input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-mono bg-slate-800/50 text-slate-900 dark:text-white" value={formData.pis || ''} onChange={e => setFormData({...formData, pis: e.target.value})} placeholder="Somente números" />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">E-mail Corporativo</label>
-                      <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-100" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value?.trim() || ''})} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">E-mail Corporativo</label>
+                      <input disabled={isViewOnly} required type="email" className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value?.trim() || ''})} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Cargo / Setor Atual</label>
-                      <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Cargo / Setor Atual</label>
+                      <select disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-900 dark:text-white" value={formData.sectorId || ''} onChange={e => setFormData({...formData, sectorId: e.target.value})}>
                         <option value="">Selecione um cargo...</option>
                         {[...sectors].sort((a,b) => a.name.localeCompare(b.name)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Código Interno</label>
-                      <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})} placeholder="Código de sincronização" />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Código Interno</label>
+                      <input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-900 dark:text-white" value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value})} placeholder="Código de sincronização" />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Status do Colaborador</label>
-                      <select disabled={isViewOnly} required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.status || UserStatus.ACTIVE} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Status do Colaborador</label>
+                      <select disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-900 dark:text-white" value={formData.status || UserStatus.ACTIVE} onChange={e => setFormData({...formData, status: e.target.value as any})}>
                         <option value={UserStatus.ACTIVE}>Ativo</option>
                         <option value={UserStatus.ON_LEAVE}>Afastado (INSS/Licença)</option>
                       </select>
                     </div>
 
-                    <div className="md:col-span-2 border-t border-slate-800 pt-6 mt-2">
+                    <div className="md:col-span-2 border-t border-slate-200 dark:border-slate-700 pt-6 mt-2">
                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-4">Informações Complementares</h4>
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500/80">Endereço Residencial</label>
-                      <input disabled={isViewOnly} className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-100" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Complemento, Bairro" />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Endereço Residencial</label>
+                      <input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-800/50 text-slate-900 dark:text-white" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Complemento, Bairro" />
                     </div>
                   </div>
                 </form>
@@ -1331,7 +1331,7 @@ const UserManager: React.FC = () => {
               {activeTab === 'ASSETS' && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
@@ -1340,7 +1340,7 @@ const UserManager: React.FC = () => {
                           <div 
                             key={d.id} 
                             onClick={() => { setIsModalOpen(false); navigate(`/devices?deviceId=${d.id}`); }}
-                            className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
+                            className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
                           >
                               <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
                               <Smartphone className="text-emerald-500" size={24}/>
@@ -1352,38 +1352,38 @@ const UserManager: React.FC = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <div className="text-[11px] font-bold text-slate-100 uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
+                                <div className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
                                 {isSharedResponsible && <span className="text-[11px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
                               </div>
-                              <div className="text-[11px] font-bold text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
-                              <div className="text-[11px] font-mono text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
+                              <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
+                              <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
                             </div>
                           </div>
                         );
                       })}
-                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-800 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 uppercase">Nenhum dispositivo em posse</p></div>}
+                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhum dispositivo em posse</p></div>}
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userSims.map(sim => (
                         <div 
                           key={sim.id} 
                           onClick={() => { setIsModalOpen(false); navigate(`/sims?simId=${sim.id}`); }}
-                          className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
+                          className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
                         >
-                          <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-900/30 shrink-0">
+                          <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-300 dark:border-sky-700/30 shrink-0">
                             <Phone className="text-blue-500" size={24}/>
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase">{sim.assetTag ? `Sim Card: ${sim.assetTag}` : 'Sim Card S/N'}</div>
-                            <div className="mt-1"><span className="text-[11px] font-black bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
+                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase">{sim.assetTag ? `Sim Card: ${sim.assetTag}` : 'Sim Card S/N'}</div>
+                            <div className="mt-1"><span className="text-[11px] font-black bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
                           </div>
                         </div>
                       ))}
-                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-800 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 uppercase">Nenhuma linha associada</p></div>}
+                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhuma linha associada</p></div>}
                     </div>
                   </div>
                 </div>
@@ -1392,24 +1392,24 @@ const UserManager: React.FC = () => {
                 <div className="space-y-4">
                    <div className="grid grid-cols-1 gap-3">
                     {userAccounts.map(acc => (
-                      <div key={acc.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+                      <div key={acc.id} className="bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-700">
-                            <Mail className="text-emerald-400" size={24} />
+                          <div className="h-12 w-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-300 dark:border-slate-600">
+                            <Mail className="text-emerald-600 dark:text-emerald-400" size={24} />
                           </div>
                           <div>
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{acc.name}</div>
-                            <div className="text-xs font-bold text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{acc.name}</div>
+                            <div className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
                             {acc.password && (
                               <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                <Key size={12} className="text-slate-500"/>
-                                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-300">
+                                <Key size={12} className="text-slate-400 dark:text-slate-500"/>
+                                <span className="text-[10px] font-mono font-bold tracking-widest text-slate-700 dark:text-slate-300">
                                   {visiblePasswords[acc.id] ? acc.password : '••••••••'}
                                 </span>
                                 <button 
                                   type="button"
                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
-                                  className="text-slate-500 hover:text-emerald-400 p-0.5 ml-1 transition-colors"
+                                  className="text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:text-emerald-400 p-0.5 ml-1 transition-colors"
                                   title={visiblePasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}
                                 >
                                   {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -1426,7 +1426,7 @@ const UserManager: React.FC = () => {
                                       showToast('Erro ao copiar senha', 'error');
                                     }
                                   }}
-                                  className="text-slate-500 hover:text-blue-400 p-0.5 transition-colors"
+                                  className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:text-sky-400 p-0.5 transition-colors"
                                   title="Copiar Senha"
                                 >
                                   <Copy size={11} />
@@ -1437,12 +1437,12 @@ const UserManager: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-6">
                            <div className="text-right">
-                              <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
-                              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-900/30 text-emerald-400">Ativa</span>
+                              <div className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
+                              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">Ativa</span>
                            </div>
                            <button 
                              onClick={() => { setIsModalOpen(false); navigate(`/accounts?accountId=${acc.id}`); }}
-                             className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-800"
+                             className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-200 dark:border-slate-700"
                            >
                              <ExternalLink size={16} />
                            </button>
@@ -1450,9 +1450,9 @@ const UserManager: React.FC = () => {
                       </div>
                     ))}
                     {userAccounts.length === 0 && (
-                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                         <Mail className="mx-auto text-slate-800 mb-4" size={48} />
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma conta Microsoft/Google</h4>
+                        <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhuma conta Microsoft/Google</h4>
                         <p className="text-xs text-slate-600 mt-2">Este colaborador não possui licenças atribuídas no momento.</p>
                       </div>
                     )}
@@ -1463,18 +1463,18 @@ const UserManager: React.FC = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3">
                     {currentUserTerms.map(term => (
-                      <div key={term.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
+                      <div key={term.id} className="bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-emerald-500/40 transition-all">
                         <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-700">
-                            {term.type === 'ENTREGA' ? <FileSignature className="text-emerald-400" size={24} /> : <RefreshCw className="text-blue-400" size={24} />}
+                          <div className="h-12 w-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-300 dark:border-slate-600">
+                            {term.type === 'ENTREGA' ? <FileSignature className="text-emerald-600 dark:text-emerald-400" size={24} /> : <RefreshCw className="text-blue-600 dark:text-sky-400" size={24} />}
                           </div>
                           <div>
-                            <div className="text-xs font-black text-slate-100 uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
-                            <div className="text-[11px] font-bold text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
+                            <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
+                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-emerald-500/80">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
-                              <div className="text-[10px] text-slate-400 font-medium">
+                              <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                                 {term.assetDetails || '---'}
                               </div>
                             </div>
@@ -1523,7 +1523,7 @@ const UserManager: React.FC = () => {
                                 });
                               }} 
                               disabled={!!(term.fileUrl || term.hasFile)}
-                              className={`p-2 bg-slate-900 rounded-lg transition-all border border-slate-800 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500' : 'text-blue-400 hover:bg-blue-900/20'}`}
+                              className={`p-2 bg-white dark:bg-slate-800 rounded-lg transition-all border border-slate-200 dark:border-slate-700 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-400 dark:text-slate-500' : 'text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20'}`}
                             >
                               <Edit2 size={16} />
                             </button>
@@ -1531,7 +1531,7 @@ const UserManager: React.FC = () => {
                               <button 
                                 type="button"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTerm(term); }}
-                                className="p-2 bg-emerald-900/20 text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                className="p-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:text-emerald-300 transition-all border border-emerald-900/40"
                                 title={!!(term.fileUrl || term.hasFile) ? "Visualizar Arquivo Assinado" : "Visualizar Comprovante Digital"}
                               >
                                 <Eye size={16} />
@@ -1543,7 +1543,7 @@ const UserManager: React.FC = () => {
                                  <button 
                                    type="button"
                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
-                                   className="p-2 bg-slate-900 text-slate-400 rounded-lg hover:text-white transition-all border border-slate-800"
+                                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-all border border-slate-200 dark:border-slate-700"
                                    title="Gerar Termo"
                                  >
                                    <Download size={16} />
@@ -1552,7 +1552,7 @@ const UserManager: React.FC = () => {
                                  <button 
                                    type="button"
                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(term.id); }}
-                                   className="p-2 bg-blue-900/20 text-blue-400 rounded-lg hover:text-blue-300 transition-all border border-blue-900/40"
+                                   className="p-2 bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 rounded-lg hover:text-blue-300 transition-all border border-blue-300 dark:border-sky-700/40"
                                    title="Gerar Link de Assinatura"
                                  >
                                    <Share2 size={16} />
@@ -1583,10 +1583,10 @@ const UserManager: React.FC = () => {
                                        }
                                      } catch(err) { console.error(err); }
                                    }}
-                                   className="p-1.5 bg-slate-900 border border-slate-700/50 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1.5"
+                                   className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
                                    title="Ver Evidências de Identidade (Doc + Selfie)"
                                  >
-                                   <Camera size={14} className="text-blue-400" />
+                                   <Camera size={14} className="text-blue-600 dark:text-sky-400" />
                                    <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
                                  </button>
                                </div>
@@ -1598,13 +1598,13 @@ const UserManager: React.FC = () => {
                                   <button 
                                     type="button"
                                     onClick={() => setResolvingManualTerm(term)}
-                                    className="p-2 bg-slate-900 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-800"
+                                    className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                     title="Resolução Manual"
                                   >
                                     <CheckSquare size={16} />
                                   </button>
                                 )}
-                                <label className="p-2 bg-slate-900 text-emerald-400 rounded-lg hover:bg-emerald-900/20 transition-all border border-slate-800 cursor-pointer" title="Upload Assinado">
+                                <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
                                   <Upload size={16} />
                                   <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(term.id, e)} />
                                 </label>
@@ -1613,7 +1613,7 @@ const UserManager: React.FC = () => {
                               <button 
                                 type="button"
                                 onClick={() => handleDeleteTermFile(term.id)}
-                                className="p-2 bg-slate-900 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-800"
+                                className="p-2 bg-white dark:bg-slate-800 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                 title="Excluir/Alterar"
                               >
                                 <Trash2 size={16} />
@@ -1624,9 +1624,9 @@ const UserManager: React.FC = () => {
                       </div>
                     ))}
                     {currentUserTerms.length === 0 && (
-                      <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                         <FileText className="mx-auto text-slate-800 mb-4" size={48} />
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhum termo gerado</h4>
+                        <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhum termo gerado</h4>
                       </div>
                     )}
                   </div>
@@ -1634,7 +1634,7 @@ const UserManager: React.FC = () => {
               )}
               {activeTab === 'LOGS' && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-800">
+                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     {(() => {
                       const currentUser = users.find(u => u.id === editingId);
                       const name = currentUser?.fullName.toLowerCase().trim() || '';
@@ -1648,7 +1648,7 @@ const UserManager: React.FC = () => {
                       });
                       return (
                         <>
-                          <span className="text-[11px] font-black uppercase text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
+                          <span className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
                         </>
                       );
                     })()}
@@ -1668,30 +1668,30 @@ const UserManager: React.FC = () => {
 
                       if (userLogs.length === 0) {
                         return (
-                          <div className="text-center py-16 bg-slate-950/50 rounded-3xl border-2 border-dashed border-slate-800">
+                          <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                             <History className="mx-auto text-slate-800 mb-4" size={48} />
-                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
+                            <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
                           </div>
                         );
                       }
 
                       return userLogs.map(log => {
-                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-400' :
-                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-400' :
-                                           'bg-slate-800 text-slate-400';
+                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-600 dark:text-emerald-400' :
+                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-600 dark:text-sky-400' :
+                                           'bg-slate-800 text-slate-600 dark:text-slate-400';
                         return (
-                          <div key={log.id} className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col gap-2 group hover:border-slate-700 transition-all">
+                          <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-300 dark:border-slate-600 transition-all">
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-3">
                                 <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
                                   {log.action}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
+                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
-                            <div className="text-xs font-bold text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
-                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>
                           </div>
@@ -1703,17 +1703,17 @@ const UserManager: React.FC = () => {
               )}
             </div>
 
-            <div className="bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-t border-white/5">
+            <div className="bg-white dark:bg-slate-800 px-8 py-5 flex justify-between items-center shrink-0 border-t border-white/5">
               <div className="flex gap-3">
                 {!isViewOnly && (
-                  <button type="button" onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
                 )}
                 {isViewOnly && (
-                  <button type="button" onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-900/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-emerald-600 dark:text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
                 )}
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
                 {!isViewOnly && (
                   <button type="submit" form="userForm" className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"><Save size={16}/> Salvar Alterações</button>
                 )}
@@ -1724,34 +1724,34 @@ const UserManager: React.FC = () => {
       )}
 
       {editingTerm && (
-        <div className="fixed inset-0 bg-slate-950/90 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-2xl border border-slate-800 animate-scale-up shadow-2xl overflow-hidden">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[200] flex items-center justify-center p-4 backdrop-blur-xl">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl overflow-hidden">
+            <div className="p-8 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter">Gerenciar Termo</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
               </div>
-              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><X size={20}/></button>
+              <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
             </div>
 
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-800 hover:border-slate-700'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
-                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-900/20 text-emerald-400' : 'border-slate-800 hover:border-slate-700'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
+                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
               </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Observações Detalhadas</label>
-                <textarea className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
+                <textarea className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
               </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Evidências (Fotos / B.O.) - Máx 3</label>
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   {termEditData.evidenceFiles.map((file, index) => (
-                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-700 group h-32">
+                    <div key={index} className="relative rounded-xl overflow-hidden border-2 border-slate-300 dark:border-slate-600 group h-32">
                       <img src={file} alt={`Evidência ${index + 1}`} className="w-full h-full object-cover"/>
-                      <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-white dark:bg-slate-800/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button onClick={() => handleRemoveEvidence(index)} className="p-2 bg-red-500 text-white rounded-full hover:scale-110 transition-transform" title="Remover Imagem">
                           <Trash2 size={16} />
                         </button>
@@ -1759,7 +1759,7 @@ const UserManager: React.FC = () => {
                     </div>
                   ))}
                   {termEditData.evidenceFiles.length < 3 && (
-                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:bg-slate-800/50 transition-colors">
+                    <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors">
                       <div className="flex flex-col items-center justify-center p-4 text-center">
                         <Upload className="w-6 h-6 mb-2"/>
                         <p className="text-xs">Adicionar</p>
@@ -1771,8 +1771,8 @@ const UserManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex gap-3 justify-end">
-              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-colors">Cancelar</button>
+            <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 flex gap-3 justify-end">
+              <button onClick={() => setEditingTerm(null)} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
               <button onClick={handleSaveTermEdit} className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest text-white transition-all">Salvar Alterações</button>
             </div>
           </div>
@@ -1780,18 +1780,18 @@ const UserManager: React.FC = () => {
       )}
 
       {isReasonModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-900/40">
+        <div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-300 dark:border-sky-700/40">
             <div className="p-8">
               <div className="flex flex-col items-center text-center mb-6">
-                <div className="h-16 w-16 bg-blue-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800">
+                <div className="h-16 w-16 bg-blue-100 dark:bg-sky-500/20 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800">
                   <Save size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-slate-100 uppercase tracking-tight">Confirmar Alterações?</h3>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Confirmar Alterações?</h3>
                 <p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p>
               </div>
               <textarea 
-                className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-100"
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-900 dark:text-white"
                 rows={3}
                 placeholder="Descreva o que foi alterado..."
                 value={editReason}
@@ -1808,17 +1808,17 @@ const UserManager: React.FC = () => {
 
       {resolvingManualTerm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[300] p-4 animate-fade-in">
-          <div className="bg-slate-900 rounded-2xl p-8 w-full max-w-md border border-slate-800 shadow-2xl">
-            <h3 className="text-xl font-black text-slate-100 mb-4 uppercase tracking-tight">Resolução Manual de Termo</h3>
-            <p className="text-sm text-slate-400 mb-6 font-medium leading-relaxed">
-              Deseja resolver este termo manualmente para <span className="text-slate-100 font-bold">{users.find(u => u.id === editingId)?.fullName}</span>? 
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">Resolução Manual de Termo</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 font-medium leading-relaxed">
+              Deseja resolver este termo manualmente para <span className="text-slate-900 dark:text-white font-bold">{users.find(u => u.id === editingId)?.fullName}</span>? 
               Isso marcará a pendência como resolvida sem anexo.
             </p>
             <div className="mb-6">
-              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo/Justificativa</label>
+              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Motivo/Justificativa</label>
               <textarea
                 rows={4}
-                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-600 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-600 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
                 placeholder="Ex: Assinatura física coletada em via única, Contingência de sistema, etc..."
                 value={resolveManualReason}
                 onChange={(e) => setResolveManualReason(e.target.value)}
@@ -1827,7 +1827,7 @@ const UserManager: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
-                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-slate-400 hover:bg-slate-800 transition-all"
+                className="flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
               >
                 Cancelar
               </button>
@@ -1844,7 +1844,7 @@ const UserManager: React.FC = () => {
       )}
       {isLinkModalOpen && generatedSignatureLink && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[501] p-4 animate-fade-in">
-          <div className="bg-slate-900 rounded-3xl p-8 w-full max-w-xl border border-slate-800 shadow-2xl relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 w-full max-w-xl border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-blue-500"></div>
             
             <div className="flex justify-between items-center mb-6">
@@ -1853,18 +1853,18 @@ const UserManager: React.FC = () => {
               </div>
               <button 
                 onClick={() => setIsLinkModalOpen(false)}
-                className="text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-xl"
+                className="text-slate-400 dark:text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"
               >
                 <X size={20} />
               </button>
             </div>
 
             <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Link de Assinatura Gerado</h3>
-            <p className="text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
+            <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
 
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 group transition-all hover:border-emerald-500/30">
+            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6 group transition-all hover:border-emerald-500/30">
               <div className="flex items-center justify-between gap-4">
-                <div className="truncate text-emerald-400 font-mono text-sm">
+                <div className="truncate text-emerald-600 dark:text-emerald-400 font-mono text-sm">
                   {generatedSignatureLink}
                 </div>
                 <button 
@@ -1884,12 +1884,12 @@ const UserManager: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+              <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-300 dark:border-slate-600/50">
                 <div className="flex gap-3 items-start">
-                  <div className="bg-blue-500/10 p-2 rounded-lg text-blue-400 shrink-0">
+                  <div className="bg-blue-500/10 p-2 rounded-lg text-blue-600 dark:text-sky-400 shrink-0">
                     <Info size={16} />
                   </div>
-                  <p className="text-[11px] text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed uppercase tracking-wider">
                     Este link é único para este termo. Caso o colaborador não consiga copiar, você pode enviar o link acima manualmente por e-mail ou WhatsApp.
                   </p>
                 </div>
@@ -1897,7 +1897,7 @@ const UserManager: React.FC = () => {
               
               <button 
                 onClick={() => setIsLinkModalOpen(false)}
-                className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all"
+                className="w-full py-4 bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all"
               >
                 Fechar Janela
               </button>

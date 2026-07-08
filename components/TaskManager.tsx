@@ -348,33 +348,33 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
   return (
     <div className="space-y-6 pb-20 animate-fade-in relative">
       {/* CABEÇALHO PADRONIZADO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl">
         <div>
           <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
             <ClipboardList className="text-indigo-500" size={28} />
             Gestão de Tarefas e Rotinas IT
           </h2>
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
+          <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
             <button 
               onClick={() => handleExport('csv')} 
-              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
               title="Exportar CSV"
             >
               <FileText size={UI_ICON_SIZE_BASE}/>
             </button>
             <button 
               onClick={() => handleExport('excel')} 
-              className="p-3 hover:bg-slate-800 border-r border-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
               title="Exportar Excel"
             >
               <FileSpreadsheet size={UI_ICON_SIZE_BASE}/>
             </button>
             <button 
               onClick={() => handleExport('pdf')} 
-              className="p-3 hover:bg-slate-800 transition-all text-slate-400 hover:text-indigo-400"
+              className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400"
               title="Exportar PDF"
             >
               <Download size={UI_ICON_SIZE_BASE}/>
@@ -392,55 +392,55 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
       {/* DASHBOARD CARDS PADRONIZADOS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Tarefas Ativas</span>
-            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
+            <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Tarefas Ativas</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{tasks.filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
           </div>
-          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><CheckSquare size={24}/></div>
+          <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><CheckSquare size={24}/></div>
         </div>
 
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Lembretes</span>
-            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.type === TaskType.REMINDER && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+            <span className="text-[11px] font-black text-amber-600 dark:text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Lembretes</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{tasks.filter(t => t.type === TaskType.REMINDER && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
           </div>
-          <div className="h-12 w-12 bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Bell size={24}/></div>
+          <div className="h-12 w-12 bg-amber-50 dark:bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-800/30 group-hover:scale-110 transition-transform"><Bell size={24}/></div>
         </div>
 
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenções</span>
-            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.type === TaskType.MAINTENANCE && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
+            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Manutenções</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{tasks.filter(t => t.type === TaskType.MAINTENANCE && (t.status === TaskStatus.PENDING || t.status === TaskStatus.IN_PROGRESS)).length}</p>
           </div>
-          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
+          <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><Wrench size={24}/></div>
         </div>
 
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
           <div>
             <span className="text-[11px] font-black text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Atrasadas</span>
-            <p className="text-2xl font-black text-slate-100">{tasks.filter(t => t.isOverdue && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{tasks.filter(t => t.isOverdue && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
           </div>
           <div className="h-12 w-12 bg-red-900/20 rounded-2xl flex items-center justify-center text-red-400 border border-red-800/30 group-hover:scale-110 transition-transform"><AlertCircle size={24}/></div>
         </div>
       </div>
 
       {/* Filtros e Busca Padronizados */}
-      <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xl ring-1 ring-white/5">
+      <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl ring-1 ring-white/5">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={20} />
+            <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors" size={20} />
             <input
               type="text"
               placeholder="Buscar tarefas por título ou descrição..."
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-200 text-sm shadow-inner"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-200 text-sm shadow-inner"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+            <div className="flex bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
               {(['Ativas', 'Concluídas', 'Canceladas'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -448,7 +448,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                   className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                     activeTab === tab 
                     ? ' bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 ' 
-                    : ' text-slate-500 hover:text-slate-300 '
+                    : ' text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 '
                   }`}
                 >
                   {tab}
@@ -457,7 +457,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             </div>
 
             <select
-              className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-[11px] font-black uppercase tracking-widest shadow-inner cursor-pointer hover:bg-slate-800"
+              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-5 py-3 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-[11px] font-black uppercase tracking-widest shadow-inner cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
             >
@@ -472,15 +472,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
       </div>
 
       {/* Lista de Tarefas Padronizada */}
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <div className="overflow-x-auto shadow-inner">
           <table className="w-full text-left border-collapse table-fixed">
             <thead>
-              <tr className="bg-slate-950/80 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-800">
+              <tr className="bg-slate-50 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
                 <th className="px-6 py-5 w-12 text-center">
                   <input 
                     type="checkbox"
-                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
                     checked={filteredTasks.length > 0 && selectedTasksIds.length === filteredTasks.length}
                     onChange={toggleSelectAll}
                   />
@@ -490,21 +490,21 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
                 <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
                 <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
-                <th className="px-6 py-4 text-right border-b border-slate-700 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-400/80 align-middle" style={{ width: '100px', minWidth: '100px' }}>Ações</th>
+                <th className="px-6 py-4 text-right border-b border-slate-300 dark:border-slate-600 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 align-middle" style={{ width: '100px', minWidth: '100px' }}>Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 bg-slate-900/50">
+            <tbody className="divide-y divide-slate-800/30 bg-white dark:bg-slate-800/50">
           {filteredTasks.length > 0 ? (
             filteredTasks.map((task) => (
               <tr 
                 key={task.id} 
-                className={`group border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-indigo-500 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-900/10 border-l-indigo-500' : ' '}`}
+                className={`group border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-indigo-500 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-900/10 border-l-indigo-500' : ' '}`}
                 onClick={() => setSelectedTaskId(task.id)}
               >
                 <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                   <input 
                     type="checkbox"
-                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-700 cursor-pointer"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
                     checked={selectedTasksIds.includes(task.id)}
                     onChange={() => toggleSelectTask(task.id)}
                   />
@@ -512,20 +512,20 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-slate-100 tracking-tight group-hover:text-indigo-400 transition-colors">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white tracking-tight group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
                         {task.title}
                       </span>
                       {task.isRecurring && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-indigo-400 bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-800/20">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-800/20">
                           <Repeat size={10} /> {getRecurrenceDescription(task.recurrenceConfig)}
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
                       {task.description}
                     </span>
                     {task.type === TaskType.MAINTENANCE && task.deviceId && (
-                      <span className="text-[10px] font-black uppercase text-indigo-400/80 mt-1.5 flex items-center gap-1 bg-indigo-950/30 w-fit px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400/80 mt-1.5 flex items-center gap-1 bg-indigo-950/30 w-fit px-2 py-0.5 rounded">
                         <Smartphone size={10} /> {getDeviceName(task.deviceId)}
                       </span>
                     )}
@@ -533,13 +533,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-slate-950 rounded-lg border border-slate-800/50">
-                      {task.type === TaskType.REMINDER && <Bell size={14} className="text-amber-400"/>}
-                      {task.type === TaskType.MAINTENANCE && <Wrench size={14} className="text-blue-400"/>}
-                      {task.type === TaskType.AUDIT && <ShieldCheck size={14} className="text-emerald-400"/>}
-                      {task.type === TaskType.OTHER && <Tag size={14} className="text-slate-400"/>}
+                    <div className="p-1.5 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700/50">
+                      {task.type === TaskType.REMINDER && <Bell size={14} className="text-amber-600 dark:text-amber-400"/>}
+                      {task.type === TaskType.MAINTENANCE && <Wrench size={14} className="text-blue-600 dark:text-sky-400"/>}
+                      {task.type === TaskType.AUDIT && <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400"/>}
+                      {task.type === TaskType.OTHER && <Tag size={14} className="text-slate-600 dark:text-slate-400"/>}
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
                       {task.type === TaskType.REMINDER ? 'Lembrete' :
                        task.type === TaskType.MAINTENANCE ? 'Manutenção' :
                        task.type === TaskType.AUDIT ? 'Auditoria' : 'Outro'}
@@ -548,10 +548,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                    task.status === TaskStatus.PENDING ? ' bg-amber-900/20 text-amber-400 border-amber-800/30' :
-                    task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-900/20 text-blue-400 border-blue-800/30' :
-                    task.status === TaskStatus.COMPLETED ? ' bg-emerald-900/20 text-emerald-400 border-emerald-800/30' :
-                    ' bg-rose-900/20 text-rose-400 border-rose-800/30'
+                    task.status === TaskStatus.PENDING ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/30' :
+                    task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-blue-800/30' :
+                    task.status === TaskStatus.COMPLETED ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-800/30' :
+                    ' bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-800/30'
                   }`}>
                     {task.status === TaskStatus.PENDING ? 'Pendente' :
                      task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
@@ -560,10 +560,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-[10px] font-black text-indigo-400 uppercase tracking-widest shadow-inner">
+                    <div className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest shadow-inner">
                       {task.assignedTo?.charAt(0) || '?'}
                     </div>
-                    <span className="text-[11px] font-bold text-slate-300">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                       {task.assignedTo ? systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo : 'Setor IT'}
                     </span>
                   </div>
@@ -572,8 +572,8 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                   {task.hasDueDate ? (
                     <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
                       task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' bg-red-900/20 text-red-400 border-red-800/30 animate-pulse' :
-                      task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' bg-amber-900/20 text-amber-400 border-amber-800/30' :
-                      ' bg-slate-950 text-slate-500 border-slate-800'
+                      task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/30' :
+                      ' bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'
                     }`}>
                       <Calendar size={12} />
                       {parseLocalDate(task.dueDate!).toLocaleDateString('pt-BR')}
@@ -590,15 +590,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                         onClick={() => toggleTaskAlert(task.id)}
                         className={`p-2 rounded-xl transition-all border shadow-inner ${
                           !disabledTaskAlerts.includes(task.id)
-                            ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-900/30'
-                            : 'bg-slate-950 text-slate-600 border-slate-800 hover:bg-slate-800'
+                            ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-100 dark:bg-amber-500/20'
+                            : 'bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
                         {!disabledTaskAlerts.includes(task.id) ? <Bell size={16} /> : <BellOff size={16} />}
                       </button>
                     )}
                     <button 
-                      className="p-2 bg-slate-950 hover:bg-indigo-600 text-slate-400 hover:text-white rounded-xl transition-all border border-slate-800/50 shadow-inner group/btn"
+                      className="p-2 bg-slate-50 dark:bg-slate-900 hover:bg-indigo-600 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl transition-all border border-slate-200 dark:border-slate-700/50 shadow-inner group/btn"
                       onClick={() => {
                         setSelectedTaskId(task.id);
                       }}
@@ -613,7 +613,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             <tr>
               <td colSpan={7} className="px-6 py-20 text-center">
                 <div className="flex flex-col items-center justify-center space-y-4 opacity-50">
-                  <div className="p-6 bg-slate-900 rounded-full border-2 border-dashed border-slate-800">
+                  <div className="p-6 bg-white dark:bg-slate-800 rounded-full border-2 border-dashed border-slate-200 dark:border-slate-700">
                     <CheckSquare size={48} className="text-slate-700"/>
                   </div>
                   <div>
@@ -638,11 +638,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  animate={{ opacity: 1, scale: 1 }}
  exit={{ opacity: 0, scale: 0.95 }}
  onSubmit={handleCreateTask}
- className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
+ className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
  >
- <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-50/50 bg-slate-800/50 shrink-0">
- <h2 className="text-xl font-bold text-slate-100">Nova Tarefa</h2>
- <button type="button"onClick={() => setIsAdding(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+ <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-800/50 shrink-0">
+ <h2 className="text-xl font-bold text-slate-900 dark:text-white">Nova Tarefa</h2>
+ <button type="button"onClick={() => setIsAdding(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
  <XCircle size={24} className=""/>
  </button>
  </div>
@@ -656,7 +656,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.title}
  onChange={(e) => setNewTask({...newTask, title: e.target.value})}
  placeholder="Ex: Backup semanal do servidor"
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-100"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
  />
  </div>
  <div>
@@ -665,7 +665,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.description}
  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
  placeholder="Detalhes da tarefa..."
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none text-slate-100"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none text-slate-900 dark:text-white"
  />
  </div>
  <div>
@@ -674,15 +674,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.instructions || ''}
  onChange={(e) => setNewTask({...newTask, instructions: e.target.value})}
  placeholder="Descreva o passo a passo para realização desta tarefa..."
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none text-slate-100 font-mono text-xs mb-3"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none text-slate-900 dark:text-white font-mono text-xs mb-3"
  />
  
- <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
+ <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-300 dark:border-slate-600">
  <div className="flex items-center justify-between mb-2">
  <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
  </h4>
- <label className="cursor-pointer text-[11px] font-bold text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
+ <label className="cursor-pointer text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-widest flex items-center gap-1">
  <Plus size={12} /> Adicionar
  <input type="file"className="hidden"accept="application/pdf,image/*"onChange={handleManualAttachmentUpload} />
  </label>
@@ -691,7 +691,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  {(newTask.manualAttachments && newTask.manualAttachments.length > 0) ? (
  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
  {newTask.manualAttachments.map((attachment, index) => (
- <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-900 aspect-square flex items-center justify-center">
+ <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 aspect-square flex items-center justify-center">
  {attachment.startsWith('data:image') ? (
  <img src={attachment} alt={`Anexo ${index + 1}`} className="w-full h-full object-cover"/>
  ) : (
@@ -731,7 +731,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  ))}
  </div>
  ) : (
- <div className="text-center py-4 border-2 border-dashed border-slate-700 rounded-xl">
+ <div className="text-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl">
  <p className="text-[11px] font-bold uppercase tracking-wider">Nenhum anexo</p>
  <p className="text-[11px] mt-1">PDFs ou Imagens (Máx 5MB)</p>
  </div>
@@ -739,7 +739,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </div>
  <div className="grid grid-cols-2 gap-4">
- <div className="col-span-2 flex items-center gap-4 p-3 bg-slate-800 rounded-xl border border-slate-700">
+ <div className="col-span-2 flex items-center gap-4 p-3 bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-600">
  <label className="flex items-center gap-2 cursor-pointer">
  <input 
  type="checkbox"
@@ -747,7 +747,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  onChange={(e) => setNewTask({...newTask, hasDueDate: e.target.checked})}
  className="w-4 h-4 rounded focus:ring-indigo-500"
  />
- <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Definir Prazo</span>
+ <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Definir Prazo</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer">
  <input 
@@ -766,7 +766,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }}
  className="w-4 h-4 rounded focus:ring-indigo-500"
  />
- <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Recorrente</span>
+ <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Recorrente</span>
  </label>
  </div>
 
@@ -775,7 +775,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.type}
  onChange={(e) => setNewTask({...newTask, type: e.target.value as any})}
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-100 font-bold"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
  >
  <option value={TaskType.REMINDER}>Lembrete</option>
  <option value={TaskType.MAINTENANCE}>Manutenção de Dispositivo</option>
@@ -787,9 +787,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
 
  {newTask.type === TaskType.MAINTENANCE && (
- <div className="col-span-2 p-4 bg-amber-900/20 rounded-2xl border border-amber-900/40 space-y-4 animate-fade-in">
+ <div className="col-span-2 p-4 bg-amber-50 dark:bg-amber-500/20 rounded-2xl border border-amber-900/40 space-y-4 animate-fade-in">
  <div className="flex items-center justify-between mb-2">
- <div className="flex items-center gap-2 text-amber-400">
+ <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
  <Wrench size={16} />
  <h4 className="text-sm font-bold uppercase tracking-wider">Detalhes da Manutenção</h4>
  </div>
@@ -804,7 +804,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }}
  className="w-3.5 h-3.5 rounded focus:ring-amber-500"
  />
- <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Manutenção em Lote</span>
+ <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Manutenção em Lote</span>
  </label>
  </div>
  </div>
@@ -817,7 +817,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  required={newTask.type === TaskType.MAINTENANCE && !isBatchMaintenance}
  value={newTask.deviceId || ''}
  onChange={(e) => setNewTask({...newTask, deviceId: e.target.value})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione o dispositivo...</option>
  {devices.filter(d => d.status !== DeviceStatus.RETIRED).map(device => (
@@ -845,7 +845,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  setSelectedDeviceIds(filtered.map(d => d.id));
  }
  }}
- className="w-full p-2 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="All">Todos os Tipos</option>
  {assetTypes.map(type => (
@@ -869,7 +869,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  .filter(d => d.status !== DeviceStatus.RETIRED)
  .filter(d => assetTypeFilter === 'All' || models.find(m => m.id === d.modelId)?.typeId === assetTypeFilter)
  .map(device => (
- <label key={device.id} className="flex items-center gap-2 p-1.5 hover:bg-amber-900/20 rounded-lg cursor-pointer transition-colors">
+ <label key={device.id} className="flex items-center gap-2 p-1.5 hover:bg-amber-50 dark:bg-amber-500/20 rounded-lg cursor-pointer transition-colors">
  <input 
  type="checkbox"
  checked={selectedDeviceIds.includes(device.id)}
@@ -900,7 +900,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.maintenanceType}
  onChange={(e) => setNewTask({...newTask, maintenanceType: e.target.value as any})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value={MaintenanceType.PREVENTIVE}>Preventiva</option>
  <option value={MaintenanceType.CORRECTIVE}>Corretiva</option>
@@ -916,7 +916,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  min="0"
  value={newTask.maintenanceCost || 0}
  onChange={(e) => setNewTask({...newTask, maintenanceCost: parseFloat(e.target.value)})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="0,00"
  />
  </div>
@@ -931,15 +931,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  type="date"
  value={newTask.dueDate}
  onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-100 disabled:opacity-50"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white disabled:opacity-50"
  />
  </div>
 
  {newTask.isRecurring && (
- <div className="col-span-2 p-4 bg-indigo-900/20 rounded-2xl border border-indigo-900/40 space-y-4">
+ <div className="col-span-2 p-4 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl border border-indigo-900/40 space-y-4">
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Padrão de Recorrência</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-1 tracking-widest">Padrão de Recorrência</label>
  <select 
  value={newTask.recurrenceConfig?.type}
  onChange={(e) => setNewTask({
@@ -954,7 +954,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  intervalMonths: undefined
  }
  })}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value={RecurrenceType.MONTHLY_DAY}>Mensal (Dia Fixo)</option>
  <option value={RecurrenceType.MONTHLY_WEEKDAY}>Mensal (Dia da Semana)</option>
@@ -964,12 +964,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  {newTask.recurrenceConfig?.type === RecurrenceType.MONTHLY_DAY && (
  <div>
- <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia do Mês</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-1 tracking-widest">Dia do Mês</label>
  <input 
  type="number"min="1"max="31"
  value={newTask.recurrenceConfig.dayOfMonth || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, dayOfMonth: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="1-31"
  />
  </div>
@@ -978,11 +978,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  {newTask.recurrenceConfig?.type === RecurrenceType.MONTHLY_WEEKDAY && (
  <>
  <div>
- <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Semana</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-1 tracking-widest">Semana</label>
  <select 
  value={newTask.recurrenceConfig.weekOfMonth || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, weekOfMonth: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione...</option>
  <option value="1">Primeira</option>
@@ -993,11 +993,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </select>
  </div>
  <div>
- <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">Dia da Semana</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-1 tracking-widest">Dia da Semana</label>
  <select 
  value={newTask.recurrenceConfig.dayOfWeek || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, dayOfWeek: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione...</option>
  <option value="1">Segunda-feira</option>
@@ -1014,12 +1014,12 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  {newTask.recurrenceConfig?.type === RecurrenceType.INTERVAL_MONTHS && (
  <div>
- <label className="block text-[11px] font-black uppercase text-indigo-400 mb-1 tracking-widest">A cada X meses</label>
+ <label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-1 tracking-widest">A cada X meses</label>
  <input 
  type="number"min="1"
  value={newTask.recurrenceConfig.intervalMonths || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, intervalMonths: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-100 outline-none"
+ className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="Ex: 3"
  />
  </div>
@@ -1033,7 +1033,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.assignedTo}
  onChange={(e) => setNewTask({...newTask, assignedTo: e.target.value})}
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-100 font-bold"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
  >
  <option value="">Geral (Todos)</option>
  {systemUsers.map(u => (
@@ -1043,11 +1043,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </div>
 
- <div className="p-6 bg-slate-800/50 border-t border-slate-800 flex gap-3 shrink-0">
+ <div className="p-6 bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3 shrink-0">
  <button 
  type="button"
  onClick={() => setIsAdding(false)}
- className="flex-1 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold hover:bg-slate-700 transition-all"
+ className="flex-1 py-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
  >
  Cancelar
  </button>
@@ -1084,9 +1084,9 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  initial={{ y: 100, opacity: 0 }}
  animate={{ y: 0, opacity: 1 }}
  exit={{ y: 100, opacity: 0 }}
- className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-6 py-4 rounded-2xl border border-slate-700 flex items-center gap-6"
+ className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-slate-800 text-white px-6 py-4 rounded-2xl border border-slate-300 dark:border-slate-600 flex items-center gap-6"
  >
- <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
+ <div className="flex items-center gap-3 pr-6 border-r border-slate-300 dark:border-slate-600">
  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
  {selectedTasksIds.length}
  </div>
@@ -1096,21 +1096,21 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <div className="flex items-center gap-2">
  <button 
  onClick={() => { setBulkActionType('status'); setIsBulkActionOpen(true); }}
- className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
+ className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
  >
- <CheckCircle2 size={16} className="text-emerald-400"/> Alterar Status
+ <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400"/> Alterar Status
  </button>
  <button 
  onClick={() => { setBulkActionType('assignee'); setIsBulkActionOpen(true); }}
- className="flex items-center gap-2 px-4 py-2 hover:bg-slate-800 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
+ className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider"
  >
- <User size={16} className="text-blue-400"/> Alterar Responsável
+ <User size={16} className="text-blue-600 dark:text-sky-400"/> Alterar Responsável
  </button>
  </div>
 
  <button 
  onClick={() => setSelectedTasksIds([])}
- className="ml-4 p-2 hover:bg-slate-800 rounded-full hover:text-white transition-colors"
+ className="ml-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full hover:text-white transition-colors"
  >
  <XCircle size={20} />
  </button>
@@ -1126,13 +1126,13 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  initial={{ opacity: 0, scale: 0.95 }}
  animate={{ opacity: 1, scale: 1 }}
  exit={{ opacity: 0, scale: 0.95 }}
- className="bg-slate-900 rounded-3xl w-full max-w-md overflow-hidden"
+ className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden"
  >
- <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-50/50 bg-slate-800/50">
- <h2 className="text-xl font-bold text-slate-100">
+ <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-800/50">
+ <h2 className="text-xl font-bold text-slate-900 dark:text-white">
  {bulkActionType === 'status' ? 'Alterar Status em Lote' : 'Alterar Responsável em Lote'}
  </h2>
- <button onClick={() => setIsBulkActionOpen(false)} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
+ <button onClick={() => setIsBulkActionOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
  <XCircle size={24} className=""/>
  </button>
  </div>
@@ -1153,7 +1153,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  className={`p-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
  bulkValue === status 
  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200 shadow-none' 
- : ' bg-slate-800 border-slate-700 hover:border-indigo-300'
+ : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-300'
  }`}
  >
  {status === TaskStatus.PENDING ? 'Pendente' :
@@ -1169,7 +1169,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={bulkValue}
  onChange={(e) => setBulkValue(e.target.value)}
- className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-white font-bold"
+ className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-white font-bold"
  >
  <option value="">Selecione o responsável...</option>
  <option value="Geral">Geral (Todos)</option>
@@ -1181,10 +1181,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  )}
  </div>
 
- <div className="p-6 bg-slate-800/50 border-t border-slate-800 flex gap-3">
+ <div className="p-6 bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3">
  <button 
  onClick={() => setIsBulkActionOpen(false)}
- className="flex-1 py-3 bg-slate-800 border border-slate-700 rounded-xl font-bold hover:bg-slate-700 transition-all"
+ className="flex-1 py-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
  >
  Cancelar
  </button>

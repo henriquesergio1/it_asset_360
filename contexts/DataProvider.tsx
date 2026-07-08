@@ -39,13 +39,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (mode === null) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-6">
+      <div className="min-h-screen bg-white dark:bg-slate-800 flex flex-col items-center justify-center text-white p-6">
         <div className="p-6 rounded-3xl mb-8 animate-pulse text-blue-500">
           <Globe size={48}/>
         </div>
         <div className="text-center">
           <h2 className="text-xl font-black uppercase tracking-[0.3em] mb-2">IT Asset 360</h2>
-          <p className="text-blue-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+          <p className="text-blue-600 dark:text-sky-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
             <Loader2 size={16} className="animate-spin"/>
             Sincronizando Ambiente...
           </p>

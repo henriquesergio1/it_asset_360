@@ -56,7 +56,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
       <div 
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`w-full p-3 border-2 rounded-xl flex items-center justify-between transition-all
-          ${disabled ? 'bg-slate-900 cursor-not-allowed border-slate-800 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-indigo-400 border-slate-700'}
+          ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-indigo-400 border-slate-300 dark:border-slate-600'}
           ${isOpen ? 'ring-4 ring-indigo-900/20 border-indigo-500' : ''}
         `}
       >
@@ -65,7 +65,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
           <div className="flex flex-col truncate">
             {selectedOption ? (
               <>
-                <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-100'}`}>{selectedOption.label}</span>
+                <span className={`font-bold text-sm truncate ${disabled ? '' : 'text-slate-900 dark:text-white'}`}>{selectedOption.label}</span>
                 {selectedOption.subLabel && <span className={`text-[11px] truncate font-mono uppercase tracking-tighter ${disabled ? '' : ''}`}>{selectedOption.subLabel}</span>}
               </>
             ) : (
@@ -73,13 +73,13 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
             )}
           </div>
         </div>
-        <ChevronDown size={16} className={`text-indigo-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-indigo-600 dark:text-indigo-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute z-[120] mt-1 w-full bg-slate-800 border border-slate-700 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in shadow-2xl">
-          <div className="p-2 border-b border-slate-700 bg-slate-900 flex items-center gap-2 sticky top-0">
-            <Search size={14} className="ml-2 text-slate-400"/>
+        <div className="absolute z-[120] mt-1 w-full bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in shadow-2xl">
+          <div className="p-2 border-b border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 flex items-center gap-2 sticky top-0">
+            <Search size={14} className="ml-2 text-slate-600 dark:text-slate-400"/>
             <input 
               type="text"
               className="flex-1 bg-transparent outline-none text-sm text-slate-200 placeholder-slate-400 py-1"
@@ -94,13 +94,13 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
               <div 
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
-                className={`px-4 py-3 cursor-pointer hover:bg-indigo-900/20 border-b border-slate-700 last:border-b-0 ${value === opt.value ? 'bg-indigo-900/30' : ''}`}
+                className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 dark:bg-indigo-500/20 border-b border-slate-300 dark:border-slate-600 last:border-b-0 ${value === opt.value ? 'bg-indigo-100 dark:bg-indigo-500/20' : ''}`}
               >
-                <div className="font-bold text-slate-100 text-sm">{opt.label}</div>
-                {opt.subLabel && <div className="text-[11px] font-mono uppercase text-slate-400">{opt.subLabel}</div>}
+                <div className="font-bold text-slate-900 dark:text-white text-sm">{opt.label}</div>
+                {opt.subLabel && <div className="text-[11px] font-mono uppercase text-slate-600 dark:text-slate-400">{opt.subLabel}</div>}
               </div>
             )) : (
-              <div className="px-4 py-8 text-center text-xs italic text-slate-500">Nenhum resultado.</div>
+              <div className="px-4 py-8 text-center text-xs italic text-slate-400 dark:text-slate-500">Nenhum resultado.</div>
             )}
           </div>
         </div>
@@ -400,34 +400,34 @@ const AccountManager = () => {
   return (
     <div className="space-y-6 animate-fade-in pb-20 relative">
       {/* CABEÇALHO PADRONIZADO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 p-6 rounded-xl border border-slate-800 transition-colors shadow-2xl relative z-30">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
         <div>
           <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
-            <ShieldCheck className="text-indigo-400" size={28} />
+            <ShieldCheck className="text-indigo-600 dark:text-indigo-400" size={28} />
             Gestão de Contas e Licenças
           </h2>
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de credenciais e acessos corporativos</p>
+          <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de credenciais e acessos corporativos</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
-            <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar CSV"><FileText size={18}/></button>
-            <button onClick={() => handleExport('excel')} className="p-3 hover:bg-slate-800 border-r border-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
-            <button onClick={() => handleExport('pdf')} className="p-3 hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-all shadow-inner" title="Exportar PDF"><Download size={18}/></button>
+          <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
+            <button onClick={() => handleExport('csv')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400 transition-all shadow-inner" title="Exportar CSV"><FileText size={18}/></button>
+            <button onClick={() => handleExport('excel')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-r border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400 transition-all shadow-inner" title="Exportar Excel"><FileSpreadsheet size={18}/></button>
+            <button onClick={() => handleExport('pdf')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:text-indigo-400 transition-all shadow-inner" title="Exportar PDF"><Download size={18}/></button>
           </div>
 
           <div className={`relative ${isColumnSelectorOpen ? 'z-[9999]' : 'z-[10]'}`} ref={columnRef}>
-            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-950 border border-slate-800 text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 font-black text-[10px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
+            <button onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-5 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 font-black text-[10px] uppercase tracking-widest transition-all shadow-inner border-b-4 border-b-slate-800 active:border-b-0 active:translate-y-[2px]">
               <SlidersHorizontal size={18} /> Colunas
             </button>
             {isColumnSelectorOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
-                <div className="bg-slate-950 px-4 py-3 border-b border-slate-800 flex justify-between items-center text-slate-400">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
                   <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
                 </div>
-                <div className="p-2 space-y-1 bg-slate-900/50">
+                <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
                   {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-indigo-900/20 text-indigo-400 ' : ' hover:bg-slate-800 text-slate-500 hover:text-slate-300 '}`}>
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 ' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 '}`}>
                       {col.label}
                       {visibleColumns.includes(col.id) && <Check size={14}/>}
                     </button>
@@ -448,61 +448,61 @@ const AccountManager = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-indigo-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Contas</span>
-            <p className="text-2xl font-black text-slate-100">{accounts.length}</p>
+            <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total de Contas</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{accounts.length}</p>
           </div>
-          <div className="h-12 w-12 bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Shield size={24}/></div>
+          <div className="h-12 w-12 bg-indigo-50 dark:bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-800/30 group-hover:scale-110 transition-transform"><Shield size={24}/></div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativas</span>
-            <p className="text-2xl font-black text-slate-100">{accounts.filter(a => a.status === 'Ativo').length}</p>
+            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativas</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{accounts.filter(a => a.status === 'Ativo').length}</p>
           </div>
-          <div className="h-12 w-12 bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><UserCheck size={24}/></div>
+          <div className="h-12 w-12 bg-emerald-50 dark:bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-800/30 group-hover:scale-110 transition-transform"><UserCheck size={24}/></div>
         </div>
-        <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-blue-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Vínculos</span>
-            <p className="text-2xl font-black text-slate-100">{accounts.reduce((acc, a) => acc + (a.userIds?.length || 0) + (a.deviceIds?.length || 0), 0)}</p>
+            <span className="text-[11px] font-black text-blue-600 dark:text-sky-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Vínculos</span>
+            <p className="text-2xl font-black text-slate-900 dark:text-white">{accounts.reduce((acc, a) => acc + (a.userIds?.length || 0) + (a.deviceIds?.length || 0), 0)}</p>
           </div>
-          <div className="h-12 w-12 bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Globe size={24}/></div>
+          <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30 group-hover:scale-110 transition-transform"><Globe size={24}/></div>
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-800 overflow-x-auto p-1.5 bg-slate-950 rounded-2xl transition-colors shadow-inner mb-6">
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 overflow-x-auto p-1.5 bg-slate-50 dark:bg-slate-900 rounded-2xl transition-colors shadow-inner mb-6">
         <button 
           onClick={() => setActiveFilter('ALL')} 
-          className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === 'ALL' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'}`}
+          className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === 'ALL' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 hover:bg-white dark:bg-slate-800'}`}
         >
           Todas
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-500'}`}>{accounts.length}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 dark:text-slate-500'}`}>{accounts.length}</span>
         </button>
         {Object.values(AccountType).map(type => (
           <button 
             key={type} 
             onClick={() => setActiveFilter(type)} 
-            className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === type ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900'}`}
+            className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 rounded-xl whitespace-nowrap ${activeFilter === type ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 hover:bg-white dark:bg-slate-800'}`}
           >
             {type}
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === type ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-500'}`}>{accounts.filter(a => a.type === type).length}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeFilter === type ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 dark:text-slate-500'}`}>{accounts.filter(a => a.type === type).length}</span>
           </button>
         ))}
       </div>
 
       <div className="relative group">
-        <Search className="absolute left-4 top-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={20} />
+        <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors" size={20} />
         <input 
           type="text"
           placeholder="Buscar por nome, login ou endereço de acesso..."
-          className="pl-12 w-full border-none rounded-2xl py-4 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-100 bg-slate-900 transition-all border-2 border-transparent focus:border-indigo-900/50 shadow-inner"
+          className="pl-12 w-full border-none rounded-2xl py-4 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white bg-white dark:bg-slate-800 transition-all border-2 border-transparent focus:border-indigo-900/50 shadow-inner"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all">
         <DataTable
           columns={accountColumns}
           data={paginatedAccounts}
@@ -514,24 +514,24 @@ const AccountManager = () => {
             <tr 
               key={acc.id} 
               onClick={() => handleOpenModal(acc)} 
-              className="hover:bg-slate-800/60 border-l-4 border-l-transparent hover:border-l-indigo-500 transition-all cursor-pointer bg-slate-900 border-b border-slate-800/50 group"
+              className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-indigo-500 transition-all cursor-pointer bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50 group"
             >
               {visibleColumns.includes('name') && (
                 <td className="px-6 py-4">
-                  <div className="font-bold text-slate-100 group-hover:text-white transition-colors">{acc.name}</div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500/80">{acc.type}</div>
+                  <div className="font-bold text-slate-900 dark:text-white group-hover:text-white transition-colors">{acc.name}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80">{acc.type}</div>
                 </td>
               )}
               {visibleColumns.includes('login') && (
-                <td className="px-6 py-4 truncate font-medium text-xs tracking-tight text-slate-300">{acc.login}</td>
+                <td className="px-6 py-4 truncate font-medium text-xs tracking-tight text-slate-700 dark:text-slate-300">{acc.login}</td>
               )}
               {visibleColumns.includes('password') && (
                 <td className="px-6 py-4 truncate">
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-slate-800 px-3 py-1 rounded-full font-mono text-[11px] font-bold text-slate-300 border border-slate-700/50">
+                    <div className="bg-slate-800 px-3 py-1 rounded-full font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600/50">
                       {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                     </div>
-                    <button type="button" onClick={(e) => { e.preventDefault(); setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]})); }} className="text-slate-500 hover:text-white p-1 hover:bg-slate-700 rounded-lg transition-all" title={showPasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}>
+                    <button type="button" onClick={(e) => { e.preventDefault(); setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]})); }} className="text-slate-400 dark:text-slate-500 hover:text-white p-1 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-lg transition-all" title={showPasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}>
                       {showPasswords[acc.id] ? <EyeOff size={14}/> : <Eye size={14}/>}
                     </button>
                     {acc.password && (
@@ -547,7 +547,7 @@ const AccountManager = () => {
                             showToast('Erro ao copiar senha', 'error');
                           }
                         }} 
-                        className="text-slate-500 hover:text-blue-400 p-1 hover:bg-slate-700 rounded-lg transition-all" 
+                        className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:text-sky-400 p-1 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-lg transition-all" 
                         title="Copiar Senha"
                       >
                         <Copy size={14} />
@@ -560,16 +560,16 @@ const AccountManager = () => {
                 <td className="px-6 py-4 truncate">
                   {acc.accessUrl ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-blue-400 truncate max-w-[150px] font-mono hover:underline">{acc.accessUrl}</span>
+                      <span className="text-xs text-blue-600 dark:text-sky-400 truncate max-w-[150px] font-mono hover:underline">{acc.accessUrl}</span>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }}
-                        className="p-1.5 hover:text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all text-slate-500"
+                        className="p-1.5 hover:text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-all text-slate-400 dark:text-slate-500"
                         title="Abrir Link"
                       >
                         <ExternalLink size={14}/>
                       </button>
                     </div>
-                  ) : <span className="text-slate-500 italic text-[11px] font-bold uppercase tracking-tighter">Não informado</span>}
+                  ) : <span className="text-slate-400 dark:text-slate-500 italic text-[11px] font-bold uppercase tracking-tighter">Não informado</span>}
                 </td>
               )}
               {visibleColumns.includes('link') && (
@@ -578,7 +578,7 @@ const AccountManager = () => {
                     {(acc.userIds || []).map(uid => {
                       const u = users.find(user => user.id === uid);
                       return u ? (
-                        <span key={uid} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-900/30 text-indigo-400 text-[11px] font-bold border border-indigo-800 animate-fade-in shadow-sm">
+                        <span key={uid} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold border border-indigo-800 animate-fade-in shadow-sm">
                           <UserIcon size={UI_ICON_SIZE_SMALL} /> {u.fullName}
                         </span>
                       ) : null;
@@ -586,7 +586,7 @@ const AccountManager = () => {
                     {(acc.deviceIds || []).map(did => {
                       const d = devices.find(dev => dev.id === did);
                       return d ? (
-                        <span key={did} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-900/30 text-emerald-400 text-[11px] font-bold border border-emerald-800 animate-fade-in shadow-sm">
+                        <span key={did} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-800 animate-fade-in shadow-sm">
                           <Smartphone size={UI_ICON_SIZE_SMALL} /> {d.assetTag}
                         </span>
                       ) : null;
@@ -599,7 +599,7 @@ const AccountManager = () => {
               )}
               {visibleColumns.includes('status') && (
                 <td className="px-6 py-4 text-center truncate">
-                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${acc.status === 'Ativo' ? ' bg-emerald-900/20 text-emerald-400 border border-emerald-800/50' : ' bg-rose-900/20 text-rose-400 border border-rose-800/50'}`}>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${acc.status === 'Ativo' ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-800/50' : ' bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-800/50'}`}>
                     {acc.status}
                   </span>
                 </td>
@@ -609,7 +609,7 @@ const AccountManager = () => {
                   <button 
                     onClick={() => handleOpenModal(acc)} 
                     disabled={isReadOnly}
-                    className={`p-2 text-indigo-400 hover:bg-indigo-900/30 rounded-xl transition-all ${isReadOnly ? 'opacity-50' : 'hover:scale-110 active:scale-95'}`}
+                    className={`p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:bg-indigo-500/20 rounded-xl transition-all ${isReadOnly ? 'opacity-50' : 'hover:scale-110 active:scale-95'}`}
                     title="Editar"
                   >
                     <Edit2 size={16} />
@@ -629,12 +629,12 @@ const AccountManager = () => {
         />
         
         {/* Pagination Footer */}
-        <div className="bg-slate-900 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors font-bold uppercase tracking-widest">
+        <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors font-bold uppercase tracking-widest">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <span className="text-[11px] text-slate-500">Exibir:</span>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">Exibir:</span>
               <select 
-                className="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-black text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+                className="bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
                 value={itemsPerPage}
                 onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
               >
@@ -645,7 +645,7 @@ const AccountManager = () => {
                 <option value="ALL">Todos</option>
               </select>
             </div>
-            <p className="text-[11px] text-slate-500">Total: {totalItems} registros</p>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">Total: {totalItems} registros</p>
           </div>
           
           {totalPages > 1 && (
@@ -653,19 +653,19 @@ const AccountManager = () => {
               <button 
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(p => p - 1)}
-                className={`p-2 rounded-xl border border-slate-800 transition-all ${currentPage === 1 ? 'text-slate-700 cursor-not-allowed' : ' text-indigo-400 hover:bg-indigo-900/30 hover:border-indigo-800'}`}
+                className={`p-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all ${currentPage === 1 ? 'text-slate-700 cursor-not-allowed' : ' text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:bg-indigo-500/20 hover:border-indigo-800'}`}
               >
                 <ChevronLeft size={18}/>
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-indigo-400 bg-indigo-900/20 px-3 py-1.5 rounded-xl border border-indigo-900/30">{currentPage}</span>
+                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1.5 rounded-xl border border-indigo-900/30">{currentPage}</span>
                 <span className="text-[11px] font-black text-slate-600">DE</span>
-                <span className="text-xs font-black text-slate-400">{totalPages}</span>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-400">{totalPages}</span>
               </div>
               <button 
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(p => p + 1)}
-                className={`p-2 rounded-xl border border-slate-800 transition-all ${currentPage === totalPages ? 'text-slate-700 cursor-not-allowed' : ' text-indigo-400 hover:bg-indigo-900/30 hover:border-indigo-800'}`}
+                className={`p-2 rounded-xl border border-slate-200 dark:border-slate-700 transition-all ${currentPage === totalPages ? 'text-slate-700 cursor-not-allowed' : ' text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:bg-indigo-500/20 hover:border-indigo-800'}`}
               >
                 <ChevronRight size={18}/>
               </button>
@@ -676,29 +676,29 @@ const AccountManager = () => {
 
       {isModalOpen && editingAccount && (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
-          <div className="bg-slate-900 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-scale-up border border-slate-800 flex flex-col max-h-[95vh] shadow-2xl transition-all ring-1 ring-white/10">
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700 flex flex-col max-h-[95vh] shadow-2xl transition-all ring-1 ring-white/10">
             <div className="bg-black px-10 py-6 flex justify-between items-center border-b border-white/5 shrink-0">
               <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner ${editingAccount.id ? 'bg-indigo-900/30 text-indigo-400' : 'bg-emerald-900/30 text-emerald-400'}`}>
+                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner ${editingAccount.id ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
                    {editingAccount.id ? <ShieldCheck size={24}/> : <Plus size={24}/>}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white uppercase tracking-tight leading-tight">
                     {editingAccount.id ? 'Editar Credencial' : 'Nova Credencial'}
                   </h3>
-                  <p className="text-[11px] font-bold text-slate-500/80 uppercase tracking-wider">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
+                  <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500/80 uppercase tracking-wider">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white transition-all hover:rotate-90"><X size={20}/></button>
+              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-white transition-all hover:rotate-90"><X size={20}/></button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2 bg-slate-800/30 p-6 rounded-3xl border border-slate-800">
-                  <label className="block text-[11px] font-bold uppercase text-indigo-400 mb-2 ml-1 tracking-wider">Identificação da Licença / Conta</label>
+                <div className="md:col-span-2 bg-slate-800/30 p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
+                  <label className="block text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400 mb-2 ml-1 tracking-wider">Identificação da Licença / Conta</label>
                   <input 
                     required 
-                    className="w-full border-2 border-slate-800 rounded-2xl p-4 text-base font-bold bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all shadow-inner"
+                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-inner"
                     value={editingAccount.name} 
                     onChange={e => setEditingAccount({...editingAccount, name: e.target.value})} 
                     placeholder="Ex: Google Workspace, AWS Production..."
@@ -707,9 +707,9 @@ const AccountManager = () => {
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500/80 mb-2 ml-1 tracking-wider">Tipo de Serviço</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-400 dark:text-slate-500/80 mb-2 ml-1 tracking-wider">Tipo de Serviço</label>
                     <select 
-                      className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm font-bold bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all cursor-pointer"
                       value={editingAccount.type} 
                       onChange={e => setEditingAccount({...editingAccount, type: e.target.value as AccountType})}
                     >
@@ -717,9 +717,9 @@ const AccountManager = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500/80 mb-2 ml-1 tracking-wider">Status Atual</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-400 dark:text-slate-500/80 mb-2 ml-1 tracking-wider">Status Atual</label>
                     <select 
-                      className={`w-full border-2 rounded-2xl p-4 text-sm font-bold outline-none transition-all cursor-pointer ${editingAccount.status === 'Ativo' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/30 focus:border-emerald-500' : 'bg-rose-900/20 text-rose-400 border-rose-900/30 focus:border-rose-500'}`}
+                      className={`w-full border-2 rounded-2xl p-4 text-sm font-bold outline-none transition-all cursor-pointer ${editingAccount.status === 'Ativo' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-900/30 focus:border-emerald-500' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-900/30 focus:border-rose-500'}`}
                       value={editingAccount.status} 
                       onChange={e => setEditingAccount({...editingAccount, status: e.target.value as any})}
                     >
@@ -731,21 +731,21 @@ const AccountManager = () => {
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">Login / Credencial Primary</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 ml-1 tracking-widest">Login / Credencial Primary</label>
                     <input 
                       required 
-                      className="w-full border-2 border-slate-800 rounded-2xl p-4 text-sm font-bold bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
                       value={editingAccount.login} 
                       onChange={e => setEditingAccount({...editingAccount, login: e.target.value})} 
                       placeholder="e-mail ou usuário"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">Master Key / Senha</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 ml-1 tracking-widest">Master Key / Senha</label>
                     <div className="relative">
                       <input 
                         type={showPasswords['modal'] ? 'text' : 'password'}
-                        className="w-full border-2 border-slate-800 rounded-2xl p-4 pr-12 text-sm font-mono bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 pr-12 text-sm font-mono bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
                         value={editingAccount.password || ''} 
                         onChange={e => setEditingAccount({...editingAccount, password: e.target.value})} 
                         placeholder="••••••••"
@@ -753,7 +753,7 @@ const AccountManager = () => {
                       <button 
                         type="button"
                         onClick={() => setShowPasswords(p => ({...p, modal: !p.modal}))}
-                        className="absolute right-4 top-3.5 p-1 text-slate-500 hover:text-white transition-colors"
+                        className="absolute right-4 top-3.5 p-1 text-slate-400 dark:text-slate-500 hover:text-white transition-colors"
                       >
                         {showPasswords['modal'] ? <EyeOff size={18}/> : <Eye size={18}/>}
                       </button>
@@ -762,11 +762,11 @@ const AccountManager = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">URL de Gestão / Acesso Web</label>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 ml-1 tracking-widest">URL de Gestão / Acesso Web</label>
                   <div className="relative group">
-                    <Globe className="absolute left-4 top-4 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18}/>
+                    <Globe className="absolute left-4 top-4 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-600 dark:text-sky-400 transition-colors" size={18}/>
                     <input 
-                      className="w-full border-2 border-slate-800 rounded-2xl p-4 pl-12 text-sm font-mono bg-slate-800 text-slate-100 focus:border-blue-500 outline-none transition-all"
+                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 pl-12 text-sm font-mono bg-slate-800 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all"
                       value={editingAccount.accessUrl || ''} 
                       onChange={e => setEditingAccount({...editingAccount, accessUrl: e.target.value})} 
                       placeholder="https://dashboard.service.com"
@@ -775,12 +775,12 @@ const AccountManager = () => {
                 </div>
 
                 <div className="md:col-span-2 space-y-6 pt-4">
-                  <h4 className="text-[11px] font-black uppercase text-indigo-400 border-b border-slate-800 pb-2 flex items-center gap-2 mb-2">
+                  <h4 className="text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2 mb-2">
                     <Info size={16}/> Vínculos e Dependências
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
-                      <label className="block text-[11px] font-black uppercase text-slate-500 mb-1 tracking-[0.2em] ml-1">Colaboradores Associados</label>
+                      <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-[0.2em] ml-1">Colaboradores Associados</label>
                       <SearchableDropdown 
                         options={userOptions.filter(o => !(editingAccount.userIds || []).includes(o.value))} 
                         value=""
@@ -788,14 +788,14 @@ const AccountManager = () => {
                           if (val) setEditingAccount({...editingAccount, userIds: [...(editingAccount.userIds || []), val]});
                         }} 
                         placeholder="Vincular Pessoa..."
-                        icon={<UserCheck size={18} className="text-indigo-400"/>}
+                        icon={<UserCheck size={18} className="text-indigo-600 dark:text-indigo-400"/>}
                       />
                       
-                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-800/20 p-2 rounded-2xl border border-slate-800/50">
+                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-800/20 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/50">
                         {(editingAccount.userIds || []).length > 0 ? (editingAccount.userIds || []).map(uid => {
                           const u = users.find(user => user.id === uid);
                           return u ? (
-                            <div key={uid} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-900/30 border border-indigo-800 hover:border-red-500 transition-all animate-scale-up">
+                            <div key={uid} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-800 hover:border-red-500 transition-all animate-scale-up">
                               <span className="text-[11px] font-bold text-indigo-300">{u.fullName}</span>
                               <button type="button" onClick={() => setEditingAccount({...editingAccount, userIds: (editingAccount.userIds || []).filter(id => id !== uid)})} className="text-indigo-500 group-hover:text-red-500">
                                 <X size={12}/>
@@ -807,7 +807,7 @@ const AccountManager = () => {
                     </div>
 
                     <div className="space-y-4">
-                      <label className="block text-[11px] font-black uppercase text-slate-500 mb-1 tracking-[0.2em] ml-1">Dispositivos Associados</label>
+                      <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1 tracking-[0.2em] ml-1">Dispositivos Associados</label>
                       <SearchableDropdown 
                         options={deviceOptions.filter(o => !(editingAccount.deviceIds || []).includes(o.value))} 
                         value=""
@@ -815,14 +815,14 @@ const AccountManager = () => {
                           if (val) setEditingAccount({...editingAccount, deviceIds: [...(editingAccount.deviceIds || []), val]});
                         }} 
                         placeholder="Vincular Ativo..."
-                        icon={<DeviceIcon size={18} className="text-emerald-400"/>}
+                        icon={<DeviceIcon size={18} className="text-emerald-600 dark:text-emerald-400"/>}
                       />
 
-                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-800/20 p-2 rounded-2xl border border-slate-800/50">
+                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-800/20 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/50">
                         {(editingAccount.deviceIds || []).length > 0 ? (editingAccount.deviceIds || []).map(did => {
                           const d = devices.find(dev => dev.id === did);
                           return d ? (
-                            <div key={did} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-900/30 border border-emerald-800 hover:border-red-500 transition-all animate-scale-up">
+                            <div key={did} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-800 hover:border-red-500 transition-all animate-scale-up">
                               <span className="text-[11px] font-bold text-emerald-300">{d.assetTag}</span>
                               <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-500 group-hover:text-red-500">
                                 <X size={12}/>
@@ -836,9 +836,9 @@ const AccountManager = () => {
                 </div>
 
                 <div className="md:col-span-2 pt-4">
-                  <label className="block text-[11px] font-black uppercase text-slate-500 mb-2 ml-1 tracking-widest">Histórico / Notas Internas</label>
+                  <label className="block text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 mb-2 ml-1 tracking-widest">Histórico / Notas Internas</label>
                   <textarea 
-                    className="w-full border-2 border-slate-800 rounded-3xl p-5 text-sm bg-slate-800 text-slate-100 focus:border-indigo-500 outline-none transition-all min-h-[120px] resize-none"
+                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-5 text-sm bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all min-h-[120px] resize-none"
                     rows={4} 
                     value={editingAccount.notes || ''} 
                     onChange={e => setEditingAccount({...editingAccount, notes: e.target.value})} 
@@ -851,7 +851,7 @@ const AccountManager = () => {
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)} 
-                  className="px-8 py-4 text-[11px] font-black uppercase hover:bg-slate-800 rounded-2xl transition-all tracking-[0.2em] text-slate-500 hover:text-white"
+                  className="px-8 py-4 text-[11px] font-black uppercase hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all tracking-[0.2em] text-slate-400 dark:text-slate-500 hover:text-white"
                 >
                   Descartar
                 </button>
@@ -870,20 +870,20 @@ const AccountManager = () => {
 
       {/* Modal de Confirmação de Exclusão */}
       {isDeleting && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-slate-900 rounded-[2.5rem] w-full max-w-sm overflow-hidden border border-slate-800 animate-scale-up shadow-2xl">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-sm overflow-hidden border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
             <div className="p-10 text-center">
-              <div className="h-24 w-24 bg-rose-900/30 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-rose-900/40">
+              <div className="h-24 w-24 bg-rose-100 dark:bg-rose-500/20 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-inner border border-rose-900/40">
                 <Trash2 size={44} className="animate-pulse" />
               </div>
               <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-3">Expurgar Registro?</h3>
-              <p className="font-medium text-slate-400 mb-10 text-sm leading-relaxed px-4">
+              <p className="font-medium text-slate-600 dark:text-slate-400 mb-10 text-sm leading-relaxed px-4">
                 Esta ação é irreversível e removerá todos os vínculos desta credencial do ecossistema.
               </p>
               <div className="flex gap-4">
                 <button
                   onClick={() => setIsDeleting(null)}
-                  className="flex-1 py-5 px-6 rounded-2xl bg-slate-800 text-slate-400 font-black uppercase text-[11px] tracking-widest hover:bg-slate-700 transition-all"
+                  className="flex-1 py-5 px-6 rounded-2xl bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[11px] tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
                 >
                   Manter
                 </button>
