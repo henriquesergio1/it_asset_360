@@ -218,6 +218,11 @@ export interface SystemUser {
   password?: string;
   role: SystemRole;
   avatarUrl?: string;
+  ID_Perfil?: number;
+  idPerfil?: number;
+  Nome_Perfil?: string;
+  Permissoes?: Record<string, boolean>;
+  permissoes?: Record<string, boolean>;
 }
 
 export interface SystemSettings {
@@ -397,4 +402,20 @@ export interface DashboardStats {
   totalSims: number;
   activeUsers: number;
   pendingTasks: number; // Adicionado para o novo módulo
+}
+
+// Modelagem de Dados para RBAC
+export interface Perfil {
+  ID_Perfil: number;
+  Nome: string;
+  Ativo: boolean;
+  Permissoes: Record<string, boolean>;
+}
+
+export interface Usuario {
+  ID_Usuario: number;
+  Nome: string;
+  ID_Perfil: number;
+  Nome_Perfil: string;
+  Ativo: boolean;
 }

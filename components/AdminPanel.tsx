@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings } from '../types';
+import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil } from '../types';
+import { hasPermission, resolveUserPermissions } from '../utils/rbac';
 import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
@@ -175,9 +176,150 @@ const AdminPanel = () => {
  const { showToast } = useToast();
  
  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE'>('USERS');
+ const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
+ 
+ const [profiles, setProfiles] = useState<Perfil[]>(() => {
+   const saved = localStorage.getItem('rbac_profiles');
+   if (saved) {
+     try {
+       return JSON.parse(saved);
+     } catch (e) {}
+   }
+   return [
+     {
+       ID_Perfil: 1,
+       Nome: 'Administrador TI',
+       Ativo: true,
+       Permissoes: { admin: true }
+     },
+     {
+       ID_Perfil: 2,
+       Nome: 'Operador Suporte',
+       Ativo: true,
+       Permissoes: {
+         dispositivos_leitura: true,
+         dispositivos_escrita: true,
+         colaboradores_leitura: true,
+         colaboradores_escrita: true,
+         ativos_leitura: true,
+         ativos_escrita: false,
+         financeiro_leitura: true
+       }
+     },
+     {
+       ID_Perfil: 3,
+       Nome: 'Financeiro e Compras',
+       Ativo: true,
+       Permissoes: {
+         financeiro_leitura: true,
+         financeiro_escrita: true,
+         faturamento_leitura: true,
+         faturamento_escrita: true
+       }
+     }
+   ];
+ });
+
+ useEffect(() => {
+   localStorage.setItem('rbac_profiles', JSON.stringify(profiles));
+ }, [profiles]);
+
+ const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+ const [editingProfile, setEditingProfile] = useState<Perfil | null>(null);
+ const [profileForm, setProfileForm] = useState<{
+   ID_Perfil?: number;
+   Nome: string;
+   Ativo: boolean;
+   Permissoes: Record<string, boolean>;
+ }>({
+   Nome: '',
+   Ativo: true,
+   Permissoes: {}
+ });
+
+ const handleOpenProfileModal = (profile?: Perfil) => {
+   if (profile) {
+     setEditingProfile(profile);
+     setProfileForm({
+       ID_Perfil: profile.ID_Perfil,
+       Nome: profile.Nome,
+       Ativo: profile.Ativo,
+       Permissoes: { ...profile.Permissoes }
+     });
+   } else {
+     setEditingProfile(null);
+     setProfileForm({
+       Nome: '',
+       Ativo: true,
+       Permissoes: {
+         dispositivos_leitura: false,
+         dispositivos_escrita: false,
+         colaboradores_leitura: false,
+         colaboradores_escrita: false,
+         financeiro_leitura: false,
+         financeiro_escrita: false,
+         faturamento_leitura: false,
+         faturamento_escrita: false,
+         sistema_leitura: false,
+         sistema_escrita: false
+       }
+     });
+   }
+   setIsProfileModalOpen(true);
+ };
+
+ const handleProfileSubmit = (e: React.FormEvent) => {
+   e.preventDefault();
+   if (!profileForm.Nome.trim()) {
+     showToast("Insira o nome do perfil", "error");
+     return;
+   }
+
+   try {
+     if (editingProfile) {
+       const updated = profiles.map(p => p.ID_Perfil === editingProfile.ID_Perfil ? { ...p, Nome: profileForm.Nome, Ativo: profileForm.Ativo, Permissoes: profileForm.Permissoes } : p);
+       setProfiles(updated);
+       showToast("Perfil atualizado com sucesso!", "success");
+
+       if (currentUser && (currentUser.ID_Perfil === editingProfile.ID_Perfil || currentUser.idPerfil === editingProfile.ID_Perfil)) {
+         const updatedUser = {
+           ...currentUser,
+           Permissoes: profileForm.Permissoes,
+           permissoes: profileForm.Permissoes,
+           Nome_Perfil: profileForm.Nome
+         };
+         localStorage.setItem('it_asset_user', JSON.stringify(updatedUser));
+       }
+     } else {
+       const newId = profiles.length > 0 ? Math.max(...profiles.map(p => p.ID_Perfil || 0)) + 1 : 1;
+       const newProfile: Perfil = {
+         ID_Perfil: newId,
+         Nome: profileForm.Nome,
+         Ativo: profileForm.Ativo,
+         Permissoes: profileForm.Permissoes
+       };
+       setProfiles([...profiles, newProfile]);
+       showToast("Perfil criado com sucesso!", "success");
+     }
+     setIsProfileModalOpen(false);
+   } catch (err) {
+     showToast("Erro ao salvar perfil", "error");
+   }
+ };
+
+ const handleDeleteProfile = (profileId: number) => {
+   if (profileId === 1) {
+     showToast("O perfil de Administrador TI não pode ser excluído.", "error");
+     return;
+   }
+   if (window.confirm("Deseja realmente excluir este perfil de acesso?")) {
+     setProfiles(profiles.filter(p => p.ID_Perfil !== profileId));
+     showToast("Perfil excluído com sucesso!", "success");
+   }
+ };
  const [logSearch, setLogSearch] = useState('');
  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 
@@ -356,32 +498,119 @@ const AdminPanel = () => {
  <div className="p-1 animate-fade-in">
  {activeTab === 'USERS' && (
  <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
- <div className="p-6 border-b border-slate-800 flex justify-between items-center">
- <h3 className="font-bold text-slate-100 flex items-center gap-2"><UserCheck size={18} className=""/> Usuários com Acesso ao Sistema</h3>
- <button onClick={() => handleOpenModal()} className="text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"><Plus size={14}/> Novo Operador</button>
- </div>
- <div className="overflow-x-auto">
- <table className="w-full text-sm text-left">
- <thead className="bg-slate-800 text-[11px] font-black uppercase tracking-widest">
- <tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">E-mail</th><th className="px-6 py-4">Perfil</th><th className="px-6 py-4 text-right">Ações</th></tr>
- </thead>
- <tbody className="divide-y divide-slate-800">
- {systemUsers.map(u => (
- <tr key={u.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
- <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
- <td className="px-6 py-4 font-medium">{u.email}</td>
- <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${u.role === SystemRole.ADMIN ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>{u.role}</span></td>
- <td className="px-6 py-4 text-right">
- <div className="flex justify-end gap-2">
- <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
- <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
- </div>
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- </div>
+   <div className="flex border-b border-slate-800 bg-slate-950/40 px-4 pt-2 gap-2">
+     <button 
+       type="button"
+       onClick={() => setAcessoSubTab('OPERADORES')} 
+       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'OPERADORES' ? 'border-blue-600 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+     >
+       Operadores ({systemUsers.length})
+     </button>
+     <button 
+       type="button"
+       onClick={() => setAcessoSubTab('PERFIS')} 
+       className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${acessoSubTab === 'PERFIS' ? 'border-blue-600 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+     >
+       Perfis de Acesso (RBAC) ({profiles.length})
+     </button>
+   </div>
+
+   {acessoSubTab === 'OPERADORES' && (
+     <div>
+       <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+         <h3 className="font-bold text-slate-100 flex items-center gap-2"><UserCheck size={18} className=""/> Usuários com Acesso ao Sistema</h3>
+         <button onClick={() => handleOpenModal()} className="text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"><Plus size={14}/> Novo Operador</button>
+       </div>
+       <div className="overflow-x-auto">
+         <table className="w-full text-sm text-left">
+           <thead className="bg-slate-800 text-[11px] font-black uppercase tracking-widest">
+             <tr>
+               <th className="px-6 py-4">Nome</th>
+               <th className="px-6 py-4">E-mail</th>
+               <th className="px-6 py-4">Perfil / Permissões</th>
+               <th className="px-6 py-4 text-right">Ações</th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-slate-800">
+             {systemUsers.map(u => {
+               const userProfile = profiles.find(p => p.ID_Perfil === u.ID_Perfil);
+               const profileName = userProfile ? userProfile.Nome : (u.role === SystemRole.ADMIN ? 'Administrador (Legado)' : 'Operador (Legado)');
+               const isProfileActive = userProfile ? userProfile.Ativo : true;
+               return (
+                 <tr key={u.id} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-800/60 hover:border-l-blue-500 bg-slate-900">
+                   <td className="px-6 py-4 font-bold text-slate-100">{u.name}</td>
+                   <td className="px-6 py-4 font-medium">{u.email}</td>
+                   <td className="px-6 py-4">
+                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${(u.role === SystemRole.ADMIN || userProfile?.Permissoes?.admin) ? ' bg-indigo-900/30 text-indigo-400 ' : ' bg-slate-800 '}`}>
+                       {profileName} {!isProfileActive && '(Inativo)'}
+                     </span>
+                   </td>
+                   <td className="px-6 py-4 text-right">
+                     <div className="flex justify-end gap-2">
+                       <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
+                       <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
+                     </div>
+                   </td>
+                 </tr>
+               );
+             })}
+           </tbody>
+         </table>
+       </div>
+     </div>
+   )}
+
+   {acessoSubTab === 'PERFIS' && (
+     <div>
+       <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+         <div>
+           <h3 className="font-bold text-slate-100 flex items-center gap-2"><Shield size={18}/> Perfis de Acesso (RBAC)</h3>
+           <p className="text-xs text-slate-400 mt-1">Crie perfis com permissões customizadas de Leitura e Escrita por módulo.</p>
+         </div>
+         <button onClick={() => handleOpenProfileModal()} className="text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"><Plus size={14}/> Novo Perfil</button>
+       </div>
+       <div className="overflow-x-auto">
+         <table className="w-full text-sm text-left">
+           <thead className="bg-slate-800 text-[11px] font-black uppercase tracking-widest">
+             <tr>
+               <th className="px-6 py-4">Nome do Perfil</th>
+               <th className="px-6 py-4">Status</th>
+               <th className="px-6 py-4">Permissões Habilitadas</th>
+               <th className="px-6 py-4 text-right">Ações</th>
+             </tr>
+           </thead>
+           <tbody className="divide-y divide-slate-800">
+             {profiles.map(p => {
+               const activePerms = Object.keys(p.Permissoes || {}).filter(k => p.Permissoes[k]);
+               const permsSummary = p.Permissoes?.admin ? 'Acesso Total (Admin)' : (activePerms.length === 0 ? 'Nenhuma' : activePerms.map(k => k.replace('_leitura', ' (L)').replace('_escrita', ' (E)')).join(', '));
+               
+               return (
+                 <tr key={p.ID_Perfil} className="border-b border-slate-800/50 border-l-4 border-l-transparent transition-all hover:bg-slate-800/60 bg-slate-900">
+                   <td className="px-6 py-4 font-bold text-slate-100">{p.Nome}</td>
+                   <td className="px-6 py-4">
+                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.Ativo ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
+                       {p.Ativo ? 'Ativo' : 'Inativo'}
+                     </span>
+                   </td>
+                   <td className="px-6 py-4 text-xs font-mono text-slate-400 max-w-xs truncate" title={permsSummary}>
+                     {permsSummary}
+                   </td>
+                   <td className="px-6 py-4 text-right">
+                     <div className="flex justify-end gap-2">
+                       <button onClick={() => handleOpenProfileModal(p)} className="p-1.5 hover:bg-blue-900/40 rounded-lg text-slate-300" title="Editar Perfil"><Edit2 size={16}/></button>
+                       {p.ID_Perfil !== 1 && (
+                         <button onClick={() => handleDeleteProfile(p.ID_Perfil)} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg" title="Excluir Perfil"><Trash2 size={16}/></button>
+                       )}
+                     </div>
+                   </td>
+                 </tr>
+               );
+             })}
+           </tbody>
+         </table>
+       </div>
+     </div>
+   )}
  </div>
  )}
 
@@ -693,16 +922,146 @@ const AdminPanel = () => {
  </div>
  </div>
  <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nível de Acesso</label>
- <select className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"value={userForm.role} onChange={e => setUserForm({...userForm, role: e.target.value as SystemRole})}>
- <option value={SystemRole.OPERATOR}>Operador (Leitura/Escrita)</option>
- <option value={SystemRole.ADMIN}>Administrador (Total)</option>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Perfil de Acesso (RBAC)</label>
+ <select 
+   className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold"
+   value={userForm.ID_Perfil || ''} 
+   onChange={e => {
+     const pId = Number(e.target.value);
+     const selectedProf = profiles.find(p => p.ID_Perfil === pId);
+     setUserForm({
+       ...userForm,
+       ID_Perfil: pId,
+       Nome_Perfil: selectedProf?.Nome || '',
+       role: selectedProf?.Permissoes?.admin ? SystemRole.ADMIN : SystemRole.OPERATOR
+     });
+   }}
+ >
+   <option value="">Selecione um Perfil de Acesso...</option>
+   {profiles.map(p => (
+     <option key={p.ID_Perfil} value={p.ID_Perfil}>
+       {p.Nome} {p.Ativo ? '' : '(Inativo)'}
+     </option>
+   ))}
  </select>
  </div>
  </div>
  <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
  <button type="button" onClick={() => setIsModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>
  <button type="submit" className={`px-8 py-3 rounded-xl ${UI_BUTTON_PRIMARY} text-xs uppercase`}>Salvar Operador</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ )}
+
+ {isProfileModalOpen && (
+ <div className="fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+ <div className="bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden animate-scale-up border border-slate-800">
+ <div className="bg-slate-900 bg-black px-8 py-5 flex justify-between items-center border-b border-white/10">
+ <h3 className="text-lg font-black text-white uppercase tracking-tighter">{editingProfile ? 'Editar Perfil (RBAC)' : 'Novo Perfil (RBAC)'}</h3>
+ <button onClick={() => setIsProfileModalOpen(false)} className="hover:text-white"><X size={24}/></button>
+ </div>
+ <form onSubmit={handleProfileSubmit} className="p-8 space-y-6">
+ <div className="space-y-4">
+ <div>
+ <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Perfil</label>
+ <input required className="w-full border-2 border-slate-800 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-800/50 text-slate-100 font-bold" value={profileForm.Nome || ''} onChange={e => setProfileForm({...profileForm, Nome: e.target.value})}/>
+ </div>
+ 
+ <div className="flex items-center gap-2 py-2">
+ <input 
+   id="profile-active"
+   type="checkbox" 
+   checked={profileForm.Ativo} 
+   onChange={e => setProfileForm({...profileForm, Ativo: e.target.checked})}
+   className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+ />
+ <label htmlFor="profile-active" className="text-xs font-bold text-slate-300 uppercase select-none">Perfil Ativo</label>
+ </div>
+
+ <div className="flex items-center gap-2 p-3 bg-indigo-950/20 border border-indigo-800/40 rounded-xl">
+ <input 
+   id="profile-admin"
+   type="checkbox" 
+   checked={!!profileForm.Permissoes?.admin} 
+   onChange={e => {
+     setProfileForm({
+       ...profileForm,
+       Permissoes: {
+         ...profileForm.Permissoes,
+         admin: e.target.checked
+       }
+     });
+   }}
+   className="rounded border-slate-800 bg-slate-900 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+ />
+ <label htmlFor="profile-admin" className="text-xs font-black text-indigo-400 uppercase select-none">Acesso Total (Administrador TI)</label>
+ </div>
+
+ <div>
+ <label className="block text-[11px] font-black uppercase mb-2 ml-1 text-slate-400">Matriz de Permissões</label>
+ <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-800 space-y-3">
+   <div className="flex items-center justify-between p-2 border-b border-slate-800">
+     <span className="text-xs font-bold text-slate-400">Módulo</span>
+     <div className="flex gap-8">
+       <span className="text-[10px] font-black uppercase text-slate-400 w-16 text-center">Leitura</span>
+       <span className="text-[10px] font-black uppercase text-slate-400 w-16 text-center">Escrita</span>
+     </div>
+   </div>
+   {[
+     { label: '📦 Dispositivos e Chips', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
+     { label: '👥 Colaboradores', readKey: 'colaboradores_leitura', writeKey: 'colaboradores_escrita' },
+     { label: '💰 Financeiro e Compras', readKey: 'financeiro_leitura', writeKey: 'financeiro_escrita' },
+     { label: '📄 Faturamento e Custos', readKey: 'faturamento_leitura', writeKey: 'faturamento_escrita' },
+     { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' },
+   ].map(m => (
+     <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-800/20 rounded-lg">
+       <span className="text-xs font-medium text-slate-300">{m.label}</span>
+       <div className="flex gap-8">
+         <div className="w-16 flex justify-center">
+           <input 
+             type="checkbox" 
+             disabled={profileForm.Permissoes?.admin}
+             checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey]} 
+             onChange={e => {
+               setProfileForm({
+                 ...profileForm,
+                 Permissoes: {
+                   ...profileForm.Permissoes,
+                   [m.readKey]: e.target.checked
+                 }
+               });
+             }}
+             className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+           />
+         </div>
+         <div className="w-16 flex justify-center">
+           <input 
+             type="checkbox" 
+             disabled={profileForm.Permissoes?.admin}
+             checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
+             onChange={e => {
+               setProfileForm({
+                 ...profileForm,
+                 Permissoes: {
+                   ...profileForm.Permissoes,
+                   [m.writeKey]: e.target.checked
+                 }
+               });
+             }}
+             className="rounded border-slate-800 bg-slate-900 text-blue-600 focus:ring-blue-500 h-4 w-4"
+           />
+         </div>
+       </div>
+     </div>
+   ))}
+ </div>
+ </div>
+ </div>
+ <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+ <button type="button" onClick={() => setIsProfileModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>
+ <button type="submit" className={`px-8 py-3 rounded-xl ${UI_BUTTON_PRIMARY} text-xs uppercase`}>Salvar Perfil</button>
  </div>
  </form>
  </div>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SystemUser, SystemRole } from '../types';
 import { useData } from './DataContext';
+import { resolveUserPermissions } from '../utils/rbac';
 
 interface AuthContextType {
  user: SystemUser | null;
@@ -19,7 +20,7 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  const [user, setUser] = useState<SystemUser | null>(() => {
  const storedUser = localStorage.getItem('it_asset_user');
  try {
- return storedUser ? JSON.parse(storedUser) : null;
+ return storedUser ? resolveUserPermissions(JSON.parse(storedUser)) : null;
  } catch (e) {
  return null;
  }
@@ -29,12 +30,14 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  // Simple mock authentication against loaded system users
  const foundUser = systemUsers.find(u => u.email === email && u.password === pass);
  if (foundUser) {
- setUser(foundUser);
- localStorage.setItem('it_asset_user', JSON.stringify(foundUser));
+ const resolved = resolveUserPermissions(foundUser);
+ setUser(resolved);
+ localStorage.setItem('it_asset_user', JSON.stringify(resolved));
  return true;
  }
  return false;
  };
+
 
  const logout = () => {
  setUser(null);

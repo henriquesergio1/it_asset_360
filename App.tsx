@@ -6,6 +6,7 @@ import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, Shiel
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { hasPermission } from './utils/rbac';
 import { useData } from './contexts/DataContext';
 import { LicenseGuard } from './components/LicenseGuard';
 
@@ -23,6 +24,7 @@ import TaskManager from './components/TaskManager';
 import Consumables from './components/Consumables';
 import DigitalSignature from './components/DigitalSignature';
 import { NotificationCenter } from './components/NotificationCenter';
+import { ThemeToggle } from './components/ThemeToggle';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -99,16 +101,16 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         {/* Navigation - Mandatory Order (v2.12.41) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />
-          <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />
+          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'financeiro_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'financeiro_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'faturamento_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'dispositivos_escrita') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
           
-          {isAdmin && (
+          {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'sistema_leitura')) && (
             <div className={`pt-4 mt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'px-0' : ''}`}>
                {!isSidebarCollapsed && <p className="px-6 text-[11px] text-slate-500/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
                <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isSidebarCollapsed} />
@@ -142,6 +144,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
           
           <div className="flex items-center space-x-4 ml-auto">
+            <ThemeToggle />
             <NotificationCenter />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-100">{user?.name}</p>
