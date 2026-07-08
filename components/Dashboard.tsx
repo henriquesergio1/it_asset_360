@@ -727,7 +727,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 gap-4">
               {/* 1º Alerta de Expediente ERP */}
               {filteredExpedienteAlerts.length > 0 ? (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 dark:border-l-red-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
                       <Clock size={20} />
@@ -828,7 +828,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 dark:border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                       <Clock size={20} />
@@ -847,7 +847,7 @@ const Dashboard = () => {
 
               {/* 2º Alerta de Consumíveis */}
               {consumableAlerts.length > 0 ? (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 dark:border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-lg shrink-0">
                       <Package size={20} />
@@ -905,7 +905,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 dark:border-l-emerald-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg shrink-0">
                       <Package size={20} />
@@ -924,7 +924,7 @@ const Dashboard = () => {
 
               {/* 3º Alerta de Termos Pendentes */}
               {pendingTerms.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 dark:border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
                       <FileWarning size={20} />
@@ -1016,7 +1016,7 @@ const Dashboard = () => {
 
               {/* 4º Alerta de Assinaturas Aguardando Validação */}
               {pendingApprovalSignatures.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 dark:border-l-sky-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 rounded-lg shrink-0">
                       <FileSignature size={20} />
