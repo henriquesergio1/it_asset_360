@@ -138,7 +138,7 @@ export function resolveUserPermissions(user: any): any {
     localStorage.setItem('rbac_profiles', JSON.stringify(profiles));
   }
 
-  const userProfileId = user.ID_Perfil || user.idPerfil;
+  const userProfileId = user.ID_Perfil || user.idPerfil || (user.role && !isNaN(Number(user.role)) ? Number(user.role) : null);
   const profile = profiles.find(p => p.ID_Perfil === Number(userProfileId));
 
   if (profile) {

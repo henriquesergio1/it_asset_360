@@ -1136,6 +1136,7 @@ async function updateUserPendingStatus(pool, userId) {
 // ... (código das rotas movido para dentro de startServer)
 
     const IGexternal_CRUD_KEYS = [
+        'ID_Perfil', 'idPerfil', 'Nome_Perfil', 'Permissoes', 'permissoes', 'avatarUrl',
         'accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 
         'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId',
         'assetsCount', 'activeSims', 'devicesInfo', 'sectorName', 'userName',

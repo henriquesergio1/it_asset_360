@@ -1,4 +1,4 @@
-export const APP_VERSION = '3.44.2';
+export const APP_VERSION = '3.44.4';
 
 // Estilos sistêmicos para padronização (UI Pattern)
 export const UI_LABEL_SMALL = "block text-[11px] font-bold uppercase tracking-wider mb-1 ml-1 text-slate-500/80";

@@ -408,9 +408,16 @@ const AdminPanel = () => {
  }, [activeTab, externalDbConfig]);
 
  const handleOpenModal = (user?: SystemUser) => {
- if (user) { setEditingId(user.id); setUserForm(user); } 
- else { setEditingId(null); setUserForm({ role: SystemRole.OPERATOR, password: '' }); }
- setIsModalOpen(true);
+   if (user) { 
+     const uProfileId = user.ID_Perfil || user.idPerfil || (user.role && !isNaN(Number(user.role)) ? Number(user.role) : undefined);
+     setEditingId(user.id); 
+     setUserForm({ ...user, ID_Perfil: uProfileId }); 
+   } 
+   else { 
+     setEditingId(null); 
+     setUserForm({ role: SystemRole.OPERATOR, password: '' }); 
+   }
+   setIsModalOpen(true);
  };
 
  const handleUserSubmit = (e: React.FormEvent) => {
@@ -533,7 +540,8 @@ const AdminPanel = () => {
            </thead>
            <tbody className="divide-y divide-slate-800">
              {systemUsers.map(u => {
-               const userProfile = profiles.find(p => p.ID_Perfil === u.ID_Perfil);
+               const uProfileId = u.ID_Perfil || u.idPerfil || (u.role && !isNaN(Number(u.role)) ? Number(u.role) : null);
+               const userProfile = profiles.find(p => p.ID_Perfil === uProfileId);
                const profileName = userProfile ? userProfile.Nome : (u.role === SystemRole.ADMIN ? 'Administrador (Legado)' : 'Operador (Legado)');
                const isProfileActive = userProfile ? userProfile.Ativo : true;
                return (
@@ -933,7 +941,9 @@ const AdminPanel = () => {
        ...userForm,
        ID_Perfil: pId,
        Nome_Perfil: selectedProf?.Nome || '',
-       role: selectedProf?.Permissoes?.admin ? SystemRole.ADMIN : SystemRole.OPERATOR
+       idPerfil: pId,
+       Permissoes: selectedProf?.Permissoes,
+       role: String(pId) as SystemRole
      });
    }}
  >
