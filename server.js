@@ -1855,6 +1855,7 @@ async function updateUserPendingStatus(pool, userId) {
     crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     crud('SoftwareAccounts', 'accounts', 'Account');
     crud('Users', 'users', 'User');
+    crud('SystemUsers', 'system-users', 'SystemUser');
     crud('TechnicalAudits', 'audits', 'Audit');
     // v2.18.14: Custom Device CRUD to handle SIM card status
     app.post('/api/devices', async (req, res) => {

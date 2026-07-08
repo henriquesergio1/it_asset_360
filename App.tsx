@@ -100,15 +100,15 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
 
         {/* Navigation - Mandatory Order (v2.12.41) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
-          <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />
+          {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />}
           {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />}
           {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'financeiro_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'financeiro_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'faturamento_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'dispositivos_escrita') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
+          {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
           
           {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'sistema_leitura')) && (
             <div className={`pt-4 mt-4 border-t border-slate-800 ${isSidebarCollapsed ? 'px-0' : ''}`}>

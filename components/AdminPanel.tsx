@@ -1010,12 +1010,17 @@ const AdminPanel = () => {
      </div>
    </div>
    {[
-     { label: '📦 Dispositivos e Chips', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
-     { label: '👥 Colaboradores', readKey: 'colaboradores_leitura', writeKey: 'colaboradores_escrita' },
-     { label: '💰 Financeiro e Compras', readKey: 'financeiro_leitura', writeKey: 'financeiro_escrita' },
-     { label: '📄 Faturamento e Custos', readKey: 'faturamento_leitura', writeKey: 'faturamento_escrita' },
-     { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' },
-   ].map(m => (
+    { label: '📊 Dashboard', readKey: 'dashboard_leitura', writeKey: 'dashboard_escrita' },
+    { label: '📱 Dispositivos', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
+    { label: '👥 Colaboradores', readKey: 'colaboradores_leitura', writeKey: 'colaboradores_escrita' },
+    { label: '📳 Chips / SIMs', readKey: 'chips_leitura', writeKey: 'chips_escrita' },
+    { label: '🌐 Licenças / Contas', readKey: 'licencas_leitura', writeKey: 'licencas_escrita' },
+    { label: '📦 Consumíveis', readKey: 'consumiveis_leitura', writeKey: 'consumiveis_escrita' },
+    { label: '✅ Gestão de Tarefas', readKey: 'tarefas_leitura', writeKey: 'tarefas_escrita' },
+    { label: '📄 Relatórios', readKey: 'relatorios_leitura', writeKey: 'relatorios_escrita' },
+    { label: '🔄 Entrega / Devolução', readKey: 'entrega_leitura', writeKey: 'entrega_escrita' },
+    { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' }
+  ].map(m => (
      <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-800/20 rounded-lg">
        <span className="text-xs font-medium text-slate-300">{m.label}</span>
        <div className="flex gap-8">

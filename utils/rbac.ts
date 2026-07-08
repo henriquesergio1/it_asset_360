@@ -36,6 +36,21 @@ export function hasPermission(user: any, key: string): boolean {
 
   // Mapeamento de fallback (legacy) para chaves antigas de grupos genéricos que se dividiram
   const legacyMapping: Record<string, string> = {
+    // Novas chaves para chaves antigas
+    'dashboard_leitura': 'dispositivos_leitura',
+    'chips_leitura': 'dispositivos_leitura',
+    'chips_escrita': 'dispositivos_escrita',
+    'licencas_leitura': 'financeiro_leitura',
+    'licencas_escrita': 'financeiro_escrita',
+    'consumiveis_leitura': 'financeiro_leitura',
+    'consumiveis_escrita': 'financeiro_escrita',
+    'tarefas_leitura': 'dispositivos_leitura',
+    'tarefas_escrita': 'dispositivos_escrita',
+    'relatorios_leitura': 'faturamento_leitura',
+    'relatorios_escrita': 'faturamento_escrita',
+    'entrega_leitura': 'dispositivos_escrita',
+    'entrega_escrita': 'dispositivos_escrita',
+    
     // Fluxo
     'fluxo_leitura': 'fluxo',
     'fluxo_escrita': 'fluxo',
@@ -61,8 +76,6 @@ export function hasPermission(user: any, key: string): boolean {
     // Painéis/Relatórios
     'paineis_leitura': 'paineis',
     'paineis_escrita': 'paineis',
-    'relatorios_leitura': 'relatorios',
-    'relatorios_escrita': 'relatorios',
   };
 
   const legacyKey = legacyMapping[key];
