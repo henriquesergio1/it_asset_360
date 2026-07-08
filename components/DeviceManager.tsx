@@ -1560,12 +1560,17 @@ const DeviceManager = () => {
                   </div>
                   <div className="md:col-span-1">
                     <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Descrição das Ações / Verificações Realizadas</label>
-                    <input 
-                      placeholder="Ex: Verificado Software, Hardware, Limpeza preventiva..."
+                    <select 
                       className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-100 shadow-inner"
                       value={newAudit.description || ''} 
                       onChange={e => setNewAudit({...newAudit, description: e.target.value})}
-                    />
+                    >
+                      <option value="" disabled>Selecione uma ação...</option>
+                      <option value="Verificação Geral">Verificação Geral</option>
+                      <option value="Atualização de Software / Sistema">Atualização de Software / Sistema</option>
+                      <option value="Limpeza / Troca de pelicula e/ou capa">Limpeza / Troca de pelicula e/ou capa</option>
+                      <option value="Outros">Outros</option>
+                    </select>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[11px] font-bold text-indigo-400 mb-1 uppercase tracking-wider">Observações Adicionais</label>
