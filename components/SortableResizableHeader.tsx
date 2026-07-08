@@ -34,13 +34,13 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
 
   return (
     <th 
-      className="p-0 border-b border-slate-300 dark:border-slate-600 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 group align-middle relative"
+      className="p-0 border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 group align-middle relative"
       style={{ width: width ? `${width}px` : undefined, minWidth }}
     >
       <div className="flex items-center h-full min-h-[48px]">
         <button
           onClick={() => requestSort(sortKey)}
-          className="flex items-center gap-2 px-6 py-4 hover:text-slate-200 transition-colors w-full text-left h-full"
+          className="flex items-center gap-2 px-6 py-4 hover:text-slate-700 dark:text-slate-200 transition-colors w-full text-left h-full"
         >
           <span className="truncate flex-1">{label}</span>
           {isSorted ? (

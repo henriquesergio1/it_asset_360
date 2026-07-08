@@ -13,7 +13,7 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => {
-  let colorClass = 'bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
+  let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
   let label = status;
 
   // Normalize status string for matching
@@ -67,14 +67,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ''
     case 'CANCELLED':
     case 'CANCELADA':
     case 'ERROR':
-      colorClass = 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30';
+      colorClass = 'bg-rose-100 dark:bg-red-500/20 text-rose-600 dark:text-red-400 border-rose-200 dark:border-red-500/30';
       if (normalizedStatus === 'RETIRED') label = 'Aposentado';
       if (normalizedStatus === 'INACTIVE') label = 'Inativo';
       if (normalizedStatus === 'CANCELLED') label = 'Cancelada';
       break;
       
     default:
-      colorClass = 'bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
+      colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600';
   }
 
   return (

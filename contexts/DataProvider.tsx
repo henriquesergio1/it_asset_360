@@ -39,7 +39,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (mode === null) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-800 flex flex-col items-center justify-center text-white p-6">
+      <div className="min-h-screen bg-white dark:bg-slate-800 flex flex-col items-center justify-center text-slate-900 dark:text-white p-6">
         <div className="p-6 rounded-3xl mb-8 animate-pulse text-blue-500">
           <Globe size={48}/>
         </div>

@@ -832,11 +832,11 @@ const Reports = () => {
         {/* CABEÇALHO PADRONIZADO */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl">
           <div>
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
               <FileText className="text-cyan-500" size={28} />
               Central de Relatórios IT
             </h2>
-            <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Emissão, exportação e análise de indicadores do sistema</p>
+            <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Emissão, exportação e análise de indicadores do sistema</p>
           </div>
           
           <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
@@ -847,7 +847,7 @@ const Reports = () => {
                 className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   activeTab === tab 
                   ? ' bg-cyan-600 text-white shadow-lg shadow-cyan-900/40 ' 
-                  : ' text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 '
+                  : ' text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 '
                 }`}
               >
                 {tab === 'USERS' ? 'Colaboradores' :
@@ -912,10 +912,10 @@ const Reports = () => {
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Saídas</span>
+                  <span className="text-[11px] font-black text-rose-600 dark:text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Saídas</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.filter(t => t.type === 'OUT').reduce((acc, t) => acc + t.quantity, 0)}</p>
                 </div>
-                <div className="h-12 w-12 bg-rose-50 dark:bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
+                <div className="h-12 w-12 bg-rose-50 dark:bg-red-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-red-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><Package size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
@@ -985,10 +985,10 @@ const Reports = () => {
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-rose-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Fim de Vida</span>
+                  <span className="text-[11px] font-black text-rose-600 dark:text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Fim de Vida</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{financialSummary.criticalCount}</p>
                 </div>
-                <div className="h-12 w-12 bg-rose-50 dark:bg-rose-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+                <div className="h-12 w-12 bg-rose-50 dark:bg-red-500/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-red-400 border border-rose-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
               </div>
             </>
           )}
@@ -1038,7 +1038,7 @@ const Reports = () => {
                   {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
                   {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : auditSubTab === 'NO_AUDIT' ? 'Ativos sem Auditoria Realizada' : 'Lista de Presença - Auditoria')}
                 </h2>
-                <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 opacity-70">
+                <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 opacity-70">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
                   {activeTab === 'CONSUMABLES' && 'Histórico detalhado de entradas e saídas de itens consumíveis.'}
                   {activeTab === 'ASSETS' && 'Contagem total de ativos agrupados por tipo, marca e modelo.'}
@@ -1054,19 +1054,19 @@ const Reports = () => {
                   <div className="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner mr-2">
                     <button 
                       onClick={() => setAuditSubTab('HISTORY')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'HISTORY' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'HISTORY' ? 'bg-slate-100 dark:bg-slate-800 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Histórico
                     </button>
                     <button 
                       onClick={() => setAuditSubTab('NO_AUDIT')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'NO_AUDIT' ? 'bg-slate-100 dark:bg-slate-800 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Sem Auditoria
                     </button>
                     <button 
                       onClick={() => setAuditSubTab('ATTENDANCE')}
-                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'ATTENDANCE' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${auditSubTab === 'ATTENDANCE' ? 'bg-slate-100 dark:bg-slate-800 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
                     >
                       Lista Presença
                     </button>
@@ -1075,7 +1075,7 @@ const Reports = () => {
                 {/* Botão Imprimir */}
                 <button 
                   onClick={handlePrint}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-inner"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-inner"
                 >
                   <Printer size={16} />
                   <span>Imprimir</span>
@@ -1119,21 +1119,21 @@ const Reports = () => {
                     activeTab === 'AUDITS' ? "Buscar por patrimônio, técnico ou descrição..." :
                     "Buscar por tipo, marca ou modelo..."
                   }
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               
               {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' || auditSubTab === 'ATTENDANCE'))) && (
-                <div className="md:col-span-2 flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-300 dark:border-slate-600">
+                <div className="md:col-span-2 flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-300 dark:border-slate-600">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 ml-2">De:</span>
                     <input 
                       type="date" 
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                   <div className="flex-1 flex items-center gap-2">
@@ -1142,7 +1142,7 @@ const Reports = () => {
                       type="date" 
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="bg-white dark:bg-slate-800 border-none rounded-lg py-1 px-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-1 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>
@@ -1153,7 +1153,7 @@ const Reports = () => {
                   <div className="relative" ref={sectorRef}>
                     <button 
                       onClick={() => setIsSectorSelectorOpen(!isSectorSelectorOpen)} 
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all font-medium"
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all font-medium"
                     >
                       <span className="truncate">
                         {selectedSectors.length === 0 
@@ -1185,7 +1185,7 @@ const Reports = () => {
                     )}
                   </div>
                   
-                  <div className="flex flex-col justify-center gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
+                  <div className="flex flex-col justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
                     <div className="grid grid-cols-2 gap-2">
                       <label className="flex items-center gap-2 cursor-pointer select-none">
                         <input 
@@ -1220,7 +1220,7 @@ const Reports = () => {
           <div className="overflow-x-auto print:overflow-visible">
             {activeTab === 'USERS' && (
               <table className="w-full text-sm text-left table-fixed">
-                <thead className="bg-slate-800/50">
+                <thead className="bg-slate-100 dark:bg-slate-800/50">
                   <tr className="border-b border-slate-200 dark:border-slate-700">
                     <SortableResizableHeader label="Colaborador" sortKey="name" currentSort={sortConfig} requestSort={requestSort} minWidth="250px" width={columnWidths['name']} onResize={(x, w) => handleResize('name', x, w)} />
                     {visibleColumns.includes('sector') && (
@@ -1254,7 +1254,7 @@ const Reports = () => {
                         </td>
                         {visibleColumns.includes('sector') && (
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
                               <Briefcase size={12} className=""/>
                               {item.sectorName}
                             </span>
@@ -1311,32 +1311,32 @@ const Reports = () => {
             {activeTab === 'CONSUMABLES' && (
               <div className="space-y-6 p-6">
                 <div className="space-y-4">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 flex items-center gap-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80 flex items-center gap-2">
                     <Package size={14} /> Resumo por Item no Período
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {consumablesSummaryData.map(item => (
-                      <div key={item.id} className="bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-slate-300 dark:border-slate-600 transition-all">
+                      <div key={item.id} className="bg-slate-100 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-slate-300 dark:border-slate-600 transition-all">
                         <div className="flex justify-between items-start mb-3">
                           <span className="font-bold text-slate-900 dark:text-white truncate">{item.name}</span>
-                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${item.net >= 0 ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${item.net >= 0 ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-red-500/20 text-rose-600 dark:text-red-400'}`}>
                             {item.net > 0 ? '+' : ''}{item.net}
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase tracking-tighter">
                           <div className="flex flex-col">
-                            <span className="text-slate-400 dark:text-slate-500">Entradas</span>
+                            <span className="text-slate-500 dark:text-slate-400">Entradas</span>
                             <span className="text-emerald-600 dark:text-emerald-400">+{item.totalIn}</span>
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-slate-400 dark:text-slate-500">Saídas</span>
-                            <span className="text-rose-600 dark:text-rose-400">-{item.totalOut}</span>
+                            <span className="text-slate-500 dark:text-slate-400">Saídas</span>
+                            <span className="text-rose-600 dark:text-red-400">-{item.totalOut}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                     {consumablesSummaryData.length === 0 && (
-                      <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 italic">
+                      <div className="col-span-full py-8 text-center text-xs text-slate-500 dark:text-slate-400 italic">
                         Nenhuma movimentação no período selecionado.
                       </div>
                     )}
@@ -1344,11 +1344,11 @@ const Reports = () => {
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 flex items-center gap-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80 flex items-center gap-2">
                     <FileText size={14} /> Detalhamento de Movimentações
                   </h3>
                   <table className="w-full text-sm text-left table-fixed">
-                    <thead className="bg-slate-800/50">
+                    <thead className="bg-slate-100 dark:bg-slate-800/50">
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <SortableResizableHeader label="Data" sortKey="date" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="150px" width={columnWidths['date']} onResize={(x, w) => handleResize('date', x, w)} />
                         <SortableResizableHeader label="Item" sortKey="consumableName" currentSort={consumablesSortConfig} requestSort={requestConsumablesSort} minWidth="200px" width={columnWidths['consumableName']} onResize={(x, w) => handleResize('consumableName', x, w)} />
@@ -1369,7 +1369,7 @@ const Reports = () => {
                               {t.consumableName}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${t.type === 'IN' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-red-500/20 text-rose-600 dark:text-red-400'}`}>
                                 {t.type === 'IN' ? 'Entrada' : 'Saída'}
                               </span>
                             </td>
@@ -1402,7 +1402,7 @@ const Reports = () => {
 
             {activeTab === 'ASSETS' && (
               <table className="w-full text-sm text-left table-fixed">
-                <thead className="bg-slate-800/50">
+                <thead className="bg-slate-100 dark:bg-slate-800/50">
                   <tr className="border-b border-slate-200 dark:border-slate-700">
                     <SortableResizableHeader label="Tipo" sortKey="type" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
                     <SortableResizableHeader label="Marca" sortKey="brand" currentSort={assetsSortConfig} requestSort={requestAssetsSort} minWidth="150px" width={columnWidths['brand']} onResize={(x, w) => handleResize('brand', x, w)} />
@@ -1415,7 +1415,7 @@ const Reports = () => {
                     assetsSummaryData.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer border-b border-slate-200 dark:border-slate-700/50">
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium">
                             <Tag size={12} />
                             {item.type}
                           </span>
@@ -1449,7 +1449,7 @@ const Reports = () => {
             {activeTab === 'FINANCIAL' && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left table-fixed">
-                  <thead className="bg-slate-800/50">
+                  <thead className="bg-slate-100 dark:bg-slate-800/50">
                     <tr className="border-b border-slate-200 dark:border-slate-700">
                       <SortableResizableHeader label="Ativo" sortKey="model" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="200px" width={columnWidths['model']} onResize={(x, w) => handleResize('model', x, w)} />
                       <SortableResizableHeader label="Tipo/Marca" sortKey="type" currentSort={financialSortConfig} requestSort={requestFinancialSort} minWidth="150px" width={columnWidths['type']} onResize={(x, w) => handleResize('type', x, w)} />
@@ -1468,13 +1468,13 @@ const Reports = () => {
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="font-bold text-slate-900 dark:text-white">{item.model}</span>
-                              <span className="text-[11px] text-slate-400 dark:text-slate-500 uppercase">Pat: {item.assetTag || 'S/T'}</span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase">Pat: {item.assetTag || 'S/T'}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
                               <span className="text-slate-700 dark:text-slate-300">{item.type}</span>
-                              <span className="text-[11px] text-slate-400 dark:text-slate-500 uppercase">{item.brand}</span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase">{item.brand}</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.purchaseCost)}</td>
@@ -1485,7 +1485,7 @@ const Reports = () => {
                               <span className={`text-xs font-bold ${item.ratio >= 0.6 ? 'text-red-400' : 'text-slate-700 dark:text-slate-300'}`}>
                                 {(item.ratio * 100).toFixed(0)}%
                               </span>
-                              <div className="w-12 bg-slate-800 h-1 rounded-full overflow-hidden">
+                              <div className="w-12 bg-slate-100 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
                                 <div className={`h-full ${item.ratio >= 0.6 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(item.ratio * 100, 100)}%` }}></div>
                               </div>
                             </div>
@@ -1508,7 +1508,7 @@ const Reports = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                        <td colSpan={8} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                           <div className="flex flex-col items-center justify-center">
                             <DollarSign size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                             <p className="text-sm font-bold">Nenhum dado financeiro encontrado</p>
@@ -1525,7 +1525,7 @@ const Reports = () => {
               <div className="overflow-x-auto print:overflow-visible">
                 {auditSubTab === 'HISTORY' ? (
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-800/50">
+                    <thead className="bg-slate-100 dark:bg-slate-800/50">
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Data</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Patrimônio</th>
@@ -1553,7 +1553,7 @@ const Reports = () => {
                                     const d = devices.find(dev => dev.id === a.deviceId);
                                     const sid = getSmartId(a.deviceId);
                                     if (d?.serialNumber && !sid.includes(d.serialNumber)) {
-                                      return <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.serialNumber}</span>;
+                                      return <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{d.serialNumber}</span>;
                                     }
                                     return null;
                                   })()}
@@ -1569,7 +1569,7 @@ const Reports = () => {
                                   return (
                                     <div className="flex flex-col">
                                       <span className="font-bold text-slate-900 dark:text-white text-[10px] uppercase">{m?.name || 'Desconhecido'}</span>
-                                      <span className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black">{t?.name || '---'} • {b?.name || '---'}</span>
+                                      <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-black">{t?.name || '---'} • {b?.name || '---'}</span>
                                     </div>
                                   );
                                 })()}
@@ -1589,7 +1589,7 @@ const Reports = () => {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                          <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                              <div className="flex flex-col items-center justify-center">
                               <History size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                               <p className="text-sm font-bold">Nenhum histórico de auditoria encontrado no período</p>
@@ -1601,7 +1601,7 @@ const Reports = () => {
                   </table>
                 ) : auditSubTab === 'ATTENDANCE' ? (
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-800/50">
+                    <thead className="bg-slate-100 dark:bg-slate-800/50">
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-12 text-center">OK</th>
                         <SortableResizableHeader label="Cód." sortKey="internalCode" currentSort={attendanceSortConfig} requestSort={requestAttendanceSort} minWidth="80px" width={columnWidths['att_internalCode']} onResize={(x, w) => handleResize('att_internalCode', x, w)} />
@@ -1636,7 +1636,7 @@ const Reports = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                          <td colSpan={5} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                              <div className="flex flex-col items-center justify-center">
                               <CheckCircle size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
                               <p className="text-sm font-bold">Nenhum aparelho entregue no momento.</p>
@@ -1648,7 +1648,7 @@ const Reports = () => {
                   </table>
                 ) : (
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-800/50">
+                    <thead className="bg-slate-100 dark:bg-slate-800/50">
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Patrimônio / SN</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400">Tipo / Marca / Modelo</th>
@@ -1671,7 +1671,7 @@ const Reports = () => {
                                 {(() => {
                                   const sid = getSmartId(d.id);
                                   if (d.serialNumber && !sid.includes(d.serialNumber)) {
-                                    return <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.serialNumber}</span>;
+                                    return <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{d.serialNumber}</span>;
                                   }
                                   return null;
                                 })()}
@@ -1680,12 +1680,12 @@ const Reports = () => {
                             <td className="px-6 py-4">
                               <div className="flex flex-col">
                                 <span className="font-bold text-slate-900 dark:text-white text-xs uppercase">{d.modelName}</span>
-                                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">{d.typeName} • {d.brandName}</span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{d.typeName} • {d.brandName}</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                                  <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400">
                                     {d.currentUser.charAt(0)}
                                   </div>
                                   <span className="font-medium text-slate-700 dark:text-slate-300 text-xs">{d.currentUser}</span>
@@ -1704,7 +1704,7 @@ const Reports = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                          <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
                              <div className="flex flex-col items-center justify-center">
                               <CheckCircle size={48} className="mb-4 text-emerald-600 dark:text-emerald-400/50"/>
                               <p className="text-sm font-bold">Excelente! Todos os ativos cadastrados possuem auditoria técnica.</p>
@@ -1719,7 +1719,7 @@ const Reports = () => {
             )}
           </div>
 
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-800/30 flex justify-between items-center text-xs font-bold">
+          <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/30 flex justify-between items-center text-xs font-bold">
             <span>Total de registros: {
               activeTab === 'USERS' ? reportData.length :
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
@@ -1748,10 +1748,10 @@ const Reports = () => {
             .text-slate-800, .dark\\:text-slate-900 dark:text-white {
               color: #1e293b !important;
             }
-            .text-slate-400 dark:text-slate-500, .dark\\:text-slate-600 dark:text-slate-400 {
+            .text-slate-500 dark:text-slate-400, .dark\\:text-slate-600 dark:text-slate-400 {
               color: #64748b !important;
             }
-            .bg-slate-50, .dark\\:bg-slate-800\\/50 {
+            .bg-slate-50, .dark\\:bg-slate-100 dark:bg-slate-800\\/50 {
               background-color: #f8fafc !important;
             }
             .bg-blue-100, .dark\\:bg-blue-900\\/30 {
@@ -1760,7 +1760,7 @@ const Reports = () => {
             .text-blue-600, .dark\\:text-blue-600 dark:text-sky-400 {
               color: #2563eb !important;
             }
-            .bg-slate-100, .dark\\:bg-slate-800 {
+            .bg-slate-100, .dark\\:bg-slate-100 dark:bg-slate-800 {
               background-color: #f1f5f9 !important;
             }
             .text-slate-600, .dark\\:text-slate-700 dark:text-slate-300 {

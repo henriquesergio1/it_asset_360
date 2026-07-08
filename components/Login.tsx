@@ -44,7 +44,7 @@ const Login = () => {
                 <img src={settings.logoUrl} alt="Logo" className="h-12 object-contain" />
             ) : (
                 <div className="bg-blue-600 p-3 rounded-xl">
-                  <Cpu className="text-white h-8 w-8" />
+                  <Cpu className="text-slate-900 dark:text-white h-8 w-8" />
                 </div>
             )}
           </div>
@@ -84,7 +84,7 @@ const Login = () => {
                 <input 
                   type="email" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-800 disabled:text-slate-400 dark:text-slate-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-100 dark:bg-slate-800 disabled:text-slate-500 dark:text-slate-400 transition-all"
                   placeholder="seu.email@empresa.com"
                   value={email}
                   disabled={loading}
@@ -100,7 +100,7 @@ const Login = () => {
                 <input 
                   type="password" 
                   required
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-800 disabled:text-slate-400 dark:text-slate-500 transition-all"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-100 dark:bg-slate-800 disabled:text-slate-500 dark:text-slate-400 transition-all"
                   placeholder="••••••••"
                   value={password}
                   disabled={loading}
@@ -129,7 +129,7 @@ const Login = () => {
             <div className="mt-6 text-center">
                 <button 
                     onClick={exitMockMode}
-                    className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-900 underline transition-colors"
+                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 underline transition-colors"
                 >
                     Voltar para o modo de Produção
                 </button>

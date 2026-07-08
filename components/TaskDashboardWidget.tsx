@@ -37,7 +37,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
       {pendingTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-4">
           <ClipboardList size={20} strokeWidth={1.5} className="mb-1 text-slate-600"/>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">Nenhuma tarefa pendente</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Nenhuma tarefa pendente</p>
         </div>
       ) : (
         pendingTasks.slice(0, 5).map(task => (
@@ -55,13 +55,13 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
                 {getAssignedUserName(task.assignedTo).charAt(0)}
               </div>
               <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
-                <p className="text-sm font-bold text-slate-200 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
                   {task.title}
                 </p>
                 <p className={`text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter w-fit md:mt-0 ${
                   task.type === 'Manutenção' ? 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' :
                   task.type === 'Envio de Arquivo' ? 'bg-purple-900/30 text-purple-400' :
-                  'bg-slate-800 text-slate-600 dark:text-slate-400'
+                  'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                   {task.type}
                 </p>
@@ -71,7 +71,7 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
               <div className={`text-[11px] flex items-center gap-1 font-bold ${
                 task.isOverdue ? 'text-red-500' : 
                 task.isNearDue ? 'text-amber-500' : 
-                'text-slate-400 dark:text-slate-500'
+                'text-slate-500 dark:text-slate-400'
               }`}>
                 <Clock size={UI_ICON_SIZE_SMALL} />
                 {task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}

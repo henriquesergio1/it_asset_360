@@ -29,7 +29,7 @@ export const ThemeToggle: React.FC = () => {
         <button
             id="theme-toggle-btn"
             onClick={toggleTheme}
-            className="p-2 rounded-xl bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer active:scale-95 flex items-center justify-center border border-slate-300 dark:border-slate-600 shadow-inner"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer active:scale-95 flex items-center justify-center border border-slate-300 dark:border-slate-600 shadow-inner"
             aria-label="Alternar tema visual"
         >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}

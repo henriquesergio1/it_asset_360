@@ -57,7 +57,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  onClick={() => !disabled && setIsOpen(!isOpen)}
  className={`w-full p-3 border-2 rounded-xl flex items-center justify-between transition-all
- ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-300 dark:border-slate-600'}
+ ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-100 dark:bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-300 dark:border-slate-600'}
  ${isOpen ? 'ring-4 ring-blue-900/20 border-blue-500' : ''}
 `}
  >
@@ -78,12 +78,12 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  </div>
 
  {isOpen && !disabled && (
- <div className="absolute z-[120] mt-1 w-full bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
+ <div className="absolute z-[120] mt-1 w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-60 overflow-hidden flex flex-col animate-fade-in">
  <div className="p-2 border-b border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 flex items-center gap-2 sticky top-0">
  <Search size={14} className="ml-2"/>
  <input 
  type="text"
- className="flex-1 bg-transparent outline-none text-sm text-slate-200 placeholder-slate-400 py-1"
+ className="flex-1 bg-transparent outline-none text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 py-1"
  placeholder="Buscar..."
  autoFocus
  value={searchTerm}
@@ -226,7 +226,7 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
  <span onClick={() => navigate(`/users?userId=${foundUser.id}`)} className="text-blue-600 dark:text-sky-400 hover:underline cursor-pointer bg-blue-100 dark:bg-sky-500/20 px-2.5 py-1 rounded-full flex items-center gap-1 text-[10px] font-bold">
  <Users size={UI_ICON_SIZE_SMALL}/> {trimmedName}
  </span>
- ) : <span className="text-slate-200">{trimmedName}</span>}
+ ) : <span className="text-slate-700 dark:text-slate-200">{trimmedName}</span>}
  </div>
  );
  }
@@ -301,7 +301,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
  <div key={log.id} className="relative pl-10">
  <div className={`absolute -left-[11px] top-0 h-5 w-5 rounded-full border-4 border-white border-slate-950 flex items-center justify-center 
  ${log.action === ActionType.CHECKOUT ? '' : ''}`}>
- {log.action === ActionType.CHECKOUT ? <UserCheck size={UI_ICON_SIZE_SMALL} className="text-white"/> : <UserX size={UI_ICON_SIZE_SMALL} className=""/>}
+ {log.action === ActionType.CHECKOUT ? <UserCheck size={UI_ICON_SIZE_SMALL} className="text-slate-900 dark:text-white"/> : <UserX size={UI_ICON_SIZE_SMALL} className=""/>}
  </div>
  <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-blue-200 hover:border-blue-800 transition-all">
  <div className="flex justify-between items-start mb-2">
@@ -318,7 +318,7 @@ const PossessionHistory = ({ deviceId }: { deviceId: string }) => {
  </span>
  ) : <span>{userName}</span>}
  </p>
- <div className="mt-2 bg-slate-800/50 p-3 rounded-lg border-l-2 border-slate-300 dark:border-slate-600">
+ <div className="mt-2 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border-l-2 border-slate-300 dark:border-slate-600">
  <LogNoteRenderer log={log} />
  </div>
  <div className="mt-3 text-[9px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-tighter">Registrado por: {log.adminUser}</div>
@@ -972,11 +972,11 @@ const DeviceManager = () => {
     <div className="space-y-6 relative pb-20 animate-fade-in">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2 truncate">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 truncate">
             <Smartphone className="text-blue-500 shrink-0" size={24} />
             Inventário de Dispositivos / Ativos
           </h2>
-          <p className="text-[10px] sm:text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Relação completa de máquinas, coletores e celulares</p>
+          <p className="text-[10px] sm:text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1 sm:mt-1.5 opacity-80 truncate">Relação completa de máquinas, coletores e celulares</p>
         </div>
         <div className="flex flex-nowrap items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner shrink-0">
@@ -1011,11 +1011,11 @@ const DeviceManager = () => {
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                 <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
                   <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
-                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
+                  <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
                 </div>
                 <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
                   {COLUMN_OPTIONS.map(col => (
-                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}>
+                    <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
                       {col.label}
                       {visibleColumns.includes(col.id) && <Check size={14}/>}
                     </button>
@@ -1072,14 +1072,14 @@ const DeviceManager = () => {
 
       <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-white dark:bg-slate-800 px-4 pt-2 rounded-t-xl transition-colors shadow-inner">
  {(['ALL', DeviceStatus.AVAILABLE, DeviceStatus.IN_USE, DeviceStatus.MAINTENANCE, DeviceStatus.RETIRED] as (DeviceStatus | 'ALL')[]).map(status => (
- <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
+ <button key={status} onClick={() => setViewStatus(status)} className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${viewStatus === status ? 'border-blue-600 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>{status === 'ALL' ? 'Todos' : status}<span className="ml-2 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[11px]">{status === 'ALL' ? devices.length : devices.filter(d => d.status === status).length}</span></button>
  ))}
  </div>
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
  <div className="relative flex-1">
  <Search className="absolute left-4 top-3.5"size={20} />
- <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-white dark:bg-slate-800 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+ <input type="text"placeholder="Pesquisar por modelo, patrimônio, IMEI, S/N, e-mail, colaborador..."className="pl-12 w-full border-none rounded-xl py-3 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 transition-colors"value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
  </div>
  <div className="flex items-center justify-end gap-4 bg-white dark:bg-slate-800 p-2 rounded-xl">
  <span className="text-[11px] font-black uppercase tracking-widest hidden lg:inline">Filtros:</span>
@@ -1087,7 +1087,7 @@ const DeviceManager = () => {
  <select 
  value={filterSector} 
  onChange={(e) => setFilterSector(e.target.value)}
- className="bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all hidden md:inline"
+ className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all hidden md:inline"
  >
  <option value="">Todos Cargos / Funções</option>
  {sectors.map(sector => (
@@ -1098,7 +1098,7 @@ const DeviceManager = () => {
  <select 
  value={filterAssetType} 
  onChange={(e) => setFilterAssetType(e.target.value)}
- className="bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+ className="bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-1.5 px-3 text-xs font-bold text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
  >
  <option value="">Todos os Tipos</option>
  {assetTypes.map(type => (
@@ -1107,11 +1107,11 @@ const DeviceManager = () => {
  </select>
  
  <label className="flex items-center gap-2 cursor-pointer">
- <input type="checkbox"checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-800 transition-colors cursor-pointer"/>
+ <input type="checkbox"checked={filterNoPulsusId} onChange={() => setFilterNoPulsusId(!filterNoPulsusId)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem ID Pulsus</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer">
- <input type="checkbox"checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-800 transition-colors cursor-pointer"/>
+ <input type="checkbox"checked={filterNoInvoice} onChange={() => setFilterNoInvoice(!filterNoInvoice)} className="h-4 w-4 rounded focus:ring-blue-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors cursor-pointer"/>
  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Sem Nota Fiscal</span>
  </label>
  <button 
@@ -1152,12 +1152,12 @@ const DeviceManager = () => {
                 type="checkbox"
                 checked={selectedIds.includes(d.id)}
                 onChange={() => handleSelectOne(d.id)}
-                className="h-4 w-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-800"
+                className="h-4 w-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800"
               />
             </td>
             <td className="px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner shrink-0 ring-1 ring-white/5">
+                <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner shrink-0 ring-1 ring-white/5">
                   {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" referrerPolicy="no-referrer" /> : <ImageIcon className="text-slate-700 dark:text-slate-300" size={16}/>}
                 </div>
                 <div className="min-w-0 flex flex-col gap-0.5">
@@ -1171,7 +1171,7 @@ const DeviceManager = () => {
                       </span>
                     )}
                   </div>
-                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                     {type?.name || '---'}
                   </div>
                   <div className="text-[11px] font-mono font-bold text-blue-600 dark:text-sky-400/95 tracking-wide uppercase">
@@ -1180,21 +1180,21 @@ const DeviceManager = () => {
                 </div>
               </div>
             </td>
-            {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-slate-400 dark:text-slate-500"/> {d.assetTag || '---'}</div></td>)}
+            {visibleColumns.includes('assetTag') && (<td className="px-6 py-4 truncate"><div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300"><TagIcon size={12} className="text-slate-500 dark:text-slate-400"/> {d.assetTag || '---'}</div></td>)}
             {visibleColumns.includes('imei') && (<td className="px-6 py-4 font-mono text-[11px] truncate text-slate-600 dark:text-slate-400">{d.imei || '---'}</td>)}
             {visibleColumns.includes('serial') && (<td className="px-6 py-4 font-mono text-[11px] truncate text-slate-600 dark:text-slate-400">{d.serialNumber || '---'}</td>)}
-            {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold uppercase tracking-widest bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600/50">{d.internalCode || '---'}</span></td>)}
-            {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600/50">{sector?.name || '---'}</span></td>)}
-            {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[11px] font-mono font-bold text-blue-600 dark:text-sky-400 bg-blue-100 dark:bg-sky-500/20 px-2.5 py-1 rounded-full border border-blue-800/30">{d.pulsusId}</span>) : <span className="text-[11px] text-slate-400 dark:text-slate-500">-</span>}</td>)}
-            {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[11px] text-slate-400 dark:text-slate-500">-</span>}</td>)}
-            {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[11px] text-slate-400 dark:text-slate-500">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
-            <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-800/50' : ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-blue-800/50'}`}>{d.status}</span></td>
+            {visibleColumns.includes('sectorCode') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600/50">{d.internalCode || '---'}</span></td>)}
+            {visibleColumns.includes('sectorName') && (<td className="px-6 py-4 truncate"><span className="text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600/50">{sector?.name || '---'}</span></td>)}
+            {visibleColumns.includes('pulsusId') && (<td className="px-6 py-4 text-center truncate">{d.pulsusId ? (<span className="text-[11px] font-mono font-bold text-blue-600 dark:text-sky-400 bg-blue-100 dark:bg-sky-500/20 px-2.5 py-1 rounded-full border border-blue-800/30">{d.pulsusId}</span>) : <span className="text-[11px] text-slate-500 dark:text-slate-400">-</span>}</td>)}
+            {visibleColumns.includes('linkedSim') && (<td className="px-6 py-4 truncate">{linkedSim ? (<span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-1 rounded-full flex items-center gap-1 w-fit border border-indigo-800/30"><Cpu size={12}/> {linkedSim.phoneNumber}</span>) : <span className="text-[11px] text-slate-500 dark:text-slate-400">-</span>}</td>)}
+            {visibleColumns.includes('purchaseInfo') && (<td className="px-6 py-4 truncate"><div className="flex flex-col"><span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">R$ {formatCurrencyBR(d.purchaseCost || 0)}</span><span className="text-[11px] text-slate-500 dark:text-slate-400">{d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'}</span></div></td>)}
+            <td className="px-6 py-4 truncate"><span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${d.status === DeviceStatus.AVAILABLE ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-800/50' : d.status === DeviceStatus.MAINTENANCE ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/50' : d.status === DeviceStatus.RETIRED ? ' bg-rose-50 dark:bg-red-500/20 text-rose-600 dark:text-red-400 border-rose-800/50' : ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-blue-800/50'}`}>{d.status}</span></td>
             <td className="px-6 py-4">
               {user ? (
                 <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-blue-600 dark:text-sky-400 underline cursor-pointer hover:text-blue-300 transition-colors" onClick={() => navigate(`/users?userId=${user.id}`)}>{user.fullName}</span>
-                    <span className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-tighter whitespace-nowrap">({user.internalCode || d.internalCode || 'S/ Cód'})</span>
+                    <span className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-tighter whitespace-nowrap">({user.internalCode || d.internalCode || 'S/ Cód'})</span>
                   </div>
                   
                   {additionalUsers.length > 0 && (
@@ -1208,7 +1208,7 @@ const DeviceManager = () => {
                     </div>
                   )}
                 </div>
-              ) : <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter italic">Livre no Estoque</span>}
+              ) : <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter italic">Livre no Estoque</span>}
             </td>
             <td className="px-6 py-4 text-right truncate">
               <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
@@ -1230,14 +1230,14 @@ const DeviceManager = () => {
       }}
     />
  <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors">
- <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold uppercase tracking-widest">Exibir:</span><select className="bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500 transition-all"value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold uppercase tracking-widest">Total: {totalItems} ativos</p></div>
+ <div className="flex items-center gap-4"><div className="flex items-center gap-2"><span className="text-xs font-bold uppercase tracking-widest">Exibir:</span><select className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500 transition-all"value={itemsPerPage} onChange={(e) => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option><option value={40}>40</option><option value="ALL">Todos</option></select></div><p className="text-xs font-bold uppercase tracking-widest">Total: {totalItems} ativos</p></div>
  {totalPages > 1 && (<div className="flex items-center gap-2"><button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-700 dark:text-slate-300 cursor-not-allowed' : ' text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20'}`}><ChevronLeft size={18}/></button><div className="flex items-center gap-1"><span className="text-xs font-black text-blue-300 bg-blue-900/40 px-3 py-1.5 rounded-lg">{currentPage}</span><span className="text-xs font-bold uppercase mx-1">de</span><span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span></div><button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-700 dark:text-slate-300 cursor-not-allowed' : ' text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20'}`}><ChevronRight size={18}/></button></div>)}
  </div>
  </div>
 
  {isModalOpen && (
  <div className="fixed inset-0 bg-white dark:bg-slate-800/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
- <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700"><div className="bg-white dark:bg-slate-800 bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><div className="flex flex-col"><div className="flex items-center gap-3"><span className="text-[11px] font-black uppercase tracking-widest leading-tight">{editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}</span></div>{editingId && <span className="text-[11px] font-bold uppercase tracking-widest">ID: {editingId}</span>}</div><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div><div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
+ <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700"><div className="bg-white dark:bg-slate-800 bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10"><div className="flex flex-col"><div className="flex items-center gap-3"><span className="text-[11px] font-black uppercase tracking-widest leading-tight">{editingId ? (isViewOnly ? 'Detalhes do Ativo' : 'Editar Ativo') : 'Novo Ativo'}</span></div>{editingId && <span className="text-[11px] font-bold uppercase tracking-widest">ID: {editingId}</span>}</div><button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-slate-900 dark:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button></div><div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
  <button type="button"onClick={() => setActiveTab('GENERAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'GENERAL' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Geral</button>
  <button type="button"onClick={() => setActiveTab('FINANCIAL')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'FINANCIAL' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>
  Financeiro 
@@ -1255,7 +1255,7 @@ const DeviceManager = () => {
                     .filter(Boolean) as User[];
                   
                   return (
-                    <div className="md:col-span-2 bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                    <div className="md:col-span-2 bg-slate-100 dark:bg-slate-800/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
                       {/* Primary User Row */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
@@ -1280,7 +1280,7 @@ const DeviceManager = () => {
                           <button 
                             type="button"
                             onClick={() => navigate(`/users?userId=${primaryUser.id}`)} 
-                            className="px-4 py-2 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-[11px] font-black uppercase text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 transition-all flex items-center gap-2 self-start sm:self-center cursor-pointer"
+                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-[11px] font-black uppercase text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 transition-all flex items-center gap-2 self-start sm:self-center cursor-pointer"
                           >
                             Ver Perfil <ChevronRight size={14}/>
                           </button>
@@ -1305,7 +1305,7 @@ const DeviceManager = () => {
                                   </div>
                                   <div className="min-w-0">
                                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{au.fullName}</p>
-                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                                       ({au.internalCode || 'S/ Cód'})
                                     </span>
                                   </div>
@@ -1325,7 +1325,7 @@ const DeviceManager = () => {
                     </div>
                   );
                 })()}<div className="md:col-span-2 space-y-4">
- <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner transition-colors">
+ <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner transition-colors">
  <label className={UI_LABEL_SMALL}>Catálogo de Modelos (A-Z)</label>
  <SearchableDropdown 
  disabled={isViewOnly} 
@@ -1336,7 +1336,7 @@ const DeviceManager = () => {
  icon={<Smartphone size={18}/>}
  />
  </div>
-</div><div className="space-y-4"><div className="bg-blue-50 dark:bg-sky-500/20 p-6 rounded-2xl border border-blue-300 dark:border-sky-700/40 relative transition-colors"><label className="block text-[11px] font-black uppercase text-blue-600 dark:text-sky-400 mb-3 tracking-widest">Identificação Principal</label><div className="flex bg-blue-100/50 bg-blue-900/40 p-1 rounded-lg mb-4"><button type="button"onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? ' bg-slate-800 text-blue-600 dark:text-sky-400 ' : 'text-blue-600 dark:text-sky-400 hover:text-blue-50 hover:text-blue-600 dark:text-sky-400'}`}>Patrimônio</button><button type="button"onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? ' bg-slate-800 text-blue-600 dark:text-sky-400 ' : 'text-blue-600 dark:text-sky-400 hover:text-blue-50 hover:text-blue-600 dark:text-sky-400'}`}>IMEI</button></div>{idType === 'TAG' ? (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase().trim()})} placeholder="TI-XXXX"/>) : (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value.trim()})} placeholder="000.000..."/>)}</div><div className="bg-indigo-50 dark:bg-indigo-500/20 p-4 rounded-2xl border border-indigo-900/40 transition-colors"><label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-2 ml-1 tracking-widest">Chip / SIM Card Vinculado</label><SearchableDropdown disabled={isViewOnly} options={simOptions} value={formData.linkedSimId || ''} onChange={val => setFormData({...formData, linkedSimId: val || null})} placeholder="Pesquisar chip..."icon={<Cpu size={18}/>}/><p className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p></div></div><div className="space-y-4"><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Estado Global</label><select disabled={isViewOnly || formData.status === DeviceStatus.IN_USE} className={`w-full border-2 rounded-xl p-3 text-sm font-black focus:border-blue-500 outline-none transition-colors ${formData.status === DeviceStatus.IN_USE ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'}`} value={formData.status || ''} onChange={e => setFormData({...formData, status: e.target.value as DeviceStatus})}>{Object.values(DeviceStatus).map(s => (<option key={s} value={s} disabled={s === DeviceStatus.IN_USE && formData.status !== DeviceStatus.IN_USE}>{s}</option>))}</select></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Serial Number</label><input required disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase().trim()})} placeholder="S/N"/></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Código Setor</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value.trim()})} placeholder="S-001..."/></div><div>
+</div><div className="space-y-4"><div className="bg-blue-50 dark:bg-sky-500/20 p-6 rounded-2xl border border-blue-300 dark:border-sky-700/40 relative transition-colors"><label className="block text-[11px] font-black uppercase text-blue-600 dark:text-sky-400 mb-3 tracking-widest">Identificação Principal</label><div className="flex bg-blue-100/50 bg-blue-900/40 p-1 rounded-lg mb-4"><button type="button"onClick={() => setIdType('TAG')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'TAG' ? ' bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-sky-400 ' : 'text-blue-600 dark:text-sky-400 hover:text-blue-50 hover:text-blue-600 dark:text-sky-400'}`}>Patrimônio</button><button type="button"onClick={() => setIdType('IMEI')} className={`flex-1 py-2 text-[11px] font-black uppercase rounded-md transition-all ${idType === 'IMEI' ? ' bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-sky-400 ' : 'text-blue-600 dark:text-sky-400 hover:text-blue-50 hover:text-blue-600 dark:text-sky-400'}`}>IMEI</button></div>{idType === 'TAG' ? (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-100 dark:bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.assetTag || ''} onChange={e => setFormData({...formData, assetTag: e.target.value.toUpperCase().trim()})} placeholder="TI-XXXX"/>) : (<input disabled={isViewOnly} className="w-full border-2 border-blue-800/60 rounded-xl p-3 text-lg font-black text-blue-100 bg-slate-100 dark:bg-slate-800 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none transition-all placeholder:text-blue-200 placeholder:text-blue-900/50"value={formData.imei || ''} onChange={e => setFormData({...formData, imei: e.target.value.trim()})} placeholder="000.000..."/>)}</div><div className="bg-indigo-50 dark:bg-indigo-500/20 p-4 rounded-2xl border border-indigo-900/40 transition-colors"><label className="block text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 mb-2 ml-1 tracking-widest">Chip / SIM Card Vinculado</label><SearchableDropdown disabled={isViewOnly} options={simOptions} value={formData.linkedSimId || ''} onChange={val => setFormData({...formData, linkedSimId: val || null})} placeholder="Pesquisar chip..."icon={<Cpu size={18}/>}/><p className="text-[11px] text-indigo-600 dark:text-indigo-400 mt-2 font-bold px-1 italic">* Ao entregar o dispositivo, este chip será entregue automaticamente.</p></div></div><div className="space-y-4"><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Estado Global</label><select disabled={isViewOnly || formData.status === DeviceStatus.IN_USE} className={`w-full border-2 rounded-xl p-3 text-sm font-black focus:border-blue-500 outline-none transition-colors ${formData.status === DeviceStatus.IN_USE ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'}`} value={formData.status || ''} onChange={e => setFormData({...formData, status: e.target.value as DeviceStatus})}>{Object.values(DeviceStatus).map(s => (<option key={s} value={s} disabled={s === DeviceStatus.IN_USE && formData.status !== DeviceStatus.IN_USE}>{s}</option>))}</select></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Serial Number</label><input required disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-mono focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.serialNumber || ''} onChange={e => setFormData({...formData, serialNumber: e.target.value.toUpperCase().trim()})} placeholder="S/N"/></div><div><label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Código Setor</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.internalCode || ''} onChange={e => setFormData({...formData, internalCode: e.target.value.trim()})} placeholder="S-001..."/></div><div>
  <label className="block text-[11px] font-black uppercase mb-1 ml-1 tracking-widest">Cargo / Função</label>
  <SearchableDropdown 
  disabled={isViewOnly} 
@@ -1346,7 +1346,7 @@ const DeviceManager = () => {
  placeholder="Destinar..."
  icon={<Briefcase size={18}/>}
  />
-</div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ID Pulsus</label><div className="flex gap-2"><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors flex-1"value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value.trim()})} placeholder="ID MDM"/>{formData.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank"rel="noopener noreferrer"className="p-3 bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl hover:bg-blue-900/60 transition-all flex items-center justify-center"title="Abrir MDM Pulsus"><ShieldCheck size={20}/></a>)}</div></div></div>{relevantFields.length > 0 && (<div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 transition-colors">{relevantFields.map(field => (<div key={field.id}><label className="block text-[10px] font-black uppercase mb-1 ml-1">{field.name}</label><input disabled={isViewOnly} className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-900 dark:text-white"value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/></div>))}</div>)}</div>)}
+</div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ID Pulsus</label><div className="flex gap-2"><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors flex-1"value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value.trim()})} placeholder="ID MDM"/>{formData.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank"rel="noopener noreferrer"className="p-3 bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl hover:bg-blue-900/60 transition-all flex items-center justify-center"title="Abrir MDM Pulsus"><ShieldCheck size={20}/></a>)}</div></div></div>{relevantFields.length > 0 && (<div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-100 dark:bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 transition-colors">{relevantFields.map(field => (<div key={field.id}><label className="block text-[10px] font-black uppercase mb-1 ml-1">{field.name}</label><input disabled={isViewOnly} className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/></div>))}</div>)}</div>)}
  {activeTab === 'FINANCIAL' && (
  <div className="space-y-8 animate-fade-in">
  {/* LCC Dashboard Section */}
@@ -1354,7 +1354,7 @@ const DeviceManager = () => {
  <div className="bg-white dark:bg-slate-800 bg-black p-5 rounded-2xl border border-white/10">
  <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-70">LCC (Custo Ciclo Vida)</span>
  <div className="flex items-baseline gap-2 mt-1">
- <span className="text-2xl font-black text-white">R$ {formatCurrencyBR(lccValue)}</span>
+ <span className="text-2xl font-black text-slate-900 dark:text-white">R$ {formatCurrencyBR(lccValue)}</span>
  </div>
  <div className="mt-3 space-y-1 border-t border-white/5 pt-3">
  <div className="flex justify-between text-[11px] font-bold">
@@ -1367,9 +1367,9 @@ const DeviceManager = () => {
  </div>
  </div>
  </div>
- <div className={`p-5 rounded-2xl border transition-all ${maintenanceRatio >= 0.6 ? ' bg-red-900/20 border-red-900/40' : ' bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
+ <div className={`p-5 rounded-2xl border transition-all ${maintenanceRatio >= 0.6 ? ' bg-red-900/20 border-red-900/40' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
  <div className="flex justify-between items-start">
- <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-red-500' : ' text-slate-400 dark:text-slate-500'}`}>Índice de Manutenção</span>
+ <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-red-500' : ' text-slate-500 dark:text-slate-400'}`}>Índice de Manutenção</span>
  {maintenanceRatio >= 0.6 && <AlertTriangle size={16} className="animate-pulse"/>}
  </div>
  <div className="flex items-baseline gap-2 mt-1">
@@ -1380,9 +1380,9 @@ const DeviceManager = () => {
  </div>
  {maintenanceRatio >= 0.6 && <p className="text-[11px] text-red-400 mt-2 font-black uppercase tracking-tighter">ALERTA: Gastos excedem 60% do valor do ativo!</p>}
  </div>
- <div className={`p-5 rounded-2xl border transition-all ${deviceAgeYears >= 5 ? ' bg-orange-900/20 border-orange-900/40' : ' bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
+ <div className={`p-5 rounded-2xl border transition-all ${deviceAgeYears >= 5 ? ' bg-orange-900/20 border-orange-900/40' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
  <div className="flex justify-between items-start">
- <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 5 ? ' text-orange-500' : ' text-slate-400 dark:text-slate-500'}`}>Tempo de Uso</span>
+ <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${deviceAgeYears >= 5 ? ' text-orange-500' : ' text-slate-500 dark:text-slate-400'}`}>Tempo de Uso</span>
  {deviceAgeYears >= 5 && <RefreshCw size={16} className="animate-spin-slow"/>}
  </div>
  <div className="flex items-baseline gap-2 mt-1">
@@ -1393,7 +1393,7 @@ const DeviceManager = () => {
  </div>
  </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className={UI_LABEL_SMALL}>Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-600 dark:text-sky-400"><FileCode size={64}/><span className="text-[11px] font-bold uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-800 border-2 border-emerald-900/40 text-emerald-600 dark:text-emerald-400 py-3 rounded-xl text-[11px] font-bold uppercase hover:bg-emerald-50 dark:bg-emerald-500/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-200 mb-4 border-2 border-slate-200 dark:border-slate-700"><Paperclip size={32}/></div><h5 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">Anexo da Nota Fiscal</h5><p className="text-[11px] mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-5"><h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider border-l-4 border-emerald-500 pl-3">Dados de Aquisição</h4><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><FileText size={12}/> Número da Nota Fiscal</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.invoiceNumber || ''} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} placeholder="NF-XXXXXX"/></div><div className="grid grid-cols-2 gap-4"><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><DollarSign size={12}/> Valor Pago (R$)</label><div className="relative"><span className="absolute left-3 top-3 text-xs font-bold">R$</span><input type="text"disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-9 text-sm focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold transition-colors"value={formatCurrencyBR(formData.purchaseCost || 0)} onChange={e => setFormData({...formData, purchaseCost: parseCurrencyBR(e.target.value)})} placeholder="0,00"/></div></div><div><label className="block text-[11px] font-bold uppercase mb-1 flex items-center gap-2 tracking-wider"><Calendar size={12}/> Data Compra</label><input type="date"disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.purchaseDate ? formData.purchaseDate.substring(0, 10) : ''} onChange={e => setFormData({...formData, purchaseDate: e.target.value})}/></div></div><div><label className={UI_LABEL_SMALL}>Fornecedor (A-Z)</label><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors"value={formData.supplier || ''} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Nome da Loja"/></div></div><div className="bg-slate-100 dark:bg-slate-800/50 p-8 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center shadow-inner transition-colors">{(formData.purchaseInvoiceUrl || formData.hasInvoice) ? (<div className="space-y-4 w-full"><div className="h-48 w-full bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden group relative">{(formData.purchaseInvoiceUrl && formData.purchaseInvoiceUrl.startsWith('data:image')) ? (<img src={formData.purchaseInvoiceUrl} className="h-full w-full object-contain"alt="NF"/>) : (<div className="flex flex-col items-center gap-2 text-blue-600 dark:text-sky-400"><FileCode size={64}/><span className="text-[11px] font-bold uppercase">Nota Fiscal Anexada</span></div>)}</div><div className="flex gap-3"><button type="button"disabled={loadingFiles[editingId!]} onClick={() => openBase64File('DEVICE', editingId!, formData.purchaseInvoiceUrl)} className="flex-1 bg-slate-100 dark:bg-slate-800 border-2 border-emerald-900/40 text-emerald-600 dark:text-emerald-400 py-3 rounded-xl text-[11px] font-bold uppercase hover:bg-emerald-50 dark:bg-emerald-500/20 flex items-center justify-center gap-2 transition-all">{loadingFiles[editingId!] ? <Loader2 size={14} className="animate-spin"/> : <ExternalLink size={14}/>} Abrir Documento</button>{!isViewOnly && <button type="button"onClick={() => setFormData({...formData, purchaseInvoiceUrl: '', hasInvoice: false})} className="p-3 bg-red-900/30 text-red-400 rounded-xl border-2 border-red-900/40 hover:bg-red-900/50 transition-all"><Trash2 size={18}/></button>}</div></div>) : (<><div className="h-20 w-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-700 dark:text-slate-200 mb-4 border-2 border-slate-200 dark:border-slate-700"><Paperclip size={32}/></div><h5 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">Anexo da Nota Fiscal</h5><p className="text-[11px] mt-2 font-medium">Importe a imagem ou PDF.</p>{!isViewOnly && (<label className="mt-6 cursor-pointer bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">{isUploadingNF ? <RefreshCw size={14} className="animate-spin"/> : <Plus size={14}/>} Escolher Arquivo
                     <input type="file" className="hidden" onChange={handleNFFileChange} accept="application/pdf,image/*"/>
                   </label>
                 )}
@@ -1439,7 +1439,7 @@ const DeviceManager = () => {
                     <label className="block text-[11px] font-bold text-orange-400 mb-1">Descrição</label>
                     <input 
                       placeholder="Ex: Troca de tela..."
-                      className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-900 dark:text-white shadow-inner"
+                      className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-inner"
                       value={newMaint.description || ''} 
                       onChange={e => setNewMaint({...newMaint, description: e.target.value})}
                     />
@@ -1450,7 +1450,7 @@ const DeviceManager = () => {
                       <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
                       <input 
                         type="text"
-                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-900 dark:text-white"
+                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
                         value={formatCurrencyBR(newMaint.cost || 0)} 
                         onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
                       />
@@ -1462,7 +1462,7 @@ const DeviceManager = () => {
                       <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
                       <input 
                         type="date"
-                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-800 text-slate-900 dark:text-white"
+                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
                         value={newMaint.date || ''} 
                         onChange={e => setNewMaint({...newMaint, date: e.target.value})}
                       />
@@ -1470,7 +1470,7 @@ const DeviceManager = () => {
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-orange-400 mb-1">Anexo</label>
-                    <label className={`w-full flex items-center gap-3 bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
+                    <label className={`w-full flex items-center gap-3 bg-slate-100 dark:bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
                       <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
                         {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
                       </div>
@@ -1528,7 +1528,7 @@ const DeviceManager = () => {
                   </div>
                 )) : (
                   <div className="text-center py-16 bg-white dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-400 dark:text-slate-500">Nenhuma manutenção externa registrada.</p>
+                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-500 dark:text-slate-400">Nenhuma manutenção externa registrada.</p>
                   </div>
                 )}
               </div>
@@ -1549,7 +1549,7 @@ const DeviceManager = () => {
                   <div>
                     <label className="block text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Status Geral da Auditoria</label>
                     <select 
-                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-900 dark:text-white font-bold"
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
                       value={newAudit.status || ''} 
                       onChange={e => setNewAudit({...newAudit, status: e.target.value as any})}
                     >
@@ -1561,7 +1561,7 @@ const DeviceManager = () => {
                   <div className="md:col-span-1">
                     <label className="block text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Descrição das Ações / Verificações Realizadas</label>
                     <select 
-                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-900 dark:text-white shadow-inner"
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-inner"
                       value={newAudit.description || ''} 
                       onChange={e => setNewAudit({...newAudit, description: e.target.value})}
                     >
@@ -1576,7 +1576,7 @@ const DeviceManager = () => {
                     <label className="block text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 uppercase tracking-wider">Observações Adicionais</label>
                     <textarea 
                       placeholder="Detalhes técnicos ou pendências encontradas..."
-                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-900 dark:text-white shadow-inner h-20 resize-none"
+                      className="w-full border-2 border-indigo-900/30 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-inner h-20 resize-none"
                       value={newAudit.observations || ''} 
                       onChange={e => setNewAudit({...newAudit, observations: e.target.value})}
                     />
@@ -1587,7 +1587,7 @@ const DeviceManager = () => {
                       <Calendar className="absolute left-3 top-3 text-indigo-300" size={16}/>
                       <input 
                         type="date"
-                        className="w-full border-2 border-indigo-900/30 rounded-xl p-3 pl-10 text-sm focus:border-indigo-400 outline-none bg-slate-800 text-slate-900 dark:text-white"
+                        className="w-full border-2 border-indigo-900/30 rounded-xl p-3 pl-10 text-sm focus:border-indigo-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
                         value={newAudit.date || ''} 
                         onChange={e => setNewAudit({...newAudit, date: e.target.value})}
                       />
@@ -1627,12 +1627,12 @@ const DeviceManager = () => {
                               </span>
                             </div>
                             <div className="flex items-center gap-3 mt-1">
-                              <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 flex items-center gap-1"><Calendar size={10}/> {formatDateBR(a.date)}</span>
+                              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1"><Calendar size={10}/> {formatDateBR(a.date)}</span>
                               <span className="text-[10px] font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1"><Settings size={10}/> {a.type}</span>
-                              <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 flex items-center gap-1 font-mono tracking-tighter">Por: {a.technician}</span>
+                              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono tracking-tighter">Por: {a.technician}</span>
                             </div>
                             {a.observations && (
-                              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 italic bg-slate-800/40 p-2 rounded-lg border border-slate-300 dark:border-slate-600/50 line-clamp-2">{a.observations}</p>
+                              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 italic bg-slate-100 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-300 dark:border-slate-600/50 line-clamp-2">{a.observations}</p>
                             )}
                           </div>
                         </div>
@@ -1651,7 +1651,7 @@ const DeviceManager = () => {
                   ))
                 ) : (
                   <div className="text-center py-16 bg-white dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-400 dark:text-slate-500">Nenhuma auditoria ou verificação técnica realizada.</p>
+                    <p className="font-bold text-xs uppercase tracking-widest italic text-slate-500 dark:text-slate-400">Nenhuma auditoria ou verificação técnica realizada.</p>
                   </div>
                 )}
               </div>
@@ -1667,7 +1667,7 @@ const DeviceManager = () => {
           {deviceAccounts.length > 0 ? deviceAccounts.map(acc => (
             <div key={acc.id} className="p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
               <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : acc.type === AccountType.OFFICE ? 'bg-orange-900/20 text-orange-400' : acc.type === AccountType.ERP ? 'bg-purple-900/20 text-purple-400' : 'bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : acc.type === AccountType.OFFICE ? 'bg-orange-900/20 text-orange-400' : acc.type === AccountType.ERP ? 'bg-purple-900/20 text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                   {acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
                 </div>
                 <div>
@@ -1677,21 +1677,21 @@ const DeviceManager = () => {
               </div>
               <div className="flex items-center gap-2">
                 {acc.accessUrl && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 text-slate-600 dark:text-slate-400 hover:text-white transition-colors">
+                  <button type="button" onClick={(e) => { e.stopPropagation(); handleOpenUrl(acc.accessUrl); }} className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors">
                     <ExternalLink size={16}/>
                   </button>
                 )}
-                <div className="bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[11px] font-bold min-w-[80px] text-center text-slate-700 dark:text-slate-300">
+                <div className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full font-mono text-[11px] font-bold min-w-[80px] text-center text-slate-700 dark:text-slate-300">
                   {showPasswords[acc.id] ? (acc.password || '---') : '••••••••'}
                 </div>
-                <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-600 dark:text-slate-400 hover:text-white">
+                <button type="button" onClick={() => setShowPasswords(p => ({...p, [acc.id]: !p[acc.id]}))} className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white">
                   {showPasswords[acc.id] ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
               </div>
             </div>
           )) : (
             <div className="text-center py-16 bg-white dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-              <Globe size={32} className="mx-auto text-slate-200 mb-2"/>
+              <Globe size={32} className="mx-auto text-slate-700 dark:text-slate-200 mb-2"/>
               <p className="text-xs font-bold uppercase tracking-widest italic">Nenhuma licença vinculada.</p>
             </div>
           )}
@@ -1710,7 +1710,7 @@ const DeviceManager = () => {
  <div className={`absolute -left-[10px] top-1 h-4 w-4 rounded-full border-4 border-white border-slate-950 ${log.action === ActionType.RESTORE ? 'bg-indigo-500' : 'bg-blue-500'}`}></div>
  <div className="text-[10px] uppercase mb-1 tracking-wider">{new Date(log.timestamp).toLocaleString()}</div>
  <div className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-tight">{log.action}</div>
- <div className="text-xs bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-300 dark:border-slate-600 transition-colors"><LogNoteRenderer log={log} /></div>
+ <div className="text-xs bg-slate-100 dark:bg-slate-800/50 p-4 rounded-xl mt-2 border border-slate-300 dark:border-slate-600 transition-colors"><LogNoteRenderer log={log} /></div>
  <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 uppercase mt-2 tracking-tight">Realizado por: {log.adminUser}</div>
  </div>
  ))}
@@ -1731,9 +1731,9 @@ const DeviceManager = () => {
  </div>
  )}
 
- {isReasonModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-300 dark:border-sky-700/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-blue-100 dark:bg-sky-500/20 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800"><Save size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Confirmar Alterações?</h3><p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Salvar</button></div></div></div></div>)}
- {isDeleteModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-sm overflow-hidden border border-red-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-red-800"><AlertTriangle size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:ring-red-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Motivo..."value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_DANGER}`}>Confirmar</button></div></div></div></div>)}
- {isRestoreModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden border border-indigo-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-500/20 rounded-full flex items-center justify-center mb-4 shadow-inner border border-indigo-800"><RotateCcw size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none mb-6 transition-all bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Motivo..."value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SUCCESS}`}>Restaurar</button></div></div></div></div>)}
+ {isReasonModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden border border-blue-300 dark:border-sky-700/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-blue-100 dark:bg-sky-500/20 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-800"><Save size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Confirmar Alterações?</h3><p className="text-xs mt-2">Informe o motivo da alteração para auditoria:</p></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none mb-6 transition-all bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Descreva o que foi alterado..."value={editReason} onChange={(e) => setEditReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsReasonModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Voltar</button><button onClick={confirmEdit} disabled={!editReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_PRIMARY}`}>Salvar</button></div></div></div></div>)}
+ {isDeleteModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-sm overflow-hidden border border-red-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 shadow-inner border border-red-800"><AlertTriangle size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Confirma o Descarte?</h3></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-red-100 focus:ring-red-900/20 outline-none mb-6 transition-all bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Motivo..."value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsDeleteModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Manter</button><button onClick={() => { deleteDevice(deleteTargetId!, adminName, deleteReason); setIsDeleteModalOpen(false); }} disabled={!deleteReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_DANGER}`}>Confirmar</button></div></div></div></div>)}
+ {isRestoreModalOpen && (<div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"><div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm overflow-hidden border border-indigo-900/40"><div className="p-8"><div className="flex flex-col items-center text-center mb-6"><div className="h-16 w-16 bg-indigo-100 dark:bg-indigo-500/20 rounded-full flex items-center justify-center mb-4 shadow-inner border border-indigo-800"><RotateCcw size={32} /></div><h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Restaurar?</h3></div><textarea className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none mb-6 transition-all bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"rows={3} placeholder="Motivo..."value={restoreReason} onChange={(e) => setRestoreReason(e.target.value)}></textarea><div className="flex gap-4"><button onClick={() => setIsRestoreModalOpen(false)} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SECONDARY}`}>Cancelar</button><button onClick={() => { restoreDevice(restoreTargetId!, adminName, restoreReason); setIsRestoreModalOpen(false); }} disabled={!restoreReason.trim()} className={`flex-1 py-3 rounded-2xl ${UI_BUTTON_SUCCESS}`}>Restaurar</button></div></div></div></div>)}
 
  {isBulkModalOpen && (
  <div className="fixed inset-0 bg-white dark:bg-slate-800/80 z-[300] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1752,7 +1752,7 @@ const DeviceManager = () => {
  <div>
  <label className="block text-[11px] font-bold uppercase mb-1 ml-1 tracking-wider">Novo Status</label>
  <select 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all"
  value={bulkValue}
  onChange={(e) => setBulkValue(e.target.value)}
  >

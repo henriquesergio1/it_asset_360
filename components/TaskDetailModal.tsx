@@ -496,7 +496,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="flex items-center gap-4">
  <div className={`p-2 rounded-xl ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
- task.status === TaskStatus.CANCELED ? ' bg-slate-800 ' :
+ task.status === TaskStatus.CANCELED ? ' bg-slate-100 dark:bg-slate-800 ' :
  task.isOverdue ? ' bg-red-900/30 text-red-400' :
  ' bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400'
  }`}>
@@ -507,7 +507,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <input 
  value={editTitle}
  onChange={(e) => setEditTitle(e.target.value)}
- className="text-lg font-bold text-slate-900 dark:text-white bg-slate-800 border-b-2 border-indigo-500 outline-none w-full px-2 rounded"
+ className="text-lg font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 border-b-2 border-indigo-500 outline-none w-full px-2 rounded"
  />
  ) : (
  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{task.title}</h2>
@@ -516,12 +516,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <span className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1">
  <Clock size={14} /> Criada em {new Date(task.createdAt).toLocaleDateString('pt-BR')}
  </span>
- <span className="text-slate-400 dark:text-slate-500">•</span>
+ <span className="text-slate-500 dark:text-slate-400">•</span>
  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
  task.status === TaskStatus.COMPLETED ? ' bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
  task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' :
  task.status === TaskStatus.PENDING ? ' bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' :
- ' bg-slate-800 text-slate-600 dark:text-slate-400'
+ ' bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
  }`}>
  {task.status}
  </span>
@@ -616,10 +616,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <textarea 
  value={editDescription}
  onChange={(e) => setEditDescription(e.target.value)}
- className="w-full p-4 bg-slate-800 border-2 border-indigo-900/30 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[100px] focus:ring-2 focus:ring-indigo-500 outline-none"
+ className="w-full p-4 bg-slate-100 dark:bg-slate-800 border-2 border-indigo-900/30 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[100px] focus:ring-2 focus:ring-indigo-500 outline-none"
  />
  ) : (
- <div className="bg-slate-800/50 p-3 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+ <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
  {task.description || 'Sem descrição detalhada.'}
  </div>
  )}
@@ -634,7 +634,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {(task.instructions || (task.manualAttachments && task.manualAttachments.length > 0)) && (
  <button 
  onClick={handlePrintManual}
- className="text-[11px] font-bold hover:text-slate-700 hover:text-slate-200 uppercase tracking-widest flex items-center gap-1 transition-colors"
+ className="text-[11px] font-bold hover:text-slate-700 hover:text-slate-700 dark:text-slate-200 uppercase tracking-widest flex items-center gap-1 transition-colors"
  >
  <Printer size={12} /> Imprimir
  </button>
@@ -660,10 +660,10 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  value={tempInstructions}
  onChange={(e) => setTempInstructions(e.target.value)}
  placeholder="Descreva o passo a passo para realização desta tarefa..."
- className="w-full p-3 bg-slate-800 border-2 border-indigo-900/30 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[150px] focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border-2 border-indigo-900/30 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed min-h-[150px] focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
  />
  
- <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
+ <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
  <div className="flex items-center justify-between mb-2">
  <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
@@ -689,7 +689,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
  <button 
   onClick={() => handleViewFile(attachment, `Anexo_${index + 1}`)}
-  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-slate-900 dark:text-white backdrop-blur-sm transition-colors"
   title="Visualizar"
  >
   <Eye size={14} />
@@ -701,7 +701,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   link.download = `Anexo_${index + 1}`;
   link.click();
  }}
- className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+ className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-slate-900 dark:text-white backdrop-blur-sm transition-colors"
  title="Download"
  >
  <ExternalLink size={14} />
@@ -728,7 +728,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  setTempInstructions(task.instructions || '');
  setTempManualAttachments(task.manualAttachments || []);
  }}
- className="px-4 py-2 text-xs font-bold hover:text-slate-700 hover:text-slate-200 transition-colors"
+ className="px-4 py-2 text-xs font-bold hover:text-slate-700 hover:text-slate-700 dark:text-slate-200 transition-colors"
  >
  Cancelar
  </button>
@@ -743,7 +743,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  ) : (
  <div className="space-y-3">
- <div className="bg-slate-800/50 p-3 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-300 dark:border-slate-600/50">
+ <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-xl text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap border border-slate-300 dark:border-slate-600/50">
  {task.instructions || 'Nenhum manual ou passo a passo anexado a esta tarefa.'}
  </div>
  
@@ -762,7 +762,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
  <button 
   onClick={() => handleViewFile(attachment, `Anexo_${index + 1}`)}
-  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
+  className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-slate-900 dark:text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
  >
   <Eye size={14} /> Ver
  </button>
@@ -773,7 +773,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   link.download = `Anexo_${index + 1}`;
   link.click();
  }}
- className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
+ className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-slate-900 dark:text-white backdrop-blur-sm transition-colors flex items-center gap-2 text-xs font-bold"
  >
  <ExternalLink size={14} /> Abrir
  </button>
@@ -798,7 +798,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  type="checkbox"
  checked={editHasDueDate}
  onChange={(e) => setEditHasDueDate(e.target.checked)}
- className="w-4 h-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-800 transition-colors"
+ className="w-4 h-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors"
  />
  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Definir Prazo</span>
  </label>
@@ -807,14 +807,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  disabled={!editHasDueDate}
  value={editDueDate}
  onChange={(e) => setEditDueDate(e.target.value)}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white disabled:opacity-50"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white disabled:opacity-50"
  />
  </div>
  ) : (
  <div className={`p-4 rounded-2xl border ${
  task.isOverdue ? ' bg-red-900/20 border-red-900/30 text-red-400' :
  task.isNearDue ? ' bg-amber-50 dark:bg-amber-500/20 border-amber-900/30 text-amber-600 dark:text-amber-400' :
- ' bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'
+ ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'
  }`}>
  <div className="text-lg font-bold">
  {task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
@@ -835,7 +835,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <select 
  value={editAssignedTo}
  onChange={(e) => setEditAssignedTo(e.target.value)}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
  >
  <option value="">Geral</option>
  {systemUsers.map(user => (
@@ -843,7 +843,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  ))}
  </select>
  ) : (
- <div className="bg-slate-800 p-4 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
+ <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
  <div className="text-lg font-bold">
  {task.assignedTo 
  ? (systemUsers.find(u => u.id === task.assignedTo)?.name || task.assignedTo) 
@@ -863,13 +863,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </h3>
  </div>
  {isEditingGeneral ? (
- <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600/50 space-y-3">
+ <div className="p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600/50 space-y-3">
  <label className="flex items-center gap-2 cursor-pointer">
  <input 
  type="checkbox"
  checked={editIsRecurring}
  onChange={(e) => setEditIsRecurring(e.target.checked)}
- className="w-4 h-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-800 transition-colors"
+ className="w-4 h-4 rounded focus:ring-indigo-500 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 transition-colors"
  />
  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Tarefa Recorrente</span>
  </label>
@@ -881,7 +881,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <select 
  value={editRecurrenceConfig.type}
  onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, type: e.target.value as any })}
- className="w-full p-2 bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
  >
  <option value="Mensal (Dia Fixo)">Mensal (Dia Fixo)</option>
  <option value="Mensal (Dia da Semana)">Mensal (Dia da Semana)</option>
@@ -895,7 +895,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  type="number"min="1"max="31"
  value={editRecurrenceConfig.dayOfMonth || ''}
  onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, dayOfMonth: parseInt(e.target.value) })}
- className="w-full p-2 bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
  />
  </div>
  )}
@@ -906,7 +906,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  type="number"min="1"
  value={editRecurrenceConfig.intervalMonths || ''}
  onChange={(e) => setEditRecurrenceConfig({ ...editRecurrenceConfig, intervalMonths: parseInt(e.target.value) })}
- className="w-full p-2 bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/30 rounded-xl text-xs font-bold outline-none text-slate-900 dark:text-white"
  />
  </div>
  )}
@@ -914,7 +914,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  )}
  </div>
  ) : (
- <div className="bg-slate-800 p-4 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
+ <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">
  <div className="text-sm font-medium">
  {task.isRecurring ? (
  <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold">
@@ -952,7 +952,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  value={cancelReason}
  onChange={(e) => setCancelReason(e.target.value)}
  placeholder="Descreva o motivo do cancelamento desta tarefa..."
- className="w-full p-3 bg-slate-800 border-2 border-red-900/30 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500 transition-all text-slate-200"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border-2 border-red-900/30 rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500 transition-all text-slate-700 dark:text-slate-200"
  rows={2}
  autoFocus
  />
@@ -999,7 +999,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  if (task.isRecurring) { handleConfirmOccurrence(); } else { handleStatusChange(TaskStatus.COMPLETED, true); }
  }}
  disabled={updating}
- className="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-lg transition-all"
+ className="px-4 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-lg transition-all"
  >
  {task.isRecurring ? 'Não, confirmar agora' : 'Não, finalizar agora'}
  </button>
@@ -1030,7 +1030,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </button>
  <button 
  onClick={() => setIsEditingGeneral(false)}
- className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 hover:bg-slate-300 bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+ className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 hover:bg-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
  >
  <X size={18} /> Cancelar Edição
  </button>
@@ -1041,7 +1041,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <button 
  onClick={() => handleStatusChange(TaskStatus.IN_PROGRESS)}
  disabled={updating}
- className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-blue-200 shadow-none transition-all disabled:opacity-50"
+ className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 text-slate-900 dark:text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-blue-200 shadow-none transition-all disabled:opacity-50"
  >
  <Clock size={18} /> Iniciar Tarefa
  </button>
@@ -1074,7 +1074,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <button 
  onClick={() => setShowCancelReason(true)}
  disabled={updating}
- className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-slate-800 border-2 border-red-900/30 text-red-400 hover:bg-red-900/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+ className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-4 bg-slate-100 dark:bg-slate-800 border-2 border-red-900/30 text-red-400 hover:bg-red-900/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
  >
  <AlertTriangle size={18} /> Cancelar Tarefa
  </button>
@@ -1092,7 +1092,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
  {isEditingGeneral && (
  <div className="relative">
- <div className="flex items-center gap-2 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1">
+ <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1">
  <Plus size={14} className=""/>
  <input 
  type="text"
@@ -1103,7 +1103,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  />
  </div>
  {searchTerm && (
- <div className="absolute top-full right-0 mt-1 w-64 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl z-10 max-h-48 overflow-y-auto">
+ <div className="absolute top-full right-0 mt-1 w-64 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl z-10 max-h-48 overflow-y-auto">
  {devices
  .filter(d => 
  (d.assetTag?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -1133,24 +1133,24 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  
  {!task.maintenanceItems && !isEditingGeneral ? (
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
- <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
+ <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
  <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Dispositivo</label>
- <div className="text-xs font-bold text-slate-200 truncate">
+ <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
  {getDeviceName(task.deviceId)}
  </div>
  </div>
  
- <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
+ <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
  <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Tipo</label>
- <div className="text-xs font-bold text-slate-200">
+ <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
  {task.maintenanceType === MaintenanceType.PREVENTIVE ? 'Preventiva' : 
  task.maintenanceType === MaintenanceType.CORRECTIVE ? 'Corretiva' : 'Auditoria'}
  </div>
  </div>
  
- <div className="bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
+ <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl border border-amber-900/30">
  <label className="block text-[11px] font-black uppercase mb-1 tracking-widest">Custo</label>
- <div className="text-xs font-bold text-slate-200 flex items-center gap-1">
+ <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
  <DollarSign size={12} /> {task.maintenanceCost?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
  </div>
  </div>
@@ -1164,7 +1164,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <div className="grid grid-cols-1 gap-2">
  {(isEditingGeneral ? editMaintenanceItems : task.maintenanceItems!).map((item) => (
  <div key={item.deviceId} className="space-y-2">
- <div className="flex items-center justify-between p-3 bg-slate-800 rounded-2xl border border-amber-900/30 hover:shadow-md transition-all">
+ <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-amber-900/30 hover:shadow-md transition-all">
  <div className="flex items-center gap-3">
  <div className={`p-1.5 rounded-lg ${
  item.status === 'Concluído' ? ' ' : 
@@ -1176,7 +1176,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <Clock size={14} />}
  </div>
  <div>
- <div className="text-xs font-bold text-slate-200">{getDeviceName(item.deviceId)}</div>
+ <div className="text-xs font-bold text-slate-700 dark:text-slate-200">{getDeviceName(item.deviceId)}</div>
  <div className="text-[11px] font-medium">Patrimônio: {item.assetTag}</div>
  </div>
  </div>
@@ -1228,7 +1228,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <button 
  onClick={() => handleStartItem(item.deviceId)}
  disabled={task.status === TaskStatus.CANCELED || task.status === TaskStatus.COMPLETED}
- className="px-3 py-1.5 text-white text-[11px] font-bold rounded-lg transition-colors disabled:opacity-50"
+ className="px-3 py-1.5 text-slate-900 dark:text-white text-[11px] font-bold rounded-lg transition-colors disabled:opacity-50"
  >
  Iniciar
  </button>
@@ -1253,12 +1253,12 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  step="0.01"
  value={finalCost}
  onChange={(e) => setFinalCost(parseFloat(e.target.value))}
- className="w-full p-2 bg-slate-800 border border-emerald-900/30 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-emerald-900/30 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
  />
  </div>
  <div>
  <label className="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Nota Fiscal</label>
- <label className="cursor-pointer flex items-center justify-center gap-2 p-2 bg-slate-800 border border-emerald-900/30 rounded-xl text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-900/40 transition-all">
+ <label className="cursor-pointer flex items-center justify-center gap-2 p-2 bg-slate-100 dark:bg-slate-800 border border-emerald-900/30 rounded-xl text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-900/40 transition-all">
  <Paperclip size={12} />
  {invoiceFile ? 'Anexo Pronto' : 'Anexar PDF/IMG'}
  <input type="file"className="hidden"accept="application/pdf,image/*"onChange={handleInvoiceUpload} />
@@ -1271,13 +1271,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  value={itemNote}
  onChange={(e) => setItemNote(e.target.value)}
  placeholder="Descreva o que foi feito ou observações importantes..."
- className="w-full p-2 bg-slate-800 border border-emerald-900/30 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 min-h-[60px] text-slate-900 dark:text-white"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-emerald-900/30 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 min-h-[60px] text-slate-900 dark:text-white"
  />
  </div>
  <div className="flex justify-end gap-2">
  <button 
  onClick={() => setCompletingItemId(null)}
- className="px-3 py-1.5 text-[11px] font-bold hover:text-slate-700 hover:text-slate-200"
+ className="px-3 py-1.5 text-[11px] font-bold hover:text-slate-700 hover:text-slate-700 dark:text-slate-200"
  >
  Cancelar
  </button>
@@ -1330,7 +1330,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  <User size={UI_ICON_SIZE_SMALL} /> {log.adminUser} • {log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Data inválida'}
  </div>
  {log.notes && (
- <div className="mt-2 p-2 bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600 text-[11px] italic whitespace-pre-wrap">
+ <div className="mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-600 text-[11px] italic whitespace-pre-wrap">
 "{log.notes}"
  </div>
  )}
@@ -1349,7 +1349,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  onChange={(e) => setNewNote(e.target.value)}
  placeholder={isFinalizingWithNote ? "Digite a nota de encerramento para finalizar a tarefa..." : (task.status === TaskStatus.IN_PROGRESS ? "Adicionar nota/comentário..." : "Inicie a tarefa para adicionar notas")}
  disabled={(task.status !== TaskStatus.IN_PROGRESS && !isFinalizingWithNote) || updating}
- className={`w-full p-3 pr-10 text-xs bg-slate-800 border rounded-xl focus:ring-2 transition-all resize-none h-20 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${
+ className={`w-full p-3 pr-10 text-xs bg-slate-100 dark:bg-slate-800 border rounded-xl focus:ring-2 transition-all resize-none h-20 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed ${
   isFinalizingWithNote 
   ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
   : 'border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-transparent'

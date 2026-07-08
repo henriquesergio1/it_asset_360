@@ -482,7 +482,7 @@ const DataImporter = () => {
  <button onClick={downloadTemplate} className="flex items-center gap-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-6 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 font-bold text-slate-700 dark:text-slate-300 transition-all">
  <Download size={18} className="text-blue-600 dark:text-sky-400"/> Baixar Planilha Modelo
  </button>
- <label className="flex items-center gap-2 text-sm text-white px-8 py-3 rounded-xl cursor-pointer transition-all font-bold">
+ <label className="flex items-center gap-2 text-sm text-slate-900 dark:text-white px-8 py-3 rounded-xl cursor-pointer transition-all font-bold">
  <Upload size={18}/> Selecionar Arquivo CSV
  <input ref={fileInputRef} type="file"accept=".csv"className="hidden"onChange={handleFileUpload} />
  </label>
@@ -502,12 +502,12 @@ const DataImporter = () => {
  <div className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'NEW').length} Novos</div>
  <div className="bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'CONFLICT').length} Existentes</div>
  {analyzedData.some(i => i.status === 'ERROR') && (
- <div className="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
+ <div className="bg-rose-100 dark:bg-red-500/20 text-rose-600 dark:text-red-400 px-4 py-1.5 rounded-full text-xs font-bold uppercase">{analyzedData.filter(i => i.status === 'ERROR').length} Com Erro</div>
  )}
  </div>
  <div className="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700">
  <table className="w-full text-xs text-left">
- <thead className="bg-slate-800 sticky top-0 z-10">
+ <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 z-10">
  <tr>
  <th className="px-6 py-4 font-black uppercase tracking-widest">Identificador</th>
  <th className="px-6 py-4 font-black uppercase tracking-widest">Ação</th>
@@ -523,7 +523,7 @@ const DataImporter = () => {
  item.row['Numero']}
  </td>
  <td className="px-6 py-3">
- <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] tracking-widest ${item.status === 'NEW' ? ' bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : item.status === 'CONFLICT' ? ' bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : ' bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+ <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] tracking-widest ${item.status === 'NEW' ? ' bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : item.status === 'CONFLICT' ? ' bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : ' bg-rose-100 dark:bg-red-500/20 text-rose-600 dark:text-red-400'}`}>
  {item.status === 'NEW' ? 'CRIAR' : item.status === 'CONFLICT' ? 'ATUALIZAR' : 'ERRO'}
  </span>
  </td>
@@ -541,7 +541,7 @@ const DataImporter = () => {
  </tbody>
  </table>
  </div>
- <button onClick={executeImport} disabled={analyzedData.every(i => !i.selected || i.status === 'ERROR')} className="mt-4 text-white py-4 rounded-xl font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:grayscale">
+ <button onClick={executeImport} disabled={analyzedData.every(i => !i.selected || i.status === 'ERROR')} className="mt-4 text-slate-900 dark:text-white py-4 rounded-xl font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:grayscale">
  Iniciar Processamento ({analyzedData.filter(i => i.selected && i.status !== 'ERROR').length} itens válidos)
  </button>
  </div>
@@ -552,7 +552,7 @@ const DataImporter = () => {
  <Loader2 size={64} className="animate-spin"/>
  <div className="text-center">
  <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Processando {progress.current} de {progress.total}</h3>
- <div className="w-64 bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner">
+ <div className="w-64 bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner">
  <div className="h-full transition-all duration-300"style={{width:`${(progress.current/progress.total)*100}%`}}></div>
  </div>
  </div>

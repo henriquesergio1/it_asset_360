@@ -204,8 +204,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="fixed inset-0 bg-black bg-opacity-50 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
  <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-slate-200 dark:border-slate-700">
  <div className="bg-white dark:bg-slate-800 bg-black px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/10 transition-colors">
- <h3 className="text-lg font-bold text-white flex items-center gap-2"><Layers size={20} /> Configurações de Ativos</h3>
- <button onClick={onClose} className="hover:text-white transition-colors"><X size={24}/></button>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Layers size={20} /> Configurações de Ativos</h3>
+ <button onClick={onClose} className="hover:text-slate-900 dark:text-white transition-colors"><X size={24}/></button>
  </div>
 
  <div className="flex flex-1 overflow-hidden">
@@ -222,8 +222,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {activeTab === 'MODELS' && (
  <div className="space-y-6">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white">Catálogo de Modelos</h4>
- <form onSubmit={handleModelSubmit} className="bg-slate-800/50 p-6 rounded-xl border border-slate-300 dark:border-slate-600 mb-8 transition-colors">
- <h5 className="font-bold text-slate-200 mb-4 uppercase text-xs tracking-widest">{modelForm.id ? 'Editando Modelo' : 'Cadastrar Novo Modelo'}</h5>
+ <form onSubmit={handleModelSubmit} className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-300 dark:border-slate-600 mb-8 transition-colors">
+ <h5 className="font-bold text-slate-700 dark:text-slate-200 mb-4 uppercase text-xs tracking-widest">{modelForm.id ? 'Editando Modelo' : 'Cadastrar Novo Modelo'}</h5>
   {modelForm.id && (
     <div className="mb-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl flex items-start gap-2.5 text-amber-300 text-xs animate-fade-in">
       <AlertTriangle size={16} className="shrink-0 mt-0.5" />
@@ -234,17 +234,17 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
     </div>
   )}
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- <div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Nome do Modelo</label><input required type="text"className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.name || ''} onChange={e => setModelForm({...modelForm, name: e.target.value})}/></div>
+ <div><label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Nome do Modelo</label><input required type="text"className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.name || ''} onChange={e => setModelForm({...modelForm, name: e.target.value})}/></div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Marca</label>
- <select required className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.brandId || ''} onChange={e => setModelForm({...modelForm, brandId: e.target.value})}>
+ <select required className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.brandId || ''} onChange={e => setModelForm({...modelForm, brandId: e.target.value})}>
  <option value="">Selecione...</option>
  {sortedBrands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
  </select>
  </div>
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Tipo</label>
- <select required className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.typeId || ''} onChange={e => setModelForm({...modelForm, typeId: e.target.value})}>
+ <select required className="w-full border border-slate-300 dark:border-slate-600 rounded-lg p-3 text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"value={modelForm.typeId || ''} onChange={e => setModelForm({...modelForm, typeId: e.target.value})}>
  <option value="">Selecione...</option>
  {sortedAssetTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
  </select>
@@ -252,13 +252,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div>
  <label className="block text-[10px] font-black uppercase mb-1 tracking-widest">Foto do Equipamento</label>
  <div className="flex items-center gap-3">
- <div className="h-14 w-14 bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden border-2 border-slate-300 dark:border-slate-600 shrink-0 shadow-inner">
+ <div className="h-14 w-14 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden border-2 border-slate-300 dark:border-slate-600 shrink-0 shadow-inner">
  {modelForm.imageUrl ? <img src={modelForm.imageUrl} className="h-full w-full object-cover"/> : <ImageIcon className=""size={24}/>}
  </div>
  {modelForm.imageUrl ? (
  <button type="button"onClick={() => setModelForm({...modelForm, imageUrl: ''})} className="text-[10px] uppercase tracking-widest bg-red-900/30 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg hover:bg-red-900/50 font-black flex items-center gap-1"><Trash2 size={14}/> Remover</button>
  ) : (
- <label className="cursor-pointer bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700/50 flex items-center gap-2 transition-colors">
+ <label className="cursor-pointer bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700/50 flex items-center gap-2 transition-colors">
  {isUploading ? <RefreshCw size={16} className="animate-spin"/> : <ImageIcon size={16}/>} Carregar Arquivo
  <input type="file"accept="image/*"className="hidden"onChange={handleImageChange} />
  </label>
@@ -276,7 +276,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <input 
  type="text"
  placeholder="Pesquisar por modelo ou marca..."
- className="pl-10 w-full border border-slate-300 dark:border-slate-600 rounded-xl py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-800 text-slate-900 dark:text-white transition-colors"
+ className="pl-10 w-full border border-slate-300 dark:border-slate-600 rounded-xl py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-colors"
  value={modelSearchTerm}
  onChange={(e) => setModelSearchTerm(e.target.value)}
  />
@@ -288,14 +288,14 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  const type = assetTypes.find(t => t.id === m.typeId);
  return (
  <div key={m.id} className="flex items-center gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-xl hover:shadow-md hover:border-slate-300 dark:border-slate-600 transition-all group">
- <div className="h-16 w-16 bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600">
+ <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600">
  {m.imageUrl ? <img src={m.imageUrl} className="h-full w-full object-cover"/> : <ImageIcon className=""size={28}/>}
  </div>
  <div className="flex-1 min-w-0">
  <h4 className="font-bold text-slate-900 dark:text-white truncate">{m.name}</h4>
  <div className="flex gap-2 mt-1">
  <span className="text-[9px] font-black uppercase text-blue-600 dark:text-sky-400 bg-blue-100 dark:bg-sky-500/20 px-2 py-0.5 rounded border border-blue-800/40">{brand?.name}</span>
- <span className="text-[9px] font-black uppercase bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600">{type?.name}</span>
+ <span className="text-[9px] font-black uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600">{type?.name}</span>
  </div>
  </div>
  <div className="flex gap-1">
@@ -314,7 +314,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <form onSubmit={handleSectorSubmit} className="bg-emerald-50 dark:bg-emerald-500/20 p-6 rounded-2xl border border-emerald-900/40 mb-6 transition-colors">
  <h5 className="font-bold text-emerald-300 mb-4 uppercase text-xs tracking-wider">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
  <div className="flex gap-3">
- <input required type="text"placeholder="Ex: Analista de RH, Gerente de Vendas..."className="flex-1 border-2 border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 outline-none font-bold bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
+ <input required type="text"placeholder="Ex: Analista de RH, Gerente de Vendas..."className="flex-1 border-2 border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
  <button type="submit"className="bg-emerald-600 bg-emerald-500 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 hover:bg-emerald-600 font-bold uppercase text-xs tracking-wider transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
  {editingSector.id && <button type="button"onClick={() => setEditingSector({})} className="p-3 hover:text-slate-600 hover:text-slate-700 dark:text-slate-300 transition-colors"><X size={20}/></button>}
  </div>
@@ -325,7 +325,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div key={s.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-200 hover:border-emerald-900 transition-all group">
  <div className="flex items-center gap-3">
  <div className="h-8 w-8 bg-emerald-900/40 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner"><Briefcase size={16}/></div>
- <span className="font-bold text-slate-200">{s.name}</span>
+ <span className="font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
  </div>
  <div className="flex gap-1">
  <button onClick={() => setEditingSector(s)} className="p-2 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-all"><Edit2 size={18}/></button>
@@ -342,11 +342,11 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <form onSubmit={handleTypeSubmit} className="bg-blue-50 dark:bg-sky-500/20 p-6 rounded-2xl border border-blue-300 dark:border-sky-700/40 mb-6 transition-colors">
  <h5 className="font-bold text-blue-300 mb-4 uppercase text-xs tracking-wider">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
  <div className="flex gap-3 mb-4">
- <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
+ <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
  <button type="submit"className="bg-blue-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Salvar</button>
  </div>
  
- <div className="flex items-center gap-2 mb-6 bg-slate-800 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
+ <div className="flex items-center gap-2 mb-6 bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
   <input 
   type="checkbox" 
   id="allowMultipleUsers"
@@ -358,8 +358,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  </div>
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
- <div className="bg-slate-800 p-4 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-inner">
- <label className="block text-[11px] font-bold uppercase mb-3 tracking-wider text-slate-400 dark:text-slate-500/80 border-b border-slate-300 dark:border-slate-600 pb-1">Campos Extras (A-Z)</label>
+ <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-inner">
+ <label className="block text-[11px] font-bold uppercase mb-3 tracking-wider text-slate-500 dark:text-slate-400/80 border-b border-slate-300 dark:border-slate-600 pb-1">Campos Extras (A-Z)</label>
  <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
  {sortedCustomFields.map(f => (
  <label key={f.id} className="flex items-center gap-3 text-xs font-bold p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700/50 cursor-pointer text-slate-700 dark:text-slate-300 transition-colors">
@@ -370,7 +370,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  </div>
  </div>
  
- <div className="bg-slate-800 p-4 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-inner">
+ <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-inner">
  <label className="block text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3 border-b border-slate-300 dark:border-slate-600 pb-1">Ordem de Exibição</label>
  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
  {(editingType.customFieldIds || []).map((id, index) => {
@@ -392,7 +392,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="space-y-2">
  {sortedAssetTypes.map(t => (
  <div key={t.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 group transition-all hover:border-blue-200 hover:border-blue-300 dark:border-sky-700">
- <span className="font-bold text-slate-200">{t.name}</span>
+ <span className="font-bold text-slate-700 dark:text-slate-200">{t.name}</span>
  <div className="flex gap-1">
  <button onClick={() => setEditingType(t)} className="p-2 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-colors"><Edit2 size={16}/></button>
  <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16}/></button>
@@ -407,14 +407,14 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Campos Personalizados</h4>
  <form onSubmit={handleFieldSubmit} className="bg-indigo-50 dark:bg-indigo-500/20 p-5 rounded-2xl border border-indigo-900/40 mb-6 transition-colors">
  <div className="flex gap-2">
- <input required type="text"placeholder="Nome do Campo (ex: Memória RAM)"className="flex-1 border-2 border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none font-bold bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
+ <input required type="text"placeholder="Nome do Campo (ex: Memória RAM)"className="flex-1 border-2 border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
  <button type="submit"className="bg-indigo-600 bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Adicionar</button>
  </div>
  </form>
  <div className="space-y-2">
  {sortedCustomFields.map(f => (
- <div key={f.id} className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
- <span className="font-bold text-slate-200">{f.name}</span>
+ <div key={f.id} className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
+ <span className="font-bold text-slate-700 dark:text-slate-200">{f.name}</span>
  <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"><Trash2 size={18}/></button>
  </div>
  ))}
@@ -425,13 +425,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="max-w-xl">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Marcas e Fabricantes</h4>
  <form onSubmit={handleBrandSubmit} className="flex gap-2 mb-6">
- <input required type="text"placeholder="Ex: Dell, Apple, Samsung..."className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-900 dark:text-white transition-colors"value={editingBrand.name || ''} onChange={e => setEditingBrand({...editingBrand, name: e.target.value.trim()})}/>
+ <input required type="text"placeholder="Ex: Dell, Apple, Samsung..."className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-colors"value={editingBrand.name || ''} onChange={e => setEditingBrand({...editingBrand, name: e.target.value.trim()})}/>
  <button type="submit"className="bg-blue-500 text-white px-8 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">Adicionar</button>
  </form>
  <div className="space-y-2">
  {sortedBrands.map(b => (
- <div key={b.id} className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
- <span className="font-bold text-slate-200">{b.name}</span>
+ <div key={b.id} className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
+ <span className="font-bold text-slate-700 dark:text-slate-200">{b.name}</span>
  <button onClick={() => confirmDelete('Marca', b.id, b.name, deleteBrand)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"><Trash2 size={16}/></button>
  </div>
  ))}
@@ -442,13 +442,13 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <div className="max-w-xl">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Tipos de Acessórios</h4>
  <form onSubmit={handleAccessorySubmit} className="flex gap-2 mb-6">
- <input required type="text"placeholder="Ex: Carregador, Cabo USB, Mouse..."className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-800 text-slate-900 dark:text-white transition-colors"value={editingAccessory.name || ''} onChange={e => setEditingAccessory({...editingAccessory, name: e.target.value.trim()})}/>
+ <input required type="text"placeholder="Ex: Carregador, Cabo USB, Mouse..."className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-colors"value={editingAccessory.name || ''} onChange={e => setEditingAccessory({...editingAccessory, name: e.target.value.trim()})}/>
  <button type="submit"className="bg-blue-500 text-white px-8 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95">Adicionar</button>
  </form>
  <div className="space-y-2">
  {sortedAccessories.map(acc => (
- <div key={acc.id} className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
- <span className="font-bold text-slate-200">{acc.name}</span>
+ <div key={acc.id} className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
+ <span className="font-bold text-slate-700 dark:text-slate-200">{acc.name}</span>
  <button onClick={() => confirmDelete('Acessório', acc.id, acc.name, deleteAccessoryType)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"><Trash2 size={16}/></button>
  </div>
  ))}

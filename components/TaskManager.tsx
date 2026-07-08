@@ -350,11 +350,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
       {/* CABEÇALHO PADRONIZADO */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl">
         <div>
-          <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
             <ClipboardList className="text-indigo-500" size={28} />
             Gestão de Tarefas e Rotinas IT
           </h2>
-          <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
+          <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Acompanhamento de manutenções, auditorias e fluxos de trabalho</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
@@ -429,11 +429,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
       <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl ring-1 ring-white/5">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors" size={20} />
+            <Search className="absolute left-4 top-3.5 text-slate-500 dark:text-slate-400 group-focus-within:text-indigo-600 dark:text-indigo-400 transition-colors" size={20} />
             <input
               type="text"
               placeholder="Buscar tarefas por título ou descrição..."
-              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-200 text-sm shadow-inner"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-700 dark:text-slate-200 text-sm shadow-inner"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -448,7 +448,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                   className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                     activeTab === tab 
                     ? ' bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 ' 
-                    : ' text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300 '
+                    : ' text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 '
                   }`}
                 >
                   {tab}
@@ -476,11 +476,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
         <div className="overflow-x-auto shadow-inner">
           <table className="w-full text-left border-collapse table-fixed">
             <thead>
-              <tr className="bg-slate-50 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
+              <tr className="bg-slate-50 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                 <th className="px-6 py-5 w-12 text-center">
                   <input 
                     type="checkbox"
-                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
                     checked={filteredTasks.length > 0 && selectedTasksIds.length === filteredTasks.length}
                     onChange={toggleSelectAll}
                   />
@@ -490,7 +490,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <SortableResizableHeader label="Status" sortKey="status" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['status']} onResize={(x, w) => handleResize('status', x, w)} />
                 <SortableResizableHeader label="Responsável" sortKey="assignedTo" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['assignedTo']} onResize={(x, w) => handleResize('assignedTo', x, w)} />
                 <SortableResizableHeader label="Prazo" sortKey="dueDate" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['dueDate']} onResize={(x, w) => handleResize('dueDate', x, w)} />
-                <th className="px-6 py-4 text-right border-b border-slate-300 dark:border-slate-600 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 align-middle" style={{ width: '100px', minWidth: '100px' }}>Ações</th>
+                <th className="px-6 py-4 text-right border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 align-middle" style={{ width: '100px', minWidth: '100px' }}>Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 bg-white dark:bg-slate-800/50">
@@ -504,7 +504,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                   <input 
                     type="checkbox"
-                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
+                    className="w-4 h-4 rounded focus:ring-indigo-500 bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 cursor-pointer"
                     checked={selectedTasksIds.includes(task.id)}
                     onChange={() => toggleSelectTask(task.id)}
                   />
@@ -521,7 +521,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                       {task.description}
                     </span>
                     {task.type === TaskType.MAINTENANCE && task.deviceId && (
@@ -551,7 +551,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     task.status === TaskStatus.PENDING ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/30' :
                     task.status === TaskStatus.IN_PROGRESS ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-blue-800/30' :
                     task.status === TaskStatus.COMPLETED ? ' bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-800/30' :
-                    ' bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-800/30'
+                    ' bg-rose-50 dark:bg-red-500/20 text-rose-600 dark:text-red-400 border-rose-800/30'
                   }`}>
                     {task.status === TaskStatus.PENDING ? 'Pendente' :
                      task.status === TaskStatus.IN_PROGRESS ? 'Em Curso' :
@@ -573,7 +573,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                     <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
                       task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' bg-red-900/20 text-red-400 border-red-800/30 animate-pulse' :
                       task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/30' :
-                      ' bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'
+                      ' bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                     }`}>
                       <Calendar size={12} />
                       {parseLocalDate(task.dueDate!).toLocaleDateString('pt-BR')}
@@ -640,7 +640,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  onSubmit={handleCreateTask}
  className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
  >
- <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-800/50 shrink-0">
+ <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-100 dark:bg-slate-800/50 shrink-0">
  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Nova Tarefa</h2>
  <button type="button"onClick={() => setIsAdding(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
  <XCircle size={24} className=""/>
@@ -656,7 +656,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.title}
  onChange={(e) => setNewTask({...newTask, title: e.target.value})}
  placeholder="Ex: Backup semanal do servidor"
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
  />
  </div>
  <div>
@@ -665,7 +665,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.description}
  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
  placeholder="Detalhes da tarefa..."
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none text-slate-900 dark:text-white"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none text-slate-900 dark:text-white"
  />
  </div>
  <div>
@@ -674,10 +674,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  value={newTask.instructions || ''}
  onChange={(e) => setNewTask({...newTask, instructions: e.target.value})}
  placeholder="Descreva o passo a passo para realização desta tarefa..."
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none text-slate-900 dark:text-white font-mono text-xs mb-3"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-32 resize-none text-slate-900 dark:text-white font-mono text-xs mb-3"
  />
  
- <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-300 dark:border-slate-600">
+ <div className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-300 dark:border-slate-600">
  <div className="flex items-center justify-between mb-2">
  <h4 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
  <Paperclip size={14} /> Anexos do Manual
@@ -713,7 +713,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }
  }
  }}
- className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
+ className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full text-slate-900 dark:text-white backdrop-blur-sm transition-colors"
  title="Visualizar"
  >
  <ExternalLink size={14} />
@@ -739,7 +739,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </div>
  <div className="grid grid-cols-2 gap-4">
- <div className="col-span-2 flex items-center gap-4 p-3 bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-600">
+ <div className="col-span-2 flex items-center gap-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-600">
  <label className="flex items-center gap-2 cursor-pointer">
  <input 
  type="checkbox"
@@ -775,7 +775,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.type}
  onChange={(e) => setNewTask({...newTask, type: e.target.value as any})}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
  >
  <option value={TaskType.REMINDER}>Lembrete</option>
  <option value={TaskType.MAINTENANCE}>Manutenção de Dispositivo</option>
@@ -817,7 +817,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  required={newTask.type === TaskType.MAINTENANCE && !isBatchMaintenance}
  value={newTask.deviceId || ''}
  onChange={(e) => setNewTask({...newTask, deviceId: e.target.value})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2.5 bg-slate-100 dark:bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione o dispositivo...</option>
  {devices.filter(d => d.status !== DeviceStatus.RETIRED).map(device => (
@@ -845,7 +845,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  setSelectedDeviceIds(filtered.map(d => d.id));
  }
  }}
- className="w-full p-2 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="All">Todos os Tipos</option>
  {assetTypes.map(type => (
@@ -864,7 +864,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </div>
 
- <div className="max-h-40 overflow-y-auto p-3 bg-slate-800/50 border border-amber-900/40 rounded-xl space-y-2">
+ <div className="max-h-40 overflow-y-auto p-3 bg-slate-100 dark:bg-slate-800/50 border border-amber-900/40 rounded-xl space-y-2">
  {devices
  .filter(d => d.status !== DeviceStatus.RETIRED)
  .filter(d => assetTypeFilter === 'All' || models.find(m => m.id === d.modelId)?.typeId === assetTypeFilter)
@@ -882,7 +882,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  }}
  className="w-3.5 h-3.5 rounded focus:ring-amber-500"
  />
- <span className="text-[11px] font-bold text-slate-200">
+ <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200">
  {getDeviceName(device.id)}
  </span>
  </label>
@@ -900,7 +900,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.maintenanceType}
  onChange={(e) => setNewTask({...newTask, maintenanceType: e.target.value as any})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2.5 bg-slate-100 dark:bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value={MaintenanceType.PREVENTIVE}>Preventiva</option>
  <option value={MaintenanceType.CORRECTIVE}>Corretiva</option>
@@ -916,7 +916,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  min="0"
  value={newTask.maintenanceCost || 0}
  onChange={(e) => setNewTask({...newTask, maintenanceCost: parseFloat(e.target.value)})}
- className="w-full p-2.5 bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2.5 bg-slate-100 dark:bg-slate-800 border border-amber-900/60 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="0,00"
  />
  </div>
@@ -931,7 +931,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  type="date"
  value={newTask.dueDate}
  onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white disabled:opacity-50"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white disabled:opacity-50"
  />
  </div>
 
@@ -954,7 +954,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  intervalMonths: undefined
  }
  })}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value={RecurrenceType.MONTHLY_DAY}>Mensal (Dia Fixo)</option>
  <option value={RecurrenceType.MONTHLY_WEEKDAY}>Mensal (Dia da Semana)</option>
@@ -969,7 +969,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  type="number"min="1"max="31"
  value={newTask.recurrenceConfig.dayOfMonth || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, dayOfMonth: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="1-31"
  />
  </div>
@@ -982,7 +982,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.recurrenceConfig.weekOfMonth || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, weekOfMonth: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione...</option>
  <option value="1">Primeira</option>
@@ -997,7 +997,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.recurrenceConfig.dayOfWeek || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, dayOfWeek: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  >
  <option value="">Selecione...</option>
  <option value="1">Segunda-feira</option>
@@ -1019,7 +1019,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  type="number"min="1"
  value={newTask.recurrenceConfig.intervalMonths || ''}
  onChange={(e) => setNewTask({...newTask, recurrenceConfig: {...newTask.recurrenceConfig!, intervalMonths: parseInt(e.target.value)}})}
- className="w-full p-2 bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
+ className="w-full p-2 bg-slate-100 dark:bg-slate-800 border border-indigo-900/60 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none"
  placeholder="Ex: 3"
  />
  </div>
@@ -1033,7 +1033,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={newTask.assignedTo}
  onChange={(e) => setNewTask({...newTask, assignedTo: e.target.value})}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold"
  >
  <option value="">Geral (Todos)</option>
  {systemUsers.map(u => (
@@ -1043,11 +1043,11 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  </div>
  </div>
 
- <div className="p-6 bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3 shrink-0">
+ <div className="p-6 bg-slate-100 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3 shrink-0">
  <button 
  type="button"
  onClick={() => setIsAdding(false)}
- className="flex-1 py-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
+ className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
  >
  Cancelar
  </button>
@@ -1110,7 +1110,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
  <button 
  onClick={() => setSelectedTasksIds([])}
- className="ml-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full hover:text-white transition-colors"
+ className="ml-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full hover:text-slate-900 dark:text-white transition-colors"
  >
  <XCircle size={20} />
  </button>
@@ -1128,7 +1128,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  exit={{ opacity: 0, scale: 0.95 }}
  className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md overflow-hidden"
  >
- <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-800/50">
+ <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 bg-slate-100 dark:bg-slate-800/50">
  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
  {bulkActionType === 'status' ? 'Alterar Status em Lote' : 'Alterar Responsável em Lote'}
  </h2>
@@ -1153,7 +1153,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  className={`p-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
  bulkValue === status 
  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-200 shadow-none' 
- : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-300'
+ : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-300'
  }`}
  >
  {status === TaskStatus.PENDING ? 'Pendente' :
@@ -1169,7 +1169,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  <select 
  value={bulkValue}
  onChange={(e) => setBulkValue(e.target.value)}
- className="w-full p-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-white font-bold"
+ className="w-full p-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white font-bold"
  >
  <option value="">Selecione o responsável...</option>
  <option value="Geral">Geral (Todos)</option>
@@ -1181,10 +1181,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
  )}
  </div>
 
- <div className="p-6 bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3">
+ <div className="p-6 bg-slate-100 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-3">
  <button 
  onClick={() => setIsBulkActionOpen(false)}
- className="flex-1 py-3 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
+ className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all"
  >
  Cancelar
  </button>

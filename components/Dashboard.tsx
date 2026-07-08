@@ -25,7 +25,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
     onClick={onClick}
   >
     <div className="flex items-start justify-between mb-4 z-10">
-      <div className={`p-3 rounded-xl ${color} bg-opacity-20 text-white shadow-lg group-hover:scale-110 transition-transform`}>
+      <div className={`p-3 rounded-xl ${color} bg-opacity-20 text-slate-900 dark:text-white shadow-lg group-hover:scale-110 transition-transform`}>
         <Icon className="w-6 h-6" />
       </div>
       {trend && (
@@ -36,7 +36,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
       )}
     </div>
     <div className="z-10">
-      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-400 dark:text-slate-500/80">{title}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400/80">{title}</p>
       <div className="flex items-baseline gap-2">
         <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{value}</h3>
       </div>
@@ -653,7 +653,7 @@ const Dashboard = () => {
             {devicesByType.map(([type, stats]) => (
               <div key={type} className="flex flex-col gap-1 border-b border-slate-200 dark:border-slate-700/50 pb-2 last:border-0">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-200">{type}</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">{type}</span>
                   <span className="text-slate-600 dark:text-slate-400">{stats.total} total</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] font-medium">
@@ -742,7 +742,7 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsExpedienteExpanded(!isExpedienteExpanded)}
-                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
                         >
                           {isExpedienteExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
@@ -757,7 +757,7 @@ const Dashboard = () => {
                           const now = new Date();
                           const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
                           return (
-                            <div key={alert.codigo} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
+                            <div key={alert.codigo} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-600 dark:text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
@@ -765,7 +765,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <p className="text-sm font-bold text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
                                       <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
                                         {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
                                       </span>
@@ -862,7 +862,7 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsConsumablesExpanded(!isConsumablesExpanded)}
-                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
                         >
                           {isConsumablesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
@@ -873,13 +873,13 @@ const Dashboard = () => {
                       
                       <div className={`space-y-3 transition-all duration-300 ${isConsumablesExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
                         {consumableAlerts.map(item => (
-                          <div key={item.id} className="bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex flex-col gap-2 group hover:border-amber-700 transition-all">
+                          <div key={item.id} className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex flex-col gap-2 group hover:border-amber-700 transition-all">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 flex-1">
                                 <div className={`w-2 h-2 rounded-full shrink-0 ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
                                 <div className="flex-1 flex items-center justify-between min-w-0">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-200 truncate" title={item.name}>{item.name}</p>
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={item.name}>{item.name}</p>
                                     <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
                                       {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
                                     </span>
@@ -939,7 +939,7 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsTermsExpanded(!isTermsExpanded)}
-                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
                         >
                           {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
@@ -952,7 +952,7 @@ const Dashboard = () => {
                         {pendingTerms.slice(0, isTermsExpanded ? pendingTerms.length : 5).map(({term, user}) => {
                           const isWaitingApproval = term.signatureStatus === 'WAITING_APPROVAL';
                           return (
-                            <div key={term.id} className={`bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-300 dark:border-sky-700/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
+                            <div key={term.id} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-300 dark:border-sky-700/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
                                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isWaitingApproval ? 'bg-blue-600 text-white shadow-lg' : 'bg-orange-900/40 text-orange-400'}`}>
@@ -960,7 +960,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
                                       {isWaitingApproval ? (
                                         <span className="bg-blue-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-500/30">
                                           Assinado (Validar)
@@ -1004,7 +1004,7 @@ const Dashboard = () => {
                           );
                         })}
                         {pendingTerms.length > 5 && !isTermsExpanded && (
-                          <button onClick={() => setIsTermsExpanded(true)} className="w-full py-2 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest hover:text-slate-700 dark:text-slate-300 transition-colors">
+                          <button onClick={() => setIsTermsExpanded(true)} className="w-full py-2 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest hover:text-slate-700 dark:text-slate-300 transition-colors">
                             Ver mais {pendingTerms.length - 5} pendências
                           </button>
                         )}
@@ -1031,7 +1031,7 @@ const Dashboard = () => {
                         </h3>
                         <button 
                           onClick={() => setIsValidationExpanded(!isValidationExpanded)}
-                          className="text-slate-600 dark:text-slate-400 hover:text-slate-200 transition-colors"
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
                         >
                           {isValidationExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
@@ -1042,7 +1042,7 @@ const Dashboard = () => {
                       
                       <div className={`space-y-3 transition-all duration-300 ${isValidationExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[220px] overflow-hidden'}`}>
                         {pendingApprovalSignatures.map(({term, user}) => (
-                            <div key={term.id} className="bg-slate-800/50 p-3 rounded-lg border border-blue-300 dark:border-sky-700/30 flex flex-col gap-2 group hover:border-blue-700 transition-all">
+                            <div key={term.id} className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border border-blue-300 dark:border-sky-700/30 flex flex-col gap-2 group hover:border-blue-700 transition-all">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
                                   <div className="w-8 h-8 rounded-full bg-blue-900/40 flex items-center justify-center font-bold text-xs shrink-0 text-blue-600 dark:text-sky-400">
@@ -1050,7 +1050,7 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <p className="text-sm font-bold text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
+                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
                                       <span className="bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 animate-pulse">
                                         Validar
                                       </span>
@@ -1083,7 +1083,7 @@ const Dashboard = () => {
 
           {/* Quick Actions / Shortcuts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-lg shadow-blue-900/20 text-white relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-lg shadow-blue-900/20 text-slate-900 dark:text-white relative overflow-hidden group">
               <div className="relative z-10">
                 <h3 className="text-lg font-black uppercase tracking-widest mb-2">Novo Empréstimo</h3>
                 <p className="text-sm text-blue-100 mb-6 opacity-80">Atribua um dispositivo ou acessório a um colaborador agora.</p>
@@ -1094,10 +1094,10 @@ const Dashboard = () => {
                   Iniciar Checkout
                 </button>
               </div>
-              <Smartphone className="absolute -bottom-4 -right-4 w-32 h-32 text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+              <Smartphone className="absolute -bottom-4 -right-4 w-32 h-32 text-slate-900 dark:text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-500" />
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-300 dark:border-slate-600 text-white relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white relative overflow-hidden group">
               <div className="relative z-10">
                 <h3 className="text-lg font-black uppercase tracking-widest mb-2">Relatórios</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 font-medium">Acesse dados financeiros, consumo e inventário completo.</p>
@@ -1108,7 +1108,7 @@ const Dashboard = () => {
                   Ver Relatórios
                 </button>
               </div>
-              <FileText className="absolute -bottom-4 -right-4 w-32 h-32 text-white/5 -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+              <FileText className="absolute -bottom-4 -right-4 w-32 h-32 text-slate-900 dark:text-white/5 -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
             </div>
           </div>
         </div>
@@ -1158,10 +1158,10 @@ const Dashboard = () => {
               Esta ação será registrada nos logs de auditoria.
             </p>
             <div className="mb-6">
-              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Motivo da Resolução</label>
+              <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Motivo da Resolução</label>
               <textarea
                 rows={4}
-                className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white placeholder-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="Descreva por que este termo está sendo resolvido sem anexo..."
                 value={resolveReason}
                 onChange={(e) => setResolveReason(e.target.value)}
@@ -1208,17 +1208,17 @@ const Dashboard = () => {
             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
                 <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Ajuste de Expediente</h2>
-                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mt-1 uppercase tracking-tighter">{editingExpediente.nome}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1 uppercase tracking-tighter">{editingExpediente.nome}</p>
               </div>
-              <button onClick={() => setEditingExpediente(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400 dark:text-slate-500 hover:text-slate-200">
+              <button onClick={() => setEditingExpediente(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200">
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Motivo / Observação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Motivo / Observação</label>
                 <textarea 
-                  className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white placeholder-slate-600"
+                  className="w-full p-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white placeholder-slate-600"
                   rows={3}
                   placeholder="Ex: Férias, Licença Médica, etc."
                   value={editingExpediente.observation}
@@ -1226,10 +1226,10 @@ const Dashboard = () => {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Data para Reativação</label>
+                <label className="block text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Data para Reativação</label>
                 <input 
                   type="date"
-                  className="w-full p-4 bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
+                  className="w-full p-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white"
                   value={editingExpediente.reactivationDate}
                   onChange={e => setEditingExpediente({...editingExpediente, reactivationDate: e.target.value})}
                 />
@@ -1265,15 +1265,15 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
             <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
-              <h3 className="text-lg font-bold text-white uppercase tracking-tight">Detalhes do Colaborador</h3>
-              <button onClick={() => setSelectedUserForModal(null)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Detalhes do Colaborador</h3>
+              <button onClick={() => setSelectedUserForModal(null)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-slate-900 dark:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
             </div>
 
             <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
               <button type="button" onClick={() => setActiveModalTab('DATA')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'DATA' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Dados Cadastrais</button>
-              <button type="button" onClick={() => setActiveModalTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'ASSETS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
-              <button type="button" onClick={() => setActiveModalTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'LICENSES' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
-              <button type="button" onClick={() => setActiveModalTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'TERMS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Termos Gerados <span className="bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('ASSETS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'ASSETS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Ativos em Posse <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{(userDevices.length + userSims.length)}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('LICENSES')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'LICENSES' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Licenças e Contas <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{userAccounts.length}</span></button>
+              <button type="button" onClick={() => setActiveModalTab('TERMS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeModalTab === 'TERMS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Termos Gerados <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[11px] font-bold">{currentUserTerms.length}</span></button>
               <button type="button" onClick={() => setActiveModalTab('LOGS')} className={`px-6 py-4 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${activeModalTab === 'LOGS' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-700 dark:text-slate-300'}`}>Histórico</button>
             </div>
 
@@ -1286,46 +1286,46 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Nome Completo</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.fullName || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Nome Completo</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.fullName || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">CPF</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.cpf || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">CPF</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.cpf || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">RG</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.rg || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">RG</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.rg || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">PIS / PASEP</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.pis || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">PIS / PASEP</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-mono outline-none" value={selectedUserForModal.pis || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">E-mail Corporativo</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white outline-none" value={selectedUserForModal.email || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">E-mail Corporativo</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white outline-none" value={selectedUserForModal.email || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Cargo / Setor Atual</label>
-                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.sectorId || ''}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Cargo / Setor Atual</label>
+                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.sectorId || ''}>
                         <option value="">Selecione um cargo...</option>
                         {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Código Interno</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.internalCode || ''} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Código Interno</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.internalCode || ''} />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Status do Colaborador</label>
-                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.active ? 'active' : 'inactive'}>
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Status do Colaborador</label>
+                      <select disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.active ? 'active' : 'inactive'}>
                         <option value="active">Ativo</option>
                         <option value="inactive">Inativo</option>
                       </select>
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-400 dark:text-slate-500/80">Endereço Residencial</label>
-                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.address || 'Não cadastrado'} />
+                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Endereço Residencial</label>
+                      <input disabled className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold outline-none" value={selectedUserForModal.address || 'Não cadastrado'} />
                     </div>
                   </div>
                 </div>
@@ -1334,7 +1334,7 @@ const Dashboard = () => {
               {activeModalTab === 'ASSETS' && (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80 mb-4 flex items-center gap-2"><Smartphone size={14} className="text-emerald-500" /> Dispositivos e Periféricos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userDevices.map(d => {
                         const m = models.find(mod => mod.id === d.modelId);
@@ -1358,17 +1358,17 @@ const Dashboard = () => {
                                 <div className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-tight truncate">{m?.name || 'Aparelho'}</div>
                                 {isSharedResponsible && <span className="text-[11px] font-bold bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/30 uppercase">Compartilhado</span>}
                               </div>
-                              <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
+                              <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-2">TAG: {d.assetTag || 'N/A'} <span className="h-1 w-1 bg-slate-700 rounded-full"/> S/N: {d.serialNumber || 'N/A'}</div>
                               <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-1">{d.imei ? `IMEI: ${d.imei}` : ''}</div>
                             </div>
                           </div>
                         );
                       })}
-                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhum dispositivo em posse</p></div>}
+                      {userDevices.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Smartphone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nenhum dispositivo em posse</p></div>}
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2"><Briefcase size={14} className="text-blue-500" /> Linhas Móveis (Chips)</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {userSims.map(sim => (
                         <div 
@@ -1381,12 +1381,12 @@ const Dashboard = () => {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">{sim.phoneNumber}</div>
-                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase">{(sim as any).assetTag ? `Sim Card: ${(sim as any).assetTag}` : 'Sim Card S/N'}</div>
+                            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">{(sim as any).assetTag ? `Sim Card: ${(sim as any).assetTag}` : 'Sim Card S/N'}</div>
                             <div className="mt-1"><span className="text-[11px] font-black bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded uppercase tracking-wider">Ativa</span></div>
                           </div>
                         </div>
                       ))}
-                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nenhuma linha associada</p></div>}
+                      {userSims.length === 0 && <div className="md:col-span-2 text-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl"><Phone className="mx-auto text-slate-700 mb-2" size={32}/><p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nenhuma linha associada</p></div>}
                     </div>
                   </div>
                 </div>
@@ -1406,14 +1406,14 @@ const Dashboard = () => {
                             <div className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate max-w-[250px] mb-1">{acc.login}</div>
                             {acc.password && (
                               <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                <Key size={12} className="text-slate-400 dark:text-slate-500"/>
+                                <Key size={12} className="text-slate-500 dark:text-slate-400"/>
                                 <span className="text-[10px] font-mono font-bold tracking-widest text-slate-700 dark:text-slate-300">
                                   {visiblePasswords[acc.id] ? acc.password : '••••••••'}
                                 </span>
                                 <button 
                                   type="button"
                                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setVisiblePasswords(prev => ({ ...prev, [acc.id]: !prev[acc.id] })); }}
-                                  className="text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:text-emerald-400 p-0.5 ml-1 transition-colors"
+                                  className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:text-emerald-400 p-0.5 ml-1 transition-colors"
                                   title={visiblePasswords[acc.id] ? "Ocultar Senha" : "Mostrar Senha"}
                                 >
                                   {visiblePasswords[acc.id] ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -1430,7 +1430,7 @@ const Dashboard = () => {
                                       showToast('Erro ao copiar senha', 'error');
                                     }
                                   }}
-                                  className="text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:text-sky-400 p-0.5 transition-colors"
+                                  className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 p-0.5 transition-colors"
                                   title="Copiar Senha"
                                 >
                                   <Copy size={11} />
@@ -1441,12 +1441,12 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center gap-6">
                            <div className="text-right">
-                              <div className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Status da Conta</div>
+                              <div className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Status da Conta</div>
                               <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">Ativa</span>
                            </div>
                            <button 
                              onClick={() => { setSelectedUserForModal(null); navigate(`/accounts?accountId=${acc.id}`); }}
-                             className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-colors border border-slate-200 dark:border-slate-700"
+                             className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-slate-900 dark:text-white transition-colors border border-slate-200 dark:border-slate-700"
                            >
                              <ExternalLink size={16} />
                            </button>
@@ -1475,7 +1475,7 @@ const Dashboard = () => {
                           </div>
                           <div>
                             <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{term.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
-                            <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase flex flex-col gap-0.5 mt-1">
+                            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase flex flex-col gap-0.5 mt-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-emerald-500/80">EMITIDO EM: {new Date(term.date).toLocaleDateString('pt-BR')}</span>
                               </div>
@@ -1527,7 +1527,7 @@ const Dashboard = () => {
                                 });
                               }} 
                               disabled={!!(term.fileUrl || term.hasFile)}
-                              className={`p-2 bg-white dark:bg-slate-800 rounded-lg transition-all border border-slate-200 dark:border-slate-700 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-400 dark:text-slate-500' : 'text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20'}`}
+                              className={`p-2 bg-white dark:bg-slate-800 rounded-lg transition-all border border-slate-200 dark:border-slate-700 ${term.fileUrl || term.hasFile ? 'opacity-30 cursor-not-allowed text-slate-500 dark:text-slate-400' : 'text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20'}`}
                             >
                               <Edit2 size={16} />
                             </button>
@@ -1547,7 +1547,7 @@ const Dashboard = () => {
                                  <button 
                                    type="button"
                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDownloadTerm(term); }}
-                                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-white transition-all border border-slate-200 dark:border-slate-700"
+                                   className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-slate-900 dark:text-white transition-all border border-slate-200 dark:border-slate-700"
                                    title="Gerar Termo"
                                  >
                                    <Download size={16} />
@@ -1587,7 +1587,7 @@ const Dashboard = () => {
                                         }
                                      } catch(err) { console.error(err); }
                                    }}
-                                   className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
+                                   className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
                                    title="Ver Evidências de Identidade (Doc + Selfie)"
                                  >
                                    <Camera size={14} className="text-blue-600 dark:text-sky-400" />
@@ -1639,7 +1639,7 @@ const Dashboard = () => {
 
               {activeModalTab === 'LOGS' && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                     {(() => {
                       const name = selectedUserForModal.fullName.toLowerCase().trim() || '';
                       const userLogs = logs.filter(l => {
@@ -1651,7 +1651,7 @@ const Dashboard = () => {
                                (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
                       });
                       return (
-                        <span className="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Total de Eventos: {userLogs.length}</span>
+                        <span className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest">Total de Eventos: {userLogs.length}</span>
                       );
                     })()}
                   </div>
@@ -1679,7 +1679,7 @@ const Dashboard = () => {
                       return userLogs.map(log => {
                         const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-600 dark:text-emerald-400' :
                                            log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-600 dark:text-sky-400' :
-                                           'bg-slate-800 text-slate-600 dark:text-slate-400';
+                                           'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
                         return (
                           <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-300 dark:border-slate-600 transition-all">
                             <div className="flex justify-between items-start">
@@ -1687,12 +1687,12 @@ const Dashboard = () => {
                                 <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
                                   {log.action}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
                             <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
-                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>
                           </div>
@@ -1713,8 +1713,8 @@ const Dashboard = () => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl overflow-hidden">
             <div className="p-8 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
-                <h3 className="text-lg font-bold text-white uppercase tracking-tight">Assinatura Eletrônica</h3>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Sincronização Ativa</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Assinatura Eletrônica</h3>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Sincronização Ativa</p>
               </div>
               <button onClick={() => setIsLinkModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
             </div>
@@ -1752,7 +1752,7 @@ const Dashboard = () => {
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">Motivo da Dispensa de Assinatura</label>
                 <textarea 
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-200 outline-none focus:border-orange-500 min-h-[120px] text-xs font-bold" 
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-700 dark:text-slate-200 outline-none focus:border-orange-500 min-h-[120px] text-xs font-bold" 
                   value={resolveManualReason} 
                   onChange={e => setResolveManualReason(e.target.value)} 
                   placeholder="Justifique o motivo de não coletar a assinatura deste termo (Ex: Colaborador desligado, extravio coberto por seguro, decisão da diretoria...)"
@@ -1773,8 +1773,8 @@ const Dashboard = () => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl overflow-hidden">
             <div className="p-8 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-white dark:bg-slate-800/50">
               <div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Gerenciar Termo</h3>
-                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Gerenciar Termo</h3>
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">ID: {editingTerm.id.toUpperCase()}</p>
               </div>
               <button onClick={() => setEditingTerm(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"><X size={20}/></button>
             </div>
@@ -1787,7 +1787,7 @@ const Dashboard = () => {
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Observações Detalhadas</label>
-                <textarea className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
+                <textarea className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-slate-700 dark:text-slate-200 outline-none focus:border-emerald-500 min-h-[100px] text-sm" value={termEditData.notes} onChange={e => setTermEditData({...termEditData, notes: e.target.value})} placeholder="Adicione notas sobre o estado dos itens ou observações do colaborador..."/>
               </div>
 
               <div>

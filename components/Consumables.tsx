@@ -335,11 +335,11 @@ const Consumables = () => {
             {/* NOVO CABEÇALHO PADRONIZADO */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors shadow-2xl relative z-30">
                 <div>
-                    <h2 className="text-2xl font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
                         <Package className="text-blue-500" size={28} />
                         Gestão de Consumíveis / Insumos
                     </h2>
-                    <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de estoque, toners, etiquetas e insumos técnicos</p>
+                    <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mt-1.5 opacity-80">Controle de estoque, toners, etiquetas e insumos técnicos</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner">
@@ -374,11 +374,11 @@ const Consumables = () => {
                             <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                                 <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
                                     <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
-                                    <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-white transition-colors"><X size={14}/></button>
+                                    <button onClick={() => setIsColumnSelectorOpen(false)} className="hover:text-slate-900 dark:text-white transition-colors"><X size={14}/></button>
                                 </div>
                                 <div className="p-2 space-y-1 bg-white dark:bg-slate-800/50">
                                     {COLUMN_OPTIONS.map(col => (
-                                        <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:text-slate-300'}`}>
+                                        <button key={col.id} onClick={() => toggleColumn(col.id)} className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${visibleColumns.includes(col.id) ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : ' hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}>
                                             {col.label}
                                             {visibleColumns.includes(col.id) && <Check size={14}/>}
                                         </button>
@@ -436,33 +436,33 @@ const Consumables = () => {
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/5">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 dark:bg-slate-900/20">
                     <div className="relative w-full sm:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400" size={18} />
                         <input 
                             type="text" 
                             placeholder="Buscar por nome ou categoria..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full border-none rounded-xl py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 bg-slate-50 dark:bg-slate-900 transition-colors text-sm"
+                            className="pl-10 w-full border-none rounded-xl py-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 transition-colors text-sm"
                         />
                     </div>
                 </div>
 
                 <div className="overflow-x-auto shadow-inner">
                     <table className="w-full text-left table-fixed border-collapse">
-                        <thead className="bg-slate-50 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-700">
+                        <thead className="bg-slate-50 dark:bg-slate-900/80 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
                             <tr>
                                 {visibleColumns.includes('Name') && <SortableResizableHeader label="Item" sortKey="Name" currentSort={sortConfig} requestSort={handleSort} minWidth="250px" width={columnWidths['Name']} onResize={(x, w) => handleResize('Name', x, w)} />}
                                 {visibleColumns.includes('CurrentStock') && <SortableResizableHeader label="Estoque Atual" sortKey="CurrentStock" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['CurrentStock']} onResize={(x, w) => handleResize('CurrentStock', x, w)} />}
                                 {visibleColumns.includes('MinStock') && <SortableResizableHeader label="Mínimo" sortKey="MinStock" currentSort={sortConfig} requestSort={handleSort} minWidth="100px" width={columnWidths['MinStock']} onResize={(x, w) => handleResize('MinStock', x, w)} />}
                                 {visibleColumns.includes('AvgDailyConsumption') && <SortableResizableHeader label="Consumo Médio (30d)" sortKey="AvgDailyConsumption" currentSort={sortConfig} requestSort={handleSort} minWidth="180px" width={columnWidths['AvgDailyConsumption']} onResize={(x, w) => handleResize('AvgDailyConsumption', x, w)} />}
                                 {visibleColumns.includes('EstimatedDaysLeft') && <SortableResizableHeader label="Duração Estimada" sortKey="EstimatedDaysLeft" currentSort={sortConfig} requestSort={handleSort} minWidth="150px" width={columnWidths['EstimatedDaysLeft']} onResize={(x, w) => handleResize('EstimatedDaysLeft', x, w)} />}
-                                <th className="px-6 py-4 text-right border-b border-slate-300 dark:border-slate-600 bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 align-middle" style={{ width: '180px', minWidth: '180px' }}>Ações</th>
+                                <th className="px-6 py-4 text-right border-b border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-[11px] uppercase font-bold tracking-wider text-slate-600 dark:text-slate-400/80 align-middle" style={{ width: '180px', minWidth: '180px' }}>Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/30 bg-white dark:bg-slate-800/50">
                             {filteredConsumables.length === 0 ? (
                                 <tr>
-                                    <td colSpan={visibleColumns.length + 1} className="p-12 text-center text-slate-400 dark:text-slate-500 font-bold italic">Nenhum consumível encontrado.</td>
+                                    <td colSpan={visibleColumns.length + 1} className="p-12 text-center text-slate-500 dark:text-slate-400 font-bold italic">Nenhum consumível encontrado.</td>
                                 </tr>
                             ) : (
                                 filteredConsumables.map(c => {
@@ -472,7 +472,7 @@ const Consumables = () => {
                                             {visibleColumns.includes('Name') && (
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 dark:text-sky-400 transition-colors">{c.Name}</div>
-                                                    <div className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider bg-slate-50 dark:bg-slate-900/50 w-fit px-2 py-0.5 rounded mt-1">{c.Category}</div>
+                                                    <div className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider bg-slate-50 dark:bg-slate-900/50 w-fit px-2 py-0.5 rounded mt-1">{c.Category}</div>
                                                 </td>
                                             )}
                                             {visibleColumns.includes('CurrentStock') && (
@@ -481,7 +481,7 @@ const Consumables = () => {
                                                         <span className={`font-black text-lg ${isLowStock ? 'text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                                             {c.CurrentStock}
                                                         </span>
-                                                        <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">{c.Unit}</span>
+                                                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">{c.Unit}</span>
                                                         {isLowStock && <div className="bg-red-900/20 p-1 rounded border border-red-800/30" title="Estoque Crítico"><AlertTriangle size={14} className="text-red-400 animate-pulse" /></div>}
                                                     </div>
                                                 </td>
@@ -514,7 +514,7 @@ const Consumables = () => {
                                                     <button onClick={() => openTransactionModal(c, 'OUT')} className="p-2 bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-700 hover:text-white rounded-xl transition-all border border-amber-800/30" title="Registrar Uso (Saída)">
                                                         <ArrowDown size={16} />
                                                     </button>
-                                                    <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                                                    <div className="w-px h-6 bg-slate-100 dark:bg-slate-800 mx-1"></div>
                                                     <button
                                                         onClick={() => toggleConsumableAlert(c.Id, c.Name)}
                                                         className={`p-2 rounded-xl transition-all border shadow-inner ${
@@ -552,32 +552,32 @@ const Consumables = () => {
                     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
                         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingConsumable ? 'Editar Consumível' : 'Novo Consumível'}</h2>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-200"><X size={20}/></button>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200"><X size={20}/></button>
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
                             <div>
                                 <label className={UI_LABEL_SMALL}>Nome / Descrição</label>
-                                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner HP 85A" />
+                                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner HP 85A" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={UI_LABEL_SMALL}>Categoria</label>
-                                    <input required type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner" />
+                                    <input required type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Toner" />
                                 </div>
                                 <div>
                                     <label className={UI_LABEL_SMALL}>Unidade</label>
-                                    <input required type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Unidade, Rolo" />
+                                    <input required type="text" value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" placeholder="Ex: Unidade, Rolo" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={UI_LABEL_SMALL}>Estoque Mínimo</label>
-                                    <input required type="number" min="0" value={formData.minStock} onChange={e => setFormData({...formData, minStock: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" />
+                                    <input required type="number" min="0" value={formData.minStock} onChange={e => setFormData({...formData, minStock: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" />
                                 </div>
                                 {!editingConsumable && (
                                     <div>
                                         <label className={UI_LABEL_SMALL}>Estoque Inicial</label>
-                                        <input required type="number" min="0" value={formData.currentStock} onChange={e => setFormData({...formData, currentStock: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" />
+                                        <input required type="number" min="0" value={formData.currentStock} onChange={e => setFormData({...formData, currentStock: parseInt(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" />
                                     </div>
                                 )}
                             </div>
@@ -599,13 +599,13 @@ const Consumables = () => {
                                 {transactionType === 'IN' ? <ArrowUpRight className="text-emerald-500"/> : <ArrowDownRight className="text-amber-500"/>}
                                 {transactionType === 'IN' ? 'Adicionar Estoque' : 'Registrar Uso'}
                             </h2>
-                            <button onClick={() => setIsTransactionModalOpen(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-200"><X size={20}/></button>
+                            <button onClick={() => setIsTransactionModalOpen(false)} className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200"><X size={20}/></button>
                         </div>
                         <form onSubmit={handleTransaction} className="p-6 space-y-4">
                             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 mb-4">
                                 <p className="text-sm text-slate-600 dark:text-slate-400">Item selecionado</p>
-                                <p className="font-bold text-slate-200">{transactionConsumable.Name}</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Estoque atual: {transactionConsumable.CurrentStock} {transactionConsumable.Unit}</p>
+                                <p className="font-bold text-slate-700 dark:text-slate-200">{transactionConsumable.Name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Estoque atual: {transactionConsumable.CurrentStock} {transactionConsumable.Unit}</p>
                             </div>
                               <div>
                                 <label className={UI_LABEL_SMALL}>Quantidade</label>
@@ -616,7 +616,7 @@ const Consumables = () => {
                                     max={transactionType === 'OUT' ? transactionConsumable.CurrentStock : undefined}
                                     value={transactionData.quantity} 
                                     onChange={e => setTransactionData({...transactionData, quantity: parseInt(e.target.value)})} 
-                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" 
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" 
                                 />
                                 {transactionType === 'OUT' && transactionData.quantity > transactionConsumable.CurrentStock && (
                                     <p className="text-xs text-red-400 mt-1">Quantidade maior que o estoque disponível.</p>
@@ -628,7 +628,7 @@ const Consumables = () => {
                                     type="text" 
                                     value={transactionData.notes} 
                                     onChange={e => setTransactionData({...transactionData, notes: e.target.value})} 
-                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:border-blue-500 outline-none" 
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-slate-700 dark:text-slate-200 focus:border-blue-500 outline-none" 
                                     placeholder={transactionType === 'IN' ? "Ex: Nota Fiscal 1234" : "Ex: Impressora RH"} 
                                 />
                             </div>
@@ -668,8 +668,8 @@ const Consumables = () => {
                                     .filter(t => t.consumableId === selectedConsumableForLogs.Id)
                                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                     .map(t => (
-                                        <div key={t.id} className="bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 flex items-start gap-4">
-                                            <div className={`p-2 rounded-xl ${t.type === 'IN' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                                        <div key={t.id} className="bg-slate-100 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 flex items-start gap-4">
+                                            <div className={`p-2 rounded-xl ${t.type === 'IN' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-red-500/20 text-rose-600 dark:text-red-400'}`}>
                                                 {t.type === 'IN' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -677,7 +677,7 @@ const Consumables = () => {
                                                     <p className="font-bold text-slate-900 dark:text-white">
                                                         {t.type === 'IN' ? 'Entrada' : 'Saída'} de {t.quantity} {selectedConsumableForLogs.Unit}
                                                     </p>
-                                                    <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                                         {new Date(t.date).toLocaleString('pt-BR')}
                                                     </span>
                                                 </div>
@@ -691,7 +691,7 @@ const Consumables = () => {
                                 {consumableTransactions.filter(t => t.consumableId === selectedConsumableForLogs.Id).length === 0 && (
                                     <div className="py-12 text-center">
                                         <History size={48} className="mx-auto text-slate-700 mb-4 opacity-20" />
-                                        <p className="text-slate-400 dark:text-slate-500 font-medium">Nenhum registro de movimentação encontrado.</p>
+                                        <p className="text-slate-500 dark:text-slate-400 font-medium">Nenhum registro de movimentação encontrado.</p>
                                     </div>
                                 )}
                             </div>

@@ -53,7 +53,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  <div 
  onClick={() => !disabled && setIsOpen(!isOpen)}
  className={`w-full p-3 border rounded-xl flex items-center justify-between transition-all
- ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-300 dark:border-slate-600'}
+ ${disabled ? 'bg-white dark:bg-slate-800 cursor-not-allowed border-slate-200 dark:border-slate-700 opacity-70' : 'bg-slate-100 dark:bg-slate-800 cursor-pointer hover:border-blue-400 border-slate-300 dark:border-slate-600'}
  ${isOpen ? 'ring-4 ring-blue-900/20 border-blue-500' : ''}
 `}
  >
@@ -74,7 +74,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  </div>
 
  {isOpen && !disabled && (
- <div className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-64 overflow-hidden flex flex-col animate-fade-in">
+ <div className="absolute z-50 mt-1 w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl max-h-64 overflow-hidden flex flex-col animate-fade-in">
  <div className="p-2 border-b border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 flex items-center gap-2 sticky top-0">
  <Search size={14} className="ml-2"/>
  <input 
@@ -407,11 +407,11 @@ const Operations = () => {
  <div className="h-24 w-24 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
  <CheckCircle size={48} />
  </div>
- <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Operação Realizada!</h2>
+ <h2 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-2">Operação Realizada!</h2>
  <p className="mb-10 font-medium">A movimentação foi registrada com sucesso no histórico de auditoria.</p>
  
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
- <button onClick={handlePrint} className="flex items-center justify-center gap-3 text-white py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:scale-105 active:scale-95">
+ <button onClick={handlePrint} className="flex items-center justify-center gap-3 text-slate-900 dark:text-white py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider transition-all hover:scale-105 active:scale-95">
  <Printer size={20}/> Imprimir Termo
  </button>
  {createdTermId && (
@@ -419,7 +419,7 @@ const Operations = () => {
    <Share2 size={20}/> {generatingLink ? 'Gerando...' : 'Link Assinatura Digital'}
   </button>
  )}
- <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-800 text-slate-700 dark:text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all">
+ <button onClick={resetProcess} className="flex items-center justify-center gap-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-4 px-6 rounded-2xl font-bold uppercase text-xs tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all">
    <ArrowLeft size={20}/> Nova Operação
   </button>
   </div>
@@ -433,11 +433,11 @@ const Operations = () => {
           <div className="h-12 w-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20">
             <Share2 size={24} />
           </div>
-          <button onClick={() => setIsLinkModalOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">
+          <button onClick={() => setIsLinkModalOpen(false)} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">
             <X size={20} />
           </button>
         </div>
-        <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Link de Assinatura Gerado</h3>
+        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Link de Assinatura Gerado</h3>
         <p className="text-slate-600 dark:text-slate-400 text-sm mb-8 font-medium">Compartilhe este link com o colaborador para que ele possa assinar o termo digitalmente.</p>
         <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 mb-6 group transition-all hover:border-emerald-500/30">
           <div className="flex items-center justify-between gap-4">
@@ -455,7 +455,7 @@ const Operations = () => {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-300 dark:border-slate-600/50">
+          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-300 dark:border-slate-600/50">
             <div className="flex gap-3 items-start">
               <div className="bg-blue-500/10 p-2 rounded-lg text-blue-600 dark:text-sky-400 shrink-0">
                 <Info size={16} />
@@ -465,7 +465,7 @@ const Operations = () => {
               </p>
             </div>
           </div>
-          <button onClick={() => setIsLinkModalOpen(false)} className="w-full py-4 bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
+          <button onClick={() => setIsLinkModalOpen(false)} className="w-full py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
             Fechar Janela
           </button>
         </div>
@@ -487,10 +487,10 @@ const Operations = () => {
 
  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700">
  <div className="flex bg-slate-50 dark:bg-slate-900 p-2 gap-2 transition-colors border-b border-slate-200 dark:border-slate-700">
- <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-200'}`}>
+ <button onClick={() => { setActiveTab('CHECKOUT'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKOUT' ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKOUT' ? 'rotate-0' : 'rotate-180'}/> Entrega
  </button>
- <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-200'}`}>
+ <button onClick={() => { setActiveTab('CHECKIN'); setSelectedAssetId(''); }} className={`flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-bold uppercase text-xs tracking-wider transition-all border ${activeTab === 'CHECKIN' ? 'bg-orange-600 text-white border-orange-500 shadow-lg shadow-orange-900/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:text-slate-200'}`}>
  <ArrowRightLeft size={18} className={activeTab === 'CHECKIN' ? 'rotate-180' : 'rotate-0'}/> Devolução
  </button>
  </div>
@@ -499,7 +499,7 @@ const Operations = () => {
  <div className="space-y-6">
  <div className="flex items-center gap-4">
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>1</div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">O que está sendo movimentado?</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">O que está sendo movimentado?</h3>
  </div>
 
  <div className="flex gap-4">
@@ -528,8 +528,8 @@ const Operations = () => {
  <div className="space-y-8 animate-fade-in">
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold`}>2</div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Quem está recebendo?</h3>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold`}>2</div>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quem está recebendo?</h3>
  </div>
  <SearchableDropdown 
  options={userOptions} 
@@ -547,17 +547,17 @@ const Operations = () => {
  {assetType === 'Device' && selectedAssetId && (
  <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-200 dark:border-slate-700">
  <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold">3</div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Acessórios Entregues</h3>
+ <div className="h-10 w-10 rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold">3</div>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Acessórios Entregues</h3>
  </div>
  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
  {accessoryTypes.map(acc => (
  <button 
  key={acc.id} 
  onClick={() => toggleAccessory(acc.id)}
- className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-100 dark:bg-sky-500/20 border-blue-500 text-blue-100 ' : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-100 dark:bg-sky-500/20 border-blue-500 text-blue-100 ' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
  >
- <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-white' : ' bg-slate-700 text-slate-700 dark:text-slate-300 '}`}>
+ <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-slate-900 dark:text-white' : ' bg-slate-700 text-slate-700 dark:text-slate-300 '}`}>
  {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
  </div>
  <span className="text-[11px] font-black uppercase truncate">{acc.name}</span>
@@ -575,7 +575,7 @@ const Operations = () => {
  <div className="space-y-6">
  <div className="flex items-center gap-4">
  <div className="h-10 w-10 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Quem está devolvendo?</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quem está devolvendo?</h3>
  </div>
  <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
  Como este é um ativo compartilhado, selecione qual colaborador está realizando a devolução:
@@ -585,7 +585,7 @@ const Operations = () => {
  <button 
  key={u.id}
  onClick={() => setReturningUserId(u.id)}
- className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
  >
  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${returningUserId === u.id ? ' bg-orange-900/40 text-orange-400' : ' bg-slate-700 '}`}>
  <UserIcon size={20}/>
@@ -606,7 +606,7 @@ const Operations = () => {
  <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold">
  {holders.length > 1 ? '3' : '2'}
  </div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Conferência de Devolução</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Conferência de Devolução</h3>
  </div>
  <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
  Marque os itens que foram devolvidos fisicamente pelo colaborador:
@@ -616,7 +616,7 @@ const Operations = () => {
  <button 
  key={item} 
  onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
- className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-slate-800 border-orange-500 text-orange-100' : 'bg-slate-100/50 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-70'}`}
+ className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-slate-100 dark:bg-slate-800 border-orange-500 text-orange-100' : 'bg-slate-100/50 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-70'}`}
  >
  <div className="flex items-center gap-3">
  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-900/50 text-orange-400' : ' bg-slate-700 '}`}>
@@ -637,7 +637,7 @@ const Operations = () => {
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-orange-600`}>
  {assetType === 'Device' ? (holders.length > 1 ? '4' : '3') : '2'}
  </div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Fluxo de Desligamento</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Fluxo de Desligamento</h3>
  </div>
  <button 
  onClick={() => setInactivateAfterReturn(!inactivateAfterReturn)}
@@ -645,7 +645,7 @@ const Operations = () => {
  ${inactivateAfterReturn ? 'border-red-500 bg-red-900/20 ' : ' border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-red-200'}`}
  >
  <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors
- ${inactivateAfterReturn ? ' bg-red-900/40 text-red-400' : ' bg-slate-800 group-hover:text-red-400'}`}>
+ ${inactivateAfterReturn ? ' bg-red-900/40 text-red-400' : ' bg-slate-100 dark:bg-slate-800 group-hover:text-red-400'}`}>
  <UserX size={24} />
  </div>
  <div className="flex-1">
@@ -669,10 +669,10 @@ const Operations = () => {
  <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>
  {activeTab === 'CHECKOUT' ? (assetType === 'Device' ? '4' : '3') : (assetType === 'Device' ? (holders.length > 1 ? '5' : '4') : '3')}
  </div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Observações Adicionais</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Observações Adicionais</h3>
  </div>
  <textarea 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
  rows={4} 
  placeholder="Descreva aqui qualquer detalhe importante (ex: tela riscada, entrega via motoboy, etc)..."
  value={notes}
@@ -686,7 +686,7 @@ const Operations = () => {
  <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold bg-red-600">
  {assetType === 'Device' ? (holders.length > 1 ? '6' : '5') : '4'}
  </div>
- <h3 className="text-lg font-bold text-white uppercase tracking-tight">Condição e Avarias</h3>
+ <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Condição e Avarias</h3>
  </div>
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -695,7 +695,7 @@ const Operations = () => {
  <select 
  value={condition} 
  onChange={e => setCondition(e.target.value)}
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all bg-slate-800 text-slate-900 dark:text-white"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
  >
  <option value="Perfeito">Perfeito Estado</option>
  <option value="Bom">Bom Estado (Marcas de Uso)</option>
@@ -748,7 +748,7 @@ const Operations = () => {
  <div className="space-y-2">
  <label className="text-xs font-bold uppercase tracking-wider">Descrição Detalhada do Dano / Ocorrência</label>
  <textarea 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
  rows={3} 
  placeholder="Descreva o dano físico (ex: tela trincada, carcaça amassada) ou detalhes do BO em caso de furto..."
  value={damageDescription}

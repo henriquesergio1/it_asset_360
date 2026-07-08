@@ -81,7 +81,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               {settings.logoUrl ? (
                   <img src={settings.logoUrl} alt="Logo" className={`${isSidebarCollapsed ? 'h-8' : 'h-14'} w-auto object-contain transition-all duration-300`} />
               ) : (
-                  <Cpu className={`text-white transition-all duration-300 ${isSidebarCollapsed ? 'h-6 w-6' : 'h-10 w-10'}`} />
+                  <Cpu className={`text-slate-900 dark:text-white transition-all duration-300 ${isSidebarCollapsed ? 'h-6 w-6' : 'h-10 w-10'}`} />
               )}
             </div>
             {!isSidebarCollapsed && (
@@ -93,7 +93,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               </div>
             )}
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-200 absolute top-4 right-4">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 absolute top-4 right-4">
             <X size={24} />
           </button>
         </div>
@@ -112,7 +112,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           
           {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'sistema_leitura')) && (
             <div className={`pt-4 mt-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'px-0' : ''}`}>
-               {!isSidebarCollapsed && <p className="px-6 text-[11px] text-slate-400 dark:text-slate-500/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
+               {!isSidebarCollapsed && <p className="px-6 text-[11px] text-slate-500 dark:text-slate-400/80 font-bold uppercase mb-2 animate-fade-in">Administrativo</p>}
                <SidebarLink to="/admin" icon={ShieldCheck} label="Administração" collapsed={isSidebarCollapsed} />
             </div>
           )}
@@ -139,7 +139,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white dark:bg-slate-800 z-40 h-16 flex items-center justify-between px-6 shrink-0 border-b border-slate-200 dark:border-slate-700">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-200">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200">
             <Menu size={24} />
           </button>
           
@@ -148,7 +148,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <NotificationCenter />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.name}</p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500/80">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-sky-500/20 flex items-center justify-center text-blue-600 dark:text-sky-400 font-bold border border-blue-200 dark:border-sky-500/30 shadow-inner">
               {user?.name.charAt(0)}
@@ -156,7 +156,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
         </header>
 
-        <main className={`flex-1 overflow-auto ${location.pathname === '/' ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-900'}`}>
+        <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
           <div className="max-w-[1850px] mx-auto w-full p-6">
             {children}
           </div>
