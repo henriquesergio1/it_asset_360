@@ -1168,7 +1168,11 @@ const Dashboard = () => {
                   const sectorName = sectors.find(s => s.id === printer.sectorId)?.name || 'Sem Setor';
 
                   return (
-                    <div key={printer.id} className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3 hover:border-blue-500/30 transition-all">
+                    <div 
+                      key={printer.id} 
+                      onClick={() => navigate(`/devices?deviceId=${printer.id}&tab=MONITOR`)}
+                      className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3 hover:border-blue-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
+                    >
                       <div>
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0 flex-1">
@@ -1195,7 +1199,7 @@ const Dashboard = () => {
                         </div>
                         <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                           <div 
-                            className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
+                            className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner === 100 ? 'bg-green-500' : displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
                             style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
                           ></div>
                         </div>

@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.48.1',
+    date: 'Hoje',
+    title: 'Monitoramento de Impressoras & Links Interativos',
+    changes: [
+      'Navegação: Clique no card de impressoras no Dashboard agora redireciona e abre automaticamente o modal do ativo com a aba Monitor focada.',
+      'Aprimoramento Visual: Barra de toner do dashboard configurada para ficar verde quando o nível atinge exatamente 100%.'
+    ]
+  },
+  {
     version: '3.48.0',
     date: 'Hoje',
     title: 'Monitoramento de Impressoras & Refinamento Zabbix',
