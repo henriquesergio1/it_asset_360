@@ -437,7 +437,25 @@ const AdminPanel = () => {
  }
  };
 
- const handleSettingsSubmit = (e: React.FormEvent) => {
+ const handleZabbixSubmit = async () => {
+    try {
+        setLoading(true);
+        const res = await fetch('/api/zabbix/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ zabbixUrl: settingsForm.zabbixUrl || '', zabbixToken: settingsForm.zabbixToken || '' })
+        });
+        if (!res.ok) throw new Error('Erro ao salvar no servidor');
+        updateSettings(settingsForm, currentUser?.name || 'Admin');
+        showToast("Configuração Zabbix salva!", "success");
+    } catch (e) {
+        showToast("Erro ao salvar Zabbix.", "error");
+    } finally {
+        setLoading(false);
+    }
+  };
+  
+  const handleSettingsSubmit = (e: React.FormEvent) => {
  e.preventDefault();
  try {
  updateSettings(settingsForm, currentUser?.name || 'Admin');
@@ -500,6 +518,7 @@ const AdminPanel = () => {
  <button onClick={() => setActiveTab('TEMPLATE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'TEMPLATE' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><FileText size={16} /> Editor de Termos</button>
  <button onClick={() => setActiveTab('LICENSE')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSE' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><ShieldCheck size={16} /> Licença</button>
  <button onClick={() => setActiveTab('LOGS')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'LOGS' ? 'border-blue-600 bg-blue-50/50 bg-blue-50 dark:bg-sky-500/20' : ' hover:text-slate-700 dark:text-slate-300'}`}><Activity size={16} /> Auditoria</button>
+                <button onClick={() => setActiveTab('ZABBIX')} className={`flex items-center gap-2 px-6 py-4 font-black uppercase text-[11px] tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'ZABBIX' ? 'border-blue-600 bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : 'text-slate-500 hover:text-slate-700 dark:text-slate-300 border-transparent'}`}><Monitor size={16} /> Zabbix</button>
  </div>
 
  <div className="p-1 animate-fade-in">
@@ -841,7 +860,54 @@ const AdminPanel = () => {
  </div>
  )}
 
- {activeTab === 'LOGS' && (
+ 
+            {activeTab === 'ZABBIX' && (
+                <div className="p-8 space-y-6">
+                    <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-700 pb-4 mb-8">
+                        <div className="h-12 w-12 bg-blue-50 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 border border-blue-800/30">
+                            <Monitor size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Integração Zabbix</h2>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Configure a conexão com seu servidor Zabbix para monitoramento de impressoras.</p>
+                        </div>
+                    </div>
+                    
+                    <div className="max-w-2xl bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">URL do Zabbix (API)</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
+                                    value={settingsForm.zabbixUrl || ''} 
+                                    onChange={e => setSettingsForm({...settingsForm, zabbixUrl: e.target.value})} 
+                                    placeholder="http://zabbix.suaempresa.local/zabbix" 
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Sem o /api_jsonrpc.php no final.</p>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">API Token</label>
+                                <input 
+                                    type="password" 
+                                    className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
+                                    value={settingsForm.zabbixToken || ''} 
+                                    onChange={e => setSettingsForm({...settingsForm, zabbixToken: e.target.value})} 
+                                    placeholder="Zabbix API Token" 
+                                />
+                            </div>
+                            <div className="pt-4 flex justify-end">
+                                <button onClick={handleZabbixSubmit} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                    Salvar Zabbix
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'LOGS' && (
  <div className="space-y-4 animate-fade-in">
  <div className="flex flex-col md:flex-row gap-4 mb-2">
  <div className="relative flex-1">

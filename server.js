@@ -247,7 +247,13 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Devices ADD DeviceImageBinary VARBINARY(MAX) NULL');
                     }
 
+                    
+                    const checkZabbix = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'ZabbixHostId'`);
+                    if (checkZabbix.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE Devices ADD ZabbixHostId NVARCHAR(255) NULL');
+                    }
                     const checkShared = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Devices' AND COLUMN_NAME = 'AdditionalUserIds'`);
+
                     if (checkShared.recordset.length === 0) {
                         console.log(`- Coluna AdditionalUserIds não encontrada em Devices. Adicionando...`);
                         await pool.request().query('ALTER TABLE Devices ADD AdditionalUserIds NVARCHAR(MAX) NULL');
@@ -258,6 +264,18 @@ async function initializeDatabase() {
                     if (checkLegacy.recordset.length > 0) {
                         console.log('- Removendo coluna legada PurchaseInvoiceUrl de Devices...');
                         await pool.request().query('ALTER TABLE Devices DROP COLUMN PurchaseInvoiceUrl');
+                    }
+                }
+                
+                
+                if (table === 'SystemSettings') {
+                    const checkZUrl = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'ZabbixUrl'`);
+                    if (checkZUrl.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE SystemSettings ADD ZabbixUrl NVARCHAR(MAX) NULL');
+                    }
+                    const checkZToken = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'ZabbixToken'`);
+                    if (checkZToken.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE SystemSettings ADD ZabbixToken NVARCHAR(MAX) NULL');
                     }
                 }
                 
@@ -718,7 +736,7 @@ app.get('/api/bootstrap', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
-            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires FROM SystemSettings"),
+            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
             pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
             pool.request().query("SELECT * FROM AssetTypes"),
@@ -738,7 +756,7 @@ app.get('/api/bootstrap', async (req, res) => {
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
             };
         }));
 
@@ -782,7 +800,7 @@ app.get('/api/sync', async (req, res) => {
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
             const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
             };
         }));
 
@@ -2581,6 +2599,68 @@ async function updateUserPendingStatus(pool, userId) {
                 ORDER BY t.Date DESC
             `);
             res.json(result.recordset);
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    
+    // --- ZABBIX INTEGRATION ---
+    app.get('/api/zabbix/config', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT TOP 1 ZabbixUrl, ZabbixToken FROM SystemSettings");
+            res.json(result.recordset[0] || {});
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/zabbix/config', async (req, res) => {
+        try {
+            const { zabbixUrl, zabbixToken } = req.body;
+            const pool = await sql.connect(dbConfig);
+            const check = await pool.request().query("SELECT COUNT(*) as count FROM SystemSettings");
+            if (check.recordset[0].count === 0) {
+                await pool.request()
+                    .input('url', sql.NVarChar, zabbixUrl)
+                    .input('token', sql.NVarChar, zabbixToken)
+                    .query("INSERT INTO SystemSettings (ZabbixUrl, ZabbixToken) VALUES (@url, @token)");
+            } else {
+                await pool.request()
+                    .input('url', sql.NVarChar, zabbixUrl)
+                    .input('token', sql.NVarChar, zabbixToken)
+                    .query("UPDATE SystemSettings SET ZabbixUrl=@url, ZabbixToken=@token");
+            }
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    // Helper proxy to Zabbix API
+    app.post('/api/zabbix/rpc', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const sys = await pool.request().query("SELECT TOP 1 ZabbixUrl, ZabbixToken FROM SystemSettings");
+            if (!sys.recordset[0] || !sys.recordset[0].ZabbixUrl || !sys.recordset[0].ZabbixToken) {
+                return res.status(400).json({ error: 'Zabbix não configurado' });
+            }
+            
+            const zabbixUrl = sys.recordset[0].ZabbixUrl.trim().replace(/\/$/, '') + '/api_jsonrpc.php';
+            const zabbixToken = sys.recordset[0].ZabbixToken.trim();
+            
+            const payload = req.body;
+            payload.auth = zabbixToken;
+            
+            const response = await fetch(zabbixUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            res.json(data);
         } catch (err) {
             res.status(500).send(err.message);
         }

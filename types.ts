@@ -111,6 +111,7 @@ export interface Device {
   previousStatus?: DeviceStatus;
   currentUserId?: string | null;
   additionalUserIds?: string[];
+  zabbixHostId?: string;
   internalCode?: string; 
   
   imei?: string;         
@@ -231,7 +232,9 @@ export interface SystemSettings {
   logoUrl: string;
   termTemplate?: string; 
   returnTermTemplate?: string; 
-  accentColor?: string; // NOVO: Cor de destaque do sistema
+  accentColor?: string;
+  zabbixUrl?: string;
+  zabbixToken?: string; // NOVO: Cor de destaque do sistema
   licenseKey?: string;
   licenseClient?: string;
   licenseExpires?: string;

@@ -1,3 +1,4 @@
+import { ZabbixMonitorTab } from './ZabbixMonitorTab';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -398,7 +399,7 @@ const DeviceManager = () => {
  const [isViewOnly, setIsViewOnly] = useState(false); 
  const [isModelSettingsOpen, setIsModelSettingsOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
- const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'LICENSES' | 'CUSTODY' | 'HISTORY'>('GENERAL');
+ const [activeTab, setActiveTab] = useState<'GENERAL' | 'FINANCIAL' | 'MAINTENANCE' | 'LICENSES' | 'CUSTODY' | 'HISTORY' | 'MONITOR'>('GENERAL');
  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
  const requestSort = (key: string) => {
@@ -1246,7 +1247,8 @@ const DeviceManager = () => {
  <button type="button"onClick={() => setActiveTab('MAINTENANCE')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap ${activeTab === 'MAINTENANCE' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Manutenções ({deviceMaintenances.length})</button>
  <button type="button"onClick={() => setActiveTab('LICENSES')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'LICENSES' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Licenças ({deviceAccounts.length})</button>
  <button type="button"onClick={() => setActiveTab('CUSTODY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'CUSTODY' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Cadeia de Custódia</button>
- <button type="button"onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Auditoria</button>
+ {formData.zabbixHostId && <button type="button" onClick={() => setActiveTab('MONITOR')} className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-b-4 transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === 'MONITOR' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}><Monitor size={16}/> Monitor</button>}
+<button type="button"onClick={() => setActiveTab('HISTORY')} className={`px-6 py-4 text-xs font-black uppercase border-b-4 transition-all whitespace-nowrap ${activeTab === 'HISTORY' ? 'border-blue-600 text-blue-600 dark:text-sky-400 bg-white dark:bg-slate-800 ' : 'border-transparent hover:text-slate-600 hover:text-slate-700 dark:text-slate-300'}`}>Auditoria</button>
  </div>
  <form id="devForm"onSubmit={handleDeviceSubmit} className="flex-1 flex flex-col overflow-hidden"><div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-800">{activeTab === 'GENERAL' && (<div className="grid grid-cols-1 md:grid-cols-2 gap-8">{isViewOnly && (<div className="md:col-span-2 bg-blue-50 dark:bg-sky-500/20 p-4 rounded-xl border border-blue-300 dark:border-sky-700/40 flex items-center gap-3"><Info className="text-blue-600 dark:text-sky-400"size={20}/><p className="text-xs font-bold text-blue-200">Modo de visualização. Clique no botão azul"Habilitar Edição"abaixo para editar os dados.</p></div>)}{editingId && (() => {
                   const primaryUser = formData.currentUserId ? users.find(u => u.id === formData.currentUserId) : null;
@@ -1346,7 +1348,7 @@ const DeviceManager = () => {
  placeholder="Destinar..."
  icon={<Briefcase size={18}/>}
  />
-</div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ID Pulsus</label><div className="flex gap-2"><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors flex-1"value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value.trim()})} placeholder="ID MDM"/>{formData.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank"rel="noopener noreferrer"className="p-3 bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl hover:bg-blue-900/60 transition-all flex items-center justify-center"title="Abrir MDM Pulsus"><ShieldCheck size={20}/></a>)}</div></div></div>{relevantFields.length > 0 && (<div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-100 dark:bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 transition-colors">{relevantFields.map(field => (<div key={field.id}><label className="block text-[10px] font-black uppercase mb-1 ml-1">{field.name}</label><input disabled={isViewOnly} className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/></div>))}</div>)}</div>)}
+</div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">ID Pulsus</label><div className="flex gap-2"><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors flex-1"value={formData.pulsusId || ''} onChange={e => setFormData({...formData, pulsusId: e.target.value.trim()})} placeholder="ID MDM"/>{formData.pulsusId && (<a href={`https://app.pulsus.mobi/devices/${formData.pulsusId}`} target="_blank"rel="noopener noreferrer"className="p-3 bg-blue-900/40 text-blue-600 dark:text-sky-400 rounded-xl hover:bg-blue-900/60 transition-all flex items-center justify-center"title="Abrir MDM Pulsus"><ShieldCheck size={20}/></a>)}</div></div><div><label className="block text-[10px] font-black uppercase mb-1 ml-1 tracking-widest">Zabbix Host ID</label><div className="flex gap-2"><input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white transition-colors flex-1"value={formData.zabbixHostId || ''} onChange={e => setFormData({...formData, zabbixHostId: e.target.value.trim()})} placeholder="Zabbix Host ID"/></div></div></div>{relevantFields.length > 0 && (<div className="md:col-span-2 grid grid-cols-2 md:grid-cols-3 gap-6 p-6 bg-slate-100 dark:bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 transition-colors">{relevantFields.map(field => (<div key={field.id}><label className="block text-[10px] font-black uppercase mb-1 ml-1">{field.name}</label><input disabled={isViewOnly} className="w-full border-2 border-slate-300 dark:border-slate-600 rounded-xl p-2.5 text-sm focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"value={formData.customData?.[field.id] || ''} onChange={e => setFormData({...formData, customData: {...formData.customData, [field.id]: e.target.value}})}/></div>))}</div>)}</div>)}
  {activeTab === 'FINANCIAL' && (
  <div className="space-y-8 animate-fade-in">
  {/* LCC Dashboard Section */}
@@ -1699,7 +1701,13 @@ const DeviceManager = () => {
       </div>
     )}
  {activeTab === 'CUSTODY' && (<PossessionHistory deviceId={editingId || ''} />)}
- {activeTab === 'HISTORY' && (
+ 
+{activeTab === 'MONITOR' && formData.zabbixHostId && (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
+        <ZabbixMonitorTab zabbixHostId={formData.zabbixHostId} />
+    </div>
+)}
+{activeTab === 'HISTORY' && (
  <div className="relative border-l-4 border-slate-200 dark:border-slate-700 ml-4 space-y-8 py-4 animate-fade-in">
  {historyLoading ? (
  <div className="text-center py-8"><Loader2 className="animate-spin inline-block mr-2"size={20}/> Carregando histórico...</div>
