@@ -376,6 +376,7 @@ const AdminPanel = () => {
  });
  const [isTestingConnection, setIsTestingConnection] = useState(false);
  const [isPasswordModified, setIsPasswordModified] = useState(false);
+  const [isSavingZabbix, setIsSavingZabbix] = useState(false);
 
  useEffect(() => {
  setSettingsForm(settings);
@@ -439,7 +440,7 @@ const AdminPanel = () => {
 
  const handleZabbixSubmit = async () => {
     try {
-        setLoading(true);
+        setIsSavingZabbix(true);
         const res = await fetch('/api/zabbix/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -451,7 +452,7 @@ const AdminPanel = () => {
     } catch (e) {
         showToast("Erro ao salvar Zabbix.", "error");
     } finally {
-        setLoading(false);
+        setIsSavingZabbix(false);
     }
   };
   
@@ -897,8 +898,8 @@ const AdminPanel = () => {
                                 />
                             </div>
                             <div className="pt-4 flex justify-end">
-                                <button onClick={handleZabbixSubmit} disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
-                                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                <button onClick={handleZabbixSubmit} disabled={isSavingZabbix} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
+                                    {isSavingZabbix ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     Salvar Zabbix
                                 </button>
                             </div>
