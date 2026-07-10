@@ -5,7 +5,7 @@ import {
   Smartphone, Users, AlertTriangle, FileWarning, ArrowRight, Lock, 
   ChevronDown, ChevronUp, DollarSign, Wrench, AlertCircle, FileText, 
   Info, Clock, X, ClipboardList, ChevronRight, Package, TrendingUp, 
-  Activity, CheckCircle2, LayoutDashboard, FileSignature, Edit2, Trash2,
+  Activity, CheckCircle2, LayoutDashboard, FileSignature, Edit2, Trash2, Printer,
   Eye, Download, Share2, Camera, CheckSquare, Upload, Copy, RefreshCw, Check,
   Briefcase, Phone, Mail, Key, EyeOff, ExternalLink, History, User as UserIcon
 } from 'lucide-react';
@@ -92,6 +92,56 @@ const Dashboard = () => {
   const [resolvingManualTerm, setResolvingManualTerm] = useState<any | null>(null);
   const [resolveManualReason, setResolveManualReason] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+
+  const [printersData, setPrintersData] = useState<Record<string, any>>({});
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
+
+  const printers = useMemo(() => {
+    return (devices || []).filter(d => d.zabbixHostId && d.zabbixHostId.trim() !== '');
+  }, [devices]);
+
+  const fetchPrintersZabbixData = async () => {
+    const validHostIds = printers.map(p => p.zabbixHostId).filter(Boolean);
+    if (validHostIds.length === 0) return;
+    try {
+      setLoadingPrinters(true);
+      const res = await fetch('/api/zabbix/rpc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "item.get",
+          params: {
+            output: ["name", "key_", "lastvalue", "units", "hostid"],
+            hostids: validHostIds,
+          },
+          id: 1
+        })
+      });
+      if (!res.ok) throw new Error("Erro de comunicação");
+      const json = await res.json();
+      if (json.result) {
+        const grouped: Record<string, any[]> = {};
+        json.result.forEach((item: any) => {
+          if (!grouped[item.hostid]) {
+            grouped[item.hostid] = [];
+          }
+          grouped[item.hostid].push(item);
+        });
+        setPrintersData(grouped);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar dados das impressoras no Zabbix:", err);
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
+
+  useEffect(() => {
+    if (printers.length > 0) {
+      fetchPrintersZabbixData();
+    }
+  }, [devices]);
 
   useEffect(() => {
     fetchExpedienteAlerts();
@@ -1081,35 +1131,80 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Quick Actions / Shortcuts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-2xl shadow-lg shadow-blue-900/20 text-slate-900 dark:text-white relative overflow-hidden group">
-              <div className="relative z-10">
-                <h3 className="text-lg font-black uppercase tracking-widest mb-2">Novo Empréstimo</h3>
-                <p className="text-sm text-blue-100 mb-6 opacity-80">Atribua um dispositivo ou acessório a um colaborador agora.</p>
-                <button 
-                  onClick={() => navigate('/operations')}
-                  className={`px-6 py-2 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-white/10 ${UI_BUTTON_SECONDARY} !bg-white !text-blue-700 !border-white hover:!bg-blue-50`}
-                >
-                  Iniciar Checkout
-                </button>
+          {/* Monitoramento de Impressoras (Zabbix) */}
+          <div className="bg-white dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <Printer className="text-blue-500 w-5 h-5" />
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white">Monitoramento de Impressoras</h3>
               </div>
-              <Smartphone className="absolute -bottom-4 -right-4 w-32 h-32 text-slate-900 dark:text-white/10 rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+              <button 
+                onClick={fetchPrintersZabbixData} 
+                disabled={loadingPrinters}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-500 hover:text-blue-500 flex items-center gap-1.5 text-xs font-bold"
+                title="Sincronizar Zabbix"
+              >
+                <RefreshCw size={14} className={loadingPrinters ? 'animate-spin' : ''} />
+                <span className="text-[10px] uppercase tracking-wider font-black">Sincronizar</span>
+              </button>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white relative overflow-hidden group">
-              <div className="relative z-10">
-                <h3 className="text-lg font-black uppercase tracking-widest mb-2">Relatórios</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 font-medium">Acesse dados financeiros, consumo e inventário completo.</p>
-                <button 
-                  onClick={() => navigate('/reports')}
-                  className={`px-6 py-2 rounded-xl text-sm transition-all active:scale-95 ${UI_BUTTON_SECONDARY}`}
-                >
-                  Ver Relatórios
-                </button>
+            {printers.length === 0 ? (
+              <div className="text-center py-6 text-slate-500 dark:text-slate-400 text-xs font-medium italic">
+                Nenhuma impressora monitorada por Zabbix encontrada no inventário.
               </div>
-              <FileText className="absolute -bottom-4 -right-4 w-32 h-32 text-slate-900 dark:text-white/5 -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
-            </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {printers.map(printer => {
+                  const hostItems = printersData[printer.zabbixHostId || ''] || [];
+                  const tonerItem = hostItems.find((i: any) => i.name.toLowerCase().includes('toner level')) || hostItems.find((i: any) => i.name.toLowerCase().includes('toner') && !isNaN(parseFloat(i.lastvalue)) && i.units === '%');
+                  const tonerVal = tonerItem ? parseFloat(tonerItem.lastvalue) : null;
+                  const displayToner = tonerVal !== null && !isNaN(tonerVal) ? Math.max(0, Math.min(100, tonerVal)) : null;
+
+                  const icmpItem = hostItems.find((i: any) => i.name.toLowerCase().includes('icmp ping') || i.key_.toLowerCase().includes('icmp.ping') || i.name.toLowerCase().includes('icmp: icmp ping'));
+                  const isOnline = icmpItem ? (String(icmpItem.lastvalue).toLowerCase() === '1' || String(icmpItem.lastvalue).toLowerCase().includes('up') || String(icmpItem.lastvalue).toLowerCase().includes('1')) : false;
+
+                  const modelName = models.find(m => m.id === printer.modelId)?.name || 'Modelo Desconhecido';
+                  const sectorName = sectors.find(s => s.id === printer.sectorId)?.name || 'Sem Setor';
+
+                  return (
+                    <div key={printer.id} className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3 hover:border-blue-500/30 transition-all">
+                      <div>
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate" title={modelName}>{modelName}</h4>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">S/N: {printer.serialNumber || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider mt-1">{sectorName}</p>
+                          </div>
+                          
+                          {/* ICMP Status Indicator */}
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isOnline ? 'text-green-600 bg-green-500/10' : 'text-red-600 bg-red-500/10'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                            {isOnline ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Toner Bar */}
+                      <div>
+                        <div className="flex justify-between text-[10px] font-bold mb-1">
+                          <span className="text-slate-500 dark:text-slate-400">Toner</span>
+                          <span className="text-slate-700 dark:text-slate-300">
+                            {displayToner !== null ? `${displayToner}%` : 'Carregando...'}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
+                            style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

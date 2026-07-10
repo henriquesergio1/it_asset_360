@@ -79,27 +79,16 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
     );
   }
 
-  // Find toner levels (usually keys like 'toner' or 'marker' or 'supply')
-  const toners = data.filter((i: any) => 
-    i.name.toLowerCase().includes('toner') || 
-    i.name.toLowerCase().includes('cartridge') || 
-    i.name.toLowerCase().includes('ink') ||
-    i.key_.toLowerCase().includes('toner')
-  ).filter((i: any) => !i.name.toLowerCase().includes('status')); // Exclude status strings if any
-
-  // Find page counters
-  const counters = data.filter((i: any) => 
-    i.name.toLowerCase().includes('page') || 
-    i.name.toLowerCase().includes('count') || 
-    i.key_.toLowerCase().includes('page')
-  );
+  // Find specific items with robust fallbacks
+  const tonerLevelItem = data.find((i: any) => i.name.toLowerCase().includes('toner level')) || data.find((i: any) => i.name.toLowerCase().includes('toner') && !isNaN(parseFloat(i.lastvalue)) && i.units === '%');
+  const cartridgeNameItem = data.find((i: any) => i.name.toLowerCase().includes('cartridge name')) || data.find((i: any) => i.name.toLowerCase().includes('cartridge') && isNaN(parseFloat(i.lastvalue)));
+  const drumUnitItem = data.find((i: any) => i.name.toLowerCase().includes('drum unit %') || i.name.toLowerCase().includes('drum unit') || i.name.toLowerCase().includes('cilindro'));
   
-  // Status items
-  const statusItems = data.filter((i: any) => 
-    i.name.toLowerCase().includes('status') || 
-    i.name.toLowerCase().includes('ping') || 
-    i.name.toLowerCase().includes('uptime')
-  );
+  const pageCounterItem = data.find((i: any) => i.name.toLowerCase().includes('page counter')) || data.find((i: any) => i.name.toLowerCase().includes('page') && i.name.toLowerCase().includes('count'));
+  
+  const icmpPingItem = data.find((i: any) => i.name.toLowerCase().includes('icmp ping') || i.key_.toLowerCase().includes('icmp.ping') || i.name.toLowerCase().includes('icmp: icmp ping'));
+  const statusText1Item = data.find((i: any) => i.name.toLowerCase().includes('status text 1') || i.name.toLowerCase() === 'status');
+  const deviceUptimeItem = data.find((i: any) => i.name.toLowerCase().includes('device uptime') || i.key_.toLowerCase().includes('uptime') || i.name.toLowerCase().includes('uptime'));
 
   const getTonerColor = (name: string, value: number) => {
     const lower = name.toLowerCase();
@@ -108,10 +97,23 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
     if (lower.includes('magenta')) return 'bg-pink-500';
     if (lower.includes('yellow') || lower.includes('amarelo')) return 'bg-yellow-400';
     
-    // Default fallback based on percentage if no color found
     if (value > 50) return 'bg-green-500';
     if (value > 20) return 'bg-yellow-500';
     return 'bg-red-500';
+  };
+
+  const formatUptime = (secondsStr: string) => {
+    const totalSeconds = parseInt(secondsStr, 10);
+    if (isNaN(totalSeconds)) return secondsStr;
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    let parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0 || days > 0) parts.push(`${hours}h`);
+    parts.push(`${minutes}m`);
+    return parts.join(' ');
   };
 
   return (
@@ -128,58 +130,115 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
           <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700 pb-2">Suprimentos / Toner</h4>
-          {toners.length === 0 ? (
-            <p className="text-sm text-slate-500 italic">Nenhum item de toner encontrado neste host.</p>
-          ) : (
-            <div className="space-y-4">
-              {toners.map((t: any) => {
-                const val = parseFloat(t.lastvalue);
-                const isPercentage = t.units === '%' || val <= 100; // Assumption for SNMP printers
-                const displayVal = isPercentage ? Math.max(0, Math.min(100, val)) : val;
-                
-                return (
-                  <div key={t.key_} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t.name}</span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}{isPercentage ? '%' : t.units}</span>
-                    </div>
-                    {isPercentage && (
-                      <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${getTonerColor(t.name, displayVal)}`} 
-                          style={{ width: `${displayVal}%` }}
-                        ></div>
-                      </div>
-                    )}
+          
+          <div className="space-y-4">
+            {/* Toner Level Bar */}
+            {tonerLevelItem && (() => {
+              const val = parseFloat(tonerLevelItem.lastvalue);
+              const displayVal = !isNaN(val) ? Math.max(0, Math.min(100, val)) : 0;
+              return (
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner Level</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}%</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${getTonerColor(tonerLevelItem.name, displayVal)}`} 
+                      style={{ width: `${displayVal}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Cartridge Name (Toner Name) */}
+            {cartridgeNameItem && (
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+                    {cartridgeNameItem.lastvalue}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Drum Unit % Life Remaining (Cilindro Restante) */}
+            {drumUnitItem && (() => {
+              const val = parseFloat(drumUnitItem.lastvalue);
+              const displayVal = !isNaN(val) ? Math.max(0, Math.min(100, val)) : 0;
+              return (
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Cilindro Restante</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}%</span>
+                  </div>
+                  <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500" 
+                      style={{ width: `${displayVal}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {!tonerLevelItem && !cartridgeNameItem && !drumUnitItem && (
+              <p className="text-sm text-slate-500 italic">Nenhum item de suprimento detectado.</p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
           <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700 pb-2">Contadores & Status</h4>
           
-          <div className="grid grid-cols-2 gap-4">
-            {counters.map((c: any) => (
-              <div key={c.key_} className="bg-blue-50 dark:bg-sky-500/10 p-4 rounded-xl border border-blue-100 dark:border-sky-500/20">
+          <div className="grid grid-cols-1 gap-4">
+            {pageCounterItem && (
+              <div className="bg-blue-50 dark:bg-sky-500/10 p-5 rounded-xl border border-blue-100 dark:border-sky-500/20">
                 <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-sky-400">
-                  <Printer size={16} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider truncate" title={c.name}>{c.name}</span>
+                  <Printer size={18} />
+                  <span className="text-xs font-bold uppercase tracking-wider">Page Counter</span>
                 </div>
-                <p className="text-xl font-black text-slate-900 dark:text-white">{c.lastvalue}</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white">{pageCounterItem.lastvalue}</p>
               </div>
-            ))}
+            )}
           </div>
 
           <div className="space-y-3 mt-6">
-             {statusItems.map((s: any) => (
-               <div key={s.key_} className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-                 <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{s.name}</span>
-                 <span className="text-xs font-mono font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">{s.lastvalue} {s.units}</span>
-               </div>
-             ))}
+            {/* ICMP Ping Row */}
+            {icmpPingItem && (() => {
+              const rawVal = String(icmpPingItem.lastvalue).toLowerCase();
+              const isOnline = rawVal === '1' || rawVal.includes('up') || rawVal.includes('1');
+              return (
+                <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">ICMP Ping</span>
+                  <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${isOnline ? 'text-green-600 bg-green-50 dark:bg-green-950/30' : 'text-red-600 bg-red-50 dark:bg-red-950/30'}`}>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* Status Text 1 as "Status" */}
+            {statusText1Item && (
+              <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Status</span>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">
+                  {statusText1Item.lastvalue}
+                </span>
+              </div>
+            )}
+
+            {/* Device Uptime as Uptime */}
+            {deviceUptimeItem && (
+              <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Uptime</span>
+                <span className="text-xs font-mono font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">
+                  {formatUptime(deviceUptimeItem.lastvalue)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

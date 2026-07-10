@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.48.0',
+    date: 'Hoje',
+    title: 'Monitoramento de Impressoras & Refinamento Zabbix',
+    changes: [
+      'Visual: Refinamento das métricas do Zabbix (labels simplificados, uptime formatado em horas/minutos, e status ping simplificado em verde).',
+      'Dashboard: Remoção dos cards antigos (Novo Empréstimo, Relatórios) e criação de um novo widget centralizado de Monitoramento de Impressoras.',
+      'Integração: Sincronização inteligente em tempo real com barra de progresso de toner dinâmica e indicação de status ICMP.'
+    ]
+  },
+  {
     version: '3.47.0',
     date: 'Hoje',
     title: 'Integração Zabbix Refinada & Exibição Dinâmica',
