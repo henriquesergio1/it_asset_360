@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil } from '../types';
 import { hasPermission, resolveUserPermissions } from '../utils/rbac';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
