@@ -175,7 +175,7 @@ const AdminPanel = () => {
  const { user: currentUser } = useAuth();
  const { showToast } = useToast();
  
- const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE'>('USERS');
+ const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE' | 'ZABBIX'>('USERS');
  const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);

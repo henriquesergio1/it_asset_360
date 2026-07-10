@@ -98,7 +98,7 @@ const DB_SCHEMAS = {
     SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50), LicenseKey NVARCHAR(MAX), LicenseClient NVARCHAR(255), LicenseExpires DATETIME)`,
     Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
-    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX), AllowMultipleUsers BIT DEFAULT 0)`,
+    AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX), AllowMultipleUsers BIT DEFAULT 0, ShowZabbix BIT DEFAULT 0)`,
     MaintenanceRecords: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), Description NVARCHAR(MAX), Cost FLOAT, Date DATETIME, Type NVARCHAR(100), Provider NVARCHAR(255), InvoiceBinary VARBINARY(MAX))`,
     Sectors: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     Terms: `(
@@ -473,6 +473,11 @@ async function initializeDatabase() {
                         console.log(`- Coluna AllowMultipleUsers não encontrada em AssetTypes. Adicionando...`);
                         await pool.request().query('ALTER TABLE AssetTypes ADD AllowMultipleUsers BIT DEFAULT 0');
                     }
+                    const checkZabbix = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'ShowZabbix'`);
+                    if (checkZabbix.recordset.length === 0) {
+                        console.log(`- Coluna ShowZabbix não encontrada em AssetTypes. Adicionando...`);
+                        await pool.request().query('ALTER TABLE AssetTypes ADD ShowZabbix BIT DEFAULT 0');
+                    }
                 }
                 if (table === 'Tasks') {
                     const checkInstructions = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Tasks' AND COLUMN_NAME = 'Instructions'`);
@@ -726,7 +731,7 @@ app.get('/api/bootstrap', async (req, res) => {
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
             consumablesRes, auditsRes
         ] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
@@ -779,7 +784,7 @@ app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
@@ -2650,16 +2655,36 @@ async function updateUserPendingStatus(pool, userId) {
             const zabbixUrl = sys.recordset[0].ZabbixUrl.trim().replace(/\/$/, '') + '/api_jsonrpc.php';
             const zabbixToken = sys.recordset[0].ZabbixToken.trim();
             
-            const payload = req.body;
+            const payload = { ...req.body };
             payload.auth = zabbixToken;
             
-            const response = await fetch(zabbixUrl, {
+            let response = await fetch(zabbixUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             
-            const data = await response.json();
+            let data = await response.json();
+            
+            // Se falhar devido ao parâmetro 'auth' não ser aceito (comum no Zabbix 6.4+ / 7.0+)
+            if (data && data.error && (
+                (data.error.message && data.error.message.includes('unexpected parameter "auth"')) ||
+                (data.error.data && data.error.data.includes('unexpected parameter "auth"'))
+            )) {
+                const cleanPayload = { ...req.body };
+                delete cleanPayload.auth;
+                
+                response = await fetch(zabbixUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${zabbixToken}`
+                    },
+                    body: JSON.stringify(cleanPayload)
+                });
+                data = await response.json();
+            }
+            
             res.json(data);
         } catch (err) {
             res.status(500).send(err.message);

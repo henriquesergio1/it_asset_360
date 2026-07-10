@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.47.0',
+    date: 'Hoje',
+    title: 'Integração Zabbix Refinada & Exibição Dinâmica',
+    changes: [
+      'Zabbix: Resolvido o erro "unexpected parameter auth" adaptando o proxy para se comunicar nativamente tanto com versões antigas quanto recentes (Zabbix 6.4/7.0+) através de cabeçalho de autenticação Bearer.',
+      'Configuração: Adicionado controle dinâmico de exibição do Zabbix Host ID parametrizado por tipo de ativo.',
+      'Interface: Condicionamento inteligente do input Zabbix Host ID e da aba de Monitor nos detalhes do ativo.'
+    ]
+  },
+  {
     version: '3.40.0',
     date: 'Hoje',
     title: 'Gestão Inteligente de Tarefas Recorrentes',

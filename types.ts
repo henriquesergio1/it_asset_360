@@ -44,6 +44,7 @@ export interface AssetType {
   name: string;
   customFieldIds?: string[]; 
   allowMultipleUsers?: boolean;
+  showZabbix?: boolean;
 }
 
 export interface DeviceBrand {

@@ -28,7 +28,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  const [modelSearchTerm, setModelSearchTerm] = useState('');
 
  // Edit State
- const [editingType, setEditingType] = useState<Partial<AssetType>>({ name: '', customFieldIds: [], allowMultipleUsers: false });
+ const [editingType, setEditingType] = useState<Partial<AssetType>>({ name: '', customFieldIds: [], allowMultipleUsers: false, showZabbix: false });
  const [editingBrand, setEditingBrand] = useState<Partial<DeviceBrand>>({ name: '' });
  const [editingAccessory, setEditingAccessory] = useState<Partial<AccessoryType>>({ name: '' });
  const [modelForm, setModelForm] = useState<Partial<DeviceModel>>({ imageUrl: '' });
@@ -63,11 +63,12 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
    id: Math.random().toString(36).substr(2, 9), 
    name: editingType.name.trim(), 
    customFieldIds: editingType.customFieldIds || [],
-   allowMultipleUsers: !!editingType.allowMultipleUsers
+   allowMultipleUsers: !!editingType.allowMultipleUsers,
+   showZabbix: !!editingType.showZabbix
  }, adminName);
  showToast("Tipo de ativo criado!","success");
  }
- setEditingType({ name: '', customFieldIds: [], allowMultipleUsers: false });
+ setEditingType({ name: '', customFieldIds: [], allowMultipleUsers: false, showZabbix: false });
  } catch (error) {
  showToast("Erro ao salvar tipo de ativo.","error");
  }
@@ -355,6 +356,17 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
   className="h-4 w-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500 focus:ring-blue-500"
   />
   <label htmlFor="allowMultipleUsers" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Permitir vinculação a múltiplos colaboradores simultaneamente (Compartilhado)</label>
+  </div>
+  
+  <div className="flex items-center gap-2 mb-6 bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-300 dark:border-slate-600">
+   <input 
+   type="checkbox" 
+   id="showZabbix"
+   checked={!!editingType.showZabbix} 
+   onChange={e => setEditingType({...editingType, showZabbix: e.target.checked})}
+   className="h-4 w-4 rounded bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-blue-500 focus:ring-blue-500"
+   />
+   <label htmlFor="showZabbix" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">Exibir campo Zabbix Host ID para ativos deste tipo</label>
  </div>
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
