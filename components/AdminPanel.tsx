@@ -874,34 +874,80 @@ const AdminPanel = () => {
                         </div>
                     </div>
                     
-                    <div className="max-w-2xl bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">URL do Zabbix (API)</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
-                                    value={settingsForm.zabbixUrl || ''} 
-                                    onChange={e => setSettingsForm({...settingsForm, zabbixUrl: e.target.value})} 
-                                    placeholder="http://zabbix.suaempresa.local/zabbix" 
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Sem o /api_jsonrpc.php no final.</p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        {/* Formulário de Configuração */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">URL do Zabbix (API)</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
+                                        value={settingsForm.zabbixUrl || ''} 
+                                        onChange={e => setSettingsForm({...settingsForm, zabbixUrl: e.target.value})} 
+                                        placeholder="http://zabbix.suaempresa.local/zabbix" 
+                                    />
+                                    <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Sem o /api_jsonrpc.php no final.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">API Token</label>
+                                    <input 
+                                        type="password" 
+                                        className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
+                                        value={settingsForm.zabbixToken || ''} 
+                                        onChange={e => setSettingsForm({...settingsForm, zabbixToken: e.target.value})} 
+                                        placeholder="Zabbix API Token" 
+                                    />
+                                </div>
+                                <div className="pt-4 flex justify-end">
+                                    <button onClick={handleZabbixSubmit} disabled={isSavingZabbix} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
+                                        {isSavingZabbix ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                                        Salvar Zabbix
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400">API Token</label>
-                                <input 
-                                    type="password" 
-                                    className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white" 
-                                    value={settingsForm.zabbixToken || ''} 
-                                    onChange={e => setSettingsForm({...settingsForm, zabbixToken: e.target.value})} 
-                                    placeholder="Zabbix API Token" 
-                                />
-                            </div>
-                            <div className="pt-4 flex justify-end">
-                                <button onClick={handleZabbixSubmit} disabled={isSavingZabbix} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-[11px] shadow-lg shadow-blue-900/20 transition-all flex items-center gap-2">
-                                    {isSavingZabbix ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                                    Salvar Zabbix
-                                </button>
+                        </div>
+
+                        {/* Guia de Ativação do Zabbix */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mb-2 border-l-4 border-amber-500 pl-3">Guia de Ativação e Uso</h3>
+                            
+                            <div className="space-y-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                                <div className="space-y-1.5">
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold text-[10px]">1</span>
+                                        Como obter a URL da API do Zabbix:
+                                    </h4>
+                                    <p className="pl-6">
+                                        A URL corresponde ao endereço base do seu painel Web do Zabbix (ex: <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">http://zabbix.suaempresa.local/zabbix</code>). O sistema concatenará automaticamente o sufixo <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">/api_jsonrpc.php</code> para realizar as requisições.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold text-[10px]">2</span>
+                                        Como gerar o API Token no Zabbix:
+                                    </h4>
+                                    <p className="pl-6">
+                                        No Zabbix 5.4 ou superior, acesse <strong className="text-slate-800 dark:text-slate-300">Administração → Usuários → API tokens</strong>. Clique em <strong className="text-slate-800 dark:text-slate-300">Criar token de API</strong>, selecione o usuário (com permissão de leitura nos hosts), defina o nome e copie a chave gerada para colar no campo <strong className="text-slate-800 dark:text-slate-300">API Token</strong> à esquerda.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <h4 className="font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold text-[10px]">3</span>
+                                        Como associar e usar nos Dispositivos:
+                                    </h4>
+                                    <div className="pl-6 space-y-1">
+                                        <p>Para exibir o monitoramento ativo em tempo real de uma impressora ou dispositivo:</p>
+                                        <ul className="list-disc list-inside space-y-1 mt-1 pl-1">
+                                            <li>Acesse o menu de <strong className="text-slate-800 dark:text-slate-300">Ativos / Dispositivos</strong>.</li>
+                                            <li>Cadastre ou edite um ativo (como uma impressora).</li>
+                                            <li>No campo <strong className="text-slate-800 dark:text-slate-300">Zabbix Host ID</strong>, insira o ID numérico do host cadastrado no seu Zabbix.</li>
+                                            <li>Com o ID configurado, uma nova aba <strong className="text-slate-800 dark:text-slate-300">"Monitor"</strong> ficará visível nos detalhes do ativo, mostrando dados vivos de suprimentos e status.</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
