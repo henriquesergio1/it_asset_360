@@ -83,7 +83,8 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
 
       // Envia a contagem de páginas lida se houver e temos o deviceId
       const pageCounterItem = items.find((i: any) => i.name.toLowerCase().includes('page counter')) || 
-                               items.find((i: any) => i.name.toLowerCase().includes('page') && i.name.toLowerCase().includes('count'));
+                               items.find((i: any) => i.name.toLowerCase().includes('page') && i.name.toLowerCase().includes('count')) ||
+                               items.find((i: any) => i.name.toLowerCase() === 'total.print' || i.key_.toLowerCase() === 'total.print');
       if (pageCounterItem && pageCounterItem.lastvalue !== undefined && deviceId) {
         const pageVal = parseInt(pageCounterItem.lastvalue);
         if (!isNaN(pageVal)) {
@@ -162,6 +163,67 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const statusText1Item = data.find((i: any) => i.name.toLowerCase().includes('status text 1') || i.name.toLowerCase() === 'status');
   const deviceUptimeItem = data.find((i: any) => i.name.toLowerCase().includes('device uptime') || i.key_.toLowerCase().includes('uptime') || i.name.toLowerCase().includes('uptime'));
 
+  // Detecção de impressora colorida (e.g. Canon MF1127C)
+  const blackTonerItem = data.find((i: any) => 
+    i.name.toLowerCase() === 'toner.black.level.now' || i.key_.toLowerCase() === 'toner.black.level.now' ||
+    (i.name.toLowerCase().includes('toner.black') && !isNaN(parseFloat(i.lastvalue))) ||
+    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('black') && !isNaN(parseFloat(i.lastvalue)))
+  );
+  const cyanTonerItem = data.find((i: any) => 
+    i.name.toLowerCase() === 'toner.cyan.level.now' || i.key_.toLowerCase() === 'toner.cyan.level.now' ||
+    (i.name.toLowerCase().includes('toner.cyan') && !isNaN(parseFloat(i.lastvalue))) ||
+    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('cyan') && !isNaN(parseFloat(i.lastvalue)))
+  );
+  const magentaTonerItem = data.find((i: any) => 
+    i.name.toLowerCase() === 'toner.magenta.level.now' || i.key_.toLowerCase() === 'toner.magenta.level.now' ||
+    (i.name.toLowerCase().includes('toner.magenta') && !isNaN(parseFloat(i.lastvalue))) ||
+    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('magenta') && !isNaN(parseFloat(i.lastvalue)))
+  );
+  const yellowTonerItem = data.find((i: any) => 
+    i.name.toLowerCase() === 'toner.yellow.level.now' || i.key_.toLowerCase() === 'toner.yellow.level.now' ||
+    (i.name.toLowerCase().includes('toner.yellow') && !isNaN(parseFloat(i.lastvalue))) ||
+    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('yellow') && !isNaN(parseFloat(i.lastvalue)))
+  );
+
+  const blackTonerModel = data.find((i: any) => i.name.toLowerCase() === 'black.toner.model' || i.key_.toLowerCase() === 'black.toner.model');
+  const cyanTonerModel = data.find((i: any) => i.name.toLowerCase() === 'cyan.toner.model' || i.key_.toLowerCase() === 'cyan.toner.model');
+  const magentaTonerModel = data.find((i: any) => i.name.toLowerCase() === 'magenta.toner.model' || i.key_.toLowerCase() === 'magenta.toner.model');
+  const yellowTonerModel = data.find((i: any) => i.name.toLowerCase() === 'yellow.toner.model' || i.key_.toLowerCase() === 'yellow.toner.model');
+
+  const totalBlackPages = data.find((i: any) => i.name.toLowerCase() === 'total.black.small' || i.key_.toLowerCase() === 'total.black.small');
+  const totalColorPages = data.find((i: any) => i.name.toLowerCase() === 'total.full.color.single.color.small' || i.key_.toLowerCase() === 'total.full.color.single.color.small');
+  const totalPrintPages = data.find((i: any) => i.name.toLowerCase() === 'total.print' || i.key_.toLowerCase() === 'total.print');
+
+  const hasColorToners = !!(cyanTonerItem || magentaTonerItem || yellowTonerItem || blackTonerItem);
+
+  const renderTonerBar = (title: string, item: any, modelItem: any, colorClass: string) => {
+    if (!item) return null;
+    const val = parseFloat(item.lastvalue);
+    const displayVal = !isNaN(val) ? Math.max(0, Math.min(100, val)) : 0;
+    return (
+      <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${colorClass}`}></span>
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{title}</span>
+          </div>
+          <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}%</span>
+        </div>
+        <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${colorClass}`} 
+            style={{ width: `${displayVal}%` }}
+          ></div>
+        </div>
+        {modelItem && (
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 font-mono uppercase">
+            Modelo: {modelItem.lastvalue}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const getTonerColor = (name: string, value: number) => {
     const lower = name.toLowerCase();
     if (lower.includes('black') || lower.includes('preto')) return 'bg-slate-800 dark:bg-slate-900';
@@ -204,36 +266,47 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
           <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700 pb-2">Suprimentos / Toner</h4>
           
           <div className="space-y-4">
-            {/* Toner Level Bar */}
-            {tonerLevelItem && (() => {
-              const val = parseFloat(tonerLevelItem.lastvalue);
-              const displayVal = !isNaN(val) ? Math.max(0, Math.min(100, val)) : 0;
-              return (
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner Level</span>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}%</span>
-                  </div>
-                  <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full ${getTonerColor(tonerLevelItem.name, displayVal)}`} 
-                      style={{ width: `${displayVal}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Cartridge Name (Toner Name) */}
-            {cartridgeNameItem && (
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner</span>
-                  <span className="text-xs font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
-                    {cartridgeNameItem.lastvalue}
-                  </span>
-                </div>
+            {hasColorToners ? (
+              <div className="grid grid-cols-1 gap-3">
+                {renderTonerBar('Toner Preto (K)', blackTonerItem, blackTonerModel, 'bg-slate-800 dark:bg-slate-950 border border-slate-700/30')}
+                {renderTonerBar('Toner Ciano (C)', cyanTonerItem, cyanTonerModel, 'bg-cyan-500')}
+                {renderTonerBar('Toner Magenta (M)', magentaTonerItem, magentaTonerModel, 'bg-pink-500')}
+                {renderTonerBar('Toner Amarelo (Y)', yellowTonerItem, yellowTonerModel, 'bg-yellow-400')}
               </div>
+            ) : (
+              <>
+                {/* Toner Level Bar */}
+                {tonerLevelItem && (() => {
+                  const val = parseFloat(tonerLevelItem.lastvalue);
+                  const displayVal = !isNaN(val) ? Math.max(0, Math.min(100, val)) : 0;
+                  return (
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner Level</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white">{displayVal}%</span>
+                      </div>
+                      <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${getTonerColor(tonerLevelItem.name, displayVal)}`} 
+                          style={{ width: `${displayVal}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Cartridge Name (Toner Name) */}
+                {cartridgeNameItem && (
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Toner</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+                        {cartridgeNameItem.lastvalue}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Drum Unit % Life Remaining (Cilindro Restante) */}
@@ -256,7 +329,7 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
               );
             })()}
 
-            {!tonerLevelItem && !cartridgeNameItem && !drumUnitItem && (
+            {!tonerLevelItem && !cartridgeNameItem && !drumUnitItem && !hasColorToners && (
               <p className="text-sm text-slate-500 italic">Nenhum item de suprimento detectado.</p>
             )}
           </div>
@@ -266,14 +339,55 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
           <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700 pb-2">Contadores & Status</h4>
           
           <div className="grid grid-cols-1 gap-4">
-            {pageCounterItem && (
-              <div className="bg-blue-50 dark:bg-sky-500/10 p-5 rounded-xl border border-blue-100 dark:border-sky-500/20">
-                <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-sky-400">
-                  <Printer size={18} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Page Counter</span>
+            {totalBlackPages || totalColorPages ? (
+              <div className="space-y-4">
+                {/* Total Impressões */}
+                {totalPrintPages && (
+                  <div className="bg-blue-50 dark:bg-sky-500/10 p-5 rounded-xl border border-blue-100 dark:border-sky-500/20">
+                    <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-sky-400">
+                      <Printer size={18} />
+                      <span className="text-xs font-black uppercase tracking-wider">Total de Impressões (Geral)</span>
+                    </div>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                      {parseInt(totalPrintPages.lastvalue, 10).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Preto & Branco */}
+                  {totalBlackPages && (
+                    <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">Preto & Branco (Monocromático)</span>
+                      <p className="text-lg font-black text-slate-900 dark:text-white font-mono">
+                        {parseInt(totalBlackPages.lastvalue, 10).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Coloridas */}
+                  {totalColorPages && (
+                    <div className="bg-gradient-to-br from-purple-500/5 to-pink-500/5 dark:from-purple-500/10 dark:to-pink-500/10 p-4 rounded-xl border border-purple-200/50 dark:border-purple-900/30">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block mb-1">Coloridas</span>
+                      <p className="text-lg font-black text-purple-700 dark:text-purple-300 font-mono">
+                        {parseInt(totalColorPages.lastvalue, 10).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-2xl font-black text-slate-900 dark:text-white">{pageCounterItem.lastvalue}</p>
               </div>
+            ) : (
+              pageCounterItem && (
+                <div className="bg-blue-50 dark:bg-sky-500/10 p-5 rounded-xl border border-blue-100 dark:border-sky-500/20">
+                  <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-sky-400">
+                    <Printer size={18} />
+                    <span className="text-xs font-bold uppercase tracking-wider">Page Counter</span>
+                  </div>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white font-mono">
+                    {isNaN(parseInt(pageCounterItem.lastvalue, 10)) ? pageCounterItem.lastvalue : parseInt(pageCounterItem.lastvalue, 10).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+              )
             )}
           </div>
 

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.50.0',
+    date: 'Hoje',
+    title: 'Monitoramento de Impressoras Coloridas & Multi-Toners',
+    changes: [
+      'Multi-Toner: Detecção e visualização automática de múltiplos toners coloridos (Black, Cyan, Magenta, Yellow) na aba de monitoramento Zabbix.',
+      'Contadores Coloridos: Suporte a contagem segregada para páginas Preto & Branco (B&W) e Coloridas para novos modelos de impressora Canon.',
+      'Sincronização: Ajuste automático para registar e consolidar as leituras de páginas no histórico a partir do contador total de impressões.'
+    ]
+  },
+  {
     version: '3.49.0',
     date: 'Hoje',
     title: 'Gráfico de Consumo Diário & Relatório de Impressoras',
