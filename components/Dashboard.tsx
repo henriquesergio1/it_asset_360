@@ -18,6 +18,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 import FilePreviewModal from './FilePreviewModal';
+import { ZabbixMonitorTab } from './ZabbixMonitorTab';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, children }: any) => (
   <div 
@@ -92,6 +93,7 @@ const Dashboard = () => {
   const [resolvingManualTerm, setResolvingManualTerm] = useState<any | null>(null);
   const [resolveManualReason, setResolveManualReason] = useState('');
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [selectedPrinterForModal, setSelectedPrinterForModal] = useState<any | null>(null);
 
   const [printersData, setPrintersData] = useState<Record<string, any>>({});
   const [loadingPrinters, setLoadingPrinters] = useState(false);
@@ -1174,7 +1176,7 @@ const Dashboard = () => {
                   return (
                     <div 
                       key={printer.id} 
-                      onClick={() => navigate(`/devices?deviceId=${printer.id}&tab=MONITOR`)}
+                      onClick={() => setSelectedPrinterForModal(printer)}
                       className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3 hover:border-blue-500/50 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
                     >
                       <div>
@@ -1950,6 +1952,78 @@ const Dashboard = () => {
       {isPreviewOpen && (
         <FilePreviewModal isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} fileUrl={previewData.url} fileName={previewData.name} />
       )}
+
+      {/* MODAL DETALHES DA IMPRESSORA */}
+      {selectedPrinterForModal && (() => {
+        const modelName = models.find(m => m.id === selectedPrinterForModal.modelId)?.name || 'Modelo Desconhecido';
+        const brandName = brands.find(b => b.id === (models.find(m => m.id === selectedPrinterForModal.modelId)?.brandId))?.name || 'Marca Desconhecida';
+        const sectorName = sectors.find(s => s.id === selectedPrinterForModal.sectorId)?.name || 'Sem Setor';
+
+        return (
+          <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
+              {/* Header */}
+              <div className="bg-slate-950 px-8 py-5 flex justify-between items-center shrink-0 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <Printer className="text-blue-500" size={24} />
+                  <div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Propriedades da Impressora</h3>
+                    <p className="text-xs text-slate-400 font-mono">
+                      {brandName} {modelName} — S/N: {selectedPrinterForModal.serialNumber || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedPrinterForModal(null)} 
+                  className="h-10 w-10 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white rounded-full transition-all"
+                >
+                  <X size={20}/>
+                </button>
+              </div>
+
+              {/* Informações básicas secundárias */}
+              <div className="bg-slate-50 dark:bg-slate-900/50 px-8 py-4 flex flex-wrap gap-x-8 gap-y-2 border-b border-slate-200 dark:border-slate-700 shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                <div>
+                  <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 mr-2">Setor:</span>
+                  <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{sectorName}</span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 mr-2">Host Zabbix ID:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{selectedPrinterForModal.zabbixHostId || 'Não Vinculado'}</span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase tracking-wider text-[10px] text-slate-400 dark:text-slate-500 mr-2">Ativo ID:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{selectedPrinterForModal.id}</span>
+                </div>
+              </div>
+
+              {/* Corpo com o ZabbixMonitorTab */}
+              <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-800 transition-colors">
+                {selectedPrinterForModal.zabbixHostId ? (
+                  <ZabbixMonitorTab 
+                    zabbixHostId={selectedPrinterForModal.zabbixHostId} 
+                    deviceId={selectedPrinterForModal.id} 
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-slate-500 dark:text-slate-400 italic">Esta impressora não possui um Host ID do Zabbix vinculado.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex justify-end shrink-0">
+                <button 
+                  onClick={() => setSelectedPrinterForModal(null)} 
+                  className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
