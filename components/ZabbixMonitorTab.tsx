@@ -18,6 +18,41 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
     }
   }, [zabbixHostId, deviceId]);
 
+  // Processa o histórico de contagem de páginas para calcular consumo diário
+  const consumptionData = React.useMemo(() => {
+    if (!pageHistory || pageHistory.length < 2) return [];
+    
+    const list: { label: string; value: number; rawDate: string }[] = [];
+    for (let i = 1; i < pageHistory.length; i++) {
+      const prev = pageHistory[i-1];
+      const curr = pageHistory[i];
+      const diff = curr.PageCount - prev.PageCount;
+      
+      let displayDate = curr.Date;
+      try {
+        const dateOnly = curr.Date.split('T')[0];
+        const parts = dateOnly.split('-');
+        if (parts.length === 3) {
+          displayDate = `${parts[2]}/${parts[1]}`;
+        }
+      } catch (e) {}
+
+      list.push({
+        label: displayDate,
+        value: diff >= 0 ? diff : 0,
+        rawDate: curr.Date
+      });
+    }
+    return list;
+  }, [pageHistory]);
+
+  const maxConsumption = React.useMemo(() => {
+    if (consumptionData.length === 0) return 1;
+    const vals = consumptionData.map(d => d.value);
+    const max = Math.max(...vals);
+    return max > 0 ? max : 1;
+  }, [consumptionData]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -152,41 +187,6 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
     parts.push(`${minutes}m`);
     return parts.join(' ');
   };
-
-  // Processa o histórico de contagem de páginas para calcular consumo diário
-  const consumptionData = React.useMemo(() => {
-    if (!pageHistory || pageHistory.length < 2) return [];
-    
-    const list: { label: string; value: number; rawDate: string }[] = [];
-    for (let i = 1; i < pageHistory.length; i++) {
-      const prev = pageHistory[i-1];
-      const curr = pageHistory[i];
-      const diff = curr.PageCount - prev.PageCount;
-      
-      let displayDate = curr.Date;
-      try {
-        const dateOnly = curr.Date.split('T')[0];
-        const parts = dateOnly.split('-');
-        if (parts.length === 3) {
-          displayDate = `${parts[2]}/${parts[1]}`;
-        }
-      } catch (e) {}
-
-      list.push({
-        label: displayDate,
-        value: diff >= 0 ? diff : 0,
-        rawDate: curr.Date
-      });
-    }
-    return list;
-  }, [pageHistory]);
-
-  const maxConsumption = React.useMemo(() => {
-    if (consumptionData.length === 0) return 1;
-    const vals = consumptionData.map(d => d.value);
-    const max = Math.max(...vals);
-    return max > 0 ? max : 1;
-  }, [consumptionData]);
 
   return (
     <div className="space-y-8 animate-fade-in">

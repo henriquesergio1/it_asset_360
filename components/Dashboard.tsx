@@ -1161,6 +1161,10 @@ const Dashboard = () => {
                   const tonerVal = tonerItem ? parseFloat(tonerItem.lastvalue) : null;
                   const displayToner = tonerVal !== null && !isNaN(tonerVal) ? Math.max(0, Math.min(100, tonerVal)) : null;
 
+                  const drumItem = hostItems.find((i: any) => i.name.toLowerCase().includes('drum unit %') || i.name.toLowerCase().includes('drum unit') || i.name.toLowerCase().includes('cilindro'));
+                  const drumVal = drumItem ? parseFloat(drumItem.lastvalue) : null;
+                  const displayDrum = drumVal !== null && !isNaN(drumVal) ? Math.max(0, Math.min(100, drumVal)) : null;
+
                   const icmpItem = hostItems.find((i: any) => i.name.toLowerCase().includes('icmp ping') || i.key_.toLowerCase().includes('icmp.ping') || i.name.toLowerCase().includes('icmp: icmp ping'));
                   const isOnline = icmpItem ? (String(icmpItem.lastvalue).toLowerCase() === '1' || String(icmpItem.lastvalue).toLowerCase().includes('up') || String(icmpItem.lastvalue).toLowerCase().includes('1')) : false;
 
@@ -1189,19 +1193,38 @@ const Dashboard = () => {
                         </div>
                       </div>
 
-                      {/* Toner Bar */}
-                      <div>
-                        <div className="flex justify-between text-[10px] font-bold mb-1">
-                          <span className="text-slate-500 dark:text-slate-400">Toner</span>
-                          <span className="text-slate-700 dark:text-slate-300">
-                            {displayToner !== null ? `${displayToner}%` : 'Carregando...'}
-                          </span>
+                      {/* Toner & Drum Bars */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Toner Bar */}
+                        <div>
+                          <div className="flex justify-between text-[10px] font-bold mb-1">
+                            <span className="text-slate-500 dark:text-slate-400">Toner</span>
+                            <span className="text-slate-700 dark:text-slate-300">
+                              {displayToner !== null ? `${displayToner}%` : 'Carregando...'}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner === 100 ? 'bg-green-500' : displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
+                              style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
+                            ></div>
+                          </div>
                         </div>
-                        <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner === 100 ? 'bg-green-500' : displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
-                            style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
-                          ></div>
+
+                        {/* Drum Bar */}
+                        <div>
+                          <div className="flex justify-between text-[10px] font-bold mb-1">
+                            <span className="text-slate-500 dark:text-slate-400">Cilindro</span>
+                            <span className="text-slate-700 dark:text-slate-300">
+                              {displayDrum !== null ? `${displayDrum}%` : drumItem ? '0%' : 'Carregando...'}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 ${displayDrum !== null ? 'bg-emerald-500' : drumItem ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`}
+                              style={{ width: `${displayDrum !== null ? displayDrum : 0}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     </div>
