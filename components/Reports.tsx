@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign, ArrowUp, ArrowDown, Scale, Box, TrendingUp, AlertTriangle, CheckCircle, History, Wrench, Plus } from 'lucide-react';
+import { FileText, Search, Printer, Download, Eye, EyeOff, Phone, Mail, Briefcase, User, ArrowUpDown, ShieldCheck, SlidersHorizontal, Check, X, Filter, FileSpreadsheet, Package, Cpu, Smartphone, Tag, DollarSign, ArrowUp, ArrowDown, Scale, Box, TrendingUp, AlertTriangle, CheckCircle, History, Wrench, Plus, Loader2 } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { normalizeString } from '../utils/stringUtils';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
@@ -10,7 +10,7 @@ import { DeviceStatus } from '../types';
 const Reports = () => {
   const { users, sectors, sims, devices, models, assetTypes, brands, consumableTransactions, maintenances, audits } = useData();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL' | 'AUDITS'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'CONSUMABLES' | 'ASSETS' | 'FINANCIAL' | 'AUDITS' | 'PRINTERS'>('USERS');
 
   const getSmartId = (deviceId: string) => {
     const d = devices.find(device => device.id === deviceId);
@@ -37,6 +37,29 @@ const Reports = () => {
     return d.toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  const [printersReportData, setPrintersReportData] = useState<any[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'PRINTERS') {
+      const fetchPrintersReport = async () => {
+        try {
+          setLoadingPrinters(true);
+          const res = await fetch(`/api/zabbix/report/printers?startDate=${startDate}&endDate=${endDate}`);
+          if (res.ok) {
+            const json = await res.json();
+            setPrintersReportData(json || []);
+          }
+        } catch (e) {
+          console.error("Erro ao carregar relatório de impressoras:", e);
+        } finally {
+          setLoadingPrinters(false);
+        }
+      };
+      fetchPrintersReport();
+    }
+  }, [activeTab, startDate, endDate]);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['sector', 'sectorCode', 'email', 'lines', 'pulsusId']);
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
@@ -770,6 +793,20 @@ const Reports = () => {
       }));
       fileName = `saude_financeira_ativos_${new Date().toISOString().split('T')[0]}`;
       pdfTitle = 'Relatório de Saúde Financeira e Ciclo de Vida (LCC)';
+    } else if (activeTab === 'PRINTERS') {
+      headers = ['Patrimônio', 'S/N', 'Modelo', 'Marca', 'Setor', 'Leitura Inicial', 'Leitura Final', 'Páginas Impressas'];
+      data = printersReportData.map(item => ({
+        'Patrimônio': item.AssetTag || 'S/T',
+        'S/N': item.SerialNumber || 'S/N',
+        'Modelo': item.ModelName,
+        'Marca': item.BrandName,
+        'Setor': item.SectorName || 'Sem Setor',
+        'Leitura Inicial': item.MinPages !== null ? item.MinPages : 0,
+        'Leitura Final': item.MaxPages !== null ? item.MaxPages : 0,
+        'Páginas Impressas': item.ConsumedPages !== null ? item.ConsumedPages : 0
+      }));
+      fileName = `relatorio_impressoras_${new Date().toISOString().split('T')[0]}`;
+      pdfTitle = 'Relatório de Consumo de Páginas de Impressoras';
     } else if (activeTab === 'AUDITS') {
       if (auditSubTab === 'HISTORY') {
         headers = ['Data', 'Patrimônio', 'Técnico', 'Tipo', 'Descrição', 'Status', 'Observações'];
@@ -840,7 +877,7 @@ const Reports = () => {
           </div>
           
           <div className="flex flex-wrap items-center gap-2 bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner">
-            {(['USERS', 'CONSUMABLES', 'ASSETS', 'FINANCIAL', 'AUDITS'] as const).map((tab) => (
+            {(['USERS', 'CONSUMABLES', 'ASSETS', 'FINANCIAL', 'AUDITS', 'PRINTERS'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -853,7 +890,8 @@ const Reports = () => {
                 {tab === 'USERS' ? 'Colaboradores' :
                  tab === 'CONSUMABLES' ? 'Consumo' :
                  tab === 'ASSETS' ? 'Ativos' : 
-                 tab === 'FINANCIAL' ? 'Financeiro' : 'Auditorias'}
+                 tab === 'FINANCIAL' ? 'Financeiro' : 
+                 tab === 'AUDITS' ? 'Auditorias' : 'Impressoras'}
               </button>
             ))}
           </div>
@@ -1037,6 +1075,7 @@ const Reports = () => {
                   {activeTab === 'ASSETS' && 'Resumo de Ativos por Modelo'}
                   {activeTab === 'FINANCIAL' && 'Saúde Financeira & Ciclo de Vida (LCC)'}
                   {activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' ? 'Histórico de Auditorias Técnicas' : auditSubTab === 'NO_AUDIT' ? 'Ativos sem Auditoria Realizada' : 'Lista de Presença - Auditoria')}
+                  {activeTab === 'PRINTERS' && 'Relatório de Consumo de Páginas de Impressoras'}
                 </h2>
                 <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 opacity-70">
                   {activeTab === 'USERS' && 'Relação personalizável de colaboradores, linhas telefônicas e dispositivos.'}
@@ -1047,6 +1086,7 @@ const Reports = () => {
                     ? 'Listagem cronológica de todas as auditorias técnicas realizadas nos aparelhos.' 
                     : auditSubTab === 'NO_AUDIT' ? 'Identificação de aparelhos que ainda não possuem nenhum registro de auditoria técnica.'
                     : 'Lista de aparelhos em uso para conferência manual (tique no papel).')}
+                  {activeTab === 'PRINTERS' && 'Monitoramento do volume de impressão acumulado por ativo com filtros de data.'}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -1125,7 +1165,7 @@ const Reports = () => {
                 />
               </div>
               
-              {(activeTab === 'CONSUMABLES' || (activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' || auditSubTab === 'ATTENDANCE'))) && (
+              {(activeTab === 'CONSUMABLES' || activeTab === 'PRINTERS' || (activeTab === 'AUDITS' && (auditSubTab === 'HISTORY' || auditSubTab === 'ATTENDANCE'))) && (
                 <div className="md:col-span-2 flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-300 dark:border-slate-600">
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 ml-2">De:</span>
@@ -1717,6 +1757,75 @@ const Reports = () => {
                 )}
               </div>
             )}
+
+            {activeTab === 'PRINTERS' && (
+              <div className="overflow-x-auto">
+                {loadingPrinters ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                    <Loader2 size={32} className="animate-spin mb-4 text-blue-500" />
+                    <p className="text-xs font-bold uppercase tracking-wider">Carregando relatório de impressoras...</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm text-left table-fixed">
+                    <thead className="bg-slate-100 dark:bg-slate-800/50">
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400" style={{ width: '180px' }}>Patrimônio / SN</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400" style={{ width: '220px' }}>Modelo / Marca</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400" style={{ width: '150px' }}>Setor</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 text-right" style={{ width: '150px' }}>Leitura Inicial</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 text-right" style={{ width: '150px' }}>Leitura Final</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 text-right" style={{ width: '180px' }}>Páginas Impressas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50">
+                      {printersReportData.length > 0 ? (
+                        printersReportData.map((item) => (
+                          <tr key={item.DeviceId} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-b border-slate-200 dark:border-slate-700/50 transition-all cursor-pointer" onClick={() => handleDeviceClick(item.DeviceId)}>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-900 dark:text-white underline decoration-dotted decoration-slate-700 underline-offset-4">{item.AssetTag || 'S/T'}</span>
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase">SN: {item.SerialNumber || 'S/N'}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-700 dark:text-slate-300">{item.ModelName}</span>
+                                <span className="text-[11px] text-slate-500 dark:text-slate-400 uppercase">{item.BrandName}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="font-medium text-slate-700 dark:text-slate-300">{item.SectorName || 'Sem Setor'}</span>
+                            </td>
+                            <td className="px-6 py-4 text-right font-mono font-bold text-slate-600 dark:text-slate-400">
+                              {item.MinPages !== null ? item.MinPages.toLocaleString('pt-BR') : '-'}
+                            </td>
+                            <td className="px-6 py-4 text-right font-mono font-bold text-slate-600 dark:text-slate-400">
+                              {item.MaxPages !== null ? item.MaxPages.toLocaleString('pt-BR') : '-'}
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-sky-500/10 text-blue-600 dark:text-sky-400 px-3 py-1 rounded-xl font-mono font-black text-xs border border-blue-100 dark:border-sky-500/20">
+                                <Printer size={12} />
+                                {item.ConsumedPages !== null ? item.ConsumedPages.toLocaleString('pt-BR') : '0'}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                            <div className="flex flex-col items-center justify-center">
+                              <Printer size={48} className="mb-4 text-slate-700 dark:text-slate-300"/>
+                              <p className="text-sm font-bold">Nenhum dado de impressora registrado</p>
+                              <p className="text-xs text-slate-500 mt-1 max-w-md">Para gerar dados neste relatório, realize consultas no monitoramento Zabbix de suas impressoras para coletar o histórico de páginas.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/30 flex justify-between items-center text-xs font-bold">
@@ -1725,6 +1834,7 @@ const Reports = () => {
               activeTab === 'CONSUMABLES' ? consumablesReportData.length :
               activeTab === 'ASSETS' ? assetsSummaryData.length :
               activeTab === 'FINANCIAL' ? financialReportData.length :
+              activeTab === 'PRINTERS' ? printersReportData.length :
               auditSubTab === 'HISTORY' ? auditsReportData.length : auditSubTab === 'ATTENDANCE' ? attendanceReportData.length : devicesWithoutAuditData.length
             }</span>
             <span className="print:hidden">Relatório gerado em {new Date().toLocaleDateString('pt-BR')}</span>

@@ -570,6 +570,22 @@ async function initializeDatabase() {
             `);
         }
 
+        const checkPrinterPageHistory = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'PrinterPageHistory'");
+        if (checkPrinterPageHistory.recordset.length === 0) {
+            console.log('- Criando tabela PrinterPageHistory...');
+            await pool.request().query(`
+                CREATE TABLE PrinterPageHistory (
+                    Id NVARCHAR(255) PRIMARY KEY,
+                    DeviceId NVARCHAR(255) NOT NULL,
+                    ZabbixHostId NVARCHAR(255) NOT NULL,
+                    PageCount INT NOT NULL,
+                    Date DATE NOT NULL,
+                    Timestamp DATETIME DEFAULT GETDATE(),
+                    CONSTRAINT UC_PrinterPage UNIQUE (DeviceId, Date)
+                )
+            `);
+        }
+
         // Garante que a tabela de settings tenha pelo menos uma linha
         const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
         if (settingsCheck.recordset[0].count === 0) {
@@ -2687,6 +2703,134 @@ async function updateUserPendingStatus(pool, userId) {
             
             res.json(data);
         } catch (err) {
+            res.status(500).send(err.message);
+        }
+    });
+
+    // Registrar contagem de páginas para o histórico local
+    app.post('/api/zabbix/log-pages', async (req, res) => {
+        try {
+            const { deviceId, zabbixHostId, pageCount } = req.body;
+            if (!deviceId || !zabbixHostId || pageCount === undefined || isNaN(parseInt(pageCount))) {
+                return res.status(400).json({ error: 'Parâmetros inválidos ou ausentes.' });
+            }
+
+            const pool = await sql.connect(dbConfig);
+            
+            // Verifica se já existe registro para o dia de hoje
+            const check = await pool.request()
+                .input('deviceId', sql.NVarChar, deviceId)
+                .query(`
+                    SELECT Id FROM PrinterPageHistory 
+                    WHERE DeviceId = @deviceId 
+                    AND Date = CAST(GETDATE() AS DATE)
+                `);
+
+            if (check.recordset.length > 0) {
+                // Atualiza se houver nova contagem de páginas hoje
+                await pool.request()
+                    .input('deviceId', sql.NVarChar, deviceId)
+                    .input('pageCount', sql.Int, parseInt(pageCount))
+                    .query(`
+                        UPDATE PrinterPageHistory 
+                        SET PageCount = @pageCount, Timestamp = GETDATE()
+                        WHERE DeviceId = @deviceId 
+                        AND Date = CAST(GETDATE() AS DATE)
+                    `);
+            } else {
+                // Insere se for a primeira do dia
+                const id = 'PPH-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                await pool.request()
+                    .input('id', sql.NVarChar, id)
+                    .input('deviceId', sql.NVarChar, deviceId)
+                    .input('zabbixHostId', sql.NVarChar, zabbixHostId)
+                    .input('pageCount', sql.Int, parseInt(pageCount))
+                    .query(`
+                        INSERT INTO PrinterPageHistory (Id, DeviceId, ZabbixHostId, PageCount, Date)
+                        VALUES (@id, @deviceId, @zabbixHostId, @pageCount, CAST(GETDATE() AS DATE))
+                    `);
+            }
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('Erro em POST /api/zabbix/log-pages:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    // Retorna o histórico de contagem de páginas de um dispositivo específico para plotagem
+    app.get('/api/zabbix/page-history/:deviceId', async (req, res) => {
+        try {
+            const { deviceId } = req.params;
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('deviceId', sql.NVarChar, deviceId)
+                .query(`
+                    SELECT Date, PageCount 
+                    FROM PrinterPageHistory 
+                    WHERE DeviceId = @deviceId 
+                    ORDER BY Date ASC
+                `);
+            res.json(result.recordset);
+        } catch (err) {
+            console.error('Erro em GET /api/zabbix/page-history/:deviceId:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    // Relatório consolidado de contagem de páginas por impressora
+    app.get('/api/zabbix/report/printers', async (req, res) => {
+        try {
+            const { startDate, endDate } = req.query;
+            const pool = await sql.connect(dbConfig);
+            
+            let dateFilter = '';
+            if (startDate && endDate) {
+                dateFilter = `AND h.Date BETWEEN @startDate AND @endDate`;
+            } else if (startDate) {
+                dateFilter = `AND h.Date >= @startDate`;
+            } else if (endDate) {
+                dateFilter = `AND h.Date <= @endDate`;
+            }
+
+            const request = pool.request();
+            if (startDate) request.input('startDate', sql.VarChar, startDate);
+            if (endDate) request.input('endDate', sql.VarChar, endDate);
+
+            const query = `
+                WITH AggregatedHistory AS (
+                    SELECT 
+                        DeviceId,
+                        MIN(PageCount) as MinPages,
+                        MAX(PageCount) as MaxPages,
+                        COUNT(Id) as RecordsCount
+                    FROM PrinterPageHistory h
+                    WHERE 1=1 ${dateFilter}
+                    GROUP BY DeviceId
+                )
+                SELECT 
+                    d.Id as DeviceId,
+                    d.AssetTag,
+                    d.SerialNumber,
+                    m.Name as ModelName,
+                    b.Name as BrandName,
+                    s.Name as SectorName,
+                    a.MinPages,
+                    a.MaxPages,
+                    (a.MaxPages - a.MinPages) as ConsumedPages,
+                    a.RecordsCount
+                FROM AggregatedHistory a
+                INNER JOIN Devices d ON a.DeviceId = d.Id
+                LEFT JOIN Models m ON d.ModelId = m.Id
+                LEFT JOIN Brands b ON m.BrandId = b.Id
+                LEFT JOIN Sectors s ON d.SectorId = s.Id
+                ORDER BY ConsumedPages DESC
+            `;
+
+            const result = await request.query(query);
+            res.json(result.recordset);
+        } catch (err) {
+            console.error('Erro em GET /api/zabbix/report/printers:', err);
             res.status(500).send(err.message);
         }
     });

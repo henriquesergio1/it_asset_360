@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.49.0',
+    date: 'Hoje',
+    title: 'Gráfico de Consumo Diário & Relatório de Impressoras',
+    changes: [
+      'Gráfico de Consumo: Integração de histórico local de consumo de páginas com gráfico de barras SVG dinâmico na aba de monitoramento Zabbix.',
+      'Relatórios: Criação de nova aba "Impressoras" em relatórios com filtros avançados por data, leitura de contadores e exportação (CSV, Excel, PDF).',
+      'Banco de Dados: Sincronização inteligente e persistência diária automática dos contadores lidos do Zabbix no banco local.'
+    ]
+  },
+  {
     version: '3.48.1',
     date: 'Hoje',
     title: 'Monitoramento de Impressoras & Links Interativos',

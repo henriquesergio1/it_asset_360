@@ -3,18 +3,20 @@ import { Loader2, Droplet, Activity, Printer, Calendar, Clock } from 'lucide-rea
 
 interface ZabbixMonitorTabProps {
   zabbixHostId: string;
+  deviceId?: string;
 }
 
-export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
+export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pageHistory, setPageHistory] = useState<{ Date: string, PageCount: number }[]>([]);
 
   useEffect(() => {
     if (zabbixHostId) {
       fetchData();
     }
-  }, [zabbixHostId]);
+  }, [zabbixHostId, deviceId]);
 
   const fetchData = async () => {
     try {
@@ -43,6 +45,41 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
       
       const items = json.result || [];
       setData(items);
+
+      // Envia a contagem de páginas lida se houver e temos o deviceId
+      const pageCounterItem = items.find((i: any) => i.name.toLowerCase().includes('page counter')) || 
+                               items.find((i: any) => i.name.toLowerCase().includes('page') && i.name.toLowerCase().includes('count'));
+      if (pageCounterItem && pageCounterItem.lastvalue !== undefined && deviceId) {
+        const pageVal = parseInt(pageCounterItem.lastvalue);
+        if (!isNaN(pageVal)) {
+          try {
+            await fetch('/api/zabbix/log-pages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                deviceId,
+                zabbixHostId,
+                pageCount: pageVal
+              })
+            });
+          } catch (e) {
+            console.error("Erro ao registrar página no histórico:", e);
+          }
+        }
+      }
+
+      // Busca o histórico consolidado do banco local
+      if (deviceId) {
+        try {
+          const histRes = await fetch(`/api/zabbix/page-history/${deviceId}`);
+          if (histRes.ok) {
+            const histJson = await histRes.json();
+            setPageHistory(histJson || []);
+          }
+        } catch (e) {
+          console.error("Erro ao buscar histórico de páginas:", e);
+        }
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -115,6 +152,41 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
     parts.push(`${minutes}m`);
     return parts.join(' ');
   };
+
+  // Processa o histórico de contagem de páginas para calcular consumo diário
+  const consumptionData = React.useMemo(() => {
+    if (!pageHistory || pageHistory.length < 2) return [];
+    
+    const list: { label: string; value: number; rawDate: string }[] = [];
+    for (let i = 1; i < pageHistory.length; i++) {
+      const prev = pageHistory[i-1];
+      const curr = pageHistory[i];
+      const diff = curr.PageCount - prev.PageCount;
+      
+      let displayDate = curr.Date;
+      try {
+        const dateOnly = curr.Date.split('T')[0];
+        const parts = dateOnly.split('-');
+        if (parts.length === 3) {
+          displayDate = `${parts[2]}/${parts[1]}`;
+        }
+      } catch (e) {}
+
+      list.push({
+        label: displayDate,
+        value: diff >= 0 ? diff : 0,
+        rawDate: curr.Date
+      });
+    }
+    return list;
+  }, [pageHistory]);
+
+  const maxConsumption = React.useMemo(() => {
+    if (consumptionData.length === 0) return 1;
+    const vals = consumptionData.map(d => d.value);
+    const max = Math.max(...vals);
+    return max > 0 ? max : 1;
+  }, [consumptionData]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -241,6 +313,64 @@ export function ZabbixMonitorTab({ zabbixHostId }: ZabbixMonitorTabProps) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Seção de Histórico de Consumo de Páginas */}
+      <div className="bg-white dark:bg-slate-950/20 p-5 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm mt-6">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Printer size={16} className="text-blue-500" /> Consumo de Páginas Diário
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Visualização de impressão acumulada por dia</p>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-sky-400 bg-blue-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-lg">
+            Histórico Local DB
+          </span>
+        </div>
+
+        {consumptionData.length === 0 ? (
+          <div className="h-40 flex flex-col items-center justify-center text-center text-slate-400 dark:text-slate-500 text-xs italic p-6">
+            <Activity size={28} className="mb-2 animate-pulse text-slate-300 dark:text-slate-700" />
+            <p className="font-bold text-slate-600 dark:text-slate-400">Coletando leituras diárias...</p>
+            <p className="text-[10px] mt-1 text-slate-500 max-w-sm">
+              Os dados de contagem de páginas são registrados localmente no banco toda vez que este ativo é monitorado ou atualizado no dashboard. O gráfico aparecerá quando tivermos leituras em dias diferentes.
+            </p>
+          </div>
+        ) : (
+          <div className="pt-4">
+            <div className="h-36 flex items-end gap-3 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+              {consumptionData.map((d, idx) => {
+                const heightPercent = (d.value / maxConsumption) * 100;
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                    {/* Tooltip do valor */}
+                    <div className="absolute bottom-full mb-2 bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-15 border border-slate-800 dark:border-slate-700">
+                      <div className="font-black text-blue-400">{d.value} páginas</div>
+                      <div className="text-[9px] text-slate-400 font-medium">{d.rawDate.split('T')[0]}</div>
+                    </div>
+                    
+                    {/* Barra */}
+                    <div 
+                      style={{ height: `${Math.max(4, heightPercent)}%` }}
+                      className="w-full bg-blue-500 hover:bg-blue-600 dark:bg-sky-500 dark:hover:bg-sky-400 rounded-t-md transition-all shadow-sm group-hover:shadow-md cursor-pointer relative"
+                    >
+                      {/* Efeito de brilho hover */}
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-md"></div>
+                    </div>
+                    
+                    {/* Label da data */}
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-2 rotate-45 origin-left whitespace-nowrap pt-1">
+                      {d.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Espaçamento para as datas rotacionadas */}
+            <div className="h-10"></div>
+          </div>
+        )}
       </div>
     </div>
   );

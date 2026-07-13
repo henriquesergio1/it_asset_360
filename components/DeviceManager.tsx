@@ -1705,7 +1705,7 @@ const DeviceManager = () => {
  
 {activeTab === 'MONITOR' && formData.zabbixHostId && (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
-        <ZabbixMonitorTab zabbixHostId={formData.zabbixHostId} />
+        <ZabbixMonitorTab zabbixHostId={formData.zabbixHostId} deviceId={editingId || ''} />
     </div>
 )}
 {activeTab === 'HISTORY' && (
