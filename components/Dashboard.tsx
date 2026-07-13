@@ -1159,6 +1159,47 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {printers.map(printer => {
                   const hostItems = printersData[printer.zabbixHostId || ''] || [];
+                  
+                  // Helper to find specific toner by color, ignoring .max, level.max
+                  const getTonerItemByColor = (items: any[], color: string) => {
+                    let item = items.find((i: any) => {
+                      const name = i.name.toLowerCase();
+                      const key = i.key_ ? i.key_.toLowerCase() : '';
+                      return (name === `toner.${color}.level.now` || key === `toner.${color}.level.now` || 
+                              (name.endsWith(`.now`) && name.includes(`toner.${color}`)) ||
+                              (key.endsWith(`.now`) && key.includes(`toner.${color}`)));
+                    });
+                    if (item) return item;
+                    item = items.find((i: any) => {
+                      const name = i.name.toLowerCase();
+                      const key = i.key_ ? i.key_.toLowerCase() : '';
+                      const containsColor = name.includes(`toner.${color}`) || key.includes(`toner.${color}`) ||
+                                            (name.includes('toner') && name.includes(color)) ||
+                                            (key.includes('toner') && key.includes(color));
+                      const containsMax = name.includes('.max') || key.includes('.max') || name.includes('level.max') || key.includes('level.max');
+                      return containsColor && !containsMax && !isNaN(parseFloat(i.lastvalue));
+                    });
+                    return item;
+                  };
+
+                  const blackToner = getTonerItemByColor(hostItems, 'black');
+                  const cyanToner = getTonerItemByColor(hostItems, 'cyan');
+                  const magentaToner = getTonerItemByColor(hostItems, 'magenta');
+                  const yellowToner = getTonerItemByColor(hostItems, 'yellow');
+
+                  const hasColorToners = !!(cyanToner || magentaToner || yellowToner || blackToner);
+
+                  const getVal = (item: any) => {
+                    if (!item) return null;
+                    const val = parseFloat(item.lastvalue);
+                    return !isNaN(val) ? Math.max(0, Math.min(100, val)) : null;
+                  };
+
+                  const valBlack = getVal(blackToner);
+                  const valCyan = getVal(cyanToner);
+                  const valMagenta = getVal(magentaToner);
+                  const valYellow = getVal(yellowToner);
+
                   const tonerItem = hostItems.find((i: any) => i.name.toLowerCase().includes('toner level')) || hostItems.find((i: any) => i.name.toLowerCase().includes('toner') && !isNaN(parseFloat(i.lastvalue)) && i.units === '%');
                   const tonerVal = tonerItem ? parseFloat(tonerItem.lastvalue) : null;
                   const displayToner = tonerVal !== null && !isNaN(tonerVal) ? Math.max(0, Math.min(100, tonerVal)) : null;
@@ -1196,39 +1237,126 @@ const Dashboard = () => {
                       </div>
 
                       {/* Toner & Drum Bars */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* Toner Bar */}
-                        <div>
-                          <div className="flex justify-between text-[10px] font-bold mb-1">
-                            <span className="text-slate-500 dark:text-slate-400">Toner</span>
-                            <span className="text-slate-700 dark:text-slate-300">
-                              {displayToner !== null ? `${displayToner}%` : 'Carregando...'}
-                            </span>
-                          </div>
-                          <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner === 100 ? 'bg-green-500' : displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
-                              style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
-                            ></div>
-                          </div>
-                        </div>
+                      {hasColorToners ? (
+                        <div className="space-y-3">
+                          {/* 4 Toners Row */}
+                          <div className="grid grid-cols-4 gap-2">
+                            {/* Black */}
+                            <div>
+                              <div className="flex justify-between text-[9px] font-black mb-1">
+                                <span className="text-slate-600 dark:text-slate-400">K</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                  {valBlack !== null ? `${valBlack}%` : '-'}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-slate-800 dark:bg-slate-950 border border-slate-700/30 transition-all duration-500"
+                                  style={{ width: `${valBlack !== null ? valBlack : 0}%` }}
+                                ></div>
+                              </div>
+                            </div>
 
-                        {/* Drum Bar */}
-                        <div>
-                          <div className="flex justify-between text-[10px] font-bold mb-1">
-                            <span className="text-slate-500 dark:text-slate-400">Cilindro</span>
-                            <span className="text-slate-700 dark:text-slate-300">
-                              {displayDrum !== null ? `${displayDrum}%` : drumItem ? '0%' : 'Carregando...'}
-                            </span>
+                            {/* Cyan */}
+                            <div>
+                              <div className="flex justify-between text-[9px] font-black mb-1">
+                                <span className="text-cyan-500">C</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                  {valCyan !== null ? `${valCyan}%` : '-'}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-cyan-500 transition-all duration-500"
+                                  style={{ width: `${valCyan !== null ? valCyan : 0}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            {/* Magenta */}
+                            <div>
+                              <div className="flex justify-between text-[9px] font-black mb-1">
+                                <span className="text-pink-500">M</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                  {valMagenta !== null ? `${valMagenta}%` : '-'}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-pink-500 transition-all duration-500"
+                                  style={{ width: `${valMagenta !== null ? valMagenta : 0}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            {/* Yellow */}
+                            <div>
+                              <div className="flex justify-between text-[9px] font-black mb-1">
+                                <span className="text-yellow-500">Y</span>
+                                <span className="text-slate-700 dark:text-slate-300">
+                                  {valYellow !== null ? `${valYellow}%` : '-'}
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-yellow-400 transition-all duration-500"
+                                  style={{ width: `${valYellow !== null ? valYellow : 0}%` }}
+                                ></div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-500 ${displayDrum !== null ? 'bg-emerald-500' : drumItem ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`}
-                              style={{ width: `${displayDrum !== null ? displayDrum : 0}%` }}
-                            ></div>
+
+                          {/* Cilindro */}
+                          {displayDrum !== null && (
+                            <div>
+                              <div className="flex justify-between text-[10px] font-bold mb-1">
+                                <span className="text-slate-500 dark:text-slate-400">Cilindro</span>
+                                <span className="text-slate-700 dark:text-slate-300">{displayDrum}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-emerald-500 transition-all duration-500"
+                                  style={{ width: `${displayDrum}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Toner Bar */}
+                          <div>
+                            <div className="flex justify-between text-[10px] font-bold mb-1">
+                              <span className="text-slate-500 dark:text-slate-400">Toner</span>
+                              <span className="text-slate-700 dark:text-slate-300">
+                                {displayToner !== null ? `${displayToner}%` : 'Carregando...'}
+                              </span>
+                            </div>
+                            <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-500 ${displayToner !== null ? (displayToner === 100 ? 'bg-green-500' : displayToner <= 20 ? 'bg-red-500' : displayToner <= 50 ? 'bg-yellow-500' : 'bg-slate-800 dark:bg-slate-400') : 'bg-slate-300 animate-pulse'}`}
+                                style={{ width: `${displayToner !== null ? displayToner : 0}%` }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* Drum Bar */}
+                          <div>
+                            <div className="flex justify-between text-[10px] font-bold mb-1">
+                              <span className="text-slate-500 dark:text-slate-400">Cilindro</span>
+                              <span className="text-slate-700 dark:text-slate-300">
+                                {displayDrum !== null ? `${displayDrum}%` : drumItem ? '0%' : 'Carregando...'}
+                              </span>
+                            </div>
+                            <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-500 ${displayDrum !== null ? 'bg-emerald-500' : drumItem ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`}
+                                style={{ width: `${displayDrum !== null ? displayDrum : 0}%` }}
+                              ></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}

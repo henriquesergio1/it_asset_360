@@ -163,27 +163,38 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const statusText1Item = data.find((i: any) => i.name.toLowerCase().includes('status text 1') || i.name.toLowerCase() === 'status');
   const deviceUptimeItem = data.find((i: any) => i.name.toLowerCase().includes('device uptime') || i.key_.toLowerCase().includes('uptime') || i.name.toLowerCase().includes('uptime'));
 
+  // Helper to find specific toner by color, ignoring .max, level.max
+  const getTonerItemByColor = (items: any[], color: string) => {
+    // Try level.now strictly first
+    let item = items.find((i: any) => {
+      const name = i.name.toLowerCase();
+      const key = i.key_ ? i.key_.toLowerCase() : '';
+      return (name === `toner.${color}.level.now` || key === `toner.${color}.level.now` || 
+              (name.endsWith(`.now`) && name.includes(`toner.${color}`)) ||
+              (key.endsWith(`.now`) && key.includes(`toner.${color}`)));
+    });
+
+    if (item) return item;
+
+    // Fallback to containing toner and color name, but ignoring .max or level.max
+    item = items.find((i: any) => {
+      const name = i.name.toLowerCase();
+      const key = i.key_ ? i.key_.toLowerCase() : '';
+      const containsColor = name.includes(`toner.${color}`) || key.includes(`toner.${color}`) ||
+                            (name.includes('toner') && name.includes(color)) ||
+                            (key.includes('toner') && key.includes(color));
+      const containsMax = name.includes('.max') || key.includes('.max') || name.includes('level.max') || key.includes('level.max');
+      return containsColor && !containsMax && !isNaN(parseFloat(i.lastvalue));
+    });
+
+    return item;
+  };
+
   // Detecção de impressora colorida (e.g. Canon MF1127C)
-  const blackTonerItem = data.find((i: any) => 
-    i.name.toLowerCase() === 'toner.black.level.now' || i.key_.toLowerCase() === 'toner.black.level.now' ||
-    (i.name.toLowerCase().includes('toner.black') && !isNaN(parseFloat(i.lastvalue))) ||
-    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('black') && !isNaN(parseFloat(i.lastvalue)))
-  );
-  const cyanTonerItem = data.find((i: any) => 
-    i.name.toLowerCase() === 'toner.cyan.level.now' || i.key_.toLowerCase() === 'toner.cyan.level.now' ||
-    (i.name.toLowerCase().includes('toner.cyan') && !isNaN(parseFloat(i.lastvalue))) ||
-    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('cyan') && !isNaN(parseFloat(i.lastvalue)))
-  );
-  const magentaTonerItem = data.find((i: any) => 
-    i.name.toLowerCase() === 'toner.magenta.level.now' || i.key_.toLowerCase() === 'toner.magenta.level.now' ||
-    (i.name.toLowerCase().includes('toner.magenta') && !isNaN(parseFloat(i.lastvalue))) ||
-    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('magenta') && !isNaN(parseFloat(i.lastvalue)))
-  );
-  const yellowTonerItem = data.find((i: any) => 
-    i.name.toLowerCase() === 'toner.yellow.level.now' || i.key_.toLowerCase() === 'toner.yellow.level.now' ||
-    (i.name.toLowerCase().includes('toner.yellow') && !isNaN(parseFloat(i.lastvalue))) ||
-    (i.name.toLowerCase().includes('toner') && i.name.toLowerCase().includes('yellow') && !isNaN(parseFloat(i.lastvalue)))
-  );
+  const blackTonerItem = getTonerItemByColor(data, 'black');
+  const cyanTonerItem = getTonerItemByColor(data, 'cyan');
+  const magentaTonerItem = getTonerItemByColor(data, 'magenta');
+  const yellowTonerItem = getTonerItemByColor(data, 'yellow');
 
   const blackTonerModel = data.find((i: any) => i.name.toLowerCase() === 'black.toner.model' || i.key_.toLowerCase() === 'black.toner.model');
   const cyanTonerModel = data.find((i: any) => i.name.toLowerCase() === 'cyan.toner.model' || i.key_.toLowerCase() === 'cyan.toner.model');
