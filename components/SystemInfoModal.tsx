@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.50.1',
+    date: 'Hoje',
+    title: 'Ajuste Fino de Monitoramento de Impressoras',
+    changes: [
+      'Dashboard: O clique em cards de impressoras abre o monitoramento completo e idêntico ao do gerenciador de dispositivos.',
+      'Zabbix: Remoção do botão de atualização manual de dados do componente de monitoramento para uma visualização mais limpa.'
+    ]
+  },
+  {
     version: '3.50.0',
     date: 'Hoje',
     title: 'Monitoramento de Impressoras Coloridas & Multi-Toners',
