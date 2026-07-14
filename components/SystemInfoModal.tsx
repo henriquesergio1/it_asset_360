@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.50.3',
+    date: 'Hoje',
+    title: 'Correção de Parâmetro de Rota para Ativo',
+    changes: [
+      'Dashboard: Ajustado parâmetro de rota de view para deviceId ao navegar do modal de impressoras para as propriedades completas, permitindo que o modal seja aberto automaticamente.',
+    ]
+  },
+  {
     version: '3.50.2',
     date: 'Hoje',
     title: 'Navegação do Monitor para Propriedades do Ativo',

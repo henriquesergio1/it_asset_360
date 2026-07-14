@@ -2144,7 +2144,7 @@ const Dashboard = () => {
                 <button 
                   onClick={() => {
                     setSelectedPrinterForModal(null);
-                    navigate(`/devices?view=${selectedPrinterForModal.id}`);
+                    navigate(`/devices?deviceId=${selectedPrinterForModal.id}`);
                   }}
                   className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center gap-2"
                 >
