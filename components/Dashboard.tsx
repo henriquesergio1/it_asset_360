@@ -2140,7 +2140,17 @@ const Dashboard = () => {
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex justify-end shrink-0">
+              <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex justify-between items-center shrink-0">
+                <button 
+                  onClick={() => {
+                    setSelectedPrinterForModal(null);
+                    navigate(`/devices?view=${selectedPrinterForModal.id}`);
+                  }}
+                  className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center gap-2"
+                >
+                  <ExternalLink size={14} />
+                  Ver Propriedades Completas
+                </button>
                 <button 
                   onClick={() => setSelectedPrinterForModal(null)} 
                   className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-colors"

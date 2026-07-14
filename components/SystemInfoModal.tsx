@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.50.2',
+    date: 'Hoje',
+    title: 'Navegação do Monitor para Propriedades do Ativo',
+    changes: [
+      'Dashboard: Adicionado botão no modal de monitoramento de impressoras que permite ir diretamente às propriedades completas do dispositivo no menu de Dispositivos.',
+    ]
+  },
+  {
     version: '3.50.1',
     date: 'Hoje',
     title: 'Ajuste Fino de Monitoramento de Impressoras',
