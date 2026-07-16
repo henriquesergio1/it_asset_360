@@ -10,6 +10,10 @@ import {
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle
 } from 'lucide-react';
+import { 
+  normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
+  formatCPF, formatPhone, formatCEP 
+} from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
   { id: 'fullName', label: 'Nome Completo' },
@@ -179,11 +183,59 @@ export const RhCollaboratorManager: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName || !form.cpf) return;
+    
+    // Validações básicas
+    if (!form.fullName || !form.cpf || !form.sectorId) {
+      alert('Nome Completo, CPF e Setor são obrigatórios.');
+      return;
+    }
+
+    if (!validateCPF(form.cpf)) {
+      alert('CPF inválido. Por favor, verifique o número informado.');
+      return;
+    }
+
+    if (form.emailPersonal && !validateEmail(form.emailPersonal)) {
+      alert('E-mail pessoal inválido.');
+      return;
+    }
+
+    if (form.emailCorporate && !validateEmail(form.emailCorporate)) {
+      alert('E-mail corporativo inválido.');
+      return;
+    }
+
+    if (form.personalPhone && !validatePhone(form.personalPhone)) {
+      alert('Telefone pessoal deve ter pelo menos 10 dígitos.');
+      return;
+    }
+
+    if (form.cep && !validateCEP(form.cep)) {
+      alert('CEP deve ter 8 dígitos.');
+      return;
+    }
+
+    // Normalização de dados
+    const normalizedForm = {
+      ...form,
+      fullName: normalizeName(form.fullName || ''),
+      motherName: normalizeName(form.motherName || ''),
+      fatherName: normalizeName(form.fatherName || ''),
+      street: normalizeName(form.street || ''),
+      neighborhood: normalizeName(form.neighborhood || ''),
+      city: normalizeName(form.city || ''),
+      role: normalizeName(form.role || ''),
+      emailPersonal: (form.emailPersonal || '').trim().toLowerCase(),
+      emailCorporate: (form.emailCorporate || '').trim().toLowerCase(),
+      cpf: (form.cpf || '').replace(/\D/g, ''),
+      cep: (form.cep || '').replace(/\D/g, ''),
+      personalPhone: (form.personalPhone || '').replace(/\D/g, ''),
+      corporatePhone: (form.corporatePhone || '').replace(/\D/g, ''),
+    };
 
     if (isCreating) {
       const newColab: RhCollaborator = {
-        ...(form as RhCollaborator),
+        ...(normalizedForm as RhCollaborator),
         id: 'colab-' + Math.random().toString(36).substr(2, 9),
         documents: form.documents || []
       };
@@ -192,7 +244,7 @@ export const RhCollaboratorManager: React.FC = () => {
     } else if (isEditing && selectedColab) {
       const updated: RhCollaborator = {
         ...selectedColab,
-        ...(form as RhCollaborator)
+        ...(normalizedForm as RhCollaborator)
       };
       updateRhCollaborator(updated, adminName);
       setSelectedColab(updated);
@@ -600,7 +652,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   </td>
                 )}
-                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-[11px] text-slate-500">{c.cpf}</td>}
+                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-[11px] text-slate-500">{formatCPF(c.cpf)}</td>}
                 {visibleColumns.includes('role') && <td className="px-6 py-4 font-bold">{c.role || 'Sem Cargo'}</td>}
                 {visibleColumns.includes('sectorId') && <td className="px-6 py-4 text-slate-500">{sectorName}</td>}
                 {visibleColumns.includes('contractType') && (
@@ -771,11 +823,11 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Corporativo</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.corporatePhone || '---'}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.corporatePhone ? formatPhone(selectedColab.corporatePhone) : '---'}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Pessoal</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.personalPhone || '---'}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.personalPhone ? formatPhone(selectedColab.personalPhone) : '---'}</span>
                       </div>
                     </div>
                   </div>
@@ -786,7 +838,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CPF</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.cpf}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{formatCPF(selectedColab.cpf)}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">RG</span>
@@ -821,7 +873,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="text-slate-400 block text-[10px] font-bold">
                           {selectedColab.neighborhood || ''} • {selectedColab.city || ''} - {selectedColab.state || ''}
                         </span>
-                        <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep || '---'}</span>
+                        <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep ? formatCEP(selectedColab.cep) : '---'}</span>
                       </div>
                     </div>
                   </div>
@@ -1148,7 +1200,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           type="text"
                           placeholder="(00) 00000-0000"
                           value={form.personalPhone || ''}
-                          onChange={e => setForm(p => ({ ...p, personalPhone: e.target.value }))}
+                          onChange={e => setForm(p => ({ ...p, personalPhone: formatPhone(e.target.value) }))}
                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                         />
                       </div>
@@ -1158,7 +1210,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           type="text"
                           placeholder="(00) 00000-0000"
                           value={form.corporatePhone || ''}
-                          onChange={e => setForm(p => ({ ...p, corporatePhone: e.target.value }))}
+                          onChange={e => setForm(p => ({ ...p, corporatePhone: formatPhone(e.target.value) }))}
                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                         />
                       </div>
@@ -1208,7 +1260,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           required
                           placeholder="000.000.000-00"
                           value={form.cpf || ''}
-                          onChange={e => setForm(p => ({ ...p, cpf: e.target.value }))}
+                          onChange={e => setForm(p => ({ ...p, cpf: formatCPF(e.target.value) }))}
                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                         />
                       </div>
@@ -1277,7 +1329,7 @@ export const RhCollaboratorManager: React.FC = () => {
                             placeholder="00000-000"
                             value={form.cep || ''}
                             onBlur={handleCepBlur}
-                            onChange={e => setForm(p => ({ ...p, cep: e.target.value }))}
+                            onChange={e => setForm(p => ({ ...p, cep: formatCEP(e.target.value) }))}
                             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white pr-10"
                           />
                           {cepLoading && <Loader2 size={16} className="animate-spin absolute right-3 top-3 text-indigo-500" />}
