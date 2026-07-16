@@ -138,10 +138,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const consumableTransactions = consumableTransactionsData || syncData?.consumableTransactions || bootstrapData?.consumableTransactions || [];
 const consumables = syncData?.consumables || bootstrapData?.consumables || [];
 
- const [rhCollaborators, setRhCollaborators] = useState<RhCollaborator[]>([]);
- const [rhOccurrences, setRhOccurrences] = useState<RhOccurrence[]>([]);
- const [rhTemplates, setRhTemplates] = useState<RhTermTemplate[]>([]);
- const [rhTerms, setRhTerms] = useState<RhTerm[]>([]);
+ const rhCollaborators = syncData?.rhCollaborators || bootstrapData?.rhCollaborators || [];
+ const rhOccurrences = syncData?.rhOccurrences || bootstrapData?.rhOccurrences || [];
+ const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
+ const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
+ const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -798,16 +799,137 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
   rhOccurrences,
   rhTemplates,
   rhTerms,
-  addRhCollaborator: (c) => setRhCollaborators(p => [...p, c]),
-  updateRhCollaborator: (c) => setRhCollaborators(p => p.map(x => x.id === c.id ? c : x)),
-  deleteRhCollaborator: (id) => setRhCollaborators(p => p.filter(x => x.id !== id)),
-  addRhOccurrence: (o) => setRhOccurrences(p => [...p, o]),
-  deleteRhOccurrence: (id) => setRhOccurrences(p => p.filter(x => x.id !== id)),
-  addRhTemplate: (t) => setRhTemplates(p => [...p, t]),
-  updateRhTemplate: (t) => setRhTemplates(p => p.map(x => x.id === t.id ? t : x)),
-  deleteRhTemplate: (id) => setRhTemplates(p => p.filter(x => x.id !== id)),
-  addRhTerm: (t) => setRhTerms(p => [...p, t]),
-  updateRhTerm: (t) => setRhTerms(p => p.map(x => x.id === t.id ? t : x))
+  rhAssetItems,
+  addRhCollaborator: async (c) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-collaborators', c);
+      fetchData(true);
+      showToast('Colaborador cadastrado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao cadastrar colaborador', 'error');
+    }
+  },
+  updateRhCollaborator: async (c) => {
+    if (checkReadOnly()) return;
+    try {
+      await putData('rh-collaborators', c);
+      fetchData(true);
+      showToast('Colaborador atualizado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar colaborador', 'error');
+    }
+  },
+  deleteRhCollaborator: async (id) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-collaborators/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Colaborador excluído do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir colaborador', 'error');
+    }
+  },
+  addRhOccurrence: async (o) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-occurrences', o);
+      fetchData(true);
+      showToast('Ocorrência registrada no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao registrar ocorrência', 'error');
+    }
+  },
+  deleteRhOccurrence: async (id) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-occurrences/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Ocorrência removida do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao remover ocorrência', 'error');
+    }
+  },
+  addRhTemplate: async (t) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-templates', t);
+      fetchData(true);
+      showToast('Modelo de termo cadastrado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao cadastrar modelo de termo', 'error');
+    }
+  },
+  updateRhTemplate: async (t) => {
+    if (checkReadOnly()) return;
+    try {
+      await putData('rh-templates', t);
+      fetchData(true);
+      showToast('Modelo de termo atualizado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar modelo de termo', 'error');
+    }
+  },
+  deleteRhTemplate: async (id) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-templates/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Modelo de termo excluído do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir modelo de termo', 'error');
+    }
+  },
+  addRhTerm: async (t) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-terms', t);
+      fetchData(true);
+      showToast('Termo gerado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao gerar termo', 'error');
+    }
+  },
+  updateRhTerm: async (t) => {
+    if (checkReadOnly()) return;
+    try {
+      await putData('rh-terms', t);
+      fetchData(true);
+      showToast('Termo atualizado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar termo', 'error');
+    }
+  },
+  addRhAssetItem: async (item) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-assets', item);
+      fetchData(true);
+      showToast('Item cadastrado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao cadastrar item', 'error');
+    }
+  },
+  updateRhAssetItem: async (item) => {
+    if (checkReadOnly()) return;
+    try {
+      await putData('rh-assets', item);
+      fetchData(true);
+      showToast('Item atualizado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar item', 'error');
+    }
+  },
+  deleteRhAssetItem: async (id) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-assets/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Item excluído do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir item', 'error');
+    }
+  }
  };
  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

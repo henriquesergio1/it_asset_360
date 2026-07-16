@@ -31,6 +31,7 @@ import { RhDashboard } from './components/RhDashboard';
 import { RhCollaboratorManager } from './components/RhCollaboratorManager';
 import { RhComodatoManager } from './components/RhComodatoManager';
 import { RhOccurrenceManager } from './components/RhOccurrenceManager';
+import { RhAssetManager } from './components/RhAssetManager';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -140,16 +141,16 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         {!isSidebarCollapsed && (hasRhAccess && hasTiAccess) && (
           <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 shrink-0">
             <span className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 text-center">Módulo Ativo</span>
-            <div className="flex bg-slate-200 dark:bg-slate-850 p-1 rounded-xl">
+            <div className="flex bg-slate-200 dark:bg-slate-900 p-1 rounded-xl">
               <button
                 onClick={() => handleModuleSwitch('TI')}
-                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'TI' ? 'bg-white dark:bg-slate-750 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'TI' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 T.I.
               </button>
               <button
                 onClick={() => handleModuleSwitch('RH')}
-                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'RH' ? 'bg-white dark:bg-slate-750 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'RH' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 R.H.
               </button>
@@ -189,6 +190,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               {(isAdmin || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} />}
               {(isAdmin || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} />}
               {(isAdmin || hasPermission(user, 'rh_atestados') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'rh_ativos') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} />}
             </>
           )}
           
@@ -312,6 +314,7 @@ const AppRoutes = () => {
             <Route path="/rh/collaborators" element={<ProtectedRoute><RhCollaboratorManager /></ProtectedRoute>} />
             <Route path="/rh/comodato" element={<ProtectedRoute><RhComodatoManager /></ProtectedRoute>} />
             <Route path="/rh/occurrences" element={<ProtectedRoute><RhOccurrenceManager /></ProtectedRoute>} />
+            <Route path="/rh/assets" element={<ProtectedRoute><RhAssetManager /></ProtectedRoute>} />
 
             <Route path="/sign-term/:token" element={<DigitalSignature />} />
             <Route path="*" element={<Navigate to="/" replace />} />

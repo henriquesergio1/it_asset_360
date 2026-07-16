@@ -43,4 +43,13 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #64748b; /* slate-500 */
   }
+
+  /* Hide scrollbar utility */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none !important;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
+  }
 }

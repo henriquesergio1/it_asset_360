@@ -2,15 +2,25 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { RhOccurrence } from '../types';
-import { Plus, Trash2, Calendar, FileText, AlertTriangle, Search } from 'lucide-react';
+import { DataTable, Column } from './DataTable';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { 
+  Plus, Trash2, Calendar, FileText, AlertTriangle, Search, X, 
+  Download, ChevronLeft, ChevronRight, Briefcase, Paperclip, Check
+} from 'lucide-react';
 
 export const RhOccurrenceManager: React.FC = () => {
   const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence } = useData();
   const { user } = useAuth();
   const adminName = user?.name || 'Gestor R.H.';
 
-  // Search/Filter state
+  // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
+
+  // Modals & Selections
+  const [selectedOccurrence, setSelectedOccurrence] = useState<RhOccurrence | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   // Form State
@@ -67,42 +77,432 @@ export const RhOccurrenceManager: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Tem certeza de que deseja remover este lançamento de ocorrência de R.H.?')) {
       deleteRhOccurrence(id, adminName);
+      setSelectedOccurrence(null);
+      setIsDetailModalOpen(false);
     }
   };
 
-  const filteredOccurrences = rhOccurrences.filter(o => {
-    const colabName = rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || 'Desconhecido';
-    return colabName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.type.toLowerCase().includes(searchTerm.toLowerCase());
+  // Filter Logic
+  const filtered = rhOccurrences.filter(o => {
+    const colabName = rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || '';
+    
+    const matchesSearch = colabName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          o.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (o.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = !filterType || o.type === filterType;
+
+    return matchesSearch && matchesType;
   });
+
+  // Table Configuration
+  const columns: Column<RhOccurrence>[] = [
+    { key: 'collaboratorId', label: 'Colaborador', sortable: true },
+    { key: 'type', label: 'Tipo de Ocorrência', sortable: true },
+    { key: 'startDate', label: 'Data Início', sortable: true },
+    { key: 'endDate', label: 'Data Fim', sortable: true },
+    { key: 'daysCount', label: 'Dias Afastado', sortable: true },
+    { key: 'fileUrl', label: 'Anexo', sortable: false }
+  ];
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+    collaboratorId: 260,
+    type: 180,
+    startDate: 130,
+    endDate: 130,
+    daysCount: 120,
+    fileUrl: 100
+  });
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleResize = (key: string, startX: number, startWidth: number) => {
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(50, startWidth + (moveEvent.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: newWidth }));
+    };
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const sortedData = [...filtered].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    
+    let aVal: any = a[key as keyof RhOccurrence];
+    let bVal: any = b[key as keyof RhOccurrence];
+
+    if (key === 'collaboratorId') {
+      aVal = rhCollaborators.find(c => c.id === a.collaboratorId)?.fullName || '';
+      bVal = rhCollaborators.find(c => c.id === b.collaboratorId)?.fullName || '';
+    }
+
+    if (aVal === undefined || aVal === null) return direction === 'asc' ? 1 : -1;
+    if (bVal === undefined || bVal === null) return direction === 'asc' ? -1 : 1;
+
+    if (typeof aVal === 'string') {
+      return direction === 'asc' 
+        ? aVal.localeCompare(bVal) 
+        : bVal.localeCompare(aVal);
+    }
+    
+    return direction === 'asc' 
+      ? (aVal > bVal ? 1 : -1) 
+      : (bVal > aVal ? 1 : -1);
+  });
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
+
+  const totalItems = sortedData.length;
+  const totalPages = itemsPerPage === 'ALL' ? 1 : Math.ceil(totalItems / itemsPerPage);
+  
+  const paginatedData = itemsPerPage === 'ALL' 
+    ? sortedData 
+    : sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Export functions
+  const handleExportCSV = () => {
+    const exportData = filtered.map(o => ({
+      'Colaborador': rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || 'Desconhecido',
+      'CPF': rhCollaborators.find(c => c.id === o.collaboratorId)?.cpf || '',
+      'Tipo': o.type,
+      'Data Início': o.startDate,
+      'Data Fim': o.endDate,
+      'Quantidade de Dias': o.daysCount,
+      'Observações': o.notes || '',
+      'Anexo Presente': o.fileUrl ? 'Sim' : 'Não'
+    }));
+    exportToCSV(exportData, 'ocorrencias_rh');
+  };
+
+  const handleExportExcel = () => {
+    const exportData = filtered.map(o => ({
+      'Colaborador': rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || 'Desconhecido',
+      'CPF': rhCollaborators.find(c => c.id === o.collaboratorId)?.cpf || '',
+      'Tipo': o.type,
+      'Data Início': o.startDate,
+      'Data Fim': o.endDate,
+      'Quantidade de Dias': o.daysCount,
+      'Observações': o.notes || '',
+      'Anexo Presente': o.fileUrl ? 'Sim' : 'Não'
+    }));
+    exportToExcel(exportData, 'ocorrencias_rh');
+  };
+
+  const handleExportPDF = () => {
+    const headers = ['Colaborador', 'Tipo de Ocorrência', 'Início', 'Fim', 'Dias'];
+    const exportData = filtered.map(o => [
+      rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || 'Desconhecido',
+      o.type,
+      new Date(o.startDate).toLocaleDateString('pt-BR'),
+      new Date(o.endDate).toLocaleDateString('pt-BR'),
+      String(o.daysCount)
+    ]);
+    exportToPDF(headers, exportData, 'ocorrencias_rh', 'Relatório de Afastamentos e Ocorrências R.H.');
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 id="rh-occurrence-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">FALTAS, ATESTADOS E OCORRÊNCIAS</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Controle rigoroso de afastamentos, atestados médicos, licenças e férias</p>
         </div>
-        {!showCreate && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-          >
-            <Plus size={16} /> Lançar Ocorrência
-          </button>
-        )}
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+        >
+          <Plus size={16} /> Lançar Ocorrência
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Painel Esquerdo: Formulário de Lançamento */}
-        {showCreate ? (
-          <div className="lg:col-span-1 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700/60 pb-3 mb-2">
-              <span className="text-xs font-black uppercase text-indigo-600 tracking-wider">Nova Ocorrência</span>
-              <button onClick={() => setShowCreate(false)} className="text-xs font-bold text-slate-400 hover:text-slate-600">Cancelar</button>
+      {/* Filter Toolbar */}
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row items-center gap-4">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
+          <input
+            type="text"
+            placeholder="Buscar por colaborador ou tipo de ocorrência..."
+            value={searchTerm}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Occurrence Type Filter */}
+          <select
+            value={filterType}
+            onChange={e => { setFilterType(e.target.value); setCurrentPage(1); }}
+            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+          >
+            <option value="">Todos os Tipos</option>
+            <option value="Atestado Médico">Atestado Médico</option>
+            <option value="Falta Justificada">Falta Justificada</option>
+            <option value="Falta Injustificada">Falta Injustificada</option>
+            <option value="Licença Maternidade">Licença Maternidade</option>
+            <option value="Licença Paternidade">Licença Paternidade</option>
+            <option value="Afastamento INSS">Afastamento INSS</option>
+          </select>
+
+          {/* Exports Dropdown */}
+          <div className="flex items-center gap-1 border-l border-slate-200 dark:border-slate-700 pl-3">
+            <button
+              onClick={handleExportExcel}
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1"
+              title="Exportar para Excel"
+            >
+              <Download size={14} /> <span className="hidden lg:inline">XLS</span>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1"
+              title="Exportar para PDF"
+            >
+              <FileText size={14} /> <span className="hidden lg:inline">PDF</span>
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1"
+              title="Exportar para CSV"
+            >
+              <Briefcase size={14} /> <span className="hidden lg:inline">CSV</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main DataTable Grid */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+        <DataTable
+          columns={columns}
+          data={paginatedData}
+          sortConfig={sortConfig}
+          requestSort={requestSort}
+          columnWidths={columnWidths}
+          onResize={handleResize}
+          emptyMessage="Nenhuma ocorrência registrada com os filtros atuais."
+          renderRow={(o) => {
+            const colabName = rhCollaborators.find(c => c.id === o.collaboratorId)?.fullName || 'Desconhecido';
+            return (
+              <tr
+                key={o.id}
+                onClick={() => {
+                  setSelectedOccurrence(o);
+                  setIsDetailModalOpen(true);
+                }}
+                className="border-b border-slate-200 dark:border-slate-700/40 hover:bg-slate-100/60 dark:hover:bg-slate-900/30 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200"
+              >
+                <td className="px-6 py-4 font-black">{colabName}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 text-[10px] font-black rounded uppercase tracking-wider ${
+                    o.type === 'Atestado Médico' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400' :
+                    o.type.includes('Licença') ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                    o.type.includes('Injustificada') ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400' :
+                    'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                  }`}>
+                    {o.type}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-slate-500">{new Date(o.startDate).toLocaleDateString('pt-BR')}</td>
+                <td className="px-6 py-4 text-slate-500">{new Date(o.endDate).toLocaleDateString('pt-BR')}</td>
+                <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{o.daysCount} dias</td>
+                <td className="px-6 py-4">
+                  {o.fileUrl ? (
+                    <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-extrabold text-[9px] px-2 py-0.5 rounded uppercase border border-indigo-500/20 flex items-center gap-1 w-max">
+                      <Paperclip size={10} /> 1 anexo
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+              </tr>
+            );
+          }}
+        />
+
+        {/* Footer Pagination */}
+        <div className="bg-slate-50 dark:bg-slate-900/20 border-t border-slate-200 dark:border-slate-700/60 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Exibir:</span>
+              <select
+                className="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                value={itemsPerPage}
+                onChange={e => {
+                  setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={40}>40</option>
+                <option value="ALL">Todos</option>
+              </select>
+            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total: {totalItems} ocorrências</p>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-indigo-600 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-black text-indigo-600 bg-indigo-500/10 px-3 py-1.5 rounded-lg">{currentPage}</span>
+                <span className="text-xs font-bold uppercase mx-1 text-slate-400">de</span>
+                <span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span>
+              </div>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-indigo-600 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* DETALHES DA OCORRÊNCIA MODAL (Popup de visualização polida) */}
+      {isDetailModalOpen && selectedOccurrence && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
+            {/* Header */}
+            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[10px] font-black rounded uppercase tracking-wider">{selectedOccurrence.type}</span>
+                <div className="flex flex-col">
+                  <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">Ocorrência de R.H.</h2>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lançamento ID: {selectedOccurrence.id}</span>
+                </div>
+              </div>
+              <button onClick={() => { setIsDetailModalOpen(false); setSelectedOccurrence(null); }} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all">
+                <X size={20} />
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-6 text-xs">
+              {(() => {
+                const colab = rhCollaborators.find(c => c.id === selectedOccurrence.collaboratorId);
+                const colabName = colab?.fullName || 'Desconhecido';
+                const colabCpf = colab?.cpf || '---';
+
+                return (
+                  <div className="space-y-6">
+                    {/* Ficha técnica em duas colunas */}
+                    <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700/60 p-5 rounded-2xl space-y-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block leading-none mb-1">Colaborador Ausente</span>
+                        <p className="font-black text-slate-900 dark:text-white">{colabName}</p>
+                        <p className="text-slate-500 font-bold font-mono">CPF: {colabCpf}</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-150 dark:border-slate-800">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block leading-none mb-1">Data Início</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{new Date(selectedOccurrence.startDate).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block leading-none mb-1">Data Fim</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{new Date(selectedOccurrence.endDate).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-150 dark:border-slate-800 flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block leading-none">Dias de Afastamento Total</span>
+                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black text-xs rounded-lg">{selectedOccurrence.daysCount} dias corridos</span>
+                      </div>
+                    </div>
+
+                    {/* Observações / Descrição */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block leading-none">Observações e Detalhes</span>
+                      <p className="p-4 bg-slate-100 dark:bg-slate-900 text-xs rounded-xl text-slate-800 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-800 whitespace-pre-wrap">
+                        {selectedOccurrence.notes || 'Nenhuma observação informada.'}
+                      </p>
+                    </div>
+
+                    {/* Anexos de certificado/atestado */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block leading-none">Anexo Regulamentar</span>
+                      {selectedOccurrence.fileUrl ? (
+                        <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 rounded-lg shrink-0">
+                              <FileText size={16} />
+                            </div>
+                            <div>
+                              <span className="block font-bold text-xs text-slate-800 dark:text-white leading-none">atestado_medico_oficial.pdf</span>
+                              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Atestado Médico / Licença oficial validada</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">Download</span>
+                        </div>
+                      ) : (
+                        <p className="text-slate-400 text-xs italic">Nenhum certificado ou atestado anexado a esta ocorrência.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
+              <button
+                onClick={() => handleDelete(selectedOccurrence.id)}
+                className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider shadow-sm transition-all"
+              >
+                <Trash2 size={14} /> Excluir Registro
+              </button>
+              
+              <button
+                onClick={() => { setIsDetailModalOpen(false); setSelectedOccurrence(null); }}
+                className="px-6 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LANÇAMENTO DE OCORRÊNCIA MODAL (Popup de cadastro) */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
+            {/* Header */}
+            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+              <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider">
+                Lançar Nova Ocorrência R.H.
+              </h2>
+              <button onClick={() => setShowCreate(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-4 text-xs">
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Colaborador Afetado *</label>
                 <select
@@ -113,13 +513,13 @@ export const RhOccurrenceManager: React.FC = () => {
                 >
                   <option value="">Selecione o Colaborador...</option>
                   {rhCollaborators.map(c => (
-                    <option key={c.id} value={c.id}>{c.fullName}</option>
+                    <option key={c.id} value={c.id}>{c.fullName} ({c.cpf})</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Afastamento *</label>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência / Motivo *</label>
                 <select
                   value={form.type}
                   onChange={e => setForm(p => ({ ...p, type: e.target.value as any }))}
@@ -134,139 +534,87 @@ export const RhOccurrenceManager: React.FC = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data Início *</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data Início Afastamento *</label>
                   <input
                     type="date"
                     required
                     value={form.startDate}
                     onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white font-medium"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data Fim *</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data Fim Afastamento *</label>
                   <input
                     type="date"
                     required
                     value={form.endDate}
                     onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white font-medium"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Anotações / CID / Motivo</label>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Observações / Detalhes CID</label>
                 <textarea
-                  rows={4}
-                  placeholder="Justificativa do afastamento, observações médicas importantes, CID se houver..."
+                  rows={3}
+                  placeholder="Escreva detalhes adicionais, justificativas ou CID se necessário..."
                   value={form.notes}
                   onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                 />
               </div>
 
-              {/* Anexos */}
-              <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
-                <span className="block text-[10px] font-black uppercase text-slate-400">Anexo Comprovante (.pdf, .jpg)</span>
-                <input
-                  type="text"
-                  placeholder="Nome do arquivo do atestado..."
-                  value={attachedFileName}
-                  onChange={e => setAttachedFileName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs"
-                />
+              {/* Upload de Atestado Simulado */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-150 dark:border-slate-700/60">
+                <span className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Anexar Atestado / Certificado de Justificativa</span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder="Nome do arquivo..."
+                    value={attachedFileName}
+                    onChange={e => setAttachedFileName(e.target.value)}
+                    className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAttachedFileName('atestado_medico_validado.pdf')}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-4 py-2 rounded-xl uppercase transition-all"
+                  >
+                    Simular Upload
+                  </button>
+                </div>
+                {attachedFileName && (
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-2 flex items-center gap-1">
+                    <Check size={12} /> Arquivo '{attachedFileName}' carregado com sucesso.
+                  </p>
+                )}
               </div>
+            </form>
 
+            {/* Form Footer */}
+            <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="px-6 py-3 bg-slate-250 hover:bg-slate-350 dark:bg-slate-700 text-slate-700 dark:text-slate-250 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
               <button
                 type="submit"
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl uppercase tracking-wider shadow-md"
+                onClick={handleSubmit}
+                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl uppercase tracking-wider hover:shadow-md transition-all"
               >
-                Salvar Lançamento
+                Lançar Ocorrência
               </button>
-            </form>
-          </div>
-        ) : (
-          <div className="lg:col-span-1 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col items-center justify-center text-center py-12">
-            <AlertTriangle size={36} className="text-indigo-500 mb-2 animate-pulse" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white mb-1">Afastamentos em Tempo Real</h3>
-            <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
-              Clique no botão superior para lançar uma falta, atestado médico, férias regulamentares ou licenças especiais para qualquer colaborador.
-            </p>
-          </div>
-        )}
-
-        {/* Painel Direito: Histórico e Lançamentos de Ocorrências */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between min-h-[60vh]">
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-700/50 pb-4">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">Lançamentos de Ocorrências</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Histórico de atestados e afastamentos</p>
-              </div>
-              <div className="relative w-64">
-                <Search size={14} className="absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Filtrar por nome ou tipo..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-semibold"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
-              {filteredOccurrences.map(occ => {
-                const start = new Date(occ.startDate);
-                const end = new Date(occ.endDate);
-                const colabName = rhCollaborators.find(c => c.id === occ.collaboratorId)?.fullName || 'Desconhecido';
-
-                return (
-                  <div
-                    key={occ.id}
-                    className="p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/50 rounded-2xl flex justify-between items-start hover:border-slate-300 dark:hover:border-slate-600 transition-all"
-                  >
-                    <div className="flex gap-4">
-                      <div className="p-3.5 bg-rose-100 dark:bg-rose-500/10 text-rose-600 rounded-xl h-11 w-11 flex items-center justify-center shrink-0">
-                        <Calendar size={18} />
-                      </div>
-                      <div className="text-xs space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-slate-950 dark:text-white">{colabName}</span>
-                          <span className="px-1.5 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 font-black text-[9px] rounded uppercase">{occ.type}</span>
-                        </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">{occ.notes || 'Nenhuma anotação inserida'}</p>
-                        <div className="flex items-center gap-4 text-[10px] text-slate-400 font-mono">
-                          <span>Período: {start.toLocaleDateString('pt-BR')} até {end.toLocaleDateString('pt-BR')}</span>
-                          <span className="font-bold text-slate-500 dark:text-slate-300">({occ.daysCount} {occ.daysCount === 1 ? 'dia' : 'dias'} de afastamento)</span>
-                        </div>
-                        {occ.fileUrl && (
-                          <div className="flex items-center gap-1 text-[9px] text-indigo-600 dark:text-indigo-400 font-bold uppercase mt-1">
-                            <FileText size={12} /> Atestado Médico Anexado (.PDF)
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleDelete(occ.id)}
-                      className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                );
-              })}
-              {filteredOccurrences.length === 0 && (
-                <p className="text-xs text-slate-400 py-12 text-center">Nenhum afastamento ou ocorrência encontrada.</p>
-              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

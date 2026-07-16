@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -33,6 +33,7 @@ export interface DataContextType {
  rhOccurrences: RhOccurrence[];
  rhTemplates: RhTermTemplate[];
  rhTerms: RhTerm[];
+ rhAssetItems: RhAssetItem[];
 
  loading?: boolean;
  error?: string | null;
@@ -172,6 +173,9 @@ export interface DataContextType {
  deleteRhTemplate: (id: string, adminName: string) => void;
  addRhTerm: (term: RhTerm, adminName: string) => void;
  updateRhTerm: (term: RhTerm, adminName: string) => void;
+ addRhAssetItem: (item: RhAssetItem, adminName: string) => void;
+ updateRhAssetItem: (item: RhAssetItem, adminName: string) => void;
+ deleteRhAssetItem: (id: string, adminName: string) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

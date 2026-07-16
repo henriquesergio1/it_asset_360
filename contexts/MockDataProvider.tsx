@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes, mockCustomFields } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -144,6 +144,12 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   ]);
 
+  const [rhAssetItems, setRhAssetItems] = useState<RhAssetItem[]>([
+    { id: 'rh-item-1', name: 'Botina de Segurança 42', type: 'CONSUMIVEL', totalStock: 15, currentStock: 15, minStock: 5, notes: 'Equipamento de Proteção Individual (EPI)' },
+    { id: 'rh-item-2', name: 'Camiseta de Uniforme G', type: 'CONSUMIVEL', totalStock: 30, currentStock: 30, minStock: 10, notes: 'Uniforme padrão de malha fria' },
+    { id: 'rh-item-3', name: 'Capacete de Proteção', type: 'ATIVO', totalStock: 5, currentStock: 5, minStock: 2, notes: 'Capacete com regulagem e carneira' }
+  ]);
+
   const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 
   const logAction = (action: ActionType, assetType: any, assetId: string, targetName: string, adminName: string, notes?: string) => {
@@ -169,6 +175,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     rhOccurrences,
     rhTemplates,
     rhTerms,
+    rhAssetItems,
     addRhCollaborator: (c) => {
       setRhCollaborators(p => [...p, c]);
       showToast('Colaborador cadastrado no R.H. (Mock)', 'success');
@@ -203,10 +210,48 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     addRhTerm: (t) => {
       setRhTerms(p => [...p, t]);
+      // Se houver itens consumíveis associados ao termo, reduz do estoque
+      if (t.deliveredItems && t.deliveredItems.length > 0) {
+        setRhAssetItems(prev => prev.map(item => {
+          const linkedItem = t.deliveredItems?.find(li => li.id === item.id);
+          if (linkedItem && item.type === 'CONSUMIVEL') {
+            return {
+              ...item,
+              currentStock: Math.max(0, item.currentStock - (linkedItem.quantity || 1))
+            };
+          }
+          return item;
+        }));
+      }
       showToast('Termo de R.H. emitido (Mock)', 'success');
     },
     updateRhTerm: (t) => {
       setRhTerms(p => p.map(x => x.id === t.id ? t : x));
+      // Se for assinado ou se for termo de devolução, podemos repor se aplicável
+      if (t.type === 'DEVOLUCAO' && t.deliveredItems) {
+        setRhAssetItems(prev => prev.map(item => {
+          const linkedItem = t.deliveredItems?.find(li => li.id === item.id);
+          if (linkedItem && item.type === 'CONSUMIVEL') {
+            return {
+              ...item,
+              currentStock: item.currentStock + (linkedItem.quantity || 1)
+            };
+          }
+          return item;
+        }));
+      }
+    },
+    addRhAssetItem: (item) => {
+      setRhAssetItems(p => [...p, item]);
+      showToast('Item de R.H. cadastrado (Mock)', 'success');
+    },
+    updateRhAssetItem: (item) => {
+      setRhAssetItems(p => p.map(x => x.id === item.id ? item : x));
+      showToast('Item de R.H. atualizado (Mock)', 'success');
+    },
+    deleteRhAssetItem: (id) => {
+      setRhAssetItems(p => p.filter(x => x.id !== id));
+      showToast('Item de R.H. removido (Mock)', 'success');
     },
     fetchData: async () => {},
     refreshData: async () => {},

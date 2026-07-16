@@ -180,6 +180,93 @@ const DB_SCHEMAS = {
         Description NVARCHAR(MAX),
         Observations NVARCHAR(MAX),
         Status NVARCHAR(50)
+    )`,
+    RhCollaborators: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        FullName NVARCHAR(255),
+        BirthDate DATETIME,
+        Gender NVARCHAR(50),
+        MaritalStatus NVARCHAR(50),
+        MotherName NVARCHAR(255),
+        FatherName NVARCHAR(255),
+        PersonalPhone NVARCHAR(50),
+        CorporatePhone NVARCHAR(50),
+        EmailPersonal NVARCHAR(255),
+        EmailCorporate NVARCHAR(255),
+        Cep NVARCHAR(20),
+        Street NVARCHAR(255),
+        Number NVARCHAR(50),
+        Complement NVARCHAR(255),
+        Neighborhood NVARCHAR(255),
+        City NVARCHAR(255),
+        State NVARCHAR(50),
+        Rg NVARCHAR(50),
+        Cpf NVARCHAR(50) UNIQUE,
+        Pis NVARCHAR(50),
+        ElectorTitle NVARCHAR(50),
+        Ctps NVARCHAR(50),
+        CnhNumber NVARCHAR(50),
+        CnhCategory NVARCHAR(50),
+        CnhExpiration DATETIME,
+        Role NVARCHAR(255),
+        SectorId NVARCHAR(255),
+        ContractType NVARCHAR(50),
+        HireDate DATETIME,
+        TerminationDate DATETIME,
+        Salary FLOAT,
+        WeeklyHours FLOAT,
+        Documents NVARCHAR(MAX)
+    )`,
+    RhOccurrences: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        CollaboratorId NVARCHAR(255),
+        Type NVARCHAR(100),
+        StartDate DATETIME,
+        EndDate DATETIME,
+        DaysCount INT,
+        Cid NVARCHAR(50),
+        Crm NVARCHAR(100),
+        Notes NVARCHAR(MAX),
+        FileUrl NVARCHAR(MAX)
+    )`,
+    RhTermTemplates: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        Name NVARCHAR(255),
+        Content NVARCHAR(MAX),
+        Type NVARCHAR(50),
+        Declaration NVARCHAR(MAX),
+        DeliveryDeclaration NVARCHAR(MAX),
+        DeliveryClauses NVARCHAR(MAX),
+        ReturnDeclaration NVARCHAR(MAX),
+        ReturnClauses NVARCHAR(MAX)
+    )`,
+    RhTerms: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        CollaboratorId NVARCHAR(255),
+        TemplateId NVARCHAR(255),
+        AssetDetails NVARCHAR(MAX),
+        Date DATETIME,
+        Status NVARCHAR(50),
+        FileUrl NVARCHAR(MAX),
+        SignatureToken NVARCHAR(255),
+        SignatureIp NVARCHAR(50),
+        SignatureDate DATETIME,
+        SignatureLocation NVARCHAR(MAX),
+        SignatureHash NVARCHAR(MAX),
+        Notes NVARCHAR(MAX),
+        Type NVARCHAR(50),
+        SnapshotDeclaration NVARCHAR(MAX),
+        SnapshotClauses NVARCHAR(MAX),
+        DeliveredItems NVARCHAR(MAX)
+    )`,
+    RhAssetItems: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        Name NVARCHAR(255),
+        Type NVARCHAR(50),
+        TotalStock INT,
+        CurrentStock INT,
+        MinStock INT,
+        Notes NVARCHAR(MAX)
     )`
 };
 
@@ -745,7 +832,7 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes, auditsRes
+            consumablesRes, auditsRes, rhCollaboratorsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
@@ -771,7 +858,12 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables"),
-            pool.request().query("SELECT * FROM TechnicalAudits")
+            pool.request().query("SELECT * FROM TechnicalAudits"),
+            pool.request().query("SELECT * FROM RhCollaborators"),
+            pool.request().query("SELECT * FROM RhOccurrences"),
+            pool.request().query("SELECT * FROM RhTermTemplates"),
+            pool.request().query("SELECT * FROM RhTerms"),
+            pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -790,7 +882,12 @@ app.get('/api/bootstrap', async (req, res) => {
             sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']), logs: format(logsRes), taskLogs: format(taskLogsRes),
-            consumables: format(consumablesRes), audits: format(auditsRes)
+            consumables: format(consumablesRes), audits: format(auditsRes),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
+            rhOccurrences: format(rhOccurrencesRes),
+            rhTemplates: format(rhTemplatesRes),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']),
+            rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -799,7 +896,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -815,7 +912,12 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Consumables"),
-            pool.request().query("SELECT * FROM TechnicalAudits")
+            pool.request().query("SELECT * FROM TechnicalAudits"),
+            pool.request().query("SELECT * FROM RhCollaborators"),
+            pool.request().query("SELECT * FROM RhOccurrences"),
+            pool.request().query("SELECT * FROM RhTermTemplates"),
+            pool.request().query("SELECT * FROM RhTerms"),
+            pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
         const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -833,7 +935,12 @@ app.get('/api/sync', async (req, res) => {
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']),
             logs: format(logsRes),
             consumables: format(consumablesRes),
-            audits: format(auditsRes)
+            audits: format(auditsRes),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
+            rhOccurrences: format(rhOccurrencesRes),
+            rhTemplates: format(rhTemplatesRes),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']),
+            rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -1897,6 +2004,11 @@ async function updateUserPendingStatus(pool, userId) {
     crud('Users', 'users', 'User');
     crud('SystemUsers', 'system-users', 'SystemUser');
     crud('TechnicalAudits', 'audits', 'Audit');
+    crud('RhCollaborators', 'rh-collaborators', 'RhCollaborator');
+    crud('RhOccurrences', 'rh-occurrences', 'RhOccurrence');
+    crud('RhTermTemplates', 'rh-templates', 'RhTermTemplate');
+    crud('RhTerms', 'rh-terms', 'RhTerm');
+    crud('RhAssetItems', 'rh-assets', 'RhAssetItem');
     // v2.18.14: Custom Device CRUD to handle SIM card status
     app.post('/api/devices', async (req, res) => {
         try {

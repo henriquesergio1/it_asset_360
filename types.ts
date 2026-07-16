@@ -436,7 +436,7 @@ export interface RhDocument {
 export interface RhOccurrence {
   id: string;
   collaboratorId: string;
-  type: 'Falta Justificada' | 'Falta Injustificada' | 'Atestado Médico' | 'Licença Maternidade' | 'Licença Paternidade' | 'Afastamento INSS';
+  type: 'Falta Justificada' | 'Falta Injustificada' | 'Atestado Médico' | 'Licença Maternidade' | 'Licença Paternidade' | 'Afastamento INSS' | 'Férias';
   startDate: string;
   endDate: string;
   daysCount: number;
@@ -523,10 +523,23 @@ export interface RhCollaborator {
   contractType: 'CLT' | 'PJ' | 'Estágio' | 'Cooperado';
   hireDate: string;
   terminationDate?: string;
+  terminationReason?: string;
+  status?: 'Ativo' | 'Demitido';
   salary: number;
   weeklyHours: number;
   
   // Relacionados
   documents: RhDocument[];
 }
+
+export interface RhAssetItem {
+  id: string;
+  name: string;
+  type: 'ATIVO' | 'CONSUMIVEL';
+  totalStock: number;
+  currentStock: number;
+  minStock?: number;
+  notes?: string;
+}
+
 
