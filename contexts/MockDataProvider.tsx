@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes, mockCustomFields } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,6 +38,112 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [consumableTransactions, setConsumableTransactions] = useState<ConsumableTransaction[]>([]);
   const [audits, setAudits] = useState<DeviceAudit[]>([]);
 
+  // Módulo R.H. Mock States
+  const [rhCollaborators, setRhCollaborators] = useState<RhCollaborator[]>([
+    {
+      id: 'rh-c1',
+      fullName: 'Carlos Henrique Silva',
+      birthDate: '1988-05-15',
+      gender: 'Masculino',
+      maritalStatus: 'Casado',
+      motherName: 'Maria Antônia Silva',
+      personalPhone: '(11) 98888-1111',
+      corporatePhone: '(11) 99999-1234',
+      emailPersonal: 'carlos.h.silva@personal.com',
+      emailCorporate: 'carlos.silva@empresa.com.br',
+      cep: '01310-100',
+      street: 'Avenida Paulista',
+      number: '1000',
+      neighborhood: 'Bela Vista',
+      city: 'São Paulo',
+      state: 'SP',
+      rg: '12.345.678-9',
+      cpf: '123.456.789-00',
+      pis: '12345678901',
+      electorTitle: '123456789012',
+      ctps: '1234567-001/SP',
+      cnhNumber: '12345678900',
+      cnhCategory: 'B',
+      cnhExpiration: '2027-08-20',
+      role: 'Analista de Vendas Senior',
+      sectorId: 'sec1',
+      contractType: 'CLT',
+      hireDate: '2015-08-10', // 11 years (aquisição: 11 meses de férias etc.)
+      salary: 5800.00,
+      weeklyHours: 44,
+      documents: [
+        { id: 'rh-doc-1', category: 'CPF', fileName: 'cpf_carlos.pdf', fileUrl: 'mock_cpf_url', uploadDate: '2022-03-01' },
+        { id: 'rh-doc-2', category: 'Contrato de Trabalho', fileName: 'contrato_clt.pdf', fileUrl: 'mock_contract_url', uploadDate: '2022-03-01' }
+      ]
+    },
+    {
+      id: 'rh-c2',
+      fullName: 'Ana Julia Pereira',
+      birthDate: '1995-10-22',
+      gender: 'Feminino',
+      maritalStatus: 'Solteiro',
+      motherName: 'Beatriz Pereira',
+      personalPhone: '(11) 97777-2222',
+      emailPersonal: 'anajulia.p@gmail.com',
+      emailCorporate: 'ana.pereira@empresa.com.br',
+      cep: '01234-000',
+      street: 'Rua Augusta',
+      number: '500',
+      neighborhood: 'Consolação',
+      city: 'São Paulo',
+      state: 'SP',
+      rg: '22.333.444-5',
+      cpf: '987.654.321-11',
+      pis: '10987654321',
+      role: 'Coordenadora Administrativa',
+      sectorId: 'sec2',
+      contractType: 'CLT',
+      hireDate: '2025-09-10', // expiração contrato de experiência próximo
+      salary: 7200.00,
+      weeklyHours: 44,
+      documents: []
+    }
+  ]);
+
+  const [rhOccurrences, setRhOccurrences] = useState<RhOccurrence[]>([
+    {
+      id: 'rh-occ-1',
+      collaboratorId: 'rh-c1',
+      type: 'Atestado Médico',
+      startDate: '2024-02-10',
+      endDate: '2024-02-12',
+      daysCount: 3,
+      cid: 'M54.5',
+      crm: 'CRM-SP 123456',
+      notes: 'Atestado de 3 dias por dor lombar',
+      fileUrl: 'mock_atestado_url'
+    }
+  ]);
+
+  const [rhTemplates, setRhTemplates] = useState<RhTermTemplate[]>([
+    {
+      id: 'rh-tmpl-1',
+      name: 'Termo de Comodato Equipamento de R.H.',
+      content: `Declaro que recebi da empresa **{{nome_empresa}}**, o equipamento **{{equipamento_nome}}**, número de série **{{numero_serie}}** para fins de comodato corporativo.`
+    }
+  ]);
+
+  const [rhTerms, setRhTerms] = useState<RhTerm[]>([
+    {
+      id: 'rh-term-1',
+      collaboratorId: 'rh-c1',
+      templateId: 'rh-tmpl-1',
+      assetDetails: 'Cadeira Ergonômica Flexform',
+      date: '2023-03-15',
+      status: 'ASSINADO',
+      signatureToken: 'sig-token-123',
+      signatureIp: '189.10.20.30',
+      signatureDate: '2023-03-15T14:30:00Z',
+      signatureLocation: 'São Paulo, SP',
+      signatureHash: 'hash_sha256_mock_123456'
+    }
+  ]);
+
   const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 
   const logAction = (action: ActionType, assetType: any, assetId: string, targetName: string, adminName: string, notes?: string) => {
@@ -59,6 +165,49 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions, audits,
     isReadOnly,
+    rhCollaborators,
+    rhOccurrences,
+    rhTemplates,
+    rhTerms,
+    addRhCollaborator: (c) => {
+      setRhCollaborators(p => [...p, c]);
+      showToast('Colaborador cadastrado no R.H. (Mock)', 'success');
+    },
+    updateRhCollaborator: (c) => {
+      setRhCollaborators(p => p.map(x => x.id === c.id ? c : x));
+      showToast('Colaborador atualizado no R.H. (Mock)', 'success');
+    },
+    deleteRhCollaborator: (id) => {
+      setRhCollaborators(p => p.filter(x => x.id !== id));
+      showToast('Colaborador removido do R.H. (Mock)', 'success');
+    },
+    addRhOccurrence: (o) => {
+      setRhOccurrences(p => [...p, o]);
+      showToast('Ocorrência de R.H. lançada (Mock)', 'success');
+    },
+    deleteRhOccurrence: (id) => {
+      setRhOccurrences(p => p.filter(x => x.id !== id));
+      showToast('Ocorrência removida (Mock)', 'success');
+    },
+    addRhTemplate: (t) => {
+      setRhTemplates(p => [...p, t]);
+      showToast('Template de Termo criado (Mock)', 'success');
+    },
+    updateRhTemplate: (t) => {
+      setRhTemplates(p => p.map(x => x.id === t.id ? t : x));
+      showToast('Template de Termo atualizado (Mock)', 'success');
+    },
+    deleteRhTemplate: (id) => {
+      setRhTemplates(p => p.filter(x => x.id !== id));
+      showToast('Template de Termo removido (Mock)', 'success');
+    },
+    addRhTerm: (t) => {
+      setRhTerms(p => [...p, t]);
+      showToast('Termo de R.H. emitido (Mock)', 'success');
+    },
+    updateRhTerm: (t) => {
+      setRhTerms(p => p.map(x => x.id === t.id ? t : x));
+    },
     fetchData: async () => {},
     refreshData: async () => {},
     getTermFile: async (id) => {

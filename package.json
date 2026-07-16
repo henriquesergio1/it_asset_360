@@ -1,6 +1,6 @@
 {
   "name": "it-asset-360",
-  "version": "3.50.3",
+  "version": "3.52.1",
   "private": true,
   "dependencies": {
     "@tailwindcss/forms": "^0.5.11",
@@ -23,6 +23,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "recharts": "^3.9.2",
     "tailwindcss": "^4.2.4",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"

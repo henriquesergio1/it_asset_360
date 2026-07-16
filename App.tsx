@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { APP_VERSION } from './constants';
-import { HashRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package } from 'lucide-react';
+import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -25,6 +25,12 @@ import Consumables from './components/Consumables';
 import DigitalSignature from './components/DigitalSignature';
 import { NotificationCenter } from './components/NotificationCenter';
 import { ThemeToggle } from './components/ThemeToggle';
+
+// RH Pages imports
+import { RhDashboard } from './components/RhDashboard';
+import { RhCollaboratorManager } from './components/RhCollaboratorManager';
+import { RhComodatoManager } from './components/RhComodatoManager';
+import { RhOccurrenceManager } from './components/RhOccurrenceManager';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -51,6 +57,28 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const { logout, user, isAdmin } = useAuth();
   const { settings, fetchData } = useData();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const hasRhAccess = isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard');
+  const hasTiAccess = isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura');
+
+  // Determinar módulo padrão com base no acesso
+  const [currentModule, setCurrentModule] = useState<'TI' | 'RH'>(() => {
+    const stored = localStorage.getItem('current_module');
+    if (stored === 'RH' && hasRhAccess) return 'RH';
+    if (stored === 'TI' && hasTiAccess) return 'TI';
+    return hasTiAccess ? 'TI' : 'RH';
+  });
+
+  const handleModuleSwitch = (mod: 'TI' | 'RH') => {
+    setCurrentModule(mod);
+    localStorage.setItem('current_module', mod);
+    if (mod === 'RH') {
+      navigate('/rh/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
 
   // Sincronização por Navegação (On-Demand Sync)
   useEffect(() => {
@@ -60,6 +88,16 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    if (currentModule === 'RH' && !hasRhAccess) {
+      setCurrentModule('TI');
+      localStorage.setItem('current_module', 'TI');
+    } else if (currentModule === 'TI' && !hasTiAccess) {
+      setCurrentModule('RH');
+      localStorage.setItem('current_module', 'RH');
+    }
+  }, [user]);
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-hidden">
@@ -98,17 +136,61 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
         </div>
 
+        {/* Module Switcher (Enterprise UI) */}
+        {!isSidebarCollapsed && (hasRhAccess && hasTiAccess) && (
+          <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 shrink-0">
+            <span className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 text-center">Módulo Ativo</span>
+            <div className="flex bg-slate-200 dark:bg-slate-850 p-1 rounded-xl">
+              <button
+                onClick={() => handleModuleSwitch('TI')}
+                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'TI' ? 'bg-white dark:bg-slate-750 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                T.I.
+              </button>
+              <button
+                onClick={() => handleModuleSwitch('RH')}
+                className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'RH' ? 'bg-white dark:bg-slate-750 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                R.H.
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isSidebarCollapsed && (hasRhAccess && hasTiAccess) && (
+          <div className="p-2 border-b border-slate-200 dark:border-slate-700 shrink-0 flex justify-center">
+            <button
+              onClick={() => handleModuleSwitch(currentModule === 'TI' ? 'RH' : 'TI')}
+              className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-black flex items-center justify-center border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400"
+              title={`Alternar para Módulo ${currentModule === 'TI' ? 'R.H.' : 'T.I.'}`}
+            >
+              {currentModule}
+            </button>
+          </div>
+        )}
+
         {/* Navigation - Mandatory Order (v2.12.41) */}
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
-          {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
-          {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
+          {currentModule === 'TI' ? (
+            <>
+              {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
+            </>
+          ) : (
+            <>
+              {(isAdmin || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'rh_atestados') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} />}
+            </>
+          )}
           
           {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'sistema_leitura')) && (
             <div className={`pt-4 mt-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'px-0' : ''}`}>
@@ -224,6 +306,13 @@ const AppRoutes = () => {
                 </ProtectedRoute>
             } />
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+            
+            {/* Módulo R.H. Routes */}
+            <Route path="/rh/dashboard" element={<ProtectedRoute><RhDashboard /></ProtectedRoute>} />
+            <Route path="/rh/collaborators" element={<ProtectedRoute><RhCollaboratorManager /></ProtectedRoute>} />
+            <Route path="/rh/comodato" element={<ProtectedRoute><RhComodatoManager /></ProtectedRoute>} />
+            <Route path="/rh/occurrences" element={<ProtectedRoute><RhOccurrenceManager /></ProtectedRoute>} />
+
             <Route path="/sign-term/:token" element={<DigitalSignature />} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

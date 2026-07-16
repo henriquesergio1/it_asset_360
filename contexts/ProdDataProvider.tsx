@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, DeviceAudit } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceStatus, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm } from '../types';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // v3.27.7: Forçando URLs relativas para evitar problemas de porta em produção
@@ -137,6 +137,11 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const expedienteAlerts = expedienteAlertsData || [];
  const consumableTransactions = consumableTransactionsData || syncData?.consumableTransactions || bootstrapData?.consumableTransactions || [];
 const consumables = syncData?.consumables || bootstrapData?.consumables || [];
+
+ const [rhCollaborators, setRhCollaborators] = useState<RhCollaborator[]>([]);
+ const [rhOccurrences, setRhOccurrences] = useState<RhOccurrence[]>([]);
+ const [rhTemplates, setRhTemplates] = useState<RhTermTemplate[]>([]);
+ const [rhTerms, setRhTerms] = useState<RhTerm[]>([]);
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -788,7 +793,21 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
   const res = await postData(`terms/${termId}/generate-signature-token`, {});
   return res.token;
  },
- updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride
+ updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride,
+  rhCollaborators,
+  rhOccurrences,
+  rhTemplates,
+  rhTerms,
+  addRhCollaborator: (c) => setRhCollaborators(p => [...p, c]),
+  updateRhCollaborator: (c) => setRhCollaborators(p => p.map(x => x.id === c.id ? c : x)),
+  deleteRhCollaborator: (id) => setRhCollaborators(p => p.filter(x => x.id !== id)),
+  addRhOccurrence: (o) => setRhOccurrences(p => [...p, o]),
+  deleteRhOccurrence: (id) => setRhOccurrences(p => p.filter(x => x.id !== id)),
+  addRhTemplate: (t) => setRhTemplates(p => [...p, t]),
+  updateRhTemplate: (t) => setRhTemplates(p => p.map(x => x.id === t.id ? t : x)),
+  deleteRhTemplate: (id) => setRhTemplates(p => p.filter(x => x.id !== id)),
+  addRhTerm: (t) => setRhTerms(p => [...p, t]),
+  updateRhTerm: (t) => setRhTerms(p => p.map(x => x.id === t.id ? t : x))
  };
  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

@@ -423,3 +423,96 @@ export interface Usuario {
   Nome_Perfil: string;
   Ativo: boolean;
 }
+
+// Módulo R.H. - Novas Interfaces
+export interface RhDocument {
+  id: string;
+  category: 'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros';
+  fileName: string;
+  fileUrl: string;
+  uploadDate: string;
+}
+
+export interface RhOccurrence {
+  id: string;
+  collaboratorId: string;
+  type: 'Falta Justificada' | 'Falta Injustificada' | 'Atestado Médico' | 'Licença Maternidade' | 'Licença Paternidade' | 'Afastamento INSS';
+  startDate: string;
+  endDate: string;
+  daysCount: number;
+  cid?: string;
+  crm?: string;
+  notes?: string;
+  fileUrl?: string;
+}
+
+export interface RhTermTemplate {
+  id: string;
+  name: string;
+  content: string;
+  type?: 'ENTREGA' | 'DEVOLUCAO';
+  declaration?: string;
+}
+
+export interface RhTerm {
+  id: string;
+  collaboratorId: string;
+  templateId: string;
+  assetDetails: string;
+  date: string;
+  status: 'PENDENTE' | 'ASSINADO' | 'RECUSADO';
+  fileUrl?: string;
+  signatureToken?: string;
+  signatureIp?: string;
+  signatureDate?: string;
+  signatureLocation?: string;
+  signatureHash?: string;
+  notes?: string;
+  type?: 'ENTREGA' | 'DEVOLUCAO';
+}
+
+export interface RhCollaborator {
+  id: string;
+  fullName: string;
+  birthDate: string;
+  gender: 'Masculino' | 'Feminino' | 'Outro';
+  maritalStatus: 'Solteiro' | 'Casado' | 'Divorciado' | 'Viúvo' | 'Outro';
+  motherName: string;
+  fatherName?: string;
+  personalPhone: string;
+  corporatePhone?: string;
+  emailPersonal: string;
+  emailCorporate: string;
+  
+  // Endereço
+  cep: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  
+  // Documentos
+  rg: string;
+  cpf: string;
+  pis: string;
+  electorTitle?: string;
+  ctps?: string;
+  cnhNumber?: string;
+  cnhCategory?: string;
+  cnhExpiration?: string;
+  
+  // Dados Contratuais
+  role: string;
+  sectorId: string;
+  contractType: 'CLT' | 'PJ' | 'Estágio' | 'Cooperado';
+  hireDate: string;
+  terminationDate?: string;
+  salary: number;
+  weeklyHours: number;
+  
+  // Relacionados
+  documents: RhDocument[];
+}
+

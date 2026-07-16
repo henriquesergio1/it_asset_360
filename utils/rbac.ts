@@ -133,6 +133,26 @@ export function resolveUserPermissions(user: any): any {
           faturamento_leitura: true,
           faturamento_escrita: true
         }
+      },
+      {
+        ID_Perfil: 4,
+        Nome: 'Gestor de R.H.',
+        Ativo: true,
+        Permissoes: {
+          rh_dashboard: true,
+          rh_colaboradores: true,
+          rh_comodatos: true,
+          rh_atestados: true,
+          rh_configuracoes: true
+        }
+      },
+      {
+        ID_Perfil: 5,
+        Nome: 'Colaborador / Self-Service',
+        Ativo: true,
+        Permissoes: {
+          self_service: true
+        }
       }
     ];
     localStorage.setItem('rbac_profiles', JSON.stringify(profiles));

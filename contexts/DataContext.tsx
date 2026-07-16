@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -27,6 +27,12 @@ export interface DataContextType {
  consumables: Consumable[];
  consumableTransactions: ConsumableTransaction[];
  audits: DeviceAudit[];
+
+ // Módulo R.H.
+ rhCollaborators: RhCollaborator[];
+ rhOccurrences: RhOccurrence[];
+ rhTemplates: RhTermTemplate[];
+ rhTerms: RhTerm[];
 
  loading?: boolean;
  error?: string | null;
@@ -154,6 +160,18 @@ export interface DataContextType {
  isReadOnly: boolean;
  updateLicense: (licenseKey: string) => Promise<{ success: boolean; error?: string }>;
  getLicenseStatus: () => Promise<{ status: 'ACTIVE' | 'EXPIRED'; client: string; expiresAt: string | null }>;
+
+ // --- CRUD Módulo R.H. ---
+ addRhCollaborator: (collaborator: RhCollaborator, adminName: string) => void;
+ updateRhCollaborator: (collaborator: RhCollaborator, adminName: string) => void;
+ deleteRhCollaborator: (id: string, adminName: string) => void;
+ addRhOccurrence: (occurrence: RhOccurrence, adminName: string) => void;
+ deleteRhOccurrence: (id: string, adminName: string) => void;
+ addRhTemplate: (template: RhTermTemplate, adminName: string) => void;
+ updateRhTemplate: (template: RhTermTemplate, adminName: string) => void;
+ deleteRhTemplate: (id: string, adminName: string) => void;
+ addRhTerm: (term: RhTerm, adminName: string) => void;
+ updateRhTerm: (term: RhTerm, adminName: string) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
