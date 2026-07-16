@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil } from '../types';
+import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil, RhTermTemplate } from '../types';
 import { hasPermission, resolveUserPermissions } from '../utils/rbac';
 import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor } from 'lucide-react';
 import DataImporter from './DataImporter';
@@ -322,6 +322,16 @@ const AdminPanel = () => {
  };
  const [logSearch, setLogSearch] = useState('');
  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+	const [templateSubTab, setTemplateSubTab] = useState<'TI' | 'RH'>('TI');
+	const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+	const [isEditingTemplate, setIsEditingTemplate] = useState<any>(null);
+	const [templateForm, setTemplateForm] = useState({
+		name: '',
+		deliveryDeclaration: '',
+		deliveryClauses: '',
+		returnDeclaration: '',
+		returnClauses: ''
+	});
 
  const [termConfig, setTermConfig] = useState({
  delivery: { declaration: '', clauses: '' },
@@ -329,12 +339,68 @@ const AdminPanel = () => {
  });
 
  const { 
- systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings,
+ systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, rhTemplates = [], addRhTemplate, updateRhTemplate, deleteRhTemplate,
  clearLogs, restoreItem, 
  externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData,
  getLicenseStatus, updateLicense
  } = useData();
  const [licenseStatus, setLicenseStatus] = useState<{ status: string; client: string; expiresAt: string | null } | null>(null);
+
+	const handleEditTemplateClick = (t: any) => {
+		setIsEditingTemplate(t);
+		setTemplateForm({
+			name: t.name,
+			deliveryDeclaration: t.deliveryDeclaration || t.declaration || '',
+			deliveryClauses: t.deliveryClauses || t.content || '',
+			returnDeclaration: t.returnDeclaration || '',
+			returnClauses: t.returnClauses || ''
+		});
+		setShowCreateTemplate(true);
+	};
+
+	const handleSaveTemplate = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!templateForm.name.trim()) return;
+
+		if (isEditingTemplate) {
+			updateRhTemplate({
+				...isEditingTemplate,
+				name: templateForm.name,
+				deliveryDeclaration: templateForm.deliveryDeclaration,
+				deliveryClauses: templateForm.deliveryClauses,
+				returnDeclaration: templateForm.returnDeclaration,
+				returnClauses: templateForm.returnClauses,
+				declaration: templateForm.deliveryDeclaration,
+				content: templateForm.deliveryClauses
+			}, currentUser?.name || 'Admin');
+			showToast('Template de Termo de RH atualizado com sucesso!', 'success');
+		} else {
+			const newTmpl: RhTermTemplate = {
+				id: Math.random().toString(36).substr(2, 9),
+				name: templateForm.name,
+				deliveryDeclaration: templateForm.deliveryDeclaration,
+				deliveryClauses: templateForm.deliveryClauses,
+				returnDeclaration: templateForm.returnDeclaration,
+				returnClauses: templateForm.returnClauses,
+				declaration: templateForm.deliveryDeclaration,
+				content: templateForm.deliveryClauses,
+				type: 'ENTREGA'
+			};
+			addRhTemplate(newTmpl, currentUser?.name || 'Admin');
+			showToast('Template de Termo de RH criado com sucesso!', 'success');
+		}
+
+		setShowCreateTemplate(false);
+		setIsEditingTemplate(null);
+		setTemplateForm({ name: '', deliveryDeclaration: '', deliveryClauses: '', returnDeclaration: '', returnClauses: '' });
+	};
+
+	const handleDeleteTemplate = (id: string) => {
+		if (window.confirm('Excluir este modelo de termo de RH?')) {
+			deleteRhTemplate(id, currentUser?.name || 'Admin');
+			showToast('Modelo de Termo de RH excluído com sucesso!', 'success');
+		}
+	};
  const [licenseKeyInput, setLicenseKeyInput] = useState('');
  const [isValidatingLicense, setIsValidatingLicense] = useState(false);
 
@@ -671,6 +737,25 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'TEMPLATE' && (
+		<div className="space-y-6">
+			<div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 px-4 pt-2 gap-2 rounded-t-2xl">
+				<button
+					type="button"
+					onClick={() => setTemplateSubTab('TI')}
+					className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${templateSubTab === 'TI' ? 'border-blue-600 text-blue-600 dark:text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
+				>
+					Termos de T.I.
+				</button>
+				<button
+					type="button"
+					onClick={() => setTemplateSubTab('RH')}
+					className={`px-5 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${templateSubTab === 'RH' ? 'border-blue-600 text-blue-600 dark:text-sky-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200'}`}
+				>
+					Termos de RH
+				</button>
+			</div>
+
+			{templateSubTab === 'TI' ? (
  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
  <form onSubmit={handleTermTemplateSubmit} className="space-y-10">
  <div>
@@ -704,10 +789,185 @@ const AdminPanel = () => {
  </div>
  <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
  <button type="submit"className="text-slate-900 dark:text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"><Save size={18}/> Salvar Templates</button>
- </div>
- </form>
- </div>
- )}
+						</div>
+					</form>
+				</div>
+			) : (
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+					{/* Lista de Modelos de RH */}
+					<div className="lg:col-span-1 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col h-[75vh] space-y-4">
+						<div className="flex justify-between items-center">
+							<h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Modelos de RH</h3>
+							<button
+								onClick={() => {
+									setIsEditingTemplate(null);
+									setTemplateForm({ name: '', deliveryDeclaration: '', deliveryClauses: '', returnDeclaration: '', returnClauses: '' });
+									setShowCreateTemplate(true);
+								}}
+								className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] px-3 py-2 rounded-lg transition-colors"
+							>
+								<Plus size={12} /> Criar Modelo
+							</button>
+						</div>
+
+						<div className="flex-1 overflow-y-auto space-y-2 pr-1">
+							{rhTemplates.map((t: any) => (
+								<div
+									key={t.id}
+									onClick={() => handleEditTemplateClick(t)}
+									className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${isEditingTemplate?.id === t.id ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-700/40 hover:bg-slate-100'}`}
+								>
+									<div className="flex-1 min-w-0">
+										<span className="block font-black text-xs text-slate-900 dark:text-white truncate">{t.name}</span>
+										<div className="flex items-center gap-1.5 mt-1">
+											<span className="text-[9px] text-slate-400 block font-bold uppercase">Cláusulas e Devolução Pareada</span>
+										</div>
+									</div>
+									<div className="flex items-center gap-2 shrink-0">
+										<button
+											type="button"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleDeleteTemplate(t.id);
+											}}
+											className="text-rose-500 hover:text-rose-700 p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-950/20"
+										>
+											<Trash2 size={14} />
+										</button>
+										<ChevronRight size={16} className="text-blue-500" />
+									</div>
+								</div>
+							))}
+							{rhTemplates.length === 0 && (
+								<div className="text-center py-8 text-slate-400 text-xs">Nenhum modelo de RH cadastrado.</div>
+							)}
+						</div>
+					</div>
+
+					{/* Formulário de Criação/Edição */}
+					<div className="lg:col-span-2 bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 min-h-[75vh] flex flex-col justify-between">
+						{showCreateTemplate ? (
+							<form onSubmit={handleSaveTemplate} className="space-y-6">
+								<div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-700">
+									<h3 className="text-sm font-black uppercase text-blue-600 dark:text-sky-400 tracking-wider">
+										{isEditingTemplate ? `Editar Modelo: ${isEditingTemplate.name}` : 'Criar Novo Modelo de Termo'}
+									</h3>
+									<button
+										type="button"
+										onClick={() => {
+											setShowCreateTemplate(false);
+											setIsEditingTemplate(null);
+										}}
+										className="text-xs text-rose-500 hover:underline uppercase font-bold"
+									>
+										Fechar
+									</button>
+								</div>
+
+								<div>
+									<label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome do Modelo</label>
+									<input
+										type="text"
+										required
+										placeholder="Ex: Termo de Comodato de Computador"
+										value={templateForm.name}
+										onChange={e => setTemplateForm(p => ({ ...p, name: e.target.value }))}
+										className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white font-semibold outline-none focus:border-blue-500"
+									/>
+								</div>
+
+								<div className="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-4 max-h-[45vh] overflow-y-auto pr-1">
+									<div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+										<h4 className="text-xs font-black uppercase text-blue-600 dark:text-sky-400 tracking-wider">1. Configuração de Entrega</h4>
+										
+										<div>
+											<div className="flex justify-between items-center mb-1">
+												<label className="block text-[10px] font-black uppercase text-slate-400">Declaração de Abertura / Cabeçalho (Entrega)</label>
+												<span className="text-[8px] text-slate-400 font-mono">Variáveis: {'{NOME_EMPRESA}, {CNPJ}, {NOME_COLABORADOR}, {CPF}, {RG}'}</span>
+											</div>
+											<textarea
+												rows={2}
+												placeholder="Ex: Declaro ter recebido de {NOME_EMPRESA} os bens descritos abaixo em perfeitas condições..."
+												value={templateForm.deliveryDeclaration}
+												onChange={e => setTemplateForm(p => ({ ...p, deliveryDeclaration: e.target.value }))}
+												className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-800 dark:text-white font-medium outline-none focus:border-blue-500"
+											/>
+										</div>
+
+										<div>
+											<label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cláusulas e Conteúdo (Entrega)</label>
+											<textarea
+												required
+												rows={4}
+												placeholder="Escreva aqui as cláusulas de entrega..."
+												value={templateForm.deliveryClauses}
+												onChange={e => setTemplateForm(p => ({ ...p, deliveryClauses: e.target.value }))}
+												className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-serif leading-relaxed text-slate-900 dark:text-white outline-none focus:border-blue-500"
+											/>
+										</div>
+									</div>
+
+									<div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+										<h4 className="text-xs font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">2. Configuração de Devolução (Correspondente)</h4>
+
+										<div>
+											<div className="flex justify-between items-center mb-1">
+												<label className="block text-[10px] font-black uppercase text-slate-400">Declaração de Abertura / Cabeçalho (Devolução)</label>
+											</div>
+											<textarea
+												rows={2}
+												placeholder="Ex: Declaro ter devolvido para {NOME_EMPRESA} os bens descritos abaixo na presente data..."
+												value={templateForm.returnDeclaration}
+												onChange={e => setTemplateForm(p => ({ ...p, returnDeclaration: e.target.value }))}
+												className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-800 dark:text-white font-medium outline-none focus:border-blue-500"
+											/>
+										</div>
+
+										<div>
+											<label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cláusulas e Conteúdo (Devolução)</label>
+											<textarea
+												required
+												rows={4}
+												placeholder="Escreva aqui as cláusulas de devolução..."
+												value={templateForm.returnClauses}
+												onChange={e => setTemplateForm(p => ({ ...p, returnClauses: e.target.value }))}
+												className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-serif leading-relaxed text-slate-900 dark:text-white outline-none focus:border-blue-500"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+									<button
+										type="button"
+										onClick={() => {
+											setShowCreateTemplate(false);
+											setIsEditingTemplate(null);
+										}}
+										className="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs rounded-xl uppercase hover:bg-slate-200 transition-colors"
+									>
+										Cancelar
+									</button>
+									<button
+										type="submit"
+										className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl uppercase shadow-sm transition-all flex items-center gap-2"
+									>
+										<Save size={14} /> Salvar Modelo
+									</button>
+								</div>
+							</form>
+						) : (
+							<div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+								<FileText size={48} className="mb-4 text-slate-300 dark:text-slate-600" />
+								<p className="text-xs font-black uppercase tracking-widest">Aba de Gestão de Modelos de RH</p>
+								<p className="text-[11px] max-w-sm text-center mt-1">Selecione um modelo à esquerda para editar, ou clique em "Criar Modelo" para configurar um novo modelo de comodato com suas cláusulas de entrega e devolução pareadas.</p>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	)}
 
  {activeTab === 'IMPORT' && <DataImporter />}
 

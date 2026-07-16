@@ -452,6 +452,10 @@ export interface RhTermTemplate {
   content: string;
   type?: 'ENTREGA' | 'DEVOLUCAO';
   declaration?: string;
+  deliveryDeclaration?: string;
+  deliveryClauses?: string;
+  returnDeclaration?: string;
+  returnClauses?: string;
 }
 
 export interface RhTerm {
@@ -469,6 +473,16 @@ export interface RhTerm {
   signatureHash?: string;
   notes?: string;
   type?: 'ENTREGA' | 'DEVOLUCAO';
+  snapshotDeclaration?: string;
+  snapshotClauses?: string;
+  deliveredItems?: {
+    id: string;
+    name: string;
+    quantity: number;
+    returned?: boolean;
+    pending?: boolean;
+  }[];
+  originalTermId?: string;
 }
 
 export interface RhCollaborator {
