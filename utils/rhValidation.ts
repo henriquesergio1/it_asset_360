@@ -18,10 +18,18 @@ export const normalizeName = (name: string): string => {
 };
 
 /**
+ * Remove caracteres não numéricos de uma string
+ */
+export const cleanDocument = (value: string): string => {
+  if (!value) return '';
+  return value.replace(/\D/g, '');
+};
+
+/**
  * Valida CPF (Algoritmo oficial)
  */
 export const validateCPF = (cpf: string): boolean => {
-  const cleanCPF = cpf.replace(/\D/g, '');
+  const cleanCPF = cleanDocument(cpf);
   if (cleanCPF.length !== 11 || /^(\d)\1+$/.test(cleanCPF)) return false;
   
   let sum = 0;

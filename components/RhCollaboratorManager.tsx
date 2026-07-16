@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
-  formatCPF, formatPhone, formatCEP 
+  formatCPF, formatPhone, formatCEP, cleanDocument 
 } from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
@@ -227,11 +227,38 @@ export const RhCollaboratorManager: React.FC = () => {
       role: normalizeName(form.role || ''),
       emailPersonal: (form.emailPersonal || '').trim().toLowerCase(),
       emailCorporate: (form.emailCorporate || '').trim().toLowerCase(),
-      cpf: (form.cpf || '').replace(/\D/g, ''),
-      cep: (form.cep || '').replace(/\D/g, ''),
-      personalPhone: (form.personalPhone || '').replace(/\D/g, ''),
-      corporatePhone: (form.corporatePhone || '').replace(/\D/g, ''),
+      cpf: cleanDocument(form.cpf || ''),
+      rg: cleanDocument(form.rg || ''),
+      pis: cleanDocument(form.pis || ''),
+      cep: cleanDocument(form.cep || ''),
+      personalPhone: cleanDocument(form.personalPhone || ''),
+      corporatePhone: cleanDocument(form.corporatePhone || ''),
+      status: form.status || 'Ativo'
     };
+
+    // Trava de duplicidade de documentos (apenas para criação ou se mudou o documento)
+    const checkDuplicate = (docType: 'cpf' | 'rg' | 'pis', value: string) => {
+      if (!value) return false;
+      return rhCollaborators.some(c => 
+        c.id !== selectedColab?.id && 
+        cleanDocument(c[docType] || '') === value
+      );
+    };
+
+    if (checkDuplicate('cpf', normalizedForm.cpf)) {
+      alert(`Já existe um colaborador cadastrado com este CPF (${formatCPF(normalizedForm.cpf)}).`);
+      return;
+    }
+
+    if (normalizedForm.rg && checkDuplicate('rg', normalizedForm.rg)) {
+      alert(`Já existe um colaborador cadastrado com este RG (${normalizedForm.rg}).`);
+      return;
+    }
+
+    if (normalizedForm.pis && checkDuplicate('pis', normalizedForm.pis)) {
+      alert(`Já existe um colaborador cadastrado com este PIS (${normalizedForm.pis}).`);
+      return;
+    }
 
     if (isCreating) {
       const newColab: RhCollaborator = {

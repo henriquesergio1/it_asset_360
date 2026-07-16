@@ -215,6 +215,8 @@ const DB_SCHEMAS = {
         TerminationDate DATETIME,
         Salary FLOAT,
         WeeklyHours FLOAT,
+        Status NVARCHAR(50) DEFAULT 'Ativo',
+        TerminationReason NVARCHAR(MAX),
         Documents NVARCHAR(MAX)
     )`,
     RhOccurrences: `(
@@ -621,6 +623,18 @@ async function initializeDatabase() {
                         await pool.request().query('ALTER TABLE Tasks ADD RecurrenceConfig NVARCHAR(MAX) NULL');
                     }
                 }
+                if (table === 'RhCollaborators') {
+                    const checkStatus = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = 'Status'`);
+                    if (checkStatus.recordset.length === 0) {
+                        console.log(`- Coluna Status não encontrada em RhCollaborators. Adicionando...`);
+                        await pool.request().query("ALTER TABLE RhCollaborators ADD Status NVARCHAR(50) DEFAULT 'Ativo'");
+                    }
+                    const checkReason = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = 'TerminationReason'`);
+                    if (checkReason.recordset.length === 0) {
+                        console.log(`- Coluna TerminationReason não encontrada em RhCollaborators. Adicionando...`);
+                        await pool.request().query("ALTER TABLE RhCollaborators ADD TerminationReason NVARCHAR(MAX) NULL");
+                    }
+                }
             }
         }
 
@@ -807,7 +821,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.41.13', 
+            version: '3.60.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
