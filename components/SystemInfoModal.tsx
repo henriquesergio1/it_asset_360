@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.64.4',
+    date: 'Hoje',
+    title: 'Correção de Clipboard e Hovers de Botões',
+    changes: [
+      'Clipboard Fallback: Implementada rotina alternativa usando textarea temporário para cópia de link de assinatura digital em ambientes locais não-HTTPS (via IP direto).',
+      'Hovers & Cores: Ajuste fino e padronização dos efeitos de hover nos botões Fechar, Link Assinatura, Resolução Manual e correção do hover esbranquiçado no botão Upload Assinado no tema escuro.',
+    ]
+  },
+  {
     version: '3.64.3',
     date: 'Hoje',
     title: 'Correção do Histórico de Alterações',

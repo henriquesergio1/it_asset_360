@@ -1034,18 +1034,18 @@ export const RhComodatoManager: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleGenerateSignatureLink(selectedTerm.id)}
-                      className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-indigo-500/20"
+                      className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-650 dark:text-indigo-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-indigo-500/20 cursor-pointer"
                       title="Copiar link para o colaborador assinar via celular/email"
                     >
                       <Share2 size={14} /> Link Assinatura
                     </button>
-                    <label className="flex items-center gap-2 bg-emerald-55 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20 cursor-pointer">
+                    <label className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-650 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20 cursor-pointer">
                       <Upload size={14} /> Upload Assinado
                       <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(selectedTerm.id, e)} />
                     </label>
                     <button
                       onClick={() => setResolvingManualTerm(selectedTerm)}
-                      className="flex items-center gap-2 bg-orange-50 dark:bg-orange-500/10 text-orange-650 dark:text-orange-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-orange-500/20"
+                      className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100/80 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 text-orange-650 dark:text-orange-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-orange-500/20 cursor-pointer"
                     >
                       <CheckSquare size={14} /> Resolução Manual
                     </button>
@@ -1054,7 +1054,7 @@ export const RhComodatoManager: React.FC = () => {
                 
                 <button
                   onClick={() => { setIsDetailModalOpen(false); setSelectedTerm(null); setSignatureData(null); }}
-                  className="px-5 py-3 bg-slate-250 hover:bg-slate-350 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-350 font-black text-xs rounded-xl uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-650 cursor-pointer"
                 >
                   Fechar
                 </button>
@@ -1286,11 +1286,28 @@ export const RhComodatoManager: React.FC = () => {
                 className="bg-transparent border-none outline-none text-xs font-mono font-bold text-slate-800 dark:text-slate-200 flex-1"
               />
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(generatedSignatureLink);
-                  showToast('Link copiado com sucesso!', 'success');
+                onClick={async () => {
+                  try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                      await navigator.clipboard.writeText(generatedSignatureLink);
+                    } else {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = generatedSignatureLink;
+                      textArea.style.position = "fixed";
+                      textArea.style.opacity = "0";
+                      document.body.appendChild(textArea);
+                      textArea.focus();
+                      textArea.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(textArea);
+                    }
+                    showToast('Link copiado com sucesso!', 'success');
+                  } catch (err) {
+                    console.error('Falha ao copiar link:', err);
+                    showToast('Erro ao copiar link automaticamente', 'error');
+                  }
                 }}
-                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors cursor-pointer"
                 title="Copiar Link"
               >
                 <Copy size={14} />
