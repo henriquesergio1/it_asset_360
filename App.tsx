@@ -32,6 +32,7 @@ import { RhCollaboratorManager } from './components/RhCollaboratorManager';
 import { RhComodatoManager } from './components/RhComodatoManager';
 import { RhOccurrenceManager } from './components/RhOccurrenceManager';
 import { RhAssetManager } from './components/RhAssetManager';
+import SystemInfoModal from './components/SystemInfoModal';
 
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
@@ -54,6 +55,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
   });
+  const [isSystemInfoOpen, setIsSystemInfoOpen] = useState(false);
   
   const { logout, user, isAdmin } = useAuth();
   const { settings, fetchData } = useData();
@@ -204,12 +206,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
 
         {/* Footer Info & Logout */}
         <div className={`border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0 transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-6'}`}>
-          {!isSidebarCollapsed && (
-              <div className="flex items-center gap-2 text-[11px] text-blue-600 dark:text-sky-400/80 mb-4 w-full overflow-hidden whitespace-nowrap">
-                 <span className="shrink-0"><Info size={14}/></span>
-                 <span>Versão {APP_VERSION}</span>
-              </div>
-          )}
+          <div 
+            onClick={() => setIsSystemInfoOpen(true)}
+            className={`flex items-center gap-2 text-[11px] text-blue-600 dark:text-sky-400/80 hover:text-blue-800 dark:hover:text-sky-300 mb-4 w-full overflow-hidden whitespace-nowrap cursor-pointer transition-colors ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Visualizar Informações do Sistema"
+          >
+             <span className="shrink-0"><Info size={14}/></span>
+             {!isSidebarCollapsed && <span>Versão {APP_VERSION}</span>}
+          </div>
           <button 
             onClick={logout} 
             className={`flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white cursor-pointer transition-colors w-full pt-4 border-t border-slate-200 dark:border-slate-700 ${isSidebarCollapsed ? 'justify-center space-x-0' : ''}`}
@@ -228,6 +232,13 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </button>
           
           <div className="flex items-center space-x-4 ml-auto">
+            <div 
+              onClick={() => setIsSystemInfoOpen(true)}
+              className="text-[10px] font-black text-slate-400 dark:text-slate-400/80 hover:text-indigo-500 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-lg uppercase tracking-wider hidden sm:block"
+              title="Informações do Sistema"
+            >
+              v{APP_VERSION}
+            </div>
             <ThemeToggle />
             <NotificationCenter />
             <div className="text-right hidden sm:block">
@@ -246,6 +257,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           </div>
         </main>
       </div>
+
+      {isSystemInfoOpen && (
+        <SystemInfoModal onClose={() => setIsSystemInfoOpen(false)} />
+      )}
     </div>
   );
 };
