@@ -16,6 +16,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString, phoneticEncode, copyToClipboard } from '../utils/stringUtils';
+import { formatCEP, validateCEP } from '../utils/rhValidation';
 import { DataTable, Column } from './DataTable';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -104,6 +105,7 @@ const UserManager: React.FC = () => {
   const [previewData, setPreviewData] = useState<{ url: string | string[]; name: string }>({ url: '', name: '' });
   const [generatedSignatureLink, setGeneratedSignatureLink] = useState<string | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -332,7 +334,11 @@ const UserManager: React.FC = () => {
         assetsCount, activeSims, devicesInfo, terms,
         ...validData 
       } = u as any;
-      setFormData(validData);
+      const dataToSet = { ...validData };
+      if (!dataToSet.street && dataToSet.address) {
+        dataToSet.street = dataToSet.address;
+      }
+      setFormData(dataToSet);
       setIsViewOnly(view);
     } else {
       setEditingId(null);
@@ -348,6 +354,10 @@ const UserManager: React.FC = () => {
         city: '',
         state: '',
         zipCode: '',
+        street: '',
+        number: '',
+        complement: '',
+        neighborhood: '',
         sectorId: '',
         hireDate: new Date().toISOString().split('T')[0],
         status: UserStatus.ACTIVE,
@@ -371,14 +381,45 @@ const UserManager: React.FC = () => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cep = e.target.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setFormData(p => ({
+          ...p,
+          zipCode: e.target.value,
+          street: data.logradouro || '',
+          neighborhood: data.bairro || '',
+          city: data.localidade || '',
+          state: data.uf || ''
+        }));
+      }
+    } catch (err) {
+      console.error('Erro ao buscar CEP:', err);
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.zipCode && !validateCEP(formData.zipCode)) {
+      alert('CEP deve ter 8 dígitos.');
+      return;
+    }
+    const fullAddress = `${formData.street || ''}, ${formData.number || ''} - ${formData.neighborhood || ''}, ${formData.city || ''} - ${formData.state || ''}`;
+    const dataToSend = { ...formData, address: fullAddress };
+
     if (editingId) {
       setEditReason('');
       setIsReasonModalOpen(true);
     } else {
       try {
-        addUser({ ...formData, id: Math.random().toString(36).substr(2, 9) } as User, adminName);
+        addUser({ ...dataToSend, id: Math.random().toString(36).substr(2, 9) } as User, adminName);
         setIsModalOpen(false);
         showToast('Colaborador cadastrado com sucesso!', 'success');
       } catch (err) {
@@ -389,8 +430,15 @@ const UserManager: React.FC = () => {
 
   const confirmUserUpdate = () => {
     if (!editReason.trim()) { alert('Informe o motivo da alteração.'); return; }
+    if (formData.zipCode && !validateCEP(formData.zipCode)) {
+      alert('CEP deve ter 8 dígitos.');
+      return;
+    }
+    const fullAddress = `${formData.street || ''}, ${formData.number || ''} - ${formData.neighborhood || ''}, ${formData.city || ''} - ${formData.state || ''}`;
+    const dataToSend = { ...formData, address: fullAddress };
+
     try {
-      updateUserData({ id: editingId, ...formData } as User, adminName, editReason);
+      updateUserData({ id: editingId, ...dataToSend } as User, adminName, editReason);
       setIsReasonModalOpen(false);
       setIsModalOpen(false);
       showToast('Dados do colaborador atualizados!', 'success');
@@ -1327,9 +1375,95 @@ const UserManager: React.FC = () => {
                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-4">Informações Complementares</h4>
                     </div>
 
-                    <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Endereço Residencial</label>
-                      <input disabled={isViewOnly} className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" value={formData.address || ''} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="Rua, Número, Complemento, Bairro" />
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-6 gap-4">
+                      <div className="md:col-span-2 relative">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">CEP (Busca automática)</label>
+                        <div className="relative">
+                          <input 
+                            disabled={isViewOnly} 
+                            type="text" 
+                            placeholder="00000-000" 
+                            className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white pr-10" 
+                            value={formData.zipCode || ''} 
+                            onBlur={handleCepBlur} 
+                            onChange={e => setFormData({...formData, zipCode: formatCEP(e.target.value)})} 
+                          />
+                          {cepLoading && <RefreshCw size={18} className="animate-spin absolute right-3 top-3.5 text-emerald-500" />}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Logradouro / Rua</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="Rua, Avenida, etc." 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                          value={formData.street || ''} 
+                          onChange={e => setFormData({...formData, street: e.target.value})} 
+                        />
+                      </div>
+
+                      <div className="md:col-span-1">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Número</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="Nº" 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                          value={formData.number || ''} 
+                          onChange={e => setFormData({...formData, number: e.target.value})} 
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Complemento</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="Apto, Bloco, etc. (Opcional)" 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                          value={formData.complement || ''} 
+                          onChange={e => setFormData({...formData, complement: e.target.value})} 
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Bairro</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="Bairro" 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                          value={formData.neighborhood || ''} 
+                          onChange={e => setFormData({...formData, neighborhood: e.target.value})} 
+                        />
+                      </div>
+
+                      <div className="md:col-span-1.5 md:col-span-1">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Cidade</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="Cidade" 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                          value={formData.city || ''} 
+                          onChange={e => setFormData({...formData, city: e.target.value})} 
+                        />
+                      </div>
+
+                      <div className="md:col-span-0.5 md:col-span-1">
+                        <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">UF</label>
+                        <input 
+                          disabled={isViewOnly} 
+                          type="text" 
+                          placeholder="UF" 
+                          className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white uppercase" 
+                          value={formData.state || ''} 
+                          maxLength={2}
+                          onChange={e => setFormData({...formData, state: e.target.value})} 
+                        />
+                      </div>
                     </div>
                   </div>
                 </form>

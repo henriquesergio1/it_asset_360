@@ -208,6 +208,15 @@ export interface User {
   hasPendingIssues?: boolean; 
   pendingIssuesNote?: string;
   onLeaveUntil?: string; // Opcional: data de retorno
+
+  // Endereço estruturado
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 export enum SystemRole {

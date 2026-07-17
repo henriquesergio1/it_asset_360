@@ -80,7 +80,11 @@ const DB_SCHEMAS = {
         State NVARCHAR(50),
         ZipCode NVARCHAR(20),
         HireDate DATETIME,
-        Notes NVARCHAR(MAX)
+        Notes NVARCHAR(MAX),
+        Street NVARCHAR(255) NULL,
+        Number NVARCHAR(50) NULL,
+        Complement NVARCHAR(255) NULL,
+        Neighborhood NVARCHAR(255) NULL
     )`,
     AuditLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -446,7 +450,11 @@ async function initializeDatabase() {
                         { name: 'State', type: 'NVARCHAR(50)' },
                         { name: 'ZipCode', type: 'NVARCHAR(20)' },
                         { name: 'HireDate', type: 'DATETIME' },
-                        { name: 'Notes', type: 'NVARCHAR(MAX)' }
+                        { name: 'Notes', type: 'NVARCHAR(MAX)' },
+                        { name: 'Street', type: 'NVARCHAR(255)' },
+                        { name: 'Number', type: 'NVARCHAR(50)' },
+                        { name: 'Complement', type: 'NVARCHAR(255)' },
+                        { name: 'Neighborhood', type: 'NVARCHAR(255)' }
                     ];
 
                     for (const col of colsToAdd) {
@@ -888,7 +896,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.70.0', 
+            version: '3.71.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });

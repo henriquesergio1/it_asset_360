@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.71.0',
+    date: 'Hoje',
+    title: 'Cadastro de Endereço Estruturado com CEP em TI',
+    changes: [
+      'Alinhamento e Padronização: Substituído o input de endereço de texto único no cadastro de colaboradores de TI por campos estruturados (CEP, Logradouro, Número, Complemento, Bairro, Cidade, Estado), igualando-o ao módulo de RH.',
+      'Busca por CEP (ViaCEP): Integrada a busca automática de endereço por CEP com loader visual durante a requisição à API externa ViaCEP.',
+      'Compatibilidade Legada: Mantida a propriedade de endereço concatenado clássico no envio ao banco para assegurar a consistência com listagens e relatórios antigos.'
+    ]
+  },
+  {
     version: '3.70.0',
     date: 'Hoje',
     title: 'Persistência de Checklist de Devolução de TI',
