@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.64.5',
+    date: 'Hoje',
+    title: 'Ajuste de Itens de R.H. no Termo Digital',
+    changes: [
+      'Assinatura Digital: Ocultação automática dos campos exclusivos de T.I. (Patrimônio/IMEI e Serial) ao visualizar termos de R.H. no fluxo de assinatura digital.',
+      'Apresentação: Exibição completa e em largura total da descrição dos bens, uniformes e EPIs cadastrados para termos de R.H., preservando a formatação e quebras de linha.',
+    ]
+  },
+  {
     version: '3.64.4',
     date: 'Hoje',
     title: 'Correção de Clipboard e Hovers de Botões',

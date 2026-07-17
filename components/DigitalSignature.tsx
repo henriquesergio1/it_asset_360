@@ -277,105 +277,126 @@ const DigitalSignature = () => {
                                         />
                                     </div>
 
-                                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                                        <div className="bg-slate-50 border-b border-slate-100 p-4">
-                                            <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">1. Detalhes do Equipamento</h3>
-                                            <p className="text-[9px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">Especificações técnicas e identificação jurídica do ativo.</p>
-                                        </div>
-                                        
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-left border-collapse">
-                                                <thead>
-                                                    <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                                                        <th className="p-4 w-7/12">Descrição do Item</th>
-                                                        <th className="p-4 w-5/12">Identificação</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                                                    {(() => {
-                                                        const details = termData.assetDetails || '';
-                                                        const bracketsMatch = details.match(/^\[(.*?)\]\s*(.*)$/);
-
-                                                        let assetName = details;
-                                                        let serial = 'N/A';
-                                                        let displayId = 'Não Informado';
-                                                        let tag = '';
-                                                        let imei = '';
-                                                        let isSim = false;
-                                                        let phone = '';
-                                                        let iccid = '';
-
-                                                        if (bracketsMatch) {
-                                                            const [_, content, modelName] = bracketsMatch;
-                                                            const parts = content.split('|').map(p => p.trim());
-                                                            
-                                                            if (content.toUpperCase().includes('CHIP:')) {
-                                                                isSim = true;
-                                                                parts.forEach(p => {
-                                                                    if (p.toUpperCase().startsWith('CHIP:')) {
-                                                                        phone = p.substring(5).trim();
-                                                                    } else if (p.toUpperCase().startsWith('ICCID:')) {
-                                                                        iccid = p.substring(6).trim();
-                                                                    }
-                                                                });
-                                                                assetName = modelName.trim() || 'Chip SIM Card';
-                                                            } else {
-                                                                parts.forEach(p => {
-                                                                    if (p.toUpperCase().startsWith('TAG:')) {
-                                                                        tag = p.substring(4).trim();
-                                                                    } else if (p.toUpperCase().startsWith('S/N:') || p.toUpperCase().startsWith('SERIAL:')) {
-                                                                        serial = p.substring(p.indexOf(':') + 1).trim();
-                                                                    } else if (p.toUpperCase().startsWith('IMEI:')) {
-                                                                        imei = p.substring(5).trim();
-                                                                    }
-                                                                });
-                                                                assetName = modelName.trim();
-                                                                
-                                                                const isTagValid = tag && !['S/T', 'S/I', 'N/A', '---', '', 'DESCONHECIDO', 'S/S'].includes(tag.toUpperCase());
-                                                                const isImeiValid = imei && !['S/I', 'S/T', 'N/A', '---', '', 'DESCONHECIDO'].includes(imei.toUpperCase());
-                                                                
-                                                                if (isTagValid) {
-                                                                    displayId = tag;
-                                                                } else if (isImeiValid) {
-                                                                    displayId = imei;
-                                                                } else {
-                                                                    displayId = tag || imei || 'Não Informado';
-                                                                }
-                                                            }
-                                                        }
-
-                                                        return (
-                                                            <tr>
-                                                                <td className="p-4 text-xs">
-                                                                    <p className="font-bold text-slate-900 text-sm">{assetName}</p>
-                                                                    {isSim ? (
-                                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic mt-1">Chip Físico</p>
-                                                                    ) : (
-                                                                        termData.accessories && termData.accessories.length > 0 ? (
-                                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic mt-1">
-                                                                                Acessórios: {termData.accessories.map(a => typeof a === 'object' && a !== null ? (a.name || a.Name) : a).join(', ')}
-                                                                            </p>
-                                                                        ) : (
-                                                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium italic mt-1">Nenhum acessório vinculado</p>
-                                                                        )
-                                                                    )}
-                                                                </td>
-                                                                <td className="p-4 space-y-1">
-                                                                    {isSim ? (
-                                                                        <>
-                                                                            <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Número: <span className="font-mono text-slate-900 font-bold block sm:inline">{phone}</span></p>
-                                                                            <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{iccid}</span></p>
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Patrimônio / IMEI: <span className="font-mono text-slate-900 font-bold block sm:inline">{displayId}</span></p>
-                                                                            <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Serial: <span className="font-mono text-slate-700 block sm:inline">{serial || 'N/A'}</span></p>
-                                                                        </>
-                                                                    )}
-                                                                </td>
+                                    {(() => {
+                                        const isRh = termData.id?.startsWith('rht-');
+                                        return (
+                                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                                                <div className="bg-slate-50 border-b border-slate-100 p-4">
+                                                    <h3 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">
+                                                        {isRh ? '1. Detalhes dos Itens / Uniformes / EPIs' : '1. Detalhes do Equipamento'}
+                                                    </h3>
+                                                    <p className="text-[9px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
+                                                        {isRh ? 'Relação e descrição detalhada dos bens sob responsabilidade do colaborador.' : 'Especificações técnicas e identificação jurídica do ativo.'}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                                                {isRh ? (
+                                                                    <th className="p-4 w-full">Descrição e Detalhes dos Bens comodatados</th>
+                                                                ) : (
+                                                                    <>
+                                                                        <th className="p-4 w-7/12">Descrição do Item</th>
+                                                                        <th className="p-4 w-5/12">Identificação</th>
+                                                                    </>
+                                                                )}
                                                             </tr>
-                                                        );
-                                                    })()}
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                                                            {isRh ? (
+                                                                <tr>
+                                                                    <td className="p-4 whitespace-pre-wrap font-sans font-medium text-slate-800 dark:text-slate-200 leading-relaxed text-sm">
+                                                                        {termData.assetDetails}
+                                                                    </td>
+                                                                </tr>
+                                                            ) : (
+                                                                (() => {
+                                                                    const details = termData.assetDetails || '';
+                                                                    const bracketsMatch = details.match(/^\[(.*?)\]\s*(.*)$/);
+
+                                                                    let assetName = details;
+                                                                    let serial = 'N/A';
+                                                                    let displayId = 'Não Informado';
+                                                                    let tag = '';
+                                                                    let imei = '';
+                                                                    let isSim = false;
+                                                                    let phone = '';
+                                                                    let iccid = '';
+
+                                                                    if (bracketsMatch) {
+                                                                        const [_, content, modelName] = bracketsMatch;
+                                                                        const parts = content.split('|').map(p => p.trim());
+                                                                        
+                                                                        if (content.toUpperCase().includes('CHIP:')) {
+                                                                            isSim = true;
+                                                                            parts.forEach(p => {
+                                                                                if (p.toUpperCase().startsWith('CHIP:')) {
+                                                                                    phone = p.substring(5).trim();
+                                                                                } else if (p.toUpperCase().startsWith('ICCID:')) {
+                                                                                    iccid = p.substring(6).trim();
+                                                                                }
+                                                                            });
+                                                                            assetName = modelName.trim() || 'Chip SIM Card';
+                                                                        } else {
+                                                                            parts.forEach(p => {
+                                                                                if (p.toUpperCase().startsWith('TAG:')) {
+                                                                                    tag = p.substring(4).trim();
+                                                                                } else if (p.toUpperCase().startsWith('S/N:') || p.toUpperCase().startsWith('SERIAL:')) {
+                                                                                    serial = p.substring(p.indexOf(':') + 1).trim();
+                                                                                } else if (p.toUpperCase().startsWith('IMEI:')) {
+                                                                                    imei = p.substring(5).trim();
+                                                                                }
+                                                                            });
+                                                                            assetName = modelName.trim();
+                                                                            
+                                                                            const isTagValid = tag && !['S/T', 'S/I', 'N/A', '---', '', 'DESCONHECIDO', 'S/S'].includes(tag.toUpperCase());
+                                                                            const isImeiValid = imei && !['S/I', 'S/T', 'N/A', '---', '', 'DESCONHECIDO'].includes(imei.toUpperCase());
+                                                                            
+                                                                            if (isTagValid) {
+                                                                                displayId = tag;
+                                                                            } else if (isImeiValid) {
+                                                                                displayId = imei;
+                                                                            } else {
+                                                                                displayId = tag || imei || 'Não Informado';
+                                                                            }
+                                                                        }
+                                                                    }
+
+                                                                    return (
+                                                                        <tr>
+                                                                            <td className="p-4 text-xs">
+                                                                                <p className="font-bold text-slate-900 text-sm">{assetName}</p>
+                                                                                {isSim ? (
+                                                                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic mt-1">Chip Físico</p>
+                                                                                ) : (
+                                                                                    termData.accessories && termData.accessories.length > 0 ? (
+                                                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium italic mt-1">
+                                                                                            Acessórios: {termData.accessories.map(a => typeof a === 'object' && a !== null ? (a.name || a.Name) : a).join(', ')}
+                                                                                        </p>
+                                                                                    ) : (
+                                                                                        <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium italic mt-1">Nenhum acessório vinculado</p>
+                                                                                    )
+                                                                                )}
+                                                                            </td>
+                                                                            <td className="p-4 space-y-1">
+                                                                                {isSim ? (
+                                                                                    <>
+                                                                                        <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Número: <span className="font-mono text-slate-900 font-bold block sm:inline">{phone}</span></p>
+                                                                                        <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">ICCID: <span className="font-mono text-slate-700 block sm:inline">{iccid}</span></p>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Patrimônio / IMEI: <span className="font-mono text-slate-900 font-bold block sm:inline">{displayId}</span></p>
+                                                                                        <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px]">Serial: <span className="font-mono text-slate-700 block sm:inline">{serial || 'N/A'}</span></p>
+                                                                                    </>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })()
+                                                            )}
 
                                                     {termData.linkedSim && (
                                                         <>
