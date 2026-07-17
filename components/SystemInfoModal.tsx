@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.69.1',
+    date: 'Hoje',
+    title: 'Remoção de setas estáticas e indicador de ordenação flutuante',
+    changes: [
+      'Visual e Layout Limpo: Removidos os ícones de seta de ordenação estáticos de dentro do fluxo de texto dos cabeçalhos das tabelas redimensionáveis de todo o sistema. Isso evita que títulos de colunas mais longos sofram truncamento desnecessário.',
+      'Indicador Flutuante Absoluto (Hover): As opções e o status de ordenação (ASC, DESC, ORDENAR) agora aparecem de forma compacta como uma badge absoluta no canto direito apenas quando o mouse passa por cima (hover) da coluna, sumindo imediatamente após retirar o cursor.'
+    ]
+  },
+  {
     version: '3.69.0',
     date: 'Hoje',
     title: 'Ajuste de Regras de Negócio e Reatividade dos Termos',
