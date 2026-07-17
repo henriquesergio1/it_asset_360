@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { RhCollaborator, RhDocument, RhOccurrence } from '../types';
+import { useToast } from '../contexts/ToastContext';
+import { RhCollaborator, RhDocument, RhOccurrence, RhTerm } from '../types';
 import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
   Search, Plus, Edit2, Trash2, Eye, EyeOff, MapPin, FileText, 
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
-  SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map
+  SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
+  FileSignature, RefreshCw, Share2, Camera, CheckSquare
 } from 'lucide-react';
+import FilePreviewModal from './FilePreviewModal';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
   formatCPF, formatPhone, formatCEP, cleanDocument 
@@ -36,10 +39,29 @@ export const RhCollaboratorManager: React.FC = () => {
     rhOccurrences, 
     addRhOccurrence, 
     deleteRhOccurrence,
-    rhTerms
+    rhTerms,
+    rhTemplates,
+    settings,
+    getTermFile,
+    updateTermFile,
+    deleteTermFile,
+    generateSignatureToken,
+    resolveTermManual,
+    fetchData,
+    isReadOnly
   } = useData();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const adminName = user?.name || 'Gestor R.H.';
+
+  // Estados locais para controle de Termos de Comodato do RH
+  const [previewData, setPreviewData] = useState<{ url: any; name: string } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [signatureData, setSignatureData] = useState<any>(null);
+  const [generatedSignatureLink, setGeneratedSignatureLink] = useState<string | null>(null);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [resolvingManualTerm, setResolvingManualTerm] = useState<RhTerm | null>(null);
+  const [resolveManualReason, setResolveManualReason] = useState('');
 
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +82,292 @@ export const RhCollaboratorManager: React.FC = () => {
 
   // Tabs for viewing collaborator detail modal
   const [detailTab, setDetailTab] = useState<'cadastro' | 'documentos' | 'ocorrencias'>('cadastro');
+
+  // --- Funções de Gestão de Termos de Comodato do RH ---
+  const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fileUrl = event.target?.result as string;
+        updateTermFile(termId, '', fileUrl, adminName);
+        showToast('Termo assinado enviado com sucesso', 'success');
+        fetchData(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteTermFile = async (termId: string) => {
+    if (window.confirm("Deseja realmente excluir o anexo deste termo?")) {
+      try {
+        await deleteTermFile(termId, '', 'Remoção do anexo pelo gestor', adminName);
+        showToast('Anexo removido do termo', 'success');
+        fetchData(true);
+      } catch (err) {
+        showToast('Erro ao remover anexo', 'error');
+      }
+    }
+  };
+
+  const handleGenerateSignatureLink = async (termId: string) => {
+    try {
+      const token = await generateSignatureToken(termId);
+      const link = `${window.location.origin}/#/sign-term/${token}`;
+      setGeneratedSignatureLink(link);
+      setIsLinkModalOpen(true);
+    } catch (err: any) {
+      console.error("Erro ao gerar link:", err);
+      showToast(`Erro ao gerar link: ${err.message}`, 'error');
+    }
+  };
+
+  const handleConfirmResolveManual = async () => {
+    if (!resolvingManualTerm || !resolveManualReason) return;
+    try {
+      await resolveTermManual(resolvingManualTerm.id, resolveManualReason, adminName);
+      showToast('Termo resolvido manualmente', 'success');
+      setResolvingManualTerm(null);
+      setResolveManualReason('');
+      fetchData(true);
+    } catch (err) {
+      showToast('Erro ao resolver termo', 'error');
+    }
+  };
+
+  const handleApproveSignature = async (termId: string) => {
+    try {
+      const res = await fetch(`/api/rh-terms/${termId}/approve-signature`, { method: 'POST' });
+      if (res.ok) {
+        showToast('Assinatura aprovada com sucesso', 'success');
+        fetchData(true);
+      } else {
+        showToast('Erro ao aprovar assinatura', 'error');
+      }
+    } catch (err) {
+      showToast('Erro ao aprovar assinatura', 'error');
+    }
+  };
+
+  const handleRejectSignature = async (termId: string) => {
+    if (window.confirm("Deseja realmente rejeitar esta assinatura? O colaborador terá que assinar novamente.")) {
+      try {
+        const res = await fetch(`/api/rh-terms/${termId}/reject-signature`, { method: 'POST' });
+        if (res.ok) {
+          showToast('Assinatura rejeitada com sucesso', 'success');
+          fetchData(true);
+        } else {
+          showToast('Erro ao rejeitar assinatura', 'error');
+        }
+      } catch (err) {
+        showToast('Erro ao rejeitar assinatura', 'error');
+      }
+    }
+  };
+
+  const handleViewSignatureEvidences = async (termId: string) => {
+    try {
+      const response = await fetch(`/api/rh-terms/${termId}/signature-data`);
+      if (response.ok) {
+        const data = await response.json();
+        setSignatureData(data);
+      } else {
+        showToast('Erro ao carregar fotos da assinatura', 'error');
+      }
+    } catch (err) {
+      showToast('Erro ao carregar fotos da assinatura', 'error');
+    }
+  };
+
+  const handleViewTermFile = async (term: RhTerm) => {
+    let url = term.fileUrl || (term as any).filebinary;
+    
+    if (!url && !!term.hasFile) {
+      try {
+        url = await getTermFile(term.id);
+      } catch (err) {
+        console.error("Erro ao buscar arquivo do termo:", err);
+      }
+    }
+    
+    if (url && url !== '#') {
+      const collaborator = rhCollaborators.find(c => c.id === term.collaboratorId);
+      setPreviewData({ 
+        url, 
+        name: `termo_${term.type?.toLowerCase() || 'comodato'}_${collaborator?.fullName || 'colaborador'}.${(url.includes('pdf') || url.includes('application/pdf')) ? 'pdf' : 'jpg'}` 
+      });
+      setIsPreviewOpen(true);
+    }
+  };
+
+  const generateAndPrintRhTerm = (term: RhTerm) => {
+    const collaborator = rhCollaborators.find(c => c.id === term.collaboratorId);
+    const template = rhTemplates.find(t => t.id === term.templateId);
+
+    if (!collaborator || !template) {
+      alert("Colaborador ou template não localizado.");
+      return;
+    }
+
+    const sectorName = sectors?.find(s => s.id === collaborator.sectorId)?.name || 'Não Informado';
+    const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Substituições
+    const replacements: Record<string, string> = {
+      '{NOME_EMPRESA}': settings?.appName || 'Minha Empresa',
+      '{CNPJ}': settings?.cnpj || 'Não Informado',
+      '{NOME_COLABORADOR}': collaborator.fullName,
+      '{CPF}': collaborator.cpf,
+      '{RG}': collaborator.rg || '-',
+      '{CARGO}': collaborator.role || '-',
+      '{SETOR}': sectorName,
+      '{TIPO_CONTRATO}': collaborator.contractType || '-',
+      '{BENS_COMODATO}': term.assetDetails || '',
+      '{DATA_ATUAL}': today
+    };
+
+    let processedDeclaration = term.snapshotDeclaration || template.declaration || (template.type === 'DEVOLUCAO' ? 'Declaro ter devolvido os itens abaixo na presente data.' : 'Declaro ter recebido os itens abaixo em perfeitas condições de uso.');
+    let processedContent = term.snapshotClauses || template.content || '';
+
+    Object.keys(replacements).forEach(key => {
+      const regex = new RegExp(key, 'g');
+      processedDeclaration = processedDeclaration.replace(regex, replacements[key]);
+      processedContent = processedContent.replace(regex, replacements[key]);
+    });
+
+    const isEntrega = (term.type || template.type || 'ENTREGA') === 'ENTREGA';
+    const headerTitle = isEntrega ? 'Termo de Responsabilidade de Comodato' : 'Termo de Devolução de Comodato';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${headerTitle}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 0; margin: 0; background-color: #fff; color: #000; line-height: 1.35; }
+            @media print {
+              body { padding: 0; margin: 0; -webkit-print-color-adjust: exact; }
+              @page { margin: 10mm; size: A4 portrait; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; line-height: 1.35; max-width: 100%; margin: 0 auto; padding: 10px 30px; background-color: #fff;">
+            
+            <!-- HEADER -->
+            <table style="width: 100%; border-bottom: 2px solid #000; margin-bottom: 12px; padding-bottom: 8px;">
+              <tr>
+                <td style="width: 25%; vertical-align: middle;">
+                  <img src="${settings?.logoUrl || ''}" alt="Logo" style="max-height: 55px; max-width: 150px; object-fit: contain;" onerror="this.style.display='none'"/>
+                </td>
+                <td style="width: 75%; text-align: right; vertical-align: middle;">
+                  <h1 style="margin: 0; font-size: 16px; font-weight: bold; color: #000;">${settings?.appName || 'Minha Empresa'}</h1>
+                  <p style="margin: 0; font-size: 10px; color: #000;">CNPJ: ${settings?.cnpj || 'Não Informado'}</p>
+                  <h2 style="margin: 3px 0 0 0; text-transform: uppercase; font-size: 13px; color: #000; letter-spacing: 0.5px;">${headerTitle}</h2>
+                  <p style="margin: 0; font-size: 9px; color: #000; text-transform: uppercase; font-weight: bold;">GESTÃO DE PESSOAS / RECURSOS HUMANOS</p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- DADOS DO COLABORADOR -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; margin-bottom: 12px; color: #000;">
+              <table style="width: 100%; font-size: 10.5px; color: #000; border-collapse: collapse;">
+                <tr>
+                  <td style="font-weight: bold; width: 18%; padding: 3px 0;">Colaborador:</td>
+                  <td style="width: 42%; padding: 3px 0;">${collaborator.fullName}</td>
+                  <td style="font-weight: bold; width: 10%; padding: 3px 0;">CPF:</td>
+                  <td style="width: 30%; font-family: monospace; padding: 3px 0;">${collaborator.cpf}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold; padding: 3px 0;">Cargo / Função:</td>
+                  <td style="padding: 4px 0;">${collaborator.role || 'Não Informado'}</td>
+                  <td style="font-weight: bold; padding: 3px 0;">Setor:</td>
+                  <td style="padding: 3px 0;">${sectorName}</td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- DECLARAÇÃO -->
+            <div style="text-align: justify; font-size: 10.5px; margin-bottom: 12px; color: #000; line-height: 1.5;">
+              ${processedDeclaration}
+            </div>
+
+            <!-- TABELA DE ITENS -->
+            <div style="margin-bottom: 12px;">
+              <h3 style="font-size: 11px; border-left: 3px solid #2563eb; padding-left: 8px; margin-bottom: 8px; color: #000; text-transform: uppercase; font-weight: bold;">1. Detalhes do Bem em Comodato</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
+                <thead>
+                  <tr style="background-color: #f1f5f9;">
+                    <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; color: #000;">Descrição do Item</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="border: 1px solid #cbd5e1; padding: 10px; color: #000; font-size: 11px; white-space: pre-wrap;">${term.assetDetails}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- OBSERVAÇÕES -->
+            ${term.notes ? `
+              <div style="margin-bottom: 12px; font-size: 10px; color: #000; background-color: #fffbeb; padding: 10px; border: 1px solid #fcd34d; border-radius: 6px;">
+                <strong>Observações:</strong> ${term.notes}
+              </div>
+            ` : ''}
+
+            <!-- CLÁUSULAS -->
+            <div style="font-size: 10px; color: #000; margin-bottom: 15px; line-height: 1.4; white-space: pre-line; text-align: justify;">
+              ${processedContent}
+            </div>
+
+            <!-- ASSINATURAS -->
+            <div style="margin-top: 25px; page-break-inside: avoid; color: #000;">
+              <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São José dos Campos, ${today}</p>
+              
+              <div style="width: 60%; margin: 0 auto; text-align: center;">
+                <div style="border-top: 1.5px solid #000; padding-top: 6px;">
+                  <strong style="font-size: 11px; color: #000; text-transform: uppercase;">${collaborator.fullName}</strong><br>
+                  <span style="font-size: 9px; color: #000; font-weight: bold;">Assinatura do Colaborador</span><br>
+                  <span style="font-size: 9px; color: #000; font-family: monospace;">Documento de Identificação (CPF): ${collaborator.cpf}</span>
+                  
+                  ${term.status === 'ASSINADO' ? `
+                    <div style="margin-top: 15px; font-size: 7px; color: #166534; text-align: center; border: 1px dashed #a7f3d0; padding: 6px; border-radius: 6px; background: #ecfdf5;">
+                      <strong style="text-transform: uppercase; color: #065f46;">AUTENTICAÇÃO DIGITAL DE R.H.</strong><br>
+                      <strong>HASH CRIPTOGRÁFICO:</strong> ${term.signatureHash?.toUpperCase() || ''}<br>
+                      IP: ${term.signatureIp || '177.45.190.22'} | DATA: ${term.signatureDate ? new Date(term.signatureDate).toLocaleString('pt-BR') : ''}<br>
+                      LOCAL: ${term.signatureLocation || 'São José dos Campos, SP'}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 25px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+              Documento gerado digitalmente pelo sistema IT Asset 360 • Módulo R.H. • ${new Date().toLocaleString()}
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() { 
+              setTimeout(function(){ 
+                window.print(); 
+              }, 800); 
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=1000,height=900');
+    if (!printWindow) {
+      alert('Permita popups para imprimir/visualizar o termo.');
+      return;
+    }
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
 
   // Column Selector
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
@@ -1044,7 +1352,7 @@ export const RhCollaboratorManager: React.FC = () => {
                   </div>
 
                   {/* Termos de Comodato vinculados */}
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60 space-y-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60 space-y-4">
                     <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Termos de Comodato Vinculados</span>
                     {(() => {
                       const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab.id);
@@ -1052,32 +1360,146 @@ export const RhCollaboratorManager: React.FC = () => {
                         return <div className="text-slate-400 py-6 text-center font-medium text-xs">Nenhum termo de comodato (entrega/devolução) gerado para este colaborador.</div>;
                       }
                       return (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-3">
                           {colabTerms.map(t => {
                             const isDevolucao = t.type === 'DEVOLUCAO';
                             return (
-                              <div key={t.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 relative">
-                                <div className="flex justify-between items-start">
-                                  <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
-                                    isDevolucao 
-                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' 
-                                      : 'bg-indigo-100 text-indigo-850 dark:bg-indigo-500/20 dark:text-indigo-400'
-                                  }`}>
-                                    {isDevolucao ? 'DEVOLUÇÃO' : 'ENTREGA'}
-                                  </span>
-                                  <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
-                                    t.status === 'ASSINADO'
-                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                      : t.status === 'RECUSADO'
-                                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
-                                        : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                                  }`}>
-                                    {t.status}
-                                  </span>
+                              <div key={t.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-12 w-12 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                                    {t.type === 'ENTREGA' ? <FileSignature className="text-indigo-600 dark:text-indigo-400" size={24} /> : <RefreshCw className="text-blue-600 dark:text-sky-400" size={24} />}
+                                  </div>
+                                  <div>
+                                    <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{t.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
+                                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase flex flex-col gap-0.5 mt-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-indigo-500/80">EMITIDO EM: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                      </div>
+                                      <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium max-w-sm truncate" title={t.assetDetails}>
+                                        {t.assetDetails || '---'}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <p className="text-xs font-bold text-slate-800 dark:text-white truncate" title={t.assetDetails}>{t.assetDetails}</p>
-                                <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                  <span>Data: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-lg ${
+                                      t.isManual 
+                                        ? 'bg-orange-600 text-white shadow-orange-500/20' 
+                                        : (t.fileUrl || t.hasFile || (t.signatureDate && t.signatureStatus === 'APPROVED')) 
+                                          ? 'bg-emerald-600 text-white shadow-emerald-500/20' 
+                                          : t.signatureStatus === 'WAITING_APPROVAL'
+                                            ? 'bg-blue-600 text-white animate-pulse shadow-blue-500/20'
+                                            : 'bg-orange-600 text-white shadow-orange-500/20'
+                                    }`} title={t.isManual ? `Resolvido Manualmente: ${t.resolutionReason || 'Sem motivo'}` : ''}>
+                                      {t.isManual ? 'Manual' : (t.fileUrl || t.hasFile || (t.signatureDate && t.signatureStatus === 'APPROVED') ? 'Assinado' : (t.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
+                                    </span>
+                                    {t.isManual && (
+                                      <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">Resolução Manual</div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {!!(t.fileUrl || t.hasFile || t.signatureDate) && (
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTermFile(t); }}
+                                        className="p-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:text-emerald-350 dark:hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                        title={!!(t.fileUrl || t.hasFile) ? "Visualizar Arquivo Assinado" : "Visualizar Comprovante Digital"}
+                                      >
+                                        <Eye size={16} />
+                                      </button>
+                                    )}
+
+                                    {!(t.fileUrl || t.hasFile) && !t.signatureDate && (
+                                      <div className="flex gap-2">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); generateAndPrintRhTerm(t); }}
+                                          className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-slate-900 dark:text-white transition-all border border-slate-200 dark:border-slate-700"
+                                          title="Gerar Termo"
+                                        >
+                                          <Download size={16} />
+                                        </button>
+
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(t.id); }}
+                                          className="p-2 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:text-indigo-300 transition-all border border-indigo-350 dark:border-indigo-700/40"
+                                          title="Gerar Link de Assinatura"
+                                        >
+                                          <Share2 size={16} />
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {t.signatureDate && t.signatureStatus !== 'APPROVED' && (
+                                      <div className="flex gap-2">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleApproveSignature(t.id); }}
+                                          className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-350 dark:border-emerald-700/30"
+                                          title="Aprovar Assinatura"
+                                        >
+                                          <Check size={12} />
+                                          Aprovar
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleRejectSignature(t.id); }}
+                                          className="p-1.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-rose-350 dark:border-rose-700/30"
+                                          title="Rejeitar Assinatura"
+                                        >
+                                          <X size={12} />
+                                          Rejeitar
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {!!(t.hasSignaturePhoto || t.hasSignatureSelfiePhoto) && (
+                                      <div className="flex gap-2">
+                                        <button 
+                                          type="button"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            await handleViewSignatureEvidences(t.id);
+                                          }}
+                                          className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
+                                          title="Ver Evidências de Identidade (Doc + Selfie)"
+                                        >
+                                          <Camera size={14} className="text-indigo-650 dark:text-indigo-400" />
+                                          <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {!(t.fileUrl || t.hasFile) ? (
+                                      <div className="flex gap-2">
+                                        {!t.isManual && (
+                                          <button 
+                                            type="button"
+                                            onClick={() => setResolvingManualTerm(t)}
+                                            className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                            title="Resolução Manual"
+                                          >
+                                            <CheckSquare size={16} />
+                                          </button>
+                                        )}
+                                        <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
+                                          <Upload size={16} />
+                                          <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(t.id, e)} />
+                                        </label>
+                                      </div>
+                                    ) : (
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleDeleteTermFile(t.id)}
+                                        className="p-2 bg-white dark:bg-slate-800 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                        title="Excluir/Alterar Anexo"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -2121,6 +2543,142 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+      {/* Modal de Link de Assinatura */}
+      {isLinkModalOpen && generatedSignatureLink && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl relative">
+            <h3 className="text-sm font-black uppercase text-indigo-500 tracking-wider mb-2">Link de Assinatura Digital</h3>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Envie o link abaixo para o colaborador assinar o termo digitalmente através de geolocalização e fotos de evidência:
+            </p>
+            <div className="flex gap-2 p-2 bg-black/40 border border-slate-700 rounded-2xl mb-4">
+              <input 
+                type="text" 
+                readOnly 
+                value={generatedSignatureLink} 
+                className="flex-1 bg-transparent border-0 outline-none text-xs text-slate-200 font-mono select-all truncate pl-2"
+              />
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedSignatureLink);
+                  showToast("Link copiado com sucesso!", "success");
+                }}
+                className="px-4 py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+              >
+                <Copy size={12} /> Copiar
+              </button>
+            </div>
+            <div className="flex justify-end pt-2 border-t border-slate-800">
+              <button 
+                onClick={() => { setIsLinkModalOpen(false); setGeneratedSignatureLink(null); }}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Resolução Manual */}
+      {resolvingManualTerm && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-orange-500 font-bold uppercase text-xs tracking-wider">
+              <CheckSquare size={18} />
+              <span>Resolução Manual de Termo</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Use esta opção se o colaborador assinou o documento físico em papel ou via outro meio e você deseja dar baixa manual sem exigir a assinatura eletrônica.
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Observação da Resolução</label>
+              <textarea 
+                required
+                placeholder="Ex: Assinado fisicamente em papel e arquivado na pasta de prontuário do colaborador."
+                value={resolveManualReason}
+                onChange={e => setResolveManualReason(e.target.value)}
+                className="w-full border border-slate-700 rounded-xl p-3 focus:border-orange-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button 
+                onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-355 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!resolveManualReason.trim()}
+                onClick={handleConfirmResolveManual}
+                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:hover:bg-orange-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Evidências da Assinatura Digital */}
+      {signatureData && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-4 shrink-0">
+              <h3 className="text-xs font-black uppercase text-indigo-500 tracking-wider flex items-center gap-2">
+                <Camera size={16} />
+                <span>Evidências de Assinatura Digital (Doc + Selfie)</span>
+              </h3>
+              <button 
+                onClick={() => setSignatureData(null)} 
+                className="h-8 w-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Foto do Documento</span>
+                {signatureData.documentPhoto ? (
+                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[220px]">
+                    <img src={signatureData.documentPhoto} className="max-h-60 object-contain" alt="Documento" />
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Foto de Selfie</span>
+                {signatureData.selfiePhoto ? (
+                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[220px]">
+                    <img src={signatureData.selfiePhoto} className="max-h-60 object-contain" alt="Selfie" />
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                )}
+              </div>
+            </div>
+            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+              <button 
+                onClick={() => setSignatureData(null)}
+                className="px-5 py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FilePreviewModal */}
+      {isPreviewOpen && previewData && (
+        <FilePreviewModal 
+          isOpen={isPreviewOpen} 
+          onClose={() => { setIsPreviewOpen(false); setPreviewData(null); }} 
+          fileUrl={previewData.url} 
+          fileName={previewData.name} 
+        />
       )}
     </div>
   );

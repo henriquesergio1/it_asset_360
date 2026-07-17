@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.67.0',
+    date: 'Hoje',
+    title: 'Ações e Visual de Termos de R.H. Idênticos a T.I.',
+    changes: [
+      'Visual Padronizado: A listagem de termos vinculados de R.H. na aba do colaborador agora utiliza o mesmo layout estético moderno, com badges de status coloridos, ícones indicativos de Entrega/Devolução e botões rápidos circulares.',
+      'Ações Completas: O gestor agora pode visualizar comprovantes e PDFs assinados, fazer download de termos pendentes, copiar link de assinatura digital, realizar resolução manual ou efetuar upload de termo digitalizado diretamente do perfil do colaborador de R.H.',
+      'Integração Completa: Adicionado suporte para visualização de evidências de identidade (selfie + documento) e pré-visualização de PDFs nativos para termos de comodato de R.H.'
+    ]
+  },
+  {
     version: '3.66.1',
     date: 'Hoje',
     title: 'Migração de Termos Legados e Consolidação Estática de PDF',
