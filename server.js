@@ -821,7 +821,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.60.0', 
+            version: '3.60.1', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1316,7 +1316,7 @@ async function updateUserPendingStatus(pool, userId) {
                 // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
                 if (key.endsWith('Binary')) continue;
                 
-                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
                 // Map legacy URL columns to Binary columns
@@ -1381,7 +1381,7 @@ async function updateUserPendingStatus(pool, userId) {
                 // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
                 if (key.endsWith('Binary')) continue;
 
-                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
+                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 
                 // Se o valor for nulo ou indefinido, pulamos a atualização deste campo
                 if (val === null || val === undefined) continue; 
@@ -1421,7 +1421,7 @@ async function updateUserPendingStatus(pool, userId) {
                 if (prev) {
                     let oldVal = prev[dbKey];
                     let newVal = req.body[key];
-                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds'].includes(key)) newVal = JSON.stringify(newVal);
+                    if (['customData', 'customFieldIds', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) newVal = JSON.stringify(newVal);
                     
                     if (String(oldVal || '') !== String(newVal || '')) {
                         diffNotes.push(`${key}: '${oldVal || '---'}' ➔ '${newVal || '---'}'`);
