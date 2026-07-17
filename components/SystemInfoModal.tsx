@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.68.1',
+    date: 'Hoje',
+    title: 'Ajuste de z-index nas modais de termos de R.H.',
+    changes: [
+      'Correção de Sobreposição: Modificados os z-indexes das modais secundárias (Link de Assinatura, Resolução Manual, Evidências Jurídicas e Justificativa de Alteração) do módulo de R.H. para z-[200]. Isso resolve a falha onde elas abriam por trás das telas principais de detalhes ou formulários (z-[100] e z-[110]) do colaborador.'
+    ]
+  },
+  {
     version: '3.68.0',
     date: 'Hoje',
     title: 'Justificativa Obrigatória e Aba Histórico no R.H.',

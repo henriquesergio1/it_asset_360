@@ -2653,7 +2653,7 @@ export const RhCollaboratorManager: React.FC = () => {
       )}
       {/* Modal de Link de Assinatura */}
       {isLinkModalOpen && generatedSignatureLink && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl relative">
             <h3 className="text-sm font-black uppercase text-indigo-500 tracking-wider mb-2">Link de Assinatura Digital</h3>
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
@@ -2690,7 +2690,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* Modal de Resolução Manual */}
       {resolvingManualTerm && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-orange-500 font-bold uppercase text-xs tracking-wider">
               <CheckSquare size={18} />
@@ -2730,7 +2730,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* Modal de Evidências da Assinatura Digital */}
       {signatureData && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-4 shrink-0">
               <h3 className="text-xs font-black uppercase text-indigo-500 tracking-wider flex items-center gap-2">
@@ -2780,7 +2780,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* Modal de Justificativa de Alteração Cadastral (Obrigatório) */}
       {isReasonModalOpen && pendingSaveData && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-indigo-500 font-bold uppercase text-xs tracking-wider">
               <AlertTriangle size={18} className="text-amber-500" />
