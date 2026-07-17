@@ -106,6 +106,13 @@ const UserManager: React.FC = () => {
   const [generatedSignatureLink, setGeneratedSignatureLink] = useState<string | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
+  // Estados para importação de colaboradores RH → TI
+  const [showRhImportList, setShowRhImportList] = useState(false);
+  const [rhSearchTerm, setRhSearchTerm] = useState('');
+  const [rhSortKey, setRhSortKey] = useState<'fullName' | 'role' | 'hireDate'>('fullName');
+  const [rhSortDirection, setRhSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedRhColab, setSelectedRhColab] = useState<any>(null);
+  const [isRhViewModalOpen, setIsRhViewModalOpen] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -130,7 +137,8 @@ const UserManager: React.FC = () => {
     updateUser: updateUserData,
     toggleUserActive,
     isReadOnly,
-    settings
+    settings,
+    rhCollaborators
   } = useData();
   const { showToast } = useToast();
   const { user: authUser } = useAuth();
@@ -998,8 +1006,75 @@ const UserManager: React.FC = () => {
     );
   };
 
+  // ─── Importação de Colaboradores RH → TI ────────────────────────────────────
+  const cleanCpf = (cpf: string) => (cpf || '').replace(/\D/g, '');
+
+  const pendingRhImports = useMemo(() => {
+    const tiCpfs = new Set(users.map(u => cleanCpf(u.cpf)));
+    return (rhCollaborators || []).filter(rc => !tiCpfs.has(cleanCpf(rc.cpf)));
+  }, [rhCollaborators, users]);
+
+  const filteredRhImports = useMemo(() => {
+    let result = [...pendingRhImports];
+    if (rhSearchTerm) {
+      const term = rhSearchTerm.toLowerCase();
+      result = result.filter(rc =>
+        rc.fullName.toLowerCase().includes(term) ||
+        (rc.cpf || '').includes(term) ||
+        (rc.role || '').toLowerCase().includes(term)
+      );
+    }
+    result.sort((a, b) => {
+      const aVal = (a[rhSortKey] || '') as string;
+      const bVal = (b[rhSortKey] || '') as string;
+      return rhSortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+    return result;
+  }, [pendingRhImports, rhSearchTerm, rhSortKey, rhSortDirection]);
+
+  const handleImportCollaborator = async (colab: any) => {
+    if (!window.confirm(`Confirmar a importação de "${colab.fullName}" para o módulo de T.I.?`)) return;
+    const addressStr = [colab.street, colab.number, colab.complement, colab.neighborhood, colab.city, colab.state]
+      .filter(Boolean).join(', ');
+    const newUser: User = {
+      id: Math.random().toString(36).substr(2, 9),
+      fullName: colab.fullName,
+      cpf: colab.cpf || '',
+      rg: colab.rg || '',
+      pis: colab.pis || '',
+      email: colab.emailCorporate || colab.emailPersonal || '',
+      sectorId: colab.sectorId || '',
+      internalCode: '',
+      active: true,
+      status: UserStatus.ACTIVE,
+      address: addressStr,
+      zipCode: colab.cep || '',
+      street: colab.street || '',
+      number: colab.number || '',
+      complement: colab.complement || '',
+      neighborhood: colab.neighborhood || '',
+      city: colab.city || '',
+      state: colab.state || '',
+      phone: colab.corporatePhone || colab.personalPhone || '',
+      personalPhone: colab.personalPhone || '',
+      gender: colab.gender || 'Masculino',
+      birthDate: colab.birthDate || '',
+      hireDate: colab.hireDate || new Date().toISOString().split('T')[0],
+      notes: 'Importado automaticamente do módulo de R.H.',
+      terms: [],
+    } as any;
+    try {
+      await addUser(newUser, adminName);
+      showToast(`Colaborador "${colab.fullName}" importado com sucesso!`, 'success');
+    } catch (err) {
+      showToast('Erro ao importar colaborador.', 'error');
+    }
+  };
+  // ────────────────────────────────────────────────────────────────────────────
+
   const columns: Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>[] = [
     { key: 'fullName', label: 'Nome Completo', minWidth: '350px', sortable: true },
+
     ...(visibleColumns.includes('email') ? [{ key: 'email', label: 'E-mail', minWidth: '200px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('cpf') ? [{ key: 'cpf', label: 'CPF', minWidth: '140px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
     ...(visibleColumns.includes('rg') ? [{ key: 'rg', label: 'RG', minWidth: '120px', sortable: true } as Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>] : []),
@@ -1110,8 +1185,9 @@ const UserManager: React.FC = () => {
             onClick={() => {
               setViewMode(mode);
               setShowPendingOnly(false);
+              setShowRhImportList(false);
             }} 
-            className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && viewMode === mode) ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
+            className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && !showRhImportList && viewMode === mode) ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
           >
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
             <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded text-[10px]">
@@ -1125,13 +1201,24 @@ const UserManager: React.FC = () => {
           </button>
         ))}
         <button 
-          onClick={() => setShowPendingOnly(true)} 
+          onClick={() => { setShowPendingOnly(true); setShowRhImportList(false); }} 
           className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-orange-400'}`}
         >
           Termos Pendentes
           <span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">
             {users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}
           </span>
+        </button>
+        <button 
+          onClick={() => { setShowRhImportList(true); setShowPendingOnly(false); }} 
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showRhImportList ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-indigo-400'}`}
+        >
+          Importar do R.H.
+          {pendingRhImports.length > 0 && (
+            <span className="ml-2 bg-indigo-900/30 text-indigo-400 px-2 py-0.5 rounded-full text-[11px]">
+              {pendingRhImports.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -1179,6 +1266,132 @@ const UserManager: React.FC = () => {
         )}
       </AnimatePresence>
 
+
+      {showRhImportList ? (
+        /* ─── PAINEL: Importar do R.H. ─── */
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
+          {/* Barra de controles */}
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, CPF ou cargo..."
+                  className="pl-9 w-full border border-slate-200 dark:border-slate-700 rounded-xl py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 transition-colors"
+                  value={rhSearchTerm}
+                  onChange={e => setRhSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Ordenar:
+              {(['fullName', 'role', 'hireDate'] as const).map(key => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    if (rhSortKey === key) setRhSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                    else { setRhSortKey(key); setRhSortDirection('asc'); }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg border transition-all ${rhSortKey === key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}
+                >
+                  {key === 'fullName' ? 'Nome' : key === 'role' ? 'Cargo' : 'Admissão'}
+                  {rhSortKey === key && <span className="ml-1">{rhSortDirection === 'asc' ? '↑' : '↓'}</span>}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">
+              {filteredRhImports.length} colaborador{filteredRhImports.length !== 1 ? 'es' : ''} aguardando importação
+            </span>
+          </div>
+
+          {/* Tabela */}
+          {filteredRhImports.length === 0 ? (
+            <div className="py-20 text-center">
+              <div className="w-16 h-16 bg-indigo-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <UserCheck size={32} className="text-indigo-400" />
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] tracking-widest">
+                {rhSearchTerm ? 'Nenhum resultado para a busca' : 'Todos os colaboradores do R.H. já estão cadastrados no T.I.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Colaborador</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Cargo / Setor</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Admissão</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Contrato</th>
+                    <th className="px-6 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRhImports.map((rc, idx) => {
+                    const sector = sectors.find(s => s.id === rc.sectorId);
+                    const color = getAvatarColor(rc.fullName);
+                    const initials = getInitials(rc.fullName);
+                    return (
+                      <tr key={rc.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 hover:border-l-indigo-500 transition-all bg-white dark:bg-slate-800">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black border ${color.bg} ${color.border} ${color.text} flex-shrink-0`}>
+                              {initials}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.fullName}</p>
+                              <p className="text-[11px] text-slate-400 font-mono">{rc.cpf || '---'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{rc.role || '---'}</p>
+                          <p className="text-[11px] text-slate-400">{sector?.name || '---'}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-slate-700 dark:text-slate-300">
+                            {rc.hireDate ? new Date(rc.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
+                            ${rc.contractType === 'CLT' ? 'bg-emerald-900/20 text-emerald-400' :
+                              rc.contractType === 'PJ' ? 'bg-blue-900/20 text-blue-400' :
+                              rc.contractType === 'Estágio' ? 'bg-amber-900/20 text-amber-400' :
+                              'bg-slate-900/20 text-slate-400'}`}>
+                            {rc.contractType || '---'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => { setSelectedRhColab(rc); setIsRhViewModalOpen(true); }}
+                              className="p-2 rounded-xl bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 transition-all"
+                              title="Visualizar dados do R.H."
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleImportCollaborator(rc)}
+                              disabled={isReadOnly}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-900/20 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300 transition-all text-[10px] font-black uppercase tracking-wider disabled:opacity-40"
+                              title="Importar para T.I."
+                            >
+                              <UserPlus size={13} />
+                              Importar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <DataTable
           columns={columns}
@@ -1305,6 +1518,7 @@ const UserManager: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
@@ -2036,6 +2250,152 @@ const UserManager: React.FC = () => {
                 className="w-full py-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 rounded-2xl font-black uppercase text-xs tracking-widest transition-all"
               >
                 Fechar Janela
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ─── Modal Visualização Restrita R.H. ─── */}
+      {isRhViewModalOpen && selectedRhColab && (
+        <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-900 to-indigo-700 px-8 py-5 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black border ${getAvatarColor(selectedRhColab.fullName).bg} ${getAvatarColor(selectedRhColab.fullName).border} ${getAvatarColor(selectedRhColab.fullName).text}`}>
+                  {getInitials(selectedRhColab.fullName)}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">{selectedRhColab.fullName}</h3>
+                  <p className="text-[11px] text-indigo-200 font-bold uppercase tracking-widest">{selectedRhColab.role || 'Sem Cargo'}</p>
+                </div>
+              </div>
+              <button onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }} className="h-9 w-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Banner informativo */}
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-200 dark:border-indigo-800/30 px-6 py-2.5 flex items-center gap-2">
+              <Shield size={14} className="text-indigo-500 flex-shrink-0" />
+              <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-bold">Exibindo apenas dados relevantes para importação. Informações sensíveis estão ocultas.</p>
+            </div>
+
+            {/* Corpo */}
+            <div className="overflow-y-auto p-8 space-y-6">
+              {/* Documentos */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><CreditCard size={12}/> Documentos</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CPF</p>
+                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.cpf || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">RG</p>
+                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.rg || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">PIS</p>
+                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.pis || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Admissão</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      {selectedRhColab.hireDate ? new Date(selectedRhColab.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contato */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Mail size={12}/> Contato</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 flex items-center gap-3">
+                    <Mail size={14} className="text-indigo-400 flex-shrink-0"/>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">E-mail Corporativo</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.emailCorporate || '---'}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Corporativo</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.corporatePhone || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Pessoal</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.personalPhone || '---'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Função */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Briefcase size={12}/> Função</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cargo</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.role || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Setor</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{sectors.find(s => s.id === selectedRhColab.sectorId)?.name || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Tipo de Contrato</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.contractType || '---'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Endereço */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><MapPin size={12}/> Endereço</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CEP</p>
+                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.cep || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Bairro</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.neighborhood || '---'}</p>
+                  </div>
+                  <div className="col-span-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Logradouro</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      {[selectedRhColab.street, selectedRhColab.number, selectedRhColab.complement].filter(Boolean).join(', ') || '---'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cidade</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.city || '---'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Estado</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.state || '---'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end bg-slate-50 dark:bg-slate-800/50 shrink-0">
+              <button
+                onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }}
+                className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-all"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => { setIsRhViewModalOpen(false); handleImportCollaborator(selectedRhColab); }}
+                disabled={isReadOnly}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-40"
+              >
+                <UserPlus size={14} />
+                Importar para T.I.
               </button>
             </div>
           </div>

@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.72.0',
+    date: 'Hoje',
+    title: 'Integração de Colaboradores RH → TI via CPF',
+    changes: [
+      'Nova Aba "Importar do R.H.": Adicionado submenu na tela de colaboradores de TI que lista automaticamente todos os colaboradores cadastrados no módulo de RH cujo CPF ainda não existe no módulo de TI.',
+      'Listagem Inteligente: Suporte a busca textual por nome, CPF ou cargo, e ordenação por Nome, Cargo ou Data de Admissão diretamente na aba de importação.',
+      'Modal de Visualização Restrita: Criado modal que exibe apenas os dados do RH relevantes para TI (Nome, CPF, RG, E-mails, Cargo/Setor, Telefones e Endereço), ocultando dados sensíveis como Salário, CTPS, Título Eleitoral, CNH e dados de filiação.',
+      'Fluxo de Importação Confirmado: Botão de importação que mapeia automaticamente os campos do RH para o cadastro de TI, incluindo endereço estruturado e campos contratuais, registrando o colaborador na tabela de usuários de TI imediatamente.'
+    ]
+  },
+  {
     version: '3.71.0',
     date: 'Hoje',
     title: 'Cadastro de Endereço Estruturado com CEP em TI',
