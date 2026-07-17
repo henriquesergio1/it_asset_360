@@ -17,6 +17,7 @@ export const NotificationCenter: React.FC = () => {
   
   // Lista de IDs já notificados nesta sessão de execução
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
+  const isFirstRenderRef = useRef<boolean>(true);
   
   // Toasts ativos na UI
   const [activeToasts, setActiveToasts] = useState<Array<{
@@ -143,7 +144,21 @@ export const NotificationCenter: React.FC = () => {
 
   // Algoritmo de envio de notificações novas (desktop + app popup Toast)
   useEffect(() => {
-    if (allNotifications.length === 0) return;
+    if (allNotifications.length === 0) {
+      if (isFirstRenderRef.current) {
+        isFirstRenderRef.current = false;
+      }
+      return;
+    }
+
+    if (isFirstRenderRef.current) {
+      // Popula o cache silenciosamente na inicialização para evitar popup de Toasts antigos
+      allNotifications.forEach(notif => {
+        notifiedIdsRef.current.add(notif.id);
+      });
+      isFirstRenderRef.current = false;
+      return;
+    }
 
     allNotifications.forEach(notif => {
       // Se não notificamos esta na sessão ainda
@@ -171,7 +186,7 @@ export const NotificationCenter: React.FC = () => {
           type: notif.type
         }]);
 
-        // Autodispensar toast flutuante após 6 segundos
+        // Autodispensar toast flutuante após 8 segundos
         setTimeout(() => {
           setActiveToasts(prev => prev.filter(t => t.id !== notif.id));
         }, 8000);

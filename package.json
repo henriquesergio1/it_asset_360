@@ -1,6 +1,6 @@
 {
   "name": "it-asset-360",
-  "version": "3.60.1",
+  "version": "3.60.2",
   "private": true,
   "dependencies": {
     "@tailwindcss/forms": "^0.5.11",
