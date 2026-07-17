@@ -530,6 +530,7 @@ export interface RhCollaborator {
   
   // Relacionados
   documents: RhDocument[];
+  photo?: string;
 }
 
 export interface RhAssetItem {

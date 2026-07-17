@@ -216,8 +216,8 @@ const DB_SCHEMAS = {
         Salary FLOAT,
         WeeklyHours FLOAT,
         Status NVARCHAR(50) DEFAULT 'Ativo',
-        TerminationReason NVARCHAR(MAX),
-        Documents NVARCHAR(MAX)
+        Documents NVARCHAR(MAX),
+        Photo NVARCHAR(MAX)
     )`,
     RhOccurrences: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -670,6 +670,11 @@ async function initializeDatabase() {
                         console.log(`- Coluna TerminationReason não encontrada em RhCollaborators. Adicionando...`);
                         await pool.request().query("ALTER TABLE RhCollaborators ADD TerminationReason NVARCHAR(MAX) NULL");
                     }
+                    const checkPhoto = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = 'Photo'`);
+                    if (checkPhoto.recordset.length === 0) {
+                        console.log(`- Coluna Photo não encontrada em RhCollaborators. Adicionando...`);
+                        await pool.request().query("ALTER TABLE RhCollaborators ADD Photo NVARCHAR(MAX) NULL");
+                    }
                 }
             }
         }
@@ -857,7 +862,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.62.1', 
+            version: '3.63.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });

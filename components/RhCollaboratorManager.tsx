@@ -8,7 +8,7 @@ import {
   Search, Plus, Edit2, Trash2, Eye, EyeOff, MapPin, FileText, 
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
-  SlidersHorizontal, AlertTriangle
+  SlidersHorizontal, AlertTriangle, Copy, Printer
 } from 'lucide-react';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
@@ -115,6 +115,20 @@ export const RhCollaboratorManager: React.FC = () => {
   const [quickOccEnd, setQuickOccEnd] = useState('');
   const [quickOccNotes, setQuickOccNotes] = useState('');
 
+  // Photo states & handlers
+  const [isExpandedPhotoOpen, setIsExpandedPhotoOpen] = useState(false);
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const photoBase64 = event.target?.result as string;
+        setForm(p => ({ ...p, photo: photoBase64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Form State
   const [form, setForm] = useState<Partial<RhCollaborator>>({
     fullName: '',
@@ -148,7 +162,8 @@ export const RhCollaboratorManager: React.FC = () => {
     hireDate: '',
     salary: 0,
     weeklyHours: 44,
-    documents: []
+    documents: [],
+    photo: ''
   });
 
   // Attachments temp state
@@ -669,13 +684,26 @@ export const RhCollaboratorManager: React.FC = () => {
               >
                 {visibleColumns.includes('fullName') && (
                   <td className="px-6 py-4 font-black">
-                    <div className="flex flex-col">
-                      <span className={isColabDemitido ? "text-slate-400 line-through" : ""}>{c.fullName}</span>
-                      {isColabDemitido && (
-                        <span className="text-[9px] font-black tracking-wider uppercase text-rose-500 mt-1 flex items-center gap-1">
-                          <AlertTriangle size={10} /> Demitido em {c.terminationDate ? new Date(c.terminationDate).toLocaleDateString('pt-BR') : '---'}
-                        </span>
+                    <div className="flex items-center gap-3">
+                      {c.photo ? (
+                        <img 
+                          src={c.photo} 
+                          alt={c.fullName} 
+                          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 hover:scale-105 transition-all shadow-sm shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 dark:border-slate-700">
+                          {c.fullName.charAt(0)}
+                        </div>
                       )}
+                      <div className="flex flex-col">
+                        <span className={isColabDemitido ? "text-slate-400 line-through" : ""}>{c.fullName}</span>
+                        {isColabDemitido && (
+                          <span className="text-[9px] font-black tracking-wider uppercase text-rose-500 mt-1 flex items-center gap-1">
+                            <AlertTriangle size={10} /> Demitido em {c.terminationDate ? new Date(c.terminationDate).toLocaleDateString('pt-BR') : '---'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                 )}
@@ -769,9 +797,21 @@ export const RhCollaboratorManager: React.FC = () => {
       {isDetailModalOpen && selectedColab && !isEditing && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
-            {/* Modal Header */}
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
+                {selectedColab.photo ? (
+                  <img 
+                    src={selectedColab.photo} 
+                    alt={selectedColab.fullName} 
+                    className="w-10 h-10 rounded-full object-cover border border-slate-350 dark:border-slate-650 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
+                    onClick={() => setIsExpandedPhotoOpen(true)}
+                    title="Clique para expandir"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 dark:border-slate-700">
+                    {selectedColab.fullName.charAt(0)}
+                  </div>
+                )}
                 <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[10px] font-black rounded uppercase tracking-wider">{selectedColab.contractType}</span>
                 <div className="flex flex-col">
                   <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
@@ -1159,6 +1199,45 @@ export const RhCollaboratorManager: React.FC = () => {
                     <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
                       Dados Pessoais
                     </h3>
+                    
+                    <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-150 dark:border-slate-800">
+                      <div className="relative group shrink-0">
+                        {form.photo ? (
+                          <img 
+                            src={form.photo} 
+                            alt="Preview" 
+                            className="w-16 h-16 rounded-full object-cover border border-slate-350 dark:border-slate-650"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-650 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-slate-350 dark:border-slate-650">
+                            Sem Foto
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <span className="block text-[10px] font-black uppercase text-slate-400">Foto de Perfil</span>
+                        <div className="flex gap-2">
+                          <label className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-755 text-white font-black text-[10px] uppercase rounded-lg cursor-pointer transition-colors shadow-sm">
+                            Selecionar
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*" 
+                              onChange={handlePhotoChange} 
+                            />
+                          </label>
+                          {form.photo && (
+                            <button
+                              type="button"
+                              onClick={() => setForm(p => ({ ...p, photo: '' }))}
+                              className="px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 font-black text-[10px] uppercase rounded-lg border border-red-500/20 transition-all hover:bg-red-100 dark:hover:bg-red-500/30"
+                            >
+                              Remover
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     
                     <div>
                       <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome Completo *</label>
@@ -1935,6 +2014,74 @@ export const RhCollaboratorManager: React.FC = () => {
                   </button>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visualizador de Foto Expandida do Colaborador */}
+      {isExpandedPhotoOpen && selectedColab?.photo && (
+        <div className="fixed inset-0 bg-slate-950/80 z-[150] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl p-6 flex flex-col items-center gap-4 relative">
+            <button
+              onClick={() => setIsExpandedPhotoOpen(false)}
+              className="absolute right-4 top-4 h-10 w-10 flex items-center justify-center bg-slate-100 dark:bg-slate-700/60 dark:hover:bg-slate-700 hover:bg-slate-200 rounded-full text-slate-400 dark:text-white transition-all shadow-sm"
+              title="Fechar"
+            >
+              <X size={20} />
+            </button>
+
+            <h3 className="text-sm font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider text-center pt-2">
+              Foto de Perfil - {selectedColab.fullName}
+            </h3>
+
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-750 flex items-center justify-center max-h-[60vh] overflow-hidden w-full">
+              <img
+                src={selectedColab.photo}
+                alt={selectedColab.fullName}
+                className="max-h-[50vh] max-w-full rounded-xl object-contain shadow-md"
+              />
+            </div>
+
+            <div className="flex gap-2 w-full pt-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch(selectedColab.photo || '');
+                    const blob = await response.blob();
+                    await navigator.clipboard.write([
+                      new ClipboardItem({
+                        [blob.type]: blob
+                      })
+                    ]);
+                    alert('Imagem copiada para a área de transferência!');
+                  } catch (err) {
+                    alert('Erro ao copiar imagem: ' + err);
+                  }
+                }}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-[10px] uppercase rounded-xl border border-slate-200 dark:border-slate-600 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Copy size={14} /> Copiar Imagem
+              </button>
+              <a
+                href={selectedColab.photo}
+                download={`foto_${selectedColab.fullName.toLowerCase().replace(/\s+/g, '_')}.png`}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 text-center shadow-sm"
+              >
+                <Download size={14} /> Salvar Imagem
+              </a>
+              <button
+                onClick={() => {
+                  const win = window.open();
+                  if (win) {
+                    win.document.write(`<img src="${selectedColab.photo}" style="max-width:100%; height:auto;" onload="window.print(); window.close();"/>`);
+                    win.document.close();
+                  }
+                }}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-[10px] uppercase rounded-xl border border-slate-200 dark:border-slate-600 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer size={14} /> Imprimir
+              </button>
             </div>
           </div>
         </div>
