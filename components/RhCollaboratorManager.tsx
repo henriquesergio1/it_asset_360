@@ -684,15 +684,15 @@ export const RhCollaboratorManager: React.FC = () => {
               >
                 {visibleColumns.includes('fullName') && (
                   <td className="px-6 py-4 font-black">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       {c.photo ? (
                         <img 
                           src={c.photo} 
                           alt={c.fullName} 
-                          className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 hover:scale-105 transition-all shadow-sm shrink-0"
+                          className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700 hover:scale-105 transition-all shadow-sm shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 dark:border-slate-700">
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0 border border-slate-200 dark:border-slate-700">
                           {c.fullName.charAt(0)}
                         </div>
                       )}
