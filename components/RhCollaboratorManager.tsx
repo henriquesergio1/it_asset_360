@@ -8,7 +8,7 @@ import {
   Search, Plus, Edit2, Trash2, Eye, EyeOff, MapPin, FileText, 
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
-  SlidersHorizontal, AlertTriangle, Copy, Printer
+  SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map
 } from 'lucide-react';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
@@ -884,9 +884,17 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Mãe</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.motherName || '---'}</span>
                       </div>
-                      <div className="col-span-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Pai</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.fatherName || '---'}</span>
+                      </div>
+                      <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Corporativo</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.emailCorporate || '---'}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailCorporate}>{selectedColab.emailCorporate || '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Pessoal</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailPersonal}>{selectedColab.emailPersonal || '---'}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Corporativo</span>
@@ -919,6 +927,10 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
                       </div>
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
+                      </div>
                       <div className="col-span-2">
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
@@ -933,10 +945,26 @@ export const RhCollaboratorManager: React.FC = () => {
                     <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">3. Endereço Residencial</h3>
                     <div className="text-xs space-y-2 flex items-start gap-3">
                       <MapPin size={20} className="text-slate-400 mt-1 shrink-0" />
-                      <div>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                          {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
-                        </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                            {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
+                            {selectedColab.complement && ` - ${selectedColab.complement}`}
+                          </span>
+                          {selectedColab.street && (
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                `${selectedColab.street || ''}, ${selectedColab.number || ''}, ${selectedColab.neighborhood || ''}, ${selectedColab.city || ''} - ${selectedColab.state || ''}, ${selectedColab.cep || ''}`
+                              )}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-indigo-650 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors flex items-center gap-1 shrink-0"
+                              title="Abrir no Google Maps"
+                            >
+                              <Map size={14} />
+                            </a>
+                          )}
+                        </div>
                         <span className="text-slate-400 block text-[10px] font-bold">
                           {selectedColab.neighborhood || ''} • {selectedColab.city || ''} - {selectedColab.state || ''}
                         </span>
@@ -956,6 +984,14 @@ export const RhCollaboratorManager: React.FC = () => {
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Jornada Semanal</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.weeklyHours || 44}h semanais</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Setor</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{sectors.find(s => s.id === selectedColab.sectorId)?.name || 'Sem Setor'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Tipo de Contrato</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.contractType || '---'}</span>
                       </div>
                       <div className="col-span-2">
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Salário Mensal</span>
