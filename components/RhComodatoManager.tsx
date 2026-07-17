@@ -1054,7 +1054,7 @@ export const RhComodatoManager: React.FC = () => {
                 
                 <button
                   onClick={() => { setIsDetailModalOpen(false); setSelectedTerm(null); setSignatureData(null); }}
-                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-350 font-black text-xs rounded-xl uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-650 cursor-pointer"
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-650 cursor-pointer"
                 >
                   Fechar
                 </button>

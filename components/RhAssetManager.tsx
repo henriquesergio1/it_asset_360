@@ -413,7 +413,7 @@ export const RhAssetManager: React.FC = () => {
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
                 <span className={`px-2 py-1 text-[10px] font-black rounded uppercase tracking-wider ${
-                  selectedItem.type === 'ATIVO' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-850'
+                  selectedItem.type === 'ATIVO' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
                 }`}>{selectedItem.type}</span>
                 <div className="flex flex-col">
                   <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedItem.name}</h2>

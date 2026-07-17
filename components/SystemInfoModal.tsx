@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.64.6',
+    date: 'Hoje',
+    title: 'Ajustes Visuais de Contraste no Tema Escuro',
+    changes: [
+      'Visualização do Estoque: Correção das classes do badge CONSUMIVEL no modal de detalhes do item do estoque de R.H., adicionando as classes correspondentes de tema escuro para garantir legibilidade e contraste adequados.',
+      'Ações do Termo: Correção da classe de cor de texto inexistente no botão Fechar, garantindo que o texto fique visível e legível no tema escuro.',
+    ]
+  },
+  {
     version: '3.64.5',
     date: 'Hoje',
     title: 'Ajuste de Itens de R.H. no Termo Digital',
