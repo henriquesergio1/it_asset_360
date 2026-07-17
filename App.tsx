@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { APP_VERSION } from './constants';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2 } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -13,9 +13,9 @@ import { LicenseGuard } from './components/LicenseGuard';
 // Pages imports
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import DeviceManager from './components/DeviceManager';
+const DeviceManager = lazy(() => import('./components/DeviceManager'));
 import SimManager from './components/SimManager';
-import UserManager from './components/UserManager';
+const UserManager = lazy(() => import('./components/UserManager'));
 import Operations from './components/Operations';
 import AdminPanel from './components/AdminPanel';
 import AccountManager from './components/AccountManager'; 
@@ -28,7 +28,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 
 // RH Pages imports
 import { RhDashboard } from './components/RhDashboard';
-import { RhCollaboratorManager } from './components/RhCollaboratorManager';
+const RhCollaboratorManager = lazy(() => import('./components/RhCollaboratorManager').then(m => ({ default: m.RhCollaboratorManager })));
 import { RhComodatoManager } from './components/RhComodatoManager';
 import { RhOccurrenceManager } from './components/RhOccurrenceManager';
 import { RhAssetManager } from './components/RhAssetManager';
@@ -253,7 +253,14 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
 
         <main className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
           <div className="max-w-[1850px] mx-auto w-full p-6">
-            {children}
+            <Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-3 opacity-60">
+                <Loader2 className="animate-spin text-blue-600 dark:text-sky-400" size={32} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Carregando Módulo...</span>
+              </div>
+            }>
+              {children}
+            </Suspense>
           </div>
         </main>
       </div>

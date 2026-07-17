@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { Link } from 'react-router-dom';
 import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle } from 'lucide-react';
@@ -11,10 +11,10 @@ export const RhDashboard: React.FC = () => {
   const [isValidationExpanded, setIsValidationExpanded] = useState(false);
 
   // 1. Alertas de Férias (11 meses de admissão ou múltiplos de 12 + 11)
-  const getHolidayAlerts = () => {
+  const holidayAlerts = useMemo(() => {
     const alerts: { collaborator: any; months: number; status: string }[] = [];
     rhCollaborators.forEach(c => {
-      if (!c.hireDate) return;
+      if (!c.hireDate || c.status === 'Demitido') return;
       const hire = new Date(c.hireDate);
       const now = new Date();
       const diffTime = Math.abs(now.getTime() - hire.getTime());
@@ -31,25 +31,27 @@ export const RhDashboard: React.FC = () => {
       }
     });
     return alerts;
-  };
+  }, [rhCollaborators]);
 
   // 2. Aniversariantes do Mês
-  const getBirthdaysThisMonth = () => {
+  const birthdaysThisMonth = useMemo(() => {
     const currentMonth = new Date().getMonth() + 1; // 1-12
     return rhCollaborators.filter(c => {
-      if (!c.birthDate) return false;
+      if (!c.birthDate || c.status === 'Demitido') return false;
       const birthMonth = parseInt(c.birthDate.split('-')[1], 10);
       return birthMonth === currentMonth;
     });
-  };
+  }, [rhCollaborators]);
 
   // 3. Vencimento de Documentos e Contrato de Experiência
-  const getDocumentExpirations = () => {
+  const docExpirations = useMemo(() => {
     const alerts: { collaborator: any; type: string; daysRemaining: number; date: string }[] = [];
     const now = new Date();
     now.setHours(0,0,0,0);
 
     rhCollaborators.forEach(c => {
+      if (c.status === 'Demitido') return;
+      
       // CNH
       if (c.cnhExpiration) {
         const exp = new Date(c.cnhExpiration);
@@ -95,33 +97,41 @@ export const RhDashboard: React.FC = () => {
       }
     });
     return alerts;
-  };
+  }, [rhCollaborators]);
 
-  const holidayAlerts = getHolidayAlerts();
-  const birthdaysThisMonth = getBirthdaysThisMonth();
-  const docExpirations = getDocumentExpirations();
-  const pendingTermsCount = rhTerms.filter(t => t.status === 'PENDENTE').length;
+  const pendingTermsCount = useMemo(() => {
+    return rhTerms.filter(t => t.status === 'PENDENTE').length;
+  }, [rhTerms]);
   
   // Pendências de Comodato R.H.
-  const pendingTerms = rhTerms.filter(t => t.status === 'PENDENTE' && t.signatureStatus !== 'WAITING_APPROVAL');
-  const pendingApprovalSignatures = rhTerms.filter(t => t.signatureStatus === 'WAITING_APPROVAL');
+  const pendingTerms = useMemo(() => {
+    return rhTerms.filter(t => t.status === 'PENDENTE' && t.signatureStatus !== 'WAITING_APPROVAL');
+  }, [rhTerms]);
+
+  const pendingApprovalSignatures = useMemo(() => {
+    return rhTerms.filter(t => t.signatureStatus === 'WAITING_APPROVAL');
+  }, [rhTerms]);
 
   // Gráficos Data
   // 1. Distribuição por Tipo de Contrato
-  const contractData = Object.entries(
-    rhCollaborators.reduce((acc, c) => {
-      acc[c.contractType] = (acc[c.contractType] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  const contractData = useMemo(() => {
+    return Object.entries(
+      rhCollaborators.reduce((acc, c) => {
+        acc[c.contractType] = (acc[c.contractType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([name, value]) => ({ name, value }));
+  }, [rhCollaborators]);
 
   // 2. Ocorrências por Tipo
-  const occurrenceData = Object.entries(
-    rhOccurrences.reduce((acc, o) => {
-      acc[o.type] = (acc[o.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([name, count]) => ({ name, count }));
+  const occurrenceData = useMemo(() => {
+    return Object.entries(
+      rhOccurrences.reduce((acc, o) => {
+        acc[o.type] = (acc[o.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([name, count]) => ({ name, count }));
+  }, [rhOccurrences]);
 
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
