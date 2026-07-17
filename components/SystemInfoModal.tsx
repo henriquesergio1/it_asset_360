@@ -9,6 +9,67 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.64.3',
+    date: 'Hoje',
+    title: 'Correção do Histórico de Alterações',
+    changes: [
+      'Sobre o Sistema: Atualizada a listagem de changelogs históricos e alinhamento visual de versão com a constante sistêmica centralizada.',
+    ]
+  },
+  {
+    version: '3.64.2',
+    date: 'Hoje',
+    title: 'Ajuste de Ações em Termo Pendente de R.H.',
+    changes: [
+      'Termos de Comodato: Remoção do botão redundante "Coletar Assinatura" no modal de detalhes do termo pendente de R.H., simplificando o fluxo para uso prioritário de links e uploads.',
+    ]
+  },
+  {
+    version: '3.64.1',
+    date: 'Hoje',
+    title: 'Integridade de Visualização & Link Google Maps',
+    changes: [
+      'Colaboradores R.H.: Adicionados campos adicionais na visualização de detalhes do colaborador (Setor, Tipo de Contrato, E-mail Pessoal, Pai, Complemento de Endereço e Título de Eleitor).',
+      'Geolocalização: Adicionado ícone/link dinâmico ao endereço do colaborador para redirecionamento e visualização direta no Google Maps.',
+    ]
+  },
+  {
+    version: '3.64.0',
+    date: 'Hoje',
+    title: 'Melhorias de Desempenho & Code-Splitting',
+    changes: [
+      'Carregamento Inicial: Implementação de importações dinâmicas (lazy loading) e Suspense wrappers para os módulos mais pesados (DeviceManager, UserManager, RhCollaboratorManager), otimizando o tamanho do bundle principal.',
+      'RhDashboard: Memoização completa dos alertas aquisitivos de férias, aniversários, vencimento de documentos e dados dos gráficos de barras e pizzas com React.useMemo, evitando recálculos e re-renderizações desnecessárias.',
+    ]
+  },
+  {
+    version: '3.63.3',
+    date: 'Hoje',
+    title: 'Vinculação Global do Sobre o Sistema',
+    changes: [
+      'Interface: Vinculado o modal de Informações do Sistema aos cliques sobre as indicações de versão no header (topo) e no rodapé da sidebar (com suporte para exibição colapsada).',
+      'Limpeza de Resíduos: Exclusão do arquivo duplicado SystemInfoModal.tsx presente na raiz do projeto.',
+    ]
+  },
+  {
+    version: '3.63.0',
+    date: 'Hoje',
+    title: 'Foto de Colaborador no R.H. em Base64',
+    changes: [
+      'Cadastro de Colaborador: Integração de upload de foto com conversão nativa para Base64 no formulário de dados de R.H.',
+      'Listagem e Visualização: Exibição circular do avatar no grid principal de colaboradores. Ao clicar no avatar do modal de detalhes, a imagem se expande em modal dedicado permitindo copiar, salvar e imprimir.',
+    ]
+  },
+  {
+    version: '3.62.1',
+    date: 'Hoje',
+    title: 'Ajustes Finos de Layout no R.H.',
+    changes: [
+      'Comodato R.H.: Ajustada a renderização de tags HTML brutas contidas nas declarações contratuais e cláusulas do template utilizando dangerouslySetInnerHTML.',
+      'Contraste Escuro: Correção do contraste do botão secundário de impressão de PDF e correção das cores da tag de status PENDENTE no modo escuro.',
+    ]
+  },
+  {
     version: '3.50.3',
     date: 'Hoje',
     title: 'Correção de Parâmetro de Rota para Ativo',
