@@ -437,8 +437,10 @@ const DigitalSignature = () => {
                                             <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">Equipamento conferido e testado conforme padrões da companhia.</p>
                                         </div>
                                     </div>
+                                );
+                            })()}
 
-                                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="space-y-4 pt-4 border-t border-slate-100">
                                         <h3 className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Cláusulas e Condições</h3>
                                         <div 
                                             className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap font-medium html-content"
