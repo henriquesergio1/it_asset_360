@@ -600,7 +600,8 @@ const UserManager: React.FC = () => {
           docPhoto,
           selfiePhoto,
           signatureInfo,
-          evidenceFiles
+          evidenceFiles,
+          snapshotTemplate: (term as any).snapshotTemplate
         }, false);
       } catch (err) {
         console.error("Erro na pré-visualização:", err);
@@ -817,7 +818,8 @@ const UserManager: React.FC = () => {
         digitalSignature,
         docPhoto,
         selfiePhoto,
-        signatureInfo
+        signatureInfo,
+        snapshotTemplate: (term as any).snapshotTemplate
       });
     }
   };

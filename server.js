@@ -120,7 +120,8 @@ const DB_SCHEMAS = {
         SignatureDocumentPhoto VARBINARY(MAX) NULL,
         SignatureSelfiePhoto VARBINARY(MAX) NULL,
         SignatureCanvasBinary VARBINARY(MAX) NULL,
-        SignatureHash NVARCHAR(MAX) NULL
+        SignatureHash NVARCHAR(MAX) NULL,
+        SnapshotTemplate NVARCHAR(MAX) NULL
     )`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
@@ -384,7 +385,8 @@ async function initializeDatabase() {
                         { name: 'SignatureLocation', type: 'NVARCHAR(MAX) NULL' },
                         { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
-                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' }
+                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SnapshotTemplate', type: 'NVARCHAR(MAX) NULL' }
                     ];
 
                     for (const col of columnsNeeded) {
@@ -864,7 +866,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.65.0', 
+            version: '3.66.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -907,7 +909,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -964,7 +966,7 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
             pool.request().query("SELECT * FROM Tasks"),
             pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
@@ -1663,6 +1665,9 @@ async function updateUserPendingStatus(pool, userId) {
                 }
             }
 
+            const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate FROM SystemSettings");
+            const termTemplate = settingsRes.recordset[0]?.TermTemplate || null;
+
             const termId = Math.random().toString(36).substr(2, 9);
             await pool.request()
                 .input('I', termId)
@@ -1674,9 +1679,10 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Sim', linkedSimData)
                 .input('AssetId', assetId)
                 .input('AssetType', assetType)
+                .input('SnapshotTemplate', termTemplate)
                 .query(`
-                    INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Notes, Accessories, LinkedSimData, AssetId, AssetType) 
-                    VALUES (@I, @U, @T, @Ad, GETDATE(), @Notes, @Acc, @Sim, @AssetId, @AssetType)
+                    INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Notes, Accessories, LinkedSimData, AssetId, AssetType, SnapshotTemplate) 
+                    VALUES (@I, @U, @T, @Ad, GETDATE(), @Notes, @Acc, @Sim, @AssetId, @AssetType, @SnapshotTemplate)
                 `);
             
             const richNotes = `Alvo: ${userName}\nStatus: 'Disponível' ➔ 'Em Uso'${notes ? `\nObservação: ${notes}` : ''}`;
@@ -1767,6 +1773,9 @@ async function updateUserPendingStatus(pool, userId) {
                     }
                 }
 
+                const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate FROM SystemSettings");
+                const termTemplate = settingsRes.recordset[0]?.TermTemplate || null;
+
                 await pool.request()
                     .input('I', termId)
                     .input('U', userId)
@@ -1784,7 +1793,8 @@ async function updateUserPendingStatus(pool, userId) {
                     .input('AssetType', assetType)
                     .input('Acc', accNames)
                     .input('Sim', linkedSimData)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories, LinkedSimData) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc, @Sim)");
+                    .input('SnapshotTemplate', termTemplate)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories, LinkedSimData, SnapshotTemplate) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc, @Sim, @SnapshotTemplate)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");
@@ -1893,8 +1903,9 @@ async function updateUserPendingStatus(pool, userId) {
             } else {
                 let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
                 try {
-                    if (settings && settings.TermTemplate) {
-                        template = JSON.parse(settings.TermTemplate);
+                    const templateSource = term.SnapshotTemplate || settings?.TermTemplate;
+                    if (templateSource) {
+                        template = JSON.parse(templateSource);
                     }
                 } catch (e) {}
 

@@ -178,6 +178,7 @@ export interface Term {
   hasSignaturePhoto?: boolean;
   hasSignatureSelfiePhoto?: boolean;
   signatureStatus?: 'WAITING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  snapshotTemplate?: string;
   assetId?: string;
   assetType?: string;
 }

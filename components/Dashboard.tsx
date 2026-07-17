@@ -328,7 +328,8 @@ const Dashboard = () => {
         digitalSignature,
         docPhoto,
         selfiePhoto,
-        signatureInfo
+        signatureInfo,
+        snapshotTemplate: (term as any).snapshotTemplate
       });
     }
   };

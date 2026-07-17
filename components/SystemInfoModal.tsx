@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.66.0',
+    date: 'Hoje',
+    title: 'Rastreabilidade de Termos com Snapshots de Contrato de T.I.',
+    changes: [
+      'Snapshots Contratuais: Os termos de entrega e devolução de T.I. agora salvam uma cópia estática do modelo de contrato (SnapshotTemplate) no momento da criação. Isso previne que modificações contratuais futuras alterem a redação de termos impressos no passado, mantendo 100% de conformidade jurídica.',
+      'Reimpressão Fiel: A reimpressão de termos de T.I. no frontend e a visualização do fluxo de assinatura digital agora lêem priorizadamente o snapshot contratual salvo no termo, caindo de volta para o template global do sistema somente nos termos antigos gerados antes da atualização.',
+      'Segurança do Banco: A coluna SnapshotTemplate foi criada na tabela de Terms sem causar perda ou quebra de nenhum dado anteriormente assinado no sistema.',
+    ]
+  },
+  {
     version: '3.65.0',
     date: 'Hoje',
     title: 'Segurança: Criptografia de Senhas com bcrypt',

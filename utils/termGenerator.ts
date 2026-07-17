@@ -26,6 +26,7 @@ interface GenerateTermProps {
     token: string;
     hash: string;
   } | null;
+  snapshotTemplate?: string;
 }
 
 // Layout Fixo Profissional Otimizado para A4 (Versão 2.10.15 - Bold Label & Smart Field)
@@ -98,7 +99,7 @@ const getFixedLayout = (
 
 export const getTermHtml = ({ 
   user, asset, settings, model, brand, type, actionType, linkedSim, sectorName, checklist, notes, condition, damageDescription, evidenceFiles,
-  digitalSignature, docPhoto, selfiePhoto, signatureInfo
+  digitalSignature, docPhoto, selfiePhoto, signatureInfo, snapshotTemplate
 }: GenerateTermProps): string => {
   
   let config = {
@@ -107,8 +108,9 @@ export const getTermHtml = ({
   };
 
   try {
-    if (settings.termTemplate && settings.termTemplate.trim().startsWith('{')) {
-      config = JSON.parse(settings.termTemplate);
+    const templateSource = snapshotTemplate || settings.termTemplate;
+    if (templateSource && templateSource.trim().startsWith('{')) {
+      config = JSON.parse(templateSource);
     } else {
       config.delivery.declaration ="Declaro ter recebido os itens abaixo em perfeitas condições de uso.";
       config.delivery.clauses ="Comprometo-me a zelar pelo equipamento e devolvê-lo em caso de desligamento.";
