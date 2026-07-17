@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.69.0',
+    date: 'Hoje',
+    title: 'Ajuste de Regras de Negócio e Reatividade dos Termos',
+    changes: [
+      'Regra Fiscal e de Negócio: Removida a seleção manual de status ("Pendente" vs "Assinado") do modal de edição de termos de T.I. Termos assinados são documentos consolidados inalteráveis e só devem transitar de status via assinatura eletrônica formal ou upload digitalizado.',
+      'Sincronismo e Reatividade Instantânea: Corrigido o fluxo de upload, exclusão e resolução manual de termos em T.I. e R.H., tornando as chamadas assíncronas no frontend com await e forçando a sincronização do banco com fetchData(true) logo em seguida. Isso elimina o atraso de exibição das badges de pendência na interface.'
+    ]
+  },
+  {
     version: '3.68.1',
     date: 'Hoje',
     title: 'Ajuste de z-index nas modais de termos de R.H.',

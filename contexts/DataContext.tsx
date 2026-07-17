@@ -88,20 +88,20 @@ export interface DataContextType {
  returnAsset: (assetType: 'Device' | 'Sim', assetId: string, notes: string, adminName: string, returnedChecklist?: Record<string, boolean>, inactivateUser?: boolean, condition?: string, damageDescription?: string, evidenceFiles?: string[], isManual?: boolean, resolutionReason?: string, returningUserId?: string) => void;
  
  // Term Management
- updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => void;
- deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => void;
- updateTermDetails: (
-    termId: string, 
-    condition: string, 
-    damageDescription: string, 
-    assetDetails: string, 
-    notes: string, 
-    evidenceFiles: string[], 
-    adminName: string,
-    accessories?: { id: string; name: string }[],
-    linkedSim?: SimCard
-  ) => void;
-  resolveTermManual: (termId: string, reason: string, adminName: string) => Promise<void>;
+  updateTermFile: (termId: string, userId: string, fileUrl: string, adminName: string) => Promise<void>;
+  deleteTermFile: (termId: string, userId: string, reason: string, adminName: string) => Promise<void>;
+  updateTermDetails: (
+     termId: string, 
+     condition: string, 
+     damageDescription: string, 
+     assetDetails: string, 
+     notes: string, 
+     evidenceFiles: string[], 
+     adminName: string,
+     accessories?: { id: string; name: string }[],
+     linkedSim?: SimCard
+   ) => Promise<void>;
+   resolveTermManual: (termId: string, reason: string, adminName: string) => Promise<void>;
 
   // Digital Signature
   generateSignatureToken: (termId: string) => Promise<string>;

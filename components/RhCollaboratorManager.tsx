@@ -108,15 +108,15 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   // --- Funções de Gestão de Termos de Comodato do RH ---
-  const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadTermFile = async (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const fileUrl = event.target?.result as string;
-        updateTermFile(termId, '', fileUrl, adminName);
+        await updateTermFile(termId, '', fileUrl, adminName);
         showToast('Termo assinado enviado com sucesso', 'success');
-        fetchData(true);
+        await fetchData(true);
       };
       reader.readAsDataURL(file);
     }

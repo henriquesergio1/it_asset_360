@@ -393,7 +393,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       logAction(ActionType.CHECKIN, assetType, assetId, user.fullName, adminName, notes);
       showToast('Termo de devolução processado', 'success');
     },
-    updateTermFile: (termId, userId, fileUrl) => {
+    updateTermFile: async (termId, userId, fileUrl) => {
       const isRh = termId.startsWith('rht-');
       if (isRh) {
         setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, fileUrl, status: 'ASSINADO', hasFile: true } : t));
@@ -410,7 +410,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       showToast('Arquivo do termo atualizado (Mock)', 'success');
     },
-    deleteTermFile: (termId, userId) => {
+    deleteTermFile: async (termId, userId) => {
       const isRh = termId.startsWith('rht-');
       if (isRh) {
         setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, fileUrl: '', hasFile: false, isManual: false, resolutionReason: '', status: 'PENDENTE', signatureDate: undefined, signatureIp: undefined, signatureLocation: undefined, signatureHash: undefined, signatureStatus: undefined, signatureToken: undefined } : t));
@@ -439,7 +439,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       showToast('Termo resolvido manualmente (Mock)', 'success');
     },
-    updateTermDetails: () => {},
+    updateTermDetails: async () => {},
     generateSignatureToken: async (termId) => {
       const token = Math.random().toString(36).substring(2, 15);
       const isRh = termId.startsWith('rht-');

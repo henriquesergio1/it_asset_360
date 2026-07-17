@@ -824,14 +824,15 @@ const UserManager: React.FC = () => {
     }
   };
 
-  const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadTermFile = async (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && editingId) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const fileUrl = event.target?.result as string;
-        updateTermFile(termId, editingId, fileUrl, authUser?.name || 'Admin');
+        await updateTermFile(termId, editingId, fileUrl, authUser?.name || 'Admin');
         showToast('Termo assinado enviado com sucesso', 'success');
+        await fetchData(true);
       };
       reader.readAsDataURL(file);
     }
@@ -863,11 +864,13 @@ const UserManager: React.FC = () => {
     await resolveTermManual(resolvingManualTerm.id, resolveManualReason, authUser?.name || 'Admin');
     setResolvingManualTerm(null);
     setResolveManualReason('');
+    await fetchData(true);
   };
 
-  const handleDeleteTermFile = (termId: string) => {
+  const handleDeleteTermFile = async (termId: string) => {
     if (editingId && window.confirm('Deseja realmente remover o arquivo deste termo? Esta ação permitirá o reenvio.')) {
-      deleteTermFile(termId, editingId, 'Remoção de arquivo do termo para reenvio', authUser?.name || 'Admin');
+      await deleteTermFile(termId, editingId, 'Remoção de arquivo do termo para reenvio', authUser?.name || 'Admin');
+      await fetchData(true);
     }
   };
 
@@ -1737,10 +1740,6 @@ const UserManager: React.FC = () => {
             </div>
 
             <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setTermEditData({...termEditData, status: 'PENDING'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'PENDING' ? 'border-orange-500 bg-orange-900/20 text-orange-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><Clock size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Pendente</span></button>
-                <button onClick={() => setTermEditData({...termEditData, status: 'SIGNED'})} className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${termEditData.status === 'SIGNED' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600'}`}><CheckCircle2 size={20}/><span className="text-[11px] font-black uppercase tracking-widest">Assinado</span></button>
-              </div>
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest mb-2">Observações Detalhadas</label>
