@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.68.0',
+    date: 'Hoje',
+    title: 'Justificativa Obrigatória e Aba Histórico no R.H.',
+    changes: [
+      'Justificativa Obrigatória: Qualquer alteração no cadastro de colaboradores de R.H. agora exige que o gestor forneça uma justificativa obrigatória no momento de salvar. O motivo da alteração é devidamente registrado no log de auditoria do sistema.',
+      'Aba Histórico de R.H.: Adicionada uma nova guia "Histórico" no modal de detalhes do colaborador do R.H., exibindo em ordem cronológica reversa todas as alterações cadastrais (com o motivo), admissão, demissão e lançamentos efetuados.',
+      'Log Administrativo: Integração total com o Log de Auditoria do Menu Administrativo, registrando o executor, data/hora e o diferencial detalhado de cada alteração.'
+    ]
+  },
+  {
     version: '3.67.0',
     date: 'Hoje',
     title: 'Ações e Visual de Termos de R.H. Idênticos a T.I.',

@@ -10,7 +10,7 @@ import {
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
-  FileSignature, RefreshCw, Share2, Camera, CheckSquare
+  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { 
@@ -48,7 +48,8 @@ export const RhCollaboratorManager: React.FC = () => {
     generateSignatureToken,
     resolveTermManual,
     fetchData,
-    isReadOnly
+    isReadOnly,
+    logs
   } = useData();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -62,6 +63,11 @@ export const RhCollaboratorManager: React.FC = () => {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [resolvingManualTerm, setResolvingManualTerm] = useState<RhTerm | null>(null);
   const [resolveManualReason, setResolveManualReason] = useState('');
+
+  // Estados para trava de alteração cadastral obrigatória com justificativa
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [editReasonText, setEditReasonText] = useState('');
+  const [pendingSaveData, setPendingSaveData] = useState<RhCollaborator | null>(null);
 
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,6 +88,24 @@ export const RhCollaboratorManager: React.FC = () => {
 
   // Tabs for viewing collaborator detail modal
   const [detailTab, setDetailTab] = useState<'cadastro' | 'documentos' | 'ocorrencias'>('cadastro');
+
+  // --- Funções de Auditoria e Trava de Edição de Cadastro ---
+  const handleConfirmEditReason = () => {
+    if (!pendingSaveData || !editReasonText.trim()) return;
+    
+    const finalData = {
+      ...pendingSaveData,
+      _notes: editReasonText.trim(),
+      _adminUser: adminName
+    };
+    
+    updateRhCollaborator(finalData, adminName);
+    setSelectedColab(finalData);
+    setIsReasonModalOpen(false);
+    setPendingSaveData(null);
+    setEditReasonText('');
+    setIsEditing(false);
+  };
 
   // --- Funções de Gestão de Termos de Comodato do RH ---
   const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -591,17 +615,17 @@ export const RhCollaboratorManager: React.FC = () => {
       };
       addRhCollaborator(newColab, adminName);
       setSelectedColab(newColab);
+      setIsCreating(false);
+      setIsEditing(false);
     } else if (isEditing && selectedColab) {
       const updated: RhCollaborator = {
         ...selectedColab,
         ...(normalizedForm as RhCollaborator)
       };
-      updateRhCollaborator(updated, adminName);
-      setSelectedColab(updated);
+      setPendingSaveData(updated);
+      setEditReasonText('');
+      setIsReasonModalOpen(true);
     }
-
-    setIsCreating(false);
-    setIsEditing(false);
   };
 
   const handleAddDocument = (e: React.FormEvent) => {
@@ -1166,6 +1190,18 @@ export const RhCollaboratorManager: React.FC = () => {
               >
                 3. Faltas / Férias / Atestados
               </button>
+              <button
+                type="button"
+                onClick={() => setDetailTab('historico')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'historico'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <History size={12} />
+                4. Histórico
+              </button>
             </div>
 
             {/* Modal Content */}
@@ -1554,6 +1590,77 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {detailTab === 'historico' && selectedColab && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                    {(() => {
+                      const name = selectedColab.fullName.toLowerCase().trim() || '';
+                      const colabLogs = logs.filter(l => {
+                        const target = (l.targetName || '').toLowerCase();
+                        const notes = (l.notes || '').toLowerCase();
+                        return target === name || 
+                               target.includes(name) ||
+                               notes.includes(name) ||
+                               (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
+                      });
+                      return (
+                        <span className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest">
+                          Total de Eventos: {colabLogs.length}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
+                    {(() => {
+                      const name = selectedColab.fullName.toLowerCase().trim() || '';
+                      const colabLogs = logs.filter(l => {
+                        const target = (l.targetName || '').toLowerCase();
+                        const notes = (l.notes || '').toLowerCase();
+                        return target === name || 
+                               target.includes(name) ||
+                               notes.includes(name) ||
+                               (name.split(' ').length > 1 && notes.includes(name.split(' ')[0]) && notes.includes(name.split(' ').pop() || ''));
+                      }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                      if (colabLogs.length === 0) {
+                        return (
+                          <div className="text-center py-16 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                            <History className="mx-auto text-slate-800 mb-4" size={48} />
+                            <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Nenhuma atividade registrada</h4>
+                          </div>
+                        );
+                      }
+
+                      return colabLogs.map(log => {
+                        const statusClass = log.action.includes('Criação') ? 'bg-indigo-950 text-indigo-400' :
+                                           log.action.includes('Atualização') ? 'bg-blue-950 text-blue-400' :
+                                           log.action.includes('Exclusão') ? 'bg-red-950 text-red-400' :
+                                           log.action.includes('Demitir') ? 'bg-red-950 text-red-400' :
+                                           log.action.includes('Resolução Manual') ? 'bg-orange-950 text-orange-400' :
+                                           'bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400';
+                        return (
+                          <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-350 dark:hover:border-slate-650 transition-all">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3">
+                                <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
+                                  {log.action}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{new Date(log.timestamp).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
+                            </div>
+                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{log.notes || 'Sem observações registradas.'}</div>
+                            <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+                              <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
@@ -2665,6 +2772,46 @@ export const RhCollaboratorManager: React.FC = () => {
                 className="px-5 py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Justificativa de Alteração Cadastral (Obrigatório) */}
+      {isReasonModalOpen && pendingSaveData && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-indigo-500 font-bold uppercase text-xs tracking-wider">
+              <AlertTriangle size={18} className="text-amber-500" />
+              <span>Justificativa de Alteração</span>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed font-bold">
+              Para prosseguir e salvar as alterações cadastrais do colaborador de R.H., por favor, informe brevemente o motivo desta alteração.
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo da Alteração</label>
+              <textarea 
+                required
+                placeholder="Ex: Ajuste salarial acordado em convenção coletiva / Correção de grafia no nome."
+                value={editReasonText}
+                onChange={e => setEditReasonText(e.target.value)}
+                className="w-full border border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+              <button 
+                onClick={() => { setIsReasonModalOpen(false); setPendingSaveData(null); setEditReasonText(''); }}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-355 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!editReasonText.trim()}
+                onClick={handleConfirmEditReason}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Salvar Cadastro
               </button>
             </div>
           </div>
