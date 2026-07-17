@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 export const RhDashboard: React.FC = () => {
   const { rhCollaborators, rhOccurrences, rhTerms, sectors } = useData();
+
+  const [isTermsExpanded, setIsTermsExpanded] = useState(false);
+  const [isValidationExpanded, setIsValidationExpanded] = useState(false);
 
   // 1. Alertas de Férias (11 meses de admissão ou múltiplos de 12 + 11)
   const getHolidayAlerts = () => {
@@ -97,6 +101,10 @@ export const RhDashboard: React.FC = () => {
   const birthdaysThisMonth = getBirthdaysThisMonth();
   const docExpirations = getDocumentExpirations();
   const pendingTermsCount = rhTerms.filter(t => t.status === 'PENDENTE').length;
+  
+  // Pendências de Comodato R.H.
+  const pendingTerms = rhTerms.filter(t => t.status === 'PENDENTE' && t.signatureStatus !== 'WAITING_APPROVAL');
+  const pendingApprovalSignatures = rhTerms.filter(t => t.signatureStatus === 'WAITING_APPROVAL');
 
   // Gráficos Data
   // 1. Distribuição por Tipo de Contrato
@@ -168,6 +176,117 @@ export const RhDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Alertas de Comodato e Assinatura Digital do R.H. */}
+      {(pendingTerms.length > 0 || pendingApprovalSignatures.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Termos Pendentes de R.H. */}
+          {pendingTerms.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-2xl p-5 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-950/20 text-orange-600 dark:text-orange-400 rounded-xl shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                      Termos Pendentes de R.H.
+                      <span className="ml-2 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase">
+                        {pendingTerms.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsTermsExpanded(!isTermsExpanded)}
+                      className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      {isTermsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400/80 mb-3">
+                    Colaboradores com comodatos emitidos mas ainda não assinados.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isTermsExpanded ? 'max-h-[300px] overflow-y-auto pr-2' : 'max-h-[140px] overflow-hidden'}`}>
+                    {pendingTerms.map(term => {
+                      const colab = rhCollaborators.find(c => c.id === term.collaboratorId);
+                      const sector = sectors.find(s => s.id === colab?.sectorId);
+                      return (
+                        <div key={term.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-150 dark:border-slate-800 flex items-center justify-between group hover:border-orange-500/40 transition-all">
+                          <div className="min-w-0 flex-1 mr-2">
+                            <span className="block text-xs font-black text-slate-900 dark:text-white truncate">{colab?.fullName || 'Desconhecido'}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-450 uppercase tracking-tighter truncate block mt-0.5">
+                              {sector?.name || 'Sem Setor'} • Cód: {colab?.role || 'N/A'} • {term.assetDetails}
+                            </span>
+                          </div>
+                          <Link 
+                            to="/rh/comodato"
+                            className="p-1.5 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
+                          >
+                            Analisar <ArrowRight size={12} />
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Validações Pendentes de R.H. */}
+          {pendingApprovalSignatures.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 dark:border-l-sky-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-2xl p-5 animate-fade-in shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 rounded-xl shrink-0">
+                  <FileSignature size={20} />
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                      Validações de Comodato
+                      <span className="ml-2 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase">
+                        {pendingApprovalSignatures.length}
+                      </span>
+                    </h3>
+                    <button 
+                      onClick={() => setIsValidationExpanded(!isValidationExpanded)}
+                      className="text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      {isValidationExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400/80 mb-3">
+                    Assinaturas digitais jurídicas aguardando validação do gestor.
+                  </p>
+                  
+                  <div className={`space-y-3 transition-all duration-300 ${isValidationExpanded ? 'max-h-[300px] overflow-y-auto pr-2' : 'max-h-[140px] overflow-hidden'}`}>
+                    {pendingApprovalSignatures.map(term => {
+                      const colab = rhCollaborators.find(c => c.id === term.collaboratorId);
+                      const sector = sectors.find(s => s.id === colab?.sectorId);
+                      return (
+                        <div key={term.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-blue-200 dark:border-blue-900/20 flex items-center justify-between group hover:border-blue-500/40 transition-all">
+                          <div className="min-w-0 flex-1 mr-2">
+                            <span className="block text-xs font-black text-slate-900 dark:text-white truncate">{colab?.fullName || 'Desconhecido'}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-450 uppercase tracking-tighter truncate block mt-0.5">
+                              {sector?.name || 'Sem Setor'} • Cód: {colab?.role || 'N/A'} • {term.assetDetails}
+                            </span>
+                          </div>
+                          <Link 
+                            to="/rh/comodato"
+                            className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors flex items-center gap-1 text-[10px] font-black uppercase shadow-sm shrink-0"
+                          >
+                            Validar <ArrowRight size={12} />
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Grid de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

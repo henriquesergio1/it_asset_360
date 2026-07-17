@@ -168,17 +168,21 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  return safeJson(res,`/api/logs/${id}`);
  };
 
-  const getTermFile = async (id: string): Promise<string> => {
-   const res = await fetch(`${API_URL}/api/terms/${id}/file`);
-   const data = await safeJson(res, `/api/terms/${id}/file`);
-   return data.fileUrl || '';
-  };
-
-  const getTermEvidences = async (id: string): Promise<string[]> => {
-    const res = await fetch(`${API_URL}/api/terms/evidence/${id}`);
-    const data = await safeJson(res, `/api/terms/evidence/${id}`);
-    return data.fileUrls || [];
-  };
+   const getTermFile = async (id: string): Promise<string> => {
+    const isRh = id.startsWith('rht-');
+    const endpoint = isRh ? 'rh-terms' : 'terms';
+    const res = await fetch(`${API_URL}/api/${endpoint}/${id}/file`);
+    const data = await safeJson(res, `/api/${endpoint}/${id}/file`);
+    return data.fileUrl || '';
+   };
+ 
+   const getTermEvidences = async (id: string): Promise<string[]> => {
+     const isRh = id.startsWith('rht-');
+     if (isRh) return [];
+     const res = await fetch(`${API_URL}/api/terms/evidence/${id}`);
+     const data = await safeJson(res, `/api/terms/evidence/${id}`);
+     return data.fileUrls || [];
+   };
 
  const getDeviceInvoice = async (id: string): Promise<string> => {
  const res = await fetch(`${API_URL}/api/devices/${id}/invoice`);
@@ -316,7 +320,12 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  const updateTermFile = async (termId: string, userId: string, fileUrl: string, adminName: string) => {
   if (checkReadOnly()) return;
  try { 
- await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName }); 
+ const isRh = termId.startsWith('rht-');
+ if (isRh) {
+   await putData('rh-terms/file', { id: termId, fileUrl, _adminUser: adminName });
+ } else {
+   await putData('terms/file', { id: termId, fileUrl, _adminUser: adminName }); 
+ }
  fetchData(true); 
  } catch (err) { 
  showToast('Falha ao salvar arquivo do termo', 'error'); 
@@ -336,7 +345,9 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
   const resolveTermManual = async (termId: string, reason: string, adminName: string) => {
     if (checkReadOnly()) return;
     try {
-      await fetch(`${API_URL}/api/terms/resolve/${termId}`, {
+      const isRh = termId.startsWith('rht-');
+      const endpoint = isRh ? 'rh-terms' : 'terms';
+      await fetch(`${API_URL}/api/${endpoint}/resolve/${termId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, _adminUser: adminName })
@@ -350,7 +361,9 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  const deleteTermFile = async (termId: string, userId: string, reason: string, adminName: string) => {
   if (checkReadOnly()) return;
  try { 
- await fetch(`${API_URL}/api/terms/${termId}/file`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ _adminUser: adminName, reason }) }); 
+ const isRh = termId.startsWith('rht-');
+ const endpoint = isRh ? 'rh-terms' : 'terms';
+ await fetch(`${API_URL}/api/${endpoint}/${termId}/file`, { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ _adminUser: adminName, reason }) }); 
  fetchData(true); 
  } catch (err) { 
  showToast('Falha ao excluir arquivo do termo', 'error'); 
@@ -791,7 +804,9 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  },
 
  generateSignatureToken: async (termId) => {
-  const res = await postData(`terms/${termId}/generate-signature-token`, {});
+  const isRh = termId.startsWith('rht-');
+  const endpoint = isRh ? 'rh-terms' : 'terms';
+  const res = await postData(`${endpoint}/${termId}/generate-signature-token`, {});
   return res.token;
  },
  updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride,

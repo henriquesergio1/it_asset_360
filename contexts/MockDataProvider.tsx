@@ -394,38 +394,60 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       showToast('Termo de devolução processado', 'success');
     },
     updateTermFile: (termId, userId, fileUrl) => {
-      setUsers(prev => prev.map(u => {
-        if (u.id === userId) {
-          return {
-            ...u,
-            terms: u.terms.map(t => t.id === termId ? { ...t, fileUrl, hasFile: true, updatedAt: new Date().toISOString() } : t)
-          };
-        }
-        return u;
-      }));
+      const isRh = termId.startsWith('rht-');
+      if (isRh) {
+        setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, fileUrl, status: 'ASSINADO', hasFile: true } : t));
+      } else {
+        setUsers(prev => prev.map(u => {
+          if (u.id === userId) {
+            return {
+              ...u,
+              terms: u.terms.map(t => t.id === termId ? { ...t, fileUrl, hasFile: true, updatedAt: new Date().toISOString() } : t)
+            };
+          }
+          return u;
+        }));
+      }
       showToast('Arquivo do termo atualizado (Mock)', 'success');
     },
     deleteTermFile: (termId, userId) => {
-      setUsers(prev => prev.map(u => {
-        if (u.id === userId) {
-          return {
-            ...u,
-            terms: u.terms.map(t => t.id === termId ? { ...t, fileUrl: '', hasFile: false, isManual: false, resolutionReason: '' } : t)
-          };
-        }
-        return u;
-      }));
+      const isRh = termId.startsWith('rht-');
+      if (isRh) {
+        setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, fileUrl: '', hasFile: false, isManual: false, resolutionReason: '', status: 'PENDENTE', signatureDate: undefined, signatureIp: undefined, signatureLocation: undefined, signatureHash: undefined, signatureStatus: undefined, signatureToken: undefined } : t));
+      } else {
+        setUsers(prev => prev.map(u => {
+          if (u.id === userId) {
+            return {
+              ...u,
+              terms: u.terms.map(t => t.id === termId ? { ...t, fileUrl: '', hasFile: false, isManual: false, resolutionReason: '' } : t)
+            };
+          }
+          return u;
+        }));
+      }
       showToast('Anexo removido do termo (Mock)', 'success');
     },
     resolveTermManual: async (termId, reason) => {
-      setUsers(prev => prev.map(u => ({
-        ...u,
-        terms: u.terms.map(t => t.id === termId ? { ...t, isManual: true, resolutionReason: reason, fileUrl: '', hasFile: false } : t)
-      })));
+      const isRh = termId.startsWith('rht-');
+      if (isRh) {
+        setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, isManual: true, resolutionReason: reason, fileUrl: '', hasFile: false, status: 'ASSINADO' } : t));
+      } else {
+        setUsers(prev => prev.map(u => ({
+          ...u,
+          terms: u.terms.map(t => t.id === termId ? { ...t, isManual: true, resolutionReason: reason, fileUrl: '', hasFile: false } : t)
+        })));
+      }
       showToast('Termo resolvido manualmente (Mock)', 'success');
     },
     updateTermDetails: () => {},
-    generateSignatureToken: async () => Math.random().toString(36).substring(2, 15),
+    generateSignatureToken: async (termId) => {
+      const token = Math.random().toString(36).substring(2, 15);
+      const isRh = termId.startsWith('rht-');
+      if (isRh) {
+        setRhTerms(prev => prev.map(t => t.id === termId ? { ...t, signatureToken: token } : t));
+      }
+      return token;
+    },
     clearLogs: () => setLogs([]),
     restoreItem: () => {},
     addAssetType: (t) => setAssetTypes(p => [...p, t]),

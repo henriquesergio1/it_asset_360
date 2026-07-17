@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { RhTermTemplate, RhTerm } from '../types';
 import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
   FileText, Plus, Check, X, Shield, PenTool, ArrowRight, Printer, 
-  Copy, Share2, Info, Search, Download, ChevronLeft, ChevronRight, Briefcase
+  Copy, Share2, Info, Search, Download, ChevronLeft, ChevronRight, Briefcase,
+  Trash2, Upload, Eye, CheckSquare, History, SlidersHorizontal, Save,
+  FileSignature, Clock, AlertCircle, EyeOff, User as UserIcon
 } from 'lucide-react';
+import FilePreviewModal from './FilePreviewModal';
 
 export const RhComodatoManager: React.FC = () => {
   const { 
     rhCollaborators, rhTemplates, rhTerms, addRhTemplate, updateRhTemplate, 
-    addRhTerm, updateRhTerm, sectors, settings, rhAssetItems, updateRhAssetItem 
+    addRhTerm, updateRhTerm, sectors, settings, rhAssetItems, updateRhAssetItem,
+    getTermFile, updateTermFile, deleteTermFile, resolveTermManual, generateSignatureToken,
+    fetchData
   } = useData();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const adminName = user?.name || 'Gestor R.H.';
 
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-
+  
   // Navigation & Term States
   const [selectedTerm, setSelectedTerm] = useState<RhTerm | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -28,6 +35,15 @@ export const RhComodatoManager: React.FC = () => {
   // Create Term Form states
   const [showCreateTerm, setShowCreateTerm] = useState(false);
   const [newTermColabId, setNewTermColabId] = useState('');
+
+  // Advanced Term States
+  const [resolvingManualTerm, setResolvingManualTerm] = useState<RhTerm | null>(null);
+  const [resolveManualReason, setResolveManualReason] = useState('');
+  const [generatedSignatureLink, setGeneratedSignatureLink] = useState('');
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{ url: string; name: string } | null>(null);
+  const [signatureData, setSignatureData] = useState<{ signatureCanvas: string | null; documentPhoto: string | null; selfiePhoto: string | null } | null>(null);
   const [newTermTemplateId, setNewTermTemplateId] = useState('');
   const [newTermCustomNotes, setNewTermCustomNotes] = useState('');
   const [newTermObservations, setNewTermObservations] = useState('');
@@ -41,6 +57,135 @@ export const RhComodatoManager: React.FC = () => {
   const [signatureConfirm, setSignatureConfirm] = useState(false);
   const [gpsApproved, setGpsApproved] = useState(false);
   const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Advanced term handlers (idênticos ao módulo de TI)
+  const handleUploadTermFile = (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fileUrl = event.target?.result as string;
+        updateTermFile(termId, '', fileUrl, adminName);
+        showToast('Termo assinado enviado com sucesso', 'success');
+        if (selectedTerm && selectedTerm.id === termId) {
+          setSelectedTerm(prev => prev ? { ...prev, fileUrl, status: 'ASSINADO', hasFile: true } : null);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteTermFile = async (termId: string) => {
+    if (window.confirm("Deseja realmente excluir o anexo deste termo?")) {
+      try {
+        await deleteTermFile(termId, '', 'Remoção do anexo pelo gestor', adminName);
+        showToast('Anexo removido do termo', 'success');
+        if (selectedTerm && selectedTerm.id === termId) {
+          setSelectedTerm(prev => prev ? { ...prev, fileUrl: '', hasFile: false, status: 'PENDENTE', signatureDate: undefined, signatureIp: undefined, signatureLocation: undefined, signatureHash: undefined, signatureStatus: undefined } : null);
+        }
+      } catch (err) {
+        showToast('Erro ao remover anexo', 'error');
+      }
+    }
+  };
+
+  const handleGenerateSignatureLink = async (termId: string) => {
+    try {
+      const token = await generateSignatureToken(termId);
+      const link = `${window.location.origin}/#/sign-term/${token}`;
+      setGeneratedSignatureLink(link);
+      setIsLinkModalOpen(true);
+    } catch (err: any) {
+      console.error("Erro ao gerar link:", err);
+      showToast(`Erro ao gerar link: ${err.message}`, 'error');
+    }
+  };
+
+  const handleConfirmResolveManual = async () => {
+    if (!resolvingManualTerm || !resolveManualReason) return;
+    try {
+      await resolveTermManual(resolvingManualTerm.id, resolveManualReason, adminName);
+      showToast('Termo resolvido manualmente', 'success');
+      if (selectedTerm && selectedTerm.id === resolvingManualTerm.id) {
+        setSelectedTerm(prev => prev ? { ...prev, isManual: true, resolutionReason: resolveManualReason, status: 'ASSINADO' } : null);
+      }
+      setResolvingManualTerm(null);
+      setResolveManualReason('');
+    } catch (err) {
+      showToast('Erro ao resolver termo', 'error');
+    }
+  };
+
+  const handleApproveSignature = async (termId: string) => {
+    try {
+      const res = await fetch(`/api/rh-terms/${termId}/approve-signature`, { method: 'POST' });
+      if (res.ok) {
+        showToast('Assinatura aprovada com sucesso', 'success');
+        await fetchData(true);
+        if (selectedTerm && selectedTerm.id === termId) {
+          setSelectedTerm(prev => prev ? { ...prev, signatureStatus: 'APPROVED', status: 'ASSINADO' } : null);
+        }
+      } else {
+        showToast('Erro ao aprovar assinatura', 'error');
+      }
+    } catch (err) {
+      showToast('Erro ao aprovar assinatura', 'error');
+    }
+  };
+
+  const handleRejectSignature = async (termId: string) => {
+    if (window.confirm("Deseja realmente rejeitar esta assinatura? O colaborador terá que assinar novamente.")) {
+      try {
+        const res = await fetch(`/api/rh-terms/${termId}/reject-signature`, { method: 'POST' });
+        if (res.ok) {
+          showToast('Assinatura rejeitada com sucesso', 'success');
+          await fetchData(true);
+          if (selectedTerm && selectedTerm.id === termId) {
+            setSelectedTerm(prev => prev ? { ...prev, signatureStatus: 'REJECTED', status: 'PENDENTE', signatureDate: undefined, signatureIp: undefined, signatureLocation: undefined, signatureHash: undefined } : null);
+          }
+        } else {
+          showToast('Erro ao rejeitar assinatura', 'error');
+        }
+      } catch (err) {
+        showToast('Erro ao rejeitar assinatura', 'error');
+      }
+    }
+  };
+
+  const handleViewSignatureEvidences = async (termId: string) => {
+    try {
+      const response = await fetch(`/api/rh-terms/${termId}/signature-data`);
+      if (response.ok) {
+        const data = await response.json();
+        setSignatureData(data);
+      } else {
+        showToast('Erro ao carregar fotos da assinatura', 'error');
+      }
+    } catch (err) {
+      showToast('Erro ao carregar fotos da assinatura', 'error');
+    }
+  };
+
+  const handleViewTermFile = async (term: RhTerm) => {
+    let url = term.fileUrl || (term as any).filebinary;
+    
+    if (!url && !!term.hasFile) {
+      try {
+        url = await getTermFile(term.id);
+      } catch (err) {
+        console.error("Erro ao buscar arquivo do termo:", err);
+      }
+    }
+    
+    if (url && url !== '#') {
+      const collaborator = rhCollaborators.find(c => c.id === term.collaboratorId);
+      setPreviewData({ 
+        url, 
+        name: `termo_${term.type?.toLowerCase() || 'comodato'}_${collaborator?.fullName || 'colaborador'}.${(url.includes('pdf') || url.includes('application/pdf')) ? 'pdf' : 'jpg'}` 
+      });
+      setIsPreviewOpen(true);
+    }
+  };
 
   // Term Emission
   const handleEmitTerm = (e: React.FormEvent) => {
@@ -705,31 +850,149 @@ export const RhComodatoManager: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Evidências se Assinado */}
-                    {selectedTerm.status === 'ASSINADO' && (
-                      <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-3 bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-2xl">
-                        <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 block tracking-widest leading-none">EVIDÊNCIAS DE AUTENTICIDADE DIGITAL (R.H. LEGAL)</span>
+                    {/* Validação de Assinatura se WAITING_APPROVAL */}
+                    {selectedTerm.signatureStatus === 'WAITING_APPROVAL' && (
+                      <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4 bg-blue-500/5 border border-blue-500/10 p-5 rounded-2xl animate-fade-in">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase text-blue-600 dark:text-sky-400 block tracking-widest leading-none">VALIDAÇÃO JURÍDICA DA ASSINATURA DIGITAL</span>
+                          <span className="bg-blue-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded animate-pulse">Aguardando Validação</span>
+                        </div>
                         
                         <div className="grid grid-cols-2 gap-4 text-xs">
                           <div>
-                            <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Data/Hora Assinatura</span>
+                            <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Data/Hora Envio</span>
                             <span className="font-bold">{selectedTerm.signatureDate ? new Date(selectedTerm.signatureDate).toLocaleString('pt-BR') : '---'}</span>
                           </div>
                           <div>
                             <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Assinatura IP</span>
-                            <span className="font-bold font-mono">{selectedTerm.signatureIp || '177.45.190.22'}</span>
+                            <span className="font-bold font-mono">{selectedTerm.signatureIp || '---'}</span>
                           </div>
                           <div className="col-span-2 font-mono">
-                            <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Hash Criptográfico</span>
-                            <span className="font-bold text-[10px] text-emerald-600 dark:text-emerald-400 break-all">{selectedTerm.signatureHash}</span>
+                            <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Hash Criptográfico de Integridade</span>
+                            <span className="font-bold text-[10px] text-blue-600 dark:text-sky-400 break-all">{selectedTerm.signatureHash}</span>
                           </div>
-                          {selectedTerm.signatureLocation && (
-                            <div className="col-span-2">
-                              <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Geolocalização (GPS)</span>
-                              <span className="font-bold">{selectedTerm.signatureLocation}</span>
+                        </div>
+
+                        {!signatureData ? (
+                          <button
+                            onClick={() => handleViewSignatureEvidences(selectedTerm.id)}
+                            className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                          >
+                            <Eye size={14} /> Carregar Evidências Fotográficas (Selfie + Documento)
+                          </button>
+                        ) : (
+                          <div className="space-y-4 animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Selfie do Colaborador</span>
+                                {signatureData.selfiePhoto ? (
+                                  <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-48 object-contain border border-slate-200 dark:border-slate-700" />
+                                ) : (
+                                  <span className="text-xs text-slate-450 block py-8">Selfie não enviada</span>
+                                )}
+                              </div>
+                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Foto do Documento (Frente/Verso)</span>
+                                {signatureData.documentPhoto ? (
+                                  <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-48 object-contain border border-slate-200 dark:border-slate-700" />
+                                ) : (
+                                  <span className="text-xs text-slate-450 block py-8">Documento não enviado</span>
+                                )}
+                              </div>
                             </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApproveSignature(selectedTerm.id)}
+                                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                              >
+                                <Check size={14} /> Aprovar Assinatura
+                              </button>
+                              <button
+                                onClick={() => handleRejectSignature(selectedTerm.id)}
+                                className="flex-1 py-2.5 bg-red-650 hover:bg-red-750 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                              >
+                                <X size={14} /> Rejeitar Assinatura
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Evidências se Assinado e Aprovado */}
+                    {selectedTerm.status === 'ASSINADO' && (
+                      <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-3 bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-2xl">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 block tracking-widest leading-none">EVIDÊNCIAS DE AUTENTICIDADE DIGITAL (R.H. LEGAL)</span>
+                          {selectedTerm.signatureStatus === 'APPROVED' && (
+                            <span className="bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded">Validação Jurídica Aprovada</span>
+                          )}
+                          {selectedTerm.isManual && (
+                            <span className="bg-orange-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded">Resolvido Manualmente</span>
                           )}
                         </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-xs">
+                          {selectedTerm.isManual ? (
+                            <div className="col-span-2">
+                              <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Motivo da Resolução Manual</span>
+                              <span className="font-bold text-orange-600 dark:text-orange-400">{selectedTerm.resolutionReason || 'Sem motivo detalhado.'}</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Data/Hora Assinatura</span>
+                                <span className="font-bold">{selectedTerm.signatureDate ? new Date(selectedTerm.signatureDate).toLocaleString('pt-BR') : '---'}</span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Assinatura IP</span>
+                                <span className="font-bold font-mono">{selectedTerm.signatureIp || '177.45.190.22'}</span>
+                              </div>
+                              <div className="col-span-2 font-mono">
+                                <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Hash Criptográfico</span>
+                                <span className="font-bold text-[10px] text-emerald-600 dark:text-emerald-400 break-all">{selectedTerm.signatureHash}</span>
+                              </div>
+                              {selectedTerm.signatureLocation && (
+                                <div className="col-span-2">
+                                  <span className="text-[9px] font-sans font-bold uppercase text-slate-400 block leading-none mb-1">Geolocalização (GPS)</span>
+                                  <span className="font-bold">{selectedTerm.signatureLocation}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {selectedTerm.signatureStatus === 'APPROVED' && (
+                          <div className="pt-2">
+                            {!signatureData ? (
+                              <button
+                                onClick={() => handleViewSignatureEvidences(selectedTerm.id)}
+                                className="py-2 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase rounded-lg transition-all flex items-center gap-1.5"
+                              >
+                                <Eye size={12} /> Exibir Evidências Fotográficas
+                              </button>
+                            ) : (
+                              <div className="space-y-3 pt-2">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="text-center">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Selfie</span>
+                                    {signatureData.selfiePhoto && <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-32 object-contain border border-slate-200 dark:border-slate-800" />}
+                                  </div>
+                                  <div className="text-center">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Documento</span>
+                                    {signatureData.documentPhoto && <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-32 object-contain border border-slate-200 dark:border-slate-800" />}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleRejectSignature(selectedTerm.id)}
+                                  className="w-full py-2 bg-red-650 hover:bg-red-750 text-white font-black text-[10px] uppercase rounded-lg transition-all flex items-center justify-center gap-1.5"
+                                >
+                                  <Trash2 size={12} /> Invalidar e Rejeitar Assinatura
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -738,17 +1001,57 @@ export const RhComodatoManager: React.FC = () => {
             </div>
 
             {/* Footer Actions */}
-            <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
-              <button
-                onClick={() => generateAndPrintRhTerm(selectedTerm)}
-                className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all"
-              >
-                <Printer size={14} /> Imprimir / Visualizar PDF
-              </button>
-              
+            <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex flex-wrap justify-between items-center gap-3">
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setIsDetailModalOpen(false); setSelectedTerm(null); }}
+                  onClick={() => generateAndPrintRhTerm(selectedTerm)}
+                  className="flex items-center gap-2 bg-slate-200 hover:bg-slate-350 dark:bg-slate-750 text-slate-700 dark:text-slate-300 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all"
+                >
+                  <Printer size={14} /> Imprimir / Visualizar PDF
+                </button>
+                {(selectedTerm.fileUrl || selectedTerm.hasFile) && (
+                  <>
+                    <button
+                      onClick={() => handleViewTermFile(selectedTerm)}
+                      className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-650 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20"
+                    >
+                      <Eye size={14} /> Ver Anexo
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTermFile(selectedTerm.id)}
+                      className="flex items-center gap-2 bg-red-50 dark:bg-red-500/20 text-red-650 dark:text-red-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-red-500/20"
+                    >
+                      <Trash2 size={14} /> Excluir Anexo
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {selectedTerm.status !== 'ASSINADO' && selectedTerm.signatureStatus !== 'WAITING_APPROVAL' && (
+                  <>
+                    <button
+                      onClick={() => handleGenerateSignatureLink(selectedTerm.id)}
+                      className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-indigo-500/20"
+                      title="Copiar link para o colaborador assinar via celular/email"
+                    >
+                      <Share2 size={14} /> Link Assinatura
+                    </button>
+                    <label className="flex items-center gap-2 bg-emerald-55 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20 cursor-pointer">
+                      <Upload size={14} /> Upload Assinado
+                      <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(selectedTerm.id, e)} />
+                    </label>
+                    <button
+                      onClick={() => setResolvingManualTerm(selectedTerm)}
+                      className="flex items-center gap-2 bg-orange-50 dark:bg-orange-500/10 text-orange-650 dark:text-orange-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-orange-500/20"
+                    >
+                      <CheckSquare size={14} /> Resolução Manual
+                    </button>
+                  </>
+                )}
+                
+                <button
+                  onClick={() => { setIsDetailModalOpen(false); setSelectedTerm(null); setSignatureData(null); }}
                   className="px-5 py-3 bg-slate-250 hover:bg-slate-350 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
                 >
                   Fechar
@@ -974,6 +1277,84 @@ export const RhComodatoManager: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {isLinkModalOpen && generatedSignatureLink && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[120] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-black uppercase text-indigo-600 tracking-wider">Link de Assinatura Digital</h3>
+              <button onClick={() => { setIsLinkModalOpen(false); setGeneratedSignatureLink(''); }} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Copie o link abaixo e envie para o colaborador realizar a assinatura digital (com selfie e documento de identidade):
+            </p>
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+              <input
+                type="text"
+                readOnly
+                value={generatedSignatureLink}
+                className="bg-transparent border-none outline-none text-xs font-mono font-bold text-slate-800 dark:text-slate-200 flex-1"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedSignatureLink);
+                  showToast('Link copiado com sucesso!', 'success');
+                }}
+                className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                title="Copiar Link"
+              >
+                <Copy size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resolvingManualTerm && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[120] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-sm font-black uppercase text-orange-600 tracking-wider">Resolução Manual de Pendência</h3>
+              <button onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Descreva detalhadamente o motivo pelo qual este termo está sendo marcado como resolvido sem assinatura eletrônica ou anexo físico:
+            </p>
+            <textarea
+              required
+              rows={3}
+              value={resolveManualReason}
+              onChange={e => setResolveManualReason(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs focus:ring-2 focus:ring-orange-500 text-slate-900 dark:text-white font-medium"
+              placeholder="Ex: Assinado fisicamente em papel arquivado na pasta física do colaborador, ou colaborador não possui mais o item..."
+            />
+            <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+              <button
+                onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-750 text-slate-500 font-bold text-xs uppercase rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmResolveManual}
+                disabled={!resolveManualReason}
+                className={`px-5 py-2 text-white font-black text-xs uppercase rounded-lg ${resolveManualReason ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800'}`}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPreviewOpen && previewData && (
+        <FilePreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => { setIsPreviewOpen(false); setPreviewData(null); }}
+          fileUrl={previewData.url}
+          fileName={previewData.name}
+        />
       )}
     </div>
   );

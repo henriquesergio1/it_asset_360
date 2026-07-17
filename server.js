@@ -249,17 +249,24 @@ const DB_SCHEMAS = {
         AssetDetails NVARCHAR(MAX),
         Date DATETIME,
         Status NVARCHAR(50),
-        FileUrl NVARCHAR(MAX),
-        SignatureToken NVARCHAR(255),
-        SignatureIp NVARCHAR(50),
-        SignatureDate DATETIME,
-        SignatureLocation NVARCHAR(MAX),
-        SignatureHash NVARCHAR(MAX),
-        Notes NVARCHAR(MAX),
-        Type NVARCHAR(50),
-        SnapshotDeclaration NVARCHAR(MAX),
-        SnapshotClauses NVARCHAR(MAX),
-        DeliveredItems NVARCHAR(MAX)
+        FileUrl NVARCHAR(MAX) NULL,
+        SignatureToken NVARCHAR(255) NULL,
+        SignatureIp NVARCHAR(50) NULL,
+        SignatureDate DATETIME NULL,
+        SignatureLocation NVARCHAR(MAX) NULL,
+        SignatureHash NVARCHAR(MAX) NULL,
+        SignatureStatus NVARCHAR(50) NULL,
+        SignatureCanvasBinary VARBINARY(MAX) NULL,
+        SignatureDocumentPhoto VARBINARY(MAX) NULL,
+        SignatureSelfiePhoto VARBINARY(MAX) NULL,
+        FileBinary VARBINARY(MAX) NULL,
+        IsManual BIT DEFAULT 0 NULL,
+        ResolutionReason NVARCHAR(MAX) NULL,
+        Notes NVARCHAR(MAX) NULL,
+        Type NVARCHAR(50) NULL,
+        SnapshotDeclaration NVARCHAR(MAX) NULL,
+        SnapshotClauses NVARCHAR(MAX) NULL,
+        DeliveredItems NVARCHAR(MAX) NULL
     )`,
     RhAssetItems: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -556,6 +563,35 @@ async function initializeDatabase() {
                     
                     await pool.request().query("UPDATE Terms SET SignatureStatus = NULL WHERE SignatureDate IS NULL AND SignatureStatus = 'WAITING_APPROVAL'");
                 }
+
+                if (table === 'RhTerms') {
+                    const rhColumnsNeeded = [
+                        { name: 'SignatureToken', type: 'NVARCHAR(255) NULL' },
+                        { name: 'SignatureIp', type: 'NVARCHAR(50) NULL' },
+                        { name: 'SignatureDate', type: 'DATETIME NULL' },
+                        { name: 'SignatureLocation', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureSelfiePhoto', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'SignatureStatus', type: 'NVARCHAR(50) NULL' },
+                        { name: 'FileBinary', type: 'VARBINARY(MAX) NULL' },
+                        { name: 'IsManual', type: 'BIT DEFAULT 0 NULL' },
+                        { name: 'ResolutionReason', type: 'NVARCHAR(MAX) NULL' }
+                    ];
+
+                    for (const col of rhColumnsNeeded) {
+                        try {
+                            const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhTerms' AND COLUMN_NAME = '${col.name}'`);
+                            if (check.recordset.length === 0) {
+                                console.log(`- Adicionando coluna ${col.name} em RhTerms...`);
+                                await pool.request().query(`ALTER TABLE RhTerms ADD ${col.name} ${col.type}`);
+                            }
+                        } catch (err) {
+                            console.error(`Erro ao adicionar coluna ${col.name} em RhTerms:`, err.message);
+                        }
+                    }
+                }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
                     if (checkAllow.recordset.length === 0) {
@@ -821,7 +857,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.60.2', 
+            version: '3.62.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -876,7 +912,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM RhCollaborators"),
             pool.request().query("SELECT * FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT * FROM RhTerms"),
+            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
@@ -900,7 +936,7 @@ app.get('/api/bootstrap', async (req, res) => {
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
             rhOccurrences: format(rhOccurrencesRes),
             rhTemplates: format(rhTemplatesRes),
-            rhTerms: format(rhTermsRes, ['DeliveredItems']),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -930,7 +966,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM RhCollaborators"),
             pool.request().query("SELECT * FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT * FROM RhTerms"),
+            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
@@ -953,7 +989,7 @@ app.get('/api/sync', async (req, res) => {
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
             rhOccurrences: format(rhOccurrencesRes),
             rhTemplates: format(rhTemplatesRes),
-            rhTerms: format(rhTermsRes, ['DeliveredItems']),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -1190,6 +1226,86 @@ app.put('/api/terms/resolve/:id', async (req, res) => {
             }
         }
 
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-terms/:id/file', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileBinary FROM RhTerms WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row) return res.json({ fileUrl: '' });
+        res.json({ fileUrl: getBase64FromBuffer(row.FileBinary) });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/rh-terms/file/:id', async (req, res) => {
+    try {
+        const { fileUrl, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, AssetDetails FROM RhTerms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+        
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        const buffer = getBufferFromBase64(fileUrl);
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Bin', buffer)
+            .query("UPDATE RhTerms SET FileBinary=@Bin, IsManual=0, ResolutionReason=NULL, Status='ASSINADO' WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        await logAction(term.CollaboratorId, 'RhCollaborator', 'Atualização', _adminUser, userName, `Digitalização anexada ao termo de comodato: ${term.AssetDetails}`);
+        
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/rh-terms/:id/file', async (req, res) => {
+    try {
+        const { _adminUser, reason } = req.body;
+        const pool = await sql.connect(dbConfig);
+
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, AssetDetails FROM RhTerms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query("UPDATE RhTerms SET FileBinary=NULL, IsManual=0, ResolutionReason=NULL, Status='PENDENTE', SignatureDate=NULL, SignatureIp=NULL, SignatureLocation=NULL, SignatureCanvasBinary=NULL, SignatureDocumentPhoto=NULL, SignatureSelfiePhoto=NULL, SignatureHash=NULL, SignatureStatus=NULL, SignatureToken=NULL WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        await logAction(term.CollaboratorId, 'RhCollaborator', 'Atualização', _adminUser, userName, `Anexo removido do termo de comodato (${term.AssetDetails}). Motivo: ${reason || 'Não informado'}`);
+        
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.put('/api/rh-terms/resolve/:id', async (req, res) => {
+    try {
+        const { reason, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, AssetDetails FROM RhTerms WHERE Id=@Id");
+        const term = oldRes.recordset[0];
+        
+        if (!term) return res.status(404).send("Termo não encontrado");
+
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('Reason', sql.NVarChar, reason)
+            .query("UPDATE RhTerms SET IsManual=1, ResolutionReason=@Reason, Status='ASSINADO' WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, term.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+
+        await logAction(term.CollaboratorId, 'RhCollaborator', 'Resolução Manual', _adminUser, userName, `Termo de comodato resolvido manualmente. Motivo: ${reason}`);
+        
         res.json({ success: true });
     } catch (err) { res.status(500).send(err.message); }
 });
@@ -1697,7 +1813,6 @@ async function updateUserPendingStatus(pool, userId) {
                 console.error(`[Signature] Nenhum termo encontrado com ID: ${req.params.id}`);
                 return res.status(404).send("Termo não encontrado");
             }
-
             console.log(`[Signature] Token gerado com sucesso: ${token}`);
             res.json({ success: true, token });
         } catch (err) { 
@@ -1709,7 +1824,7 @@ async function updateUserPendingStatus(pool, userId) {
     app.get('/api/public/terms-to-sign/:token', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const result = await pool.request()
+            let result = await pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
                 .query(`
                     SELECT t.*, u.FullName as UserName, u.Cpf as UserCpf, u.InternalCode as UserCode, s.Name as SectorName
@@ -1719,27 +1834,32 @@ async function updateUserPendingStatus(pool, userId) {
                     WHERE t.SignatureToken = @Token
                 `);
             
-            const term = result.recordset[0];
+            let term = result.recordset[0];
+            let isRh = false;
+
+            if (!term) {
+                const rhRes = await pool.request()
+                    .input('Token', sql.NVarChar, req.params.token)
+                    .query(`
+                        SELECT t.*, c.FullName as UserName, c.Cpf as UserCpf, c.Role as UserCode, s.Name as SectorName
+                        FROM RhTerms t
+                        JOIN RhCollaborators c ON c.Id = t.CollaboratorId
+                        LEFT JOIN Sectors s ON s.Id = c.SectorId
+                        WHERE t.SignatureToken = @Token
+                    `);
+                term = rhRes.recordset[0];
+                if (term) isRh = true;
+            }
+
             if (!term) return res.status(404).send("Termo não encontrado ou link expirado");
             if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado digitalmente");
 
-            // Buscar declarações e cláusulas do template e dados da empresa
             const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate, AppName, Cnpj, LogoUrl FROM SystemSettings");
             const settings = settingsRes.recordset[0];
-            let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
-            
-            try {
-                if (settings && settings.TermTemplate) {
-                    template = JSON.parse(settings.TermTemplate);
-                }
-            } catch (e) {}
-
-            const selectedTemplate = term.Type === 'ENTREGA' ? template.delivery : template.return;
             const companyName = settings?.AppName || 'A Empresa';
             const companyCnpj = settings?.Cnpj || '00.000.000/0000-00';
             const logoUrl = settings?.LogoUrl || '';
 
-            // Processar tags nas strings do template
             const processTags = (text) => {
                 if (!text) return '';
                 return text
@@ -1750,31 +1870,52 @@ async function updateUserPendingStatus(pool, userId) {
                     .replace(/\{DATA\}/g, new Date(term.Date).toLocaleDateString('pt-BR'));
             };
 
-            const finalizedTemplate = {
-                declaration: processTags(selectedTemplate.declaration),
-                clauses: processTags(selectedTemplate.clauses)
-            };
+            let finalizedTemplate = { declaration: '', clauses: '' };
 
-            // DINAMISMO ROBUSTO: Recuperar acessórios e chip se nulos ou vazios
+            if (isRh) {
+                const tmplRes = await pool.request().input('TmplId', sql.NVarChar, term.TemplateId).query("SELECT Content, Declaration, Type FROM RhTermTemplates WHERE Id=@TmplId");
+                const tmpl = tmplRes.recordset[0];
+                if (tmpl) {
+                    const declaration = tmpl.Declaration || (tmpl.Type === 'DEVOLUCAO' ? 'Declaro ter devolvido os itens abaixo na presente data.' : 'Declaro ter recebido os itens abaixo em perfeitas condições de uso.');
+                    const clauses = tmpl.Content || '';
+                    finalizedTemplate = {
+                        declaration: processTags(declaration),
+                        clauses: processTags(clauses)
+                    };
+                }
+            } else {
+                let template = { delivery: { declaration: '', clauses: '' }, return: { declaration: '', clauses: '' } };
+                try {
+                    if (settings && settings.TermTemplate) {
+                        template = JSON.parse(settings.TermTemplate);
+                    }
+                } catch (e) {}
+
+                const selectedTemplate = term.Type === 'ENTREGA' ? template.delivery : template.return;
+                finalizedTemplate = {
+                    declaration: processTags(selectedTemplate?.declaration),
+                    clauses: processTags(selectedTemplate?.clauses)
+                };
+            }
+
             let parsedAccessories = [];
-            if (term.Accessories) {
+            if (!isRh && term.Accessories) {
                 try {
                     parsedAccessories = JSON.parse(term.Accessories);
                 } catch (e) {}
             }
 
             let parsedLinkedSim = null;
-            if (term.LinkedSimData) {
+            if (!isRh && term.LinkedSimData) {
                 try {
                     parsedLinkedSim = JSON.parse(term.LinkedSimData);
                 } catch (e) {}
             }
 
-            // Tentar identificar o ID do dispositivo pelas informações no termo
             let foundAssetId = term.AssetId;
             let foundAssetType = term.AssetType || 'Device';
 
-            if (!foundAssetId && term.AssetDetails) {
+            if (!isRh && !foundAssetId && term.AssetDetails) {
                 let tag = '';
                 let serial = '';
                 let imei = '';
@@ -1824,8 +1965,7 @@ async function updateUserPendingStatus(pool, userId) {
                 }
             }
 
-            // Se identificamos o ID do dispositivo e for Device, carregar seus acessórios e chip diretamente das tabelas
-            if (foundAssetId && foundAssetType === 'Device') {
+            if (!isRh && foundAssetId && foundAssetType === 'Device') {
                 try {
                     if (!parsedAccessories || parsedAccessories.length === 0) {
                         const accRes = await pool.request()
@@ -1873,6 +2013,7 @@ async function updateUserPendingStatus(pool, userId) {
                 linkedSim: parsedLinkedSim,
                 notes: term.Notes,
                 template: finalizedTemplate,
+                isRhTerm: isRh,
                 company: {
                     name: companyName,
                     cnpj: companyCnpj,
@@ -1887,11 +2028,21 @@ async function updateUserPendingStatus(pool, userId) {
             const { signatureCanvas, documentPhoto, selfiePhoto, location, ip, observations } = req.body;
             const pool = await sql.connect(dbConfig);
             
-            const checkRes = await pool.request()
+            let checkRes = await pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
                 .query("SELECT Id, SignatureDate, Notes FROM Terms WHERE SignatureToken = @Token");
             
-            const term = checkRes.recordset[0];
+            let term = checkRes.recordset[0];
+            let isRh = false;
+
+            if (!term) {
+                checkRes = await pool.request()
+                    .input('Token', sql.NVarChar, req.params.token)
+                    .query("SELECT Id, SignatureDate, Notes FROM RhTerms WHERE SignatureToken = @Token");
+                term = checkRes.recordset[0];
+                if (term) isRh = true;
+            }
+
             if (!term) return res.status(404).send("Termo não encontrado");
             if (term.SignatureDate) return res.status(400).send("Este termo já foi assinado");
 
@@ -1911,6 +2062,7 @@ async function updateUserPendingStatus(pool, userId) {
             const hashInput = `${term.Id}-${sigDate.toISOString()}-${ip}-${location}`;
             const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
 
+            const tableName = isRh ? 'RhTerms' : 'Terms';
             await pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
                 .input('Date', sql.DateTime, sigDate)
@@ -1922,7 +2074,7 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Hash', sql.NVarChar, hash)
                 .input('Notes', sql.NVarChar, finalNotes)
                 .query(`
-                    UPDATE Terms SET 
+                    UPDATE ${tableName} SET 
                         SignatureDate = @Date,
                         SignatureIp = @Ip,
                         SignatureLocation = @Loc,
@@ -2003,6 +2155,80 @@ async function updateUserPendingStatus(pool, userId) {
             
             if (term) await updateUserPendingStatus(pool, term.UserId);
 
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/rh-terms/:id/generate-signature-token', async (req, res) => {
+        try {
+            console.log(`[Signature RH] Gerando token para termo de RH: ${req.params.id}`);
+            const pool = await sql.connect(dbConfig);
+            const token = crypto.randomBytes(16).toString('hex');
+            
+            const result = await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .input('Token', sql.NVarChar, token)
+                .query("UPDATE RhTerms SET SignatureToken = @Token WHERE Id = @Id");
+            
+            if (result.rowsAffected[0] === 0) {
+                console.error(`[Signature RH] Nenhum termo encontrado com ID: ${req.params.id}`);
+                return res.status(404).send("Termo não encontrado");
+            }
+
+            console.log(`[Signature RH] Token gerado com sucesso: ${token}`);
+            res.json({ success: true, token });
+        } catch (err) { 
+            console.error('[Signature RH] Erro fatal ao gerar token:', err);
+            res.status(500).send(err.message); 
+        }
+    });
+
+    app.get('/api/rh-terms/:id/signature-data', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .query("SELECT SignatureCanvasBinary, SignatureDocumentPhoto, SignatureSelfiePhoto FROM RhTerms WHERE Id = @Id");
+            
+            const row = result.recordset[0];
+            if (!row) return res.status(404).send("Dados não encontrados");
+            
+            res.json({
+                signatureCanvas: row.SignatureCanvasBinary ? getBase64FromBuffer(row.SignatureCanvasBinary) : null,
+                documentPhoto: row.SignatureDocumentPhoto ? getBase64FromBuffer(row.SignatureDocumentPhoto) : null,
+                selfiePhoto: row.SignatureSelfiePhoto ? getBase64FromBuffer(row.SignatureSelfiePhoto) : null
+            });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/rh-terms/:id/approve-signature', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .query("UPDATE RhTerms SET SignatureStatus = 'APPROVED', Status = 'ASSINADO' WHERE Id = @Id");
+            res.json({ success: true });
+        } catch (err) { res.status(500).send(err.message); }
+    });
+
+    app.post('/api/rh-terms/:id/reject-signature', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .query(`
+                    UPDATE RhTerms SET 
+                        SignatureStatus = 'REJECTED',
+                        Status = 'PENDENTE',
+                        SignatureDate = NULL,
+                        SignatureIp = NULL,
+                        SignatureLocation = NULL,
+                        SignatureCanvasBinary = NULL,
+                        SignatureDocumentPhoto = NULL,
+                        SignatureSelfiePhoto = NULL,
+                        SignatureHash = NULL
+                    WHERE Id = @Id
+                `);
             res.json({ success: true });
         } catch (err) { res.status(500).send(err.message); }
     });
