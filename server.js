@@ -5,6 +5,7 @@ const sql = require('mssql');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3000;
@@ -754,14 +755,15 @@ async function initializeDatabase() {
         if (userCheck.recordset[0].count === 0) {
             console.log('- Criando usuário administrador padrão...');
             const adminId = 'admin-' + Date.now();
+            const hashedAdminPass = await bcrypt.hash('admin', 10);
             await pool.request()
                 .input('id', sql.NVarChar, adminId)
                 .input('name', sql.NVarChar, 'Administrador')
                 .input('email', sql.NVarChar, 'admin@admin')
-                .input('pass', sql.NVarChar, 'admin')
+                .input('pass', sql.NVarChar, hashedAdminPass)
                 .input('role', sql.NVarChar, 'admin')
                 .query("INSERT INTO SystemUsers (Id, Name, Email, Password, Role) VALUES (@id, @name, @email, @pass, @role)");
-            console.log('  ... Usuário admin@admin criado (Senha: admin).');
+            console.log('  ... Usuário admin@admin criado (Senha: admin — armazenada com bcrypt).');
         }
 
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
@@ -862,7 +864,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.64.7', 
+            version: '3.65.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -898,7 +900,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers"),
+            pool.request().query("SELECT Id as id, Name as name, Email as email, Role as role FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
             pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
@@ -2247,7 +2249,115 @@ async function updateUserPendingStatus(pool, userId) {
     crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     crud('SoftwareAccounts', 'accounts', 'Account');
     crud('Users', 'users', 'User');
-    crud('SystemUsers', 'system-users', 'SystemUser');
+    // --- SystemUsers: rotas customizadas com hash de senha (bcrypt) ---
+    // POST /api/system-users — criação com hash
+    app.post('/api/system-users', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const body = { ...req.body };
+            // Hasheia a senha antes de persistir, se fornecida
+            if (body.password && !body.password.startsWith('$2')) {
+                body.password = await bcrypt.hash(body.password, 10);
+            }
+            const request = pool.request();
+            let columns = [], values = [];
+            const IGNORE = ['_adminUser', '_notes', '_reason', 'Permissoes', 'permissoes', 'Nome_Perfil', 'auditLog'];
+            for (let key in body) {
+                if (key.startsWith('_') || IGNORE.includes(key)) continue;
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                request.input(dbKey, sql.NVarChar, body[key] != null ? String(body[key]) : null);
+                columns.push(dbKey);
+                values.push('@' + dbKey);
+            }
+            await request.query(`INSERT INTO SystemUsers (${columns.join(',')}) VALUES (${values.join(',')})`);
+            await logAction(body.id, 'SystemUser', 'Criação', body._adminUser || req.body._adminUser, body.name, 'Usuário do sistema criado');
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO POST /api/system-users:', err);
+            res.status(500).send(err.message);
+        }
+    });
+    // PUT /api/system-users/:id — atualização com hash condicional
+    app.put('/api/system-users/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const body = { ...req.body };
+            // Hasheia a senha apenas se vier alterada e ainda não for um hash bcrypt
+            if (body.password) {
+                if (!body.password.startsWith('$2')) {
+                    body.password = await bcrypt.hash(body.password, 10);
+                }
+            }
+            const request = pool.request();
+            let sets = [];
+            const IGNORE = ['_adminUser', '_notes', '_reason', 'Permissoes', 'permissoes', 'Nome_Perfil', 'auditLog', 'id', 'Id'];
+            for (let key in body) {
+                if (key.startsWith('_') || IGNORE.includes(key)) continue;
+                if (body[key] === null || body[key] === undefined) continue;
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                request.input(dbKey, sql.NVarChar, String(body[key]));
+                sets.push(`${dbKey}=@${dbKey}`);
+            }
+            if (sets.length === 0) return res.json({ success: true });
+            request.input('TargetId', req.params.id);
+            await request.query(`UPDATE SystemUsers SET ${sets.join(',')} WHERE Id=@TargetId`);
+            await logAction(req.params.id, 'SystemUser', 'Atualização', body._adminUser || req.body._adminUser, body.name, body._notes || 'Usuário do sistema atualizado');
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO PUT /api/system-users/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+    // DELETE /api/system-users/:id — exclusão (mantém comportamento do crud genérico)
+    app.delete('/api/system-users/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request().input('Id', sql.NVarChar, req.params.id).query('DELETE FROM SystemUsers WHERE Id=@Id');
+            await logAction(req.params.id, 'SystemUser', 'Exclusão', req.body?._adminUser, '', 'Usuário do sistema removido');
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO DELETE /api/system-users/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+    // --- Endpoint de autenticação segura ---
+    // POST /api/auth/login — valida credenciais no servidor sem expor senhas ao frontend
+    app.post('/api/auth/login', async (req, res) => {
+        try {
+            const { email, password } = req.body;
+            if (!email || !password) return res.status(400).json({ success: false, message: 'Credenciais incompletas.' });
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('Email', sql.NVarChar, email)
+                .query('SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers WHERE Email=@Email');
+            const user = result.recordset[0];
+            if (!user) return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+            let passwordValid = false;
+            if (user.password && user.password.startsWith('$2')) {
+                // Senha já hasheada — comparação bcrypt
+                passwordValid = await bcrypt.compare(password, user.password);
+            } else {
+                // Fallback: senha ainda em plain text (legado) — migração transparente
+                passwordValid = (user.password === password);
+                if (passwordValid) {
+                    // Re-hasheia automaticamente a senha legada no banco
+                    const newHash = await bcrypt.hash(password, 10);
+                    await pool.request()
+                        .input('Hash', sql.NVarChar, newHash)
+                        .input('Id', sql.NVarChar, user.id)
+                        .query('UPDATE SystemUsers SET Password=@Hash WHERE Id=@Id');
+                    console.log(`[auth] Senha do usuário ${user.email} migrada para bcrypt automaticamente.`);
+                }
+            }
+            if (!passwordValid) return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+            // Retorna o usuário SEM a senha
+            const { password: _omit, ...safeUser } = user;
+            res.json({ success: true, user: safeUser });
+        } catch (err) {
+            console.error('ERRO POST /api/auth/login:', err);
+            res.status(500).send(err.message);
+        }
+    });
     crud('TechnicalAudits', 'audits', 'Audit');
     crud('RhCollaborators', 'rh-collaborators', 'RhCollaborator');
     crud('RhOccurrences', 'rh-occurrences', 'RhOccurrence');

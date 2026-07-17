@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.65.0',
+    date: 'Hoje',
+    title: 'Segurança: Criptografia de Senhas com bcrypt',
+    changes: [
+      'Hash de Senhas: Senhas dos usuários do sistema agora são armazenadas com hash bcrypt (custo 10) no banco de dados SQL Server, eliminando o armazenamento em texto puro.',
+      'Login Seguro: Autenticação migrada para endpoint dedicado POST /api/auth/login no servidor, que valida as credenciais com comparação bcrypt e nunca retorna a senha ao frontend.',
+      'Migração Transparente: Senhas legadas em plain text são re-hasheadas automaticamente no primeiro login bem-sucedido, sem interrupção de acesso para usuários existentes.',
+      'Proteção de Dados: Campo Password removido das respostas do endpoint GET /api/data. Apenas dados não sensíveis dos usuários do sistema trafegam para o frontend.',
+    ]
+  },
+  {
     version: '3.64.7',
     date: 'Hoje',
     title: 'Correção de Acesso ao Painel de Administração via Perfil RBAC',

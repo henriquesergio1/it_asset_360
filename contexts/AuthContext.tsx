@@ -27,15 +27,36 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  });
 
  const login = async (email: string, pass: string) => {
- // Simple mock authentication against loaded system users
- const foundUser = systemUsers.find(u => u.email === email && u.password === pass);
- if (foundUser) {
- const resolved = resolveUserPermissions(foundUser);
- setUser(resolved);
- localStorage.setItem('it_asset_user', JSON.stringify(resolved));
- return true;
- }
- return false;
+  // Tenta autenticar via endpoint seguro do servidor (bcrypt no backend)
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.user) {
+        const resolved = resolveUserPermissions(data.user);
+        setUser(resolved);
+        localStorage.setItem('it_asset_user', JSON.stringify(resolved));
+        return true;
+      }
+    }
+    // Resposta 401 = credenciais inválidas
+    if (response.status === 401) return false;
+  } catch {
+    // Servidor indisponível — fallback para modo mock (desenvolvimento local sem banco)
+  }
+  // Fallback mock: compara contra usuários carregados em memória (sem banco)
+  const foundUser = systemUsers.find(u => u.email === email && (u as any).password === pass);
+  if (foundUser) {
+    const resolved = resolveUserPermissions(foundUser);
+    setUser(resolved);
+    localStorage.setItem('it_asset_user', JSON.stringify(resolved));
+    return true;
+  }
+  return false;
  };
 
 

@@ -1,6 +1,6 @@
 {
   "name": "it-asset-360",
-  "version": "3.64.7",
+  "version": "3.65.0",
   "private": true,
   "dependencies": {
     "@tailwindcss/forms": "^0.5.11",
@@ -8,6 +8,7 @@
     "@tanstack/react-query": "^5.95.2",
     "@types/react-signature-canvas": "^1.0.7",
     "autoprefixer": "^10.5.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
