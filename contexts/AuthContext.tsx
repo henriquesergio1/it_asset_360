@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  login,
  logout,
  isAuthenticated: !!user,
- isAdmin: user?.role === SystemRole.ADMIN
+ isAdmin: user?.role === SystemRole.ADMIN || user?.Permissoes?.admin === true || user?.permissoes?.admin === true
  };
 
  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.64.7',
+    date: 'Hoje',
+    title: 'Correção de Acesso ao Painel de Administração via Perfil RBAC',
+    changes: [
+      'Controle de Acesso: Corrigida a validação de administrador (isAdmin) para reconhecer usuários cujo acesso administrativo é concedido via perfil RBAC (permissão admin: true), e não apenas os usuários com role legado ADMIN. Antes, usuários com perfil de Administrador TI eram redirecionados para a tela inicial ao tentar acessar o menu Administração.',
+    ]
+  },
+  {
     version: '3.64.6',
     date: 'Hoje',
     title: 'Ajustes Visuais de Contraste no Tema Escuro',
