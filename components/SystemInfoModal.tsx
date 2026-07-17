@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.69.2',
+    date: 'Hoje',
+    title: 'Ajuste de Padding do Cabeçalho e Tooltip de Ordenação Elevado',
+    changes: [
+      'Padding Otimizado: Reduzido o padding horizontal do cabeçalho da coluna para px-3, liberando até 60px de espaço útil que evita o truncamento desnecessário do texto.',
+      'Tooltip Flutuante Elevada (Hover): O indicador de ordenação agora é exibido como uma tooltip flutuante e centralizada por cima do cabeçalho (com posicionamento absoluto e animação de subida no hover), evitando cobrir ou misturar-se com o texto do nome da coluna.'
+    ]
+  },
+  {
     version: '3.69.1',
     date: 'Hoje',
     title: 'Remoção de setas estáticas e indicador de ordenação flutuante',

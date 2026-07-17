@@ -40,14 +40,14 @@ export const SortableResizableHeader: React.FC<SortableResizableHeaderProps> = (
       <div className="flex items-center h-full min-h-[48px] relative">
         <button
           onClick={() => requestSort(sortKey)}
-          className="flex items-center px-6 py-4 hover:text-slate-700 dark:text-slate-200 transition-colors w-full text-left h-full pr-10"
+          className="flex items-center px-3 py-4 hover:text-slate-700 dark:text-slate-200 transition-colors w-full text-left h-full"
           title={`Clique para ordenar por ${label}`}
         >
           <span className="truncate w-full">{label}</span>
         </button>
 
-        {/* Indicador de ordenação absoluto visível apenas sob hover do mouse */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded shadow-sm text-[9px] font-black text-slate-700 dark:text-slate-300 z-10">
+        {/* Indicador de ordenação absoluto visível apenas sob hover do mouse (Tooltip acima do cabeçalho) */}
+        <div className="absolute left-1/2 -translate-x-1/2 -top-7 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center gap-1 bg-slate-900 dark:bg-slate-950 border border-slate-700 px-2 py-0.5 rounded shadow-xl text-[9px] font-black text-slate-100 z-[200] whitespace-nowrap group-hover:-top-8">
           {isSorted ? (
             isAsc ? (
               <>
