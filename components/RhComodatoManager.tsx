@@ -756,7 +756,7 @@ export const RhComodatoManager: React.FC = () => {
             {/* Header */}
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
-                <span className={`px-2 py-1 text-[10px] font-black rounded uppercase tracking-wider ${selectedTerm.status === 'ASSINADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-850'}`}>{selectedTerm.status}</span>
+                <span className={`px-2 py-1 text-[10px] font-black rounded uppercase tracking-wider ${selectedTerm.status === 'ASSINADO' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-amber-100 text-amber-850 dark:bg-amber-500/20 dark:text-amber-400'}`}>{selectedTerm.status}</span>
                 <div className="flex flex-col">
                   <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">
                     Termo de Comodato {selectedTerm.id}
@@ -823,9 +823,10 @@ export const RhComodatoManager: React.FC = () => {
                     {/* Declaração Principal */}
                     <div className="p-4 bg-blue-500/5 border-l-4 border-indigo-600 rounded-r-xl">
                       <p className="text-xs font-bold uppercase text-indigo-500 tracking-wider mb-1">Declaração e Aceite</p>
-                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic">
-                        "{processedDeclaration}"
-                      </p>
+                      <p 
+                        className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium italic"
+                        dangerouslySetInnerHTML={{ __html: `"${processedDeclaration}"` }}
+                      />
                     </div>
 
                     {/* Bens Vinculados */}
@@ -845,9 +846,10 @@ export const RhComodatoManager: React.FC = () => {
                     {/* Cláusulas Contratuais */}
                     <div className="space-y-2">
                       <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block leading-none">2. Cláusulas e Responsabilidades Legais</span>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-900/20 border border-slate-150 dark:border-slate-800 rounded-xl max-h-48 overflow-y-auto text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 white-space-pre-line text-justify">
-                        {processedContent}
-                      </div>
+                      <div 
+                        className="p-4 bg-slate-50 dark:bg-slate-900/20 border border-slate-150 dark:border-slate-800 rounded-xl max-h-48 overflow-y-auto text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 text-justify"
+                        dangerouslySetInnerHTML={{ __html: processedContent }}
+                      />
                     </div>
 
                     {/* Validação de Assinatura se WAITING_APPROVAL */}
@@ -1005,7 +1007,7 @@ export const RhComodatoManager: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => generateAndPrintRhTerm(selectedTerm)}
-                  className="flex items-center gap-2 bg-slate-200 hover:bg-slate-350 dark:bg-slate-750 text-slate-700 dark:text-slate-300 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all"
+                  className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all shadow-sm"
                 >
                   <Printer size={14} /> Imprimir / Visualizar PDF
                 </button>
