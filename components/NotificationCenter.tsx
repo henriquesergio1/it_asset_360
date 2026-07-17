@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, BellOff, AlertTriangle, AlertCircle, Package, Clock, X, Check, Shield } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Bell, BellOff, AlertTriangle, AlertCircle, Package, Clock, X, Check, Shield, Cake, FileSignature, Calendar } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { parseLocalDate } from './recurrenceUtils';
 
 export const NotificationCenter: React.FC = () => {
-  const { tasks, consumables, expedienteAlerts, users } = useData();
+  const { tasks, consumables, expedienteAlerts, users, rhCollaborators, rhTerms } = useData();
   const { user } = useAuth();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   
   // Preferências locais salvas no localStorage
@@ -24,7 +26,7 @@ export const NotificationCenter: React.FC = () => {
     id: string;
     title: string;
     message: string;
-    type: 'expediente' | 'stock' | 'task';
+    type: 'expediente' | 'stock' | 'task' | 'rh-alert';
   }>>([]);
 
   // Recarregar preferências locais
@@ -133,14 +135,158 @@ export const NotificationCenter: React.FC = () => {
     }));
   }, [tasks, disabledTaskAlerts]);
 
-  // Juntar todas as notificações ativas
+  // --- NOTIFICAÇÕES DE R.H. ---
+  // 1. Aniversariantes do Dia
+  const activeRhBirthdayNotifications = useMemo(() => {
+    if (!rhCollaborators) return [];
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth() + 1; // 1-12
+    
+    return rhCollaborators.filter(c => {
+      if (!c.birthDate || c.status === 'Demitido') return false;
+      const parts = c.birthDate.split('-');
+      if (parts.length < 3) return false;
+      const birthMonth = parseInt(parts[1], 10);
+      const birthDay = parseInt(parts[2], 10);
+      return birthMonth === currentMonth && birthDay === currentDay;
+    }).map(c => ({
+      id: `rh-birthday-${c.id}`,
+      title: 'Aniversariante do Dia 🎂',
+      message: `Hoje é aniversário de ${c.fullName}! Parabéns!`,
+      type: 'rh-alert' as any,
+      timestamp: new Date()
+    }));
+  }, [rhCollaborators]);
+
+  // 2. Alertas de Férias (Admissão próxima de completar 11 meses ou múltiplos de 12 meses + 11)
+  const activeRhHolidayNotifications = useMemo(() => {
+    if (!rhCollaborators) return [];
+    const alerts: any[] = [];
+    rhCollaborators.forEach(c => {
+      if (!c.hireDate || c.status === 'Demitido') return;
+      const hire = new Date(c.hireDate);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - hire.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const totalMonths = Math.floor(diffDays / 30.4);
+      
+      const reminder = totalMonths % 12;
+      if (reminder === 11) {
+        alerts.push({
+          id: `rh-holiday-${c.id}-${totalMonths}`,
+          title: 'Período de Férias Próximo 📅',
+          message: `Colaborador ${c.fullName} atingiu ${totalMonths} meses de empresa. Férias próximas!`,
+          type: 'rh-alert' as any,
+          timestamp: new Date()
+        });
+      }
+    });
+    return alerts;
+  }, [rhCollaborators]);
+
+  // 3. Vencimentos de Documentos e CNH
+  const activeRhDocNotifications = useMemo(() => {
+    if (!rhCollaborators) return [];
+    const alerts: any[] = [];
+    const now = new Date();
+    now.setHours(0,0,0,0);
+
+    rhCollaborators.forEach(c => {
+      if (c.status === 'Demitido') return;
+      
+      // CNH
+      if (c.cnhExpiration) {
+        const exp = new Date(c.cnhExpiration);
+        const diff = exp.getTime() - now.getTime();
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        if (days >= 0 && days <= 90) {
+          alerts.push({
+            id: `rh-cnh-${c.id}`,
+            title: 'CNH Próxima do Vencimento ⚠️',
+            message: `A CNH do colaborador ${c.fullName} vence em ${days} dias (${new Date(c.cnhExpiration).toLocaleDateString('pt-BR')}).`,
+            type: 'rh-alert' as any,
+            timestamp: new Date()
+          });
+        }
+      }
+
+      // Experiência (45 e 90 dias)
+      if (c.hireDate) {
+        const hire = new Date(c.hireDate);
+        const exp45 = new Date(hire.getTime() + 45 * 24 * 60 * 60 * 1000);
+        const exp90 = new Date(hire.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+        const diff45 = exp45.getTime() - now.getTime();
+        const days45 = Math.ceil(diff45 / (1000 * 60 * 60 * 24));
+
+        const diff90 = exp90.getTime() - now.getTime();
+        const days90 = Math.ceil(diff90 / (1000 * 60 * 60 * 24));
+
+        if (days45 >= 0 && days45 <= 15) {
+          alerts.push({
+            id: `rh-exp45-${c.id}`,
+            title: 'Contrato de Experiência (45d) ⚠️',
+            message: `O contrato de 45 dias do colaborador ${c.fullName} vence em ${days45} dias.`,
+            type: 'rh-alert' as any,
+            timestamp: new Date()
+          });
+        } else if (days90 >= 0 && days90 <= 15) {
+          alerts.push({
+            id: `rh-exp90-${c.id}`,
+            title: 'Contrato de Experiência (90d) ⚠️',
+            message: `O contrato de 90 dias do colaborador ${c.fullName} vence em ${days90} dias.`,
+            type: 'rh-alert' as any,
+            timestamp: new Date()
+          });
+        }
+      }
+    });
+    return alerts;
+  }, [rhCollaborators]);
+
+  // 4. Assinaturas Pendentes de Validação (WAITING_APPROVAL)
+  const activeRhTermsNotifications = useMemo(() => {
+    if (!rhTerms) return [];
+    return rhTerms.filter(t => t.signatureStatus === 'WAITING_APPROVAL').map(t => {
+      const colab = rhCollaborators?.find(c => c.id === t.collaboratorId);
+      return {
+        id: `rh-term-approval-${t.id}`,
+        title: 'Validação de Assinatura 📝',
+        message: `O termo ${t.id} de ${colab?.fullName || 'Colaborador'} aguarda validação.`,
+        type: 'rh-alert' as any,
+        timestamp: new Date()
+      };
+    });
+  }, [rhTerms, rhCollaborators]);
+
+  // Juntar todas as notificações ativas (com independência de módulo e reatividade de rota)
   const allNotifications = useMemo(() => {
-    return [
-      ...activeExpedienteNotifications,
-      ...activeStockNotifications,
-      ...activeTaskNotifications
-    ];
-  }, [activeExpedienteNotifications, activeStockNotifications, activeTaskNotifications]);
+    const currentModule = localStorage.getItem('current_module') || 'TI';
+    if (currentModule === 'RH') {
+      return [
+        ...activeRhBirthdayNotifications,
+        ...activeRhHolidayNotifications,
+        ...activeRhDocNotifications,
+        ...activeRhTermsNotifications
+      ];
+    } else {
+      return [
+        ...activeExpedienteNotifications,
+        ...activeStockNotifications,
+        ...activeTaskNotifications
+      ];
+    }
+  }, [
+    activeRhBirthdayNotifications,
+    activeRhHolidayNotifications,
+    activeRhDocNotifications,
+    activeRhTermsNotifications,
+    activeExpedienteNotifications,
+    activeStockNotifications,
+    activeTaskNotifications,
+    location.pathname
+  ]);
 
   // Algoritmo de envio de notificações novas (desktop + app popup Toast)
   useEffect(() => {
@@ -282,7 +428,9 @@ export const NotificationCenter: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sem alertas ativos</p>
-                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter mt-1">Sua infraestrutura está sob controle!</p>
+                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter mt-1">
+                        {localStorage.getItem('current_module') === 'RH' ? 'Sua equipe está sob controle!' : 'Sua infraestrutura está sob controle!'}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -302,6 +450,13 @@ export const NotificationCenter: React.FC = () => {
                         {notif.type === 'task' && (
                           <div className="p-1.5 bg-blue-950/40 rounded-lg border border-blue-800/30 text-blue-600 dark:text-sky-400">
                             <AlertCircle size={14} />
+                          </div>
+                        )}
+                        {notif.type === 'rh-alert' && (
+                          <div className="p-1.5 bg-indigo-950/40 rounded-lg border border-indigo-800/30 text-indigo-400">
+                            {notif.id.includes('birthday') ? <Cake size={14} /> :
+                             notif.id.includes('approval') ? <FileSignature size={14} /> :
+                             <Calendar size={14} />}
                           </div>
                         )}
                       </div>
@@ -337,13 +492,15 @@ export const NotificationCenter: React.FC = () => {
               style={{
                 borderLeftColor: 
                   toast.type === 'expediente' ? '#f87171' : 
-                  toast.type === 'stock' ? '#fbbf24' : '#60a5fa'
+                  toast.type === 'stock' ? '#fbbf24' : 
+                  toast.type === 'rh-alert' ? '#818cf8' : '#60a5fa'
               }}
             >
               <div className="shrink-0">
                 {toast.type === 'expediente' && <Clock size={16} className="text-red-400 animate-pulse" />}
                 {toast.type === 'stock' && <Package size={16} className="text-amber-600 dark:text-amber-400 animate-pulse" />}
                 {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-600 dark:text-sky-400 animate-pulse" />}
+                {toast.type === 'rh-alert' && <Bell size={16} className="text-indigo-650 dark:text-indigo-400 animate-pulse" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
