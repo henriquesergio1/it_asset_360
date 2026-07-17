@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.66.1',
+    date: 'Hoje',
+    title: 'Migração de Termos Legados e Consolidação Estática de PDF',
+    changes: [
+      'Migração Automática: Desenvolvido script de atualização em massa seguro e transparente no inicializador do banco para preencher retroativamente o SnapshotTemplate de todos os termos históricos antigos de T.I. com o modelo contratual ativo atualmente.',
+      'Consolidação de PDF: Rota de assinatura digital pública adaptada para receber opcionalmente a versão estática e final compilada do PDF assinado em Base64, gravando-a na coluna FileBinary do banco. Isso blinda juridicamente os termos assinados digitalmente contra exclusões ou mudanças futuras no código ou banco.',
+    ]
+  },
+  {
     version: '3.66.0',
     date: 'Hoje',
     title: 'Rastreabilidade de Termos com Snapshots de Contrato de T.I.',

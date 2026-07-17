@@ -775,6 +775,26 @@ async function initializeDatabase() {
             await pool.request().query("INSERT INTO ExternalDbConfig (Technology) VALUES ('SQL Server')");
         }
 
+        // Migração Retroativa: Preenche SnapshotTemplate de termos legados de T.I. com o template atual das configurações
+        try {
+            console.log('- Verificando termos legados sem snapshot de template...');
+            const countRes = await pool.request().query("SELECT COUNT(*) as count FROM Terms WHERE SnapshotTemplate IS NULL");
+            const legacyCount = countRes.recordset[0]?.count || 0;
+            if (legacyCount > 0) {
+                console.log(`  ... Encontrados ${legacyCount} termos legados. Iniciando migração...`);
+                const migrateRes = await pool.request().query(`
+                    UPDATE Terms 
+                    SET SnapshotTemplate = (SELECT TOP 1 TermTemplate FROM SystemSettings) 
+                    WHERE SnapshotTemplate IS NULL
+                `);
+                console.log(`  ... Migração concluída. ${migrateRes.rowsAffected[0]} termos legados atualizados com o snapshot do template atual.`);
+            } else {
+                console.log('  ... Todos os termos já possuem snapshot de template.');
+            }
+        } catch (migErr) {
+            console.error('AVISO: Falha na migração dos termos legados:', migErr.message);
+        }
+
         await createIndexes(pool);
 
         console.log('Banco de dados pronto.');
@@ -866,7 +886,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.66.0', 
+            version: '3.66.1', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -2043,7 +2063,7 @@ async function updateUserPendingStatus(pool, userId) {
 
     app.post('/api/public/terms-to-sign/:token/sign', async (req, res) => {
         try {
-            const { signatureCanvas, documentPhoto, selfiePhoto, location, ip, observations } = req.body;
+            const { signatureCanvas, documentPhoto, selfiePhoto, location, ip, observations, pdfBinary } = req.body;
             const pool = await sql.connect(dbConfig);
             
             let checkRes = await pool.request()
@@ -2068,6 +2088,7 @@ async function updateUserPendingStatus(pool, userId) {
             const canvasBuffer = signatureCanvas ? getBufferFromBase64(signatureCanvas) : null;
             const photoBuffer = documentPhoto ? getBufferFromBase64(documentPhoto) : null;
             const selfieBuffer = selfiePhoto ? getBufferFromBase64(selfiePhoto) : null;
+            const pdfBuffer = pdfBinary ? getBufferFromBase64(pdfBinary) : null;
             
             // Concatenar observações se já existirem
             let finalNotes = term.Notes || '';
@@ -2081,7 +2102,7 @@ async function updateUserPendingStatus(pool, userId) {
             const hash = crypto.createHash('sha256').update(hashInput).digest('hex');
 
             const tableName = isRh ? 'RhTerms' : 'Terms';
-            await pool.request()
+            const request = pool.request()
                 .input('Token', sql.NVarChar, req.params.token)
                 .input('Date', sql.DateTime, sigDate)
                 .input('Ip', sql.NVarChar, ip)
@@ -2090,20 +2111,29 @@ async function updateUserPendingStatus(pool, userId) {
                 .input('Photo', sql.VarBinary, photoBuffer)
                 .input('Selfie', sql.VarBinary, selfieBuffer)
                 .input('Hash', sql.NVarChar, hash)
-                .input('Notes', sql.NVarChar, finalNotes)
-                .query(`
-                    UPDATE ${tableName} SET 
-                        SignatureDate = @Date,
-                        SignatureIp = @Ip,
-                        SignatureLocation = @Loc,
-                        SignatureCanvasBinary = @Canvas,
-                        SignatureDocumentPhoto = @Photo,
-                        SignatureSelfiePhoto = @Selfie,
-                        SignatureHash = @Hash,
-                        Notes = @Notes,
-                        SignatureStatus = 'WAITING_APPROVAL'
-                    WHERE SignatureToken = @Token
-                `);
+                .input('Notes', sql.NVarChar, finalNotes);
+
+            let query = `
+                UPDATE ${tableName} SET 
+                    SignatureDate = @Date,
+                    SignatureIp = @Ip,
+                    SignatureLocation = @Loc,
+                    SignatureCanvasBinary = @Canvas,
+                    SignatureDocumentPhoto = @Photo,
+                    SignatureSelfiePhoto = @Selfie,
+                    SignatureHash = @Hash,
+                    Notes = @Notes,
+                    SignatureStatus = 'WAITING_APPROVAL'
+            `;
+
+            if (pdfBuffer) {
+                request.input('Pdf', sql.VarBinary, pdfBuffer);
+                query += `, FileBinary = @Pdf`;
+            }
+
+            query += ` WHERE SignatureToken = @Token`;
+
+            await request.query(query);
 
             res.json({ success: true, hash, signatureDate: sigDate });
         } catch (err) { 
