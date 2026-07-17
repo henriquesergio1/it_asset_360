@@ -1058,19 +1058,6 @@ export const RhComodatoManager: React.FC = () => {
                 >
                   Fechar
                 </button>
-                {selectedTerm.status !== 'ASSINADO' && (
-                  <button
-                    onClick={() => {
-                      setSigningTerm(selectedTerm);
-                      setSignatureConfirm(false);
-                      setGpsApproved(false);
-                      setGpsCoords(null);
-                    }}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wider hover:shadow-md transition-all"
-                  >
-                    <PenTool size={14} /> Coletar Assinatura
-                  </button>
-                )}
               </div>
             </div>
           </div>
