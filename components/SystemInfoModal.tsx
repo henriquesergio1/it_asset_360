@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.70.0',
+    date: 'Hoje',
+    title: 'Persistência de Checklist de Devolução de TI',
+    changes: [
+      'Modelo do Banco e Persistência: Criada a coluna Checklist na tabela de Termos para armazenar fielmente o status dos itens conferidos durante o check-in de ativos de TI (ex. carregador, cabo, fone, etc).',
+      'Fidelidade na Reimpressão: Integrado o checklist na API de sincronização e nas rotas de impressão, garantindo que o termo impresso posteriormente exiba com precisão os itens devolvidos como OK ou PENDENTE.'
+    ]
+  },
+  {
     version: '3.69.2',
     date: 'Hoje',
     title: 'Ajuste de Padding do Cabeçalho e Tooltip de Ordenação Elevado',

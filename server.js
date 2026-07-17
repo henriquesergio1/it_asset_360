@@ -121,7 +121,8 @@ const DB_SCHEMAS = {
         SignatureSelfiePhoto VARBINARY(MAX) NULL,
         SignatureCanvasBinary VARBINARY(MAX) NULL,
         SignatureHash NVARCHAR(MAX) NULL,
-        SnapshotTemplate NVARCHAR(MAX) NULL
+        SnapshotTemplate NVARCHAR(MAX) NULL,
+        Checklist NVARCHAR(MAX) NULL
     )`,
     AccessoryTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     DeviceAccessories: `(Id NVARCHAR(255) PRIMARY KEY, DeviceId NVARCHAR(255), AccessoryTypeId NVARCHAR(255), Name NVARCHAR(255))`,
@@ -386,7 +387,8 @@ async function initializeDatabase() {
                         { name: 'SignatureDocumentPhoto', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureCanvasBinary', type: 'VARBINARY(MAX) NULL' },
                         { name: 'SignatureHash', type: 'NVARCHAR(MAX) NULL' },
-                        { name: 'SnapshotTemplate', type: 'NVARCHAR(MAX) NULL' }
+                        { name: 'SnapshotTemplate', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'Checklist', type: 'NVARCHAR(MAX) NULL' }
                     ];
 
                     for (const col of columnsNeeded) {
@@ -886,7 +888,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.69.2', 
+            version: '3.70.0', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -929,7 +931,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate, Checklist as checklist FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
@@ -958,7 +960,7 @@ app.get('/api/bootstrap', async (req, res) => {
             models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
+            sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim', 'checklist']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes),
@@ -1717,7 +1719,7 @@ async function updateUserPendingStatus(pool, userId) {
 
     app.post('/api/operations/checkin', async (req, res) => {
         try {
-            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason, returningUserId } = req.body;
+            const { assetId, assetType, notes, _adminUser, inactivateUser, condition, damageDescription, evidenceFiles, isManual, resolutionReason, returningUserId, returnedChecklist } = req.body;
             const pool = await sql.connect(dbConfig);
             const table = assetType === 'Device' ? 'Devices' : 'SimCards';
             const oldRes = await pool.request().input('Id', sql.NVarChar, assetId).query(`SELECT * FROM ${table} WHERE Id=@Id`);
@@ -1796,6 +1798,8 @@ async function updateUserPendingStatus(pool, userId) {
                 const settingsRes = await pool.request().query("SELECT TOP 1 TermTemplate FROM SystemSettings");
                 const termTemplate = settingsRes.recordset[0]?.TermTemplate || null;
 
+                const checklistStr = returnedChecklist ? JSON.stringify(returnedChecklist) : null;
+
                 await pool.request()
                     .input('I', termId)
                     .input('U', userId)
@@ -1814,7 +1818,8 @@ async function updateUserPendingStatus(pool, userId) {
                     .input('Acc', accNames)
                     .input('Sim', linkedSimData)
                     .input('SnapshotTemplate', termTemplate)
-                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories, LinkedSimData, SnapshotTemplate) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc, @Sim, @SnapshotTemplate)");
+                    .input('Chk', checklistStr)
+                    .query("INSERT INTO Terms (Id, UserId, Type, AssetDetails, Date, Condition, DamageDescription, Notes, EvidenceBinary, Evidence2Binary, Evidence3Binary, IsManual, ResolutionReason, AssetId, AssetType, Accessories, LinkedSimData, SnapshotTemplate, Checklist) VALUES (@I, @U, @T, @Ad, GETDATE(), @Cond, @Desc, @Notes, @Evid, @Evid2, @Evid3, @IsM, @ResR, @AssetId, @AssetType, @Acc, @Sim, @SnapshotTemplate, @Chk)");
                 
                 if (inactivateUser) {
                     await pool.request().input('Uid', sql.NVarChar, userId).query("UPDATE Users SET Active=0, Status='Inativo' WHERE Id=@Uid");

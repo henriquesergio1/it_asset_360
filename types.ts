@@ -181,6 +181,7 @@ export interface Term {
   snapshotTemplate?: string;
   assetId?: string;
   assetType?: string;
+  checklist?: ReturnChecklist;
 }
 
 export type ReturnChecklist = Record<string, boolean>;
