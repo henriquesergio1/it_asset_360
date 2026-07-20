@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.76.1',
+    date: 'Hoje',
+    title: 'Sanitização de Documentos no Banco e Comparador R.H. x T.I. sem Falsos Positivos',
+    changes: [
+      'Normalização de Documentos no Banco: CPF, RG, PIS, CEP e telefones passam a ser salvos estritamente como dígitos numéricos limpos no banco de dados.',
+      'Comparação R.H. x T.I. sem Falsos Positivos: A detecção de divergências sanitiza os valores numéricos antes da comparação, impedindo que diferenças de pontuação (pontos/hífens) gerem alertas falsos.',
+      'Formatação Dinâmica de Exibição: A exibição do CPF nas tabelas do T.I. conta com formatação visual automatizada.'
+    ]
+  },
+  {
     version: '3.76.0',
     date: 'Hoje',
     title: 'Sincronização Automática de Fotos R.H. → T.I. por CPF',

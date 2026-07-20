@@ -16,7 +16,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserSector, Device, DeviceModel, Term, SoftwareAccount, UserStatus, DeviceStatus } from '../types';
 import { normalizeString, phoneticEncode, copyToClipboard } from '../utils/stringUtils';
-import { formatCEP, validateCEP } from '../utils/rhValidation';
+import { formatCEP, validateCEP, formatCPF } from '../utils/rhValidation';
 import { DataTable, Column } from './DataTable';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -415,14 +415,25 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const cleanDocument = (val?: string) => (val || '').replace(/\D/g, '');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.zipCode && !validateCEP(formData.zipCode)) {
       alert('CEP deve ter 8 dígitos.');
       return;
     }
-    const fullAddress = `${formData.street || ''}, ${formData.number || ''} - ${formData.neighborhood || ''}, ${formData.city || ''} - ${formData.state || ''}`;
-    const dataToSend = { ...formData, address: fullAddress };
+    const sanitizedForm = {
+      ...formData,
+      cpf: cleanDocument(formData.cpf),
+      rg: cleanDocument(formData.rg),
+      pis: cleanDocument(formData.pis),
+      zipCode: cleanDocument(formData.zipCode),
+      phone: cleanDocument(formData.phone),
+      personalPhone: cleanDocument(formData.personalPhone)
+    };
+    const fullAddress = `${sanitizedForm.street || ''}, ${sanitizedForm.number || ''} - ${sanitizedForm.neighborhood || ''}, ${sanitizedForm.city || ''} - ${sanitizedForm.state || ''}`;
+    const dataToSend = { ...sanitizedForm, address: fullAddress };
 
     if (editingId) {
       setEditReason('');
@@ -444,8 +455,17 @@ const UserManager: React.FC = () => {
       alert('CEP deve ter 8 dígitos.');
       return;
     }
-    const fullAddress = `${formData.street || ''}, ${formData.number || ''} - ${formData.neighborhood || ''}, ${formData.city || ''} - ${formData.state || ''}`;
-    const dataToSend = { ...formData, address: fullAddress };
+    const sanitizedForm = {
+      ...formData,
+      cpf: cleanDocument(formData.cpf),
+      rg: cleanDocument(formData.rg),
+      pis: cleanDocument(formData.pis),
+      zipCode: cleanDocument(formData.zipCode),
+      phone: cleanDocument(formData.phone),
+      personalPhone: cleanDocument(formData.personalPhone)
+    };
+    const fullAddress = `${sanitizedForm.street || ''}, ${sanitizedForm.number || ''} - ${sanitizedForm.neighborhood || ''}, ${sanitizedForm.city || ''} - ${sanitizedForm.state || ''}`;
+    const dataToSend = { ...sanitizedForm, address: fullAddress };
 
     try {
       updateUserData({ id: editingId, ...dataToSend } as User, adminName, editReason);
@@ -1046,7 +1066,17 @@ const UserManager: React.FC = () => {
       for (const mapping of RH_TI_FIELD_MAP) {
         const rhVal = String((rc as any)[mapping.rhKey] || '').trim();
         const tiVal = String((tiUser as any)[mapping.tiKey] || '').trim();
-        if (rhVal !== tiVal && rhVal !== '') {
+
+        const isNumericDoc = ['cpf', 'rg', 'pis', 'cep', 'zipCode', 'phone', 'corporatePhone', 'personalPhone'].includes(mapping.rhKey) ||
+                             ['cpf', 'rg', 'pis', 'zipCode', 'phone', 'personalPhone'].includes(mapping.tiKey);
+
+        if (isNumericDoc) {
+          const rhClean = cleanCpf(rhVal);
+          const tiClean = cleanCpf(tiVal);
+          if (rhClean !== tiClean && rhClean !== '') {
+            diffs.push({ ...mapping, rhValue: rhVal, tiValue: tiVal });
+          }
+        } else if (rhVal !== tiVal && rhVal !== '') {
           diffs.push({ ...mapping, rhValue: rhVal, tiValue: tiVal });
         }
       }
@@ -1090,24 +1120,24 @@ const UserManager: React.FC = () => {
     const newUser: User = {
       id: Math.random().toString(36).substr(2, 9),
       fullName: colab.fullName,
-      cpf: colab.cpf || '',
-      rg: colab.rg || '',
-      pis: colab.pis || '',
+      cpf: cleanDocument(colab.cpf),
+      rg: cleanDocument(colab.rg),
+      pis: cleanDocument(colab.pis),
       email: colab.emailCorporate || colab.emailPersonal || '',
       sectorId: colab.sectorId || '',
       internalCode: '',
       active: true,
       status: UserStatus.ACTIVE,
       address: addressStr,
-      zipCode: colab.cep || '',
+      zipCode: cleanDocument(colab.cep),
       street: colab.street || '',
       number: colab.number || '',
       complement: colab.complement || '',
       neighborhood: colab.neighborhood || '',
       city: colab.city || '',
       state: colab.state || '',
-      phone: colab.corporatePhone || colab.personalPhone || '',
-      personalPhone: colab.personalPhone || '',
+      phone: cleanDocument(colab.corporatePhone || colab.personalPhone),
+      personalPhone: cleanDocument(colab.personalPhone),
       gender: colab.gender || 'Masculino',
       birthDate: colab.birthDate || '',
       hireDate: colab.hireDate || new Date().toISOString().split('T')[0],
@@ -1132,14 +1162,14 @@ const UserManager: React.FC = () => {
     setFormData({
       ...tiUser,
       fullName: rc.fullName || tiUser.fullName,
-      cpf: rc.cpf || tiUser.cpf,
-      rg: rc.rg || tiUser.rg,
-      pis: rc.pis || tiUser.pis,
+      cpf: cleanDocument(rc.cpf || tiUser.cpf),
+      rg: cleanDocument(rc.rg || tiUser.rg),
+      pis: cleanDocument(rc.pis || tiUser.pis),
       email: rc.emailCorporate || rc.emailPersonal || tiUser.email,
       sectorId: rc.sectorId || tiUser.sectorId,
-      phone: rc.corporatePhone || tiUser.phone,
-      personalPhone: rc.personalPhone || tiUser.personalPhone,
-      zipCode: rc.cep || tiUser.zipCode,
+      phone: cleanDocument(rc.corporatePhone || tiUser.phone),
+      personalPhone: cleanDocument(rc.personalPhone || tiUser.personalPhone),
+      zipCode: cleanDocument(rc.cep || tiUser.zipCode),
       street: rc.street || tiUser.street,
       number: rc.number || tiUser.number,
       complement: rc.complement || tiUser.complement,
@@ -1609,7 +1639,7 @@ const UserManager: React.FC = () => {
                   </div>
                 </td>
                 {visibleColumns.includes('email') && <td className="px-6 py-4 truncate text-xs">{u.email}</td>}
-                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-xs truncate">{u.cpf}</td>}
+                {visibleColumns.includes('cpf') && <td className="px-6 py-4 font-mono text-xs truncate">{formatCPF(u.cpf)}</td>}
                 {visibleColumns.includes('rg') && <td className="px-6 py-4 font-mono text-xs truncate">{u.rg || '---'}</td>}
                 {visibleColumns.includes('sector') && (
                   <td className="px-6 py-4 truncate">
