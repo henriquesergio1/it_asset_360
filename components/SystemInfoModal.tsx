@@ -27,6 +27,7 @@ const versions = [
       'Compatibilidade HTML5 Date Picker: Sanitização dos campos de datas (Admissão, Nascimento, Vencimento CNH, Períodos de Ocorrência) para garantir a conversão estrita do formato ISO em YYYY-MM-DD.',
       'Eliminação de Avisos no Console: Corrigido o erro de incompatibilidade do formato date input ao carregar/salvar colaboradores e ocorrências do R.H.'
     ]
+  },
   {
     version: '3.74.1',
     date: 'Hoje',
