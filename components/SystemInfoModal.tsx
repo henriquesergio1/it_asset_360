@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.75.1',
+    date: 'Hoje',
+    title: 'Isolamento de Subnet na Rede Docker (Prevenção de Colisão com Rede Local)',
+    changes: [
+      'Rede Isolada Fixo 172.28.0.0/16: Definida subnet customizada e estática no docker-compose.yml para a stack it-asset-360.',
+      'Prevenção de Conflitos de Roteamento: Impede que a engine do Docker gere subnets aleatórias na faixa 10.x.x.x que possam entrar em conflito com a rede LAN corporativa do servidor host.'
+    ]
+  },
+  {
     version: '3.74.0',
     date: 'Hoje',
     title: 'Ajuste Geral de Contraste, Cores e Padronização de Temas (Claro/Escuro)',
