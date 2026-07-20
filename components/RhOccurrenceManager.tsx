@@ -9,6 +9,8 @@ import {
   Download, ChevronLeft, ChevronRight, Briefcase, Paperclip, Check
 } from 'lucide-react';
 
+const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
+
 export const RhOccurrenceManager: React.FC = () => {
   const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence } = useData();
   const { user } = useAuth();
@@ -540,7 +542,7 @@ export const RhOccurrenceManager: React.FC = () => {
                   <input
                     type="date"
                     required
-                    value={form.startDate}
+                    value={formatDateForInput(form.startDate)}
                     onChange={e => setForm(p => ({ ...p, startDate: e.target.value }))}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                   />
@@ -550,7 +552,7 @@ export const RhOccurrenceManager: React.FC = () => {
                   <input
                     type="date"
                     required
-                    value={form.endDate}
+                    value={formatDateForInput(form.endDate)}
                     onChange={e => setForm(p => ({ ...p, endDate: e.target.value }))}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                   />
