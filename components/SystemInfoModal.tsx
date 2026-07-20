@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.75.2',
+    date: 'Hoje',
+    title: 'Remoção de Redes Customizadas Extra (Zero Conflitos de IP no Portainer)',
+    changes: [
+      'Configuração Limpa de Container: Removida a criação de redes virtuais adicionais no docker-compose.yml, restaurando a simplicidade nativa do Docker.',
+      'Compatibilidade com Portainer: Impede erros de colisão de subnets ou sobreposição de pools IP no Docker daemon.'
+    ]
+  },
+  {
     version: '3.75.1',
     date: 'Hoje',
     title: 'Isolamento de Subnet na Rede Docker (Prevenção de Colisão com Rede Local)',
