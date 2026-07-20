@@ -217,6 +217,10 @@ export interface User {
   neighborhood?: string;
   city?: string;
   state?: string;
+
+  // Contato
+  phone?: string;
+  personalPhone?: string;
 }
 
 export enum SystemRole {

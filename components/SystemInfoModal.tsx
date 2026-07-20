@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.73.0',
+    date: 'Hoje',
+    title: 'Sincronização de Atualizações RH → TI com Diff Visual',
+    changes: [
+      'Detecção de Divergências: A aba "Importar do R.H." agora detecta automaticamente colaboradores já cadastrados em TI cujos dados foram alterados no módulo de RH (endereço, documentos, e-mails, setor, etc.).',
+      'Tags Visuais: Novos registros exibem a tag verde "NOVO" e registros com divergências exibem a tag âmbar "ATUALIZAÇÃO" com o contador de campos alterados.',
+      'Sub-filtros de Triagem: Botões rápidos "Todos / Novos / Atualizações" para facilitar a triagem dos registros pendentes.',
+      'Modal com Diff Comparativo: Para registros "ATUALIZAÇÃO", o modal exibe lado a lado o valor atual do T.I. e o valor novo do R.H., destacando visualmente cada campo divergente.',
+      'Fluxo de Sincronização: Botão "Sincronizar" aplica os dados do R.H. sobre o cadastro de T.I. via fluxo de auditoria existente (exige motivo de alteração).'
+    ]
+  },
+  {
     version: '3.72.0',
     date: 'Hoje',
     title: 'Integração de Colaboradores RH → TI via CPF',

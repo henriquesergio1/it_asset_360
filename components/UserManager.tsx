@@ -113,6 +113,8 @@ const UserManager: React.FC = () => {
   const [rhSortDirection, setRhSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedRhColab, setSelectedRhColab] = useState<any>(null);
   const [isRhViewModalOpen, setIsRhViewModalOpen] = useState(false);
+  const [rhFilter, setRhFilter] = useState<'all' | 'new' | 'update'>('all');
+  const [rhSyncTarget, setRhSyncTarget] = useState<any>(null); // User TI alvo de sync
   const columnRef = useRef<HTMLDivElement>(null);
 
   const { 
@@ -1006,31 +1008,80 @@ const UserManager: React.FC = () => {
     );
   };
 
-  // ─── Importação de Colaboradores RH → TI ────────────────────────────────────
+  // ─── Importação / Sincronização de Colaboradores RH → TI ─────────────────────
   const cleanCpf = (cpf: string) => (cpf || '').replace(/\D/g, '');
 
+  // Mapa de campos mapeáveis RH → TI com labels amigáveis
+  const RH_TI_FIELD_MAP: Array<{ label: string; rhKey: string; tiKey: string; }> = [
+    { label: 'Nome Completo',        rhKey: 'fullName',       tiKey: 'fullName' },
+    { label: 'CPF',                  rhKey: 'cpf',            tiKey: 'cpf' },
+    { label: 'RG',                   rhKey: 'rg',             tiKey: 'rg' },
+    { label: 'PIS',                  rhKey: 'pis',            tiKey: 'pis' },
+    { label: 'E-mail Corporativo',   rhKey: 'emailCorporate', tiKey: 'email' },
+    { label: 'Telefone Corporativo', rhKey: 'corporatePhone', tiKey: 'phone' },
+    { label: 'Telefone Pessoal',     rhKey: 'personalPhone',  tiKey: 'personalPhone' },
+    { label: 'Setor',                rhKey: 'sectorId',       tiKey: 'sectorId' },
+    { label: 'CEP',                  rhKey: 'cep',            tiKey: 'zipCode' },
+    { label: 'Logradouro',           rhKey: 'street',         tiKey: 'street' },
+    { label: 'Número',               rhKey: 'number',         tiKey: 'number' },
+    { label: 'Complemento',          rhKey: 'complement',     tiKey: 'complement' },
+    { label: 'Bairro',               rhKey: 'neighborhood',   tiKey: 'neighborhood' },
+    { label: 'Cidade',               rhKey: 'city',           tiKey: 'city' },
+    { label: 'Estado',               rhKey: 'state',          tiKey: 'state' },
+  ];
+
+  // Colaboradores novos (CPF não existe em TI)
   const pendingRhImports = useMemo(() => {
     const tiCpfs = new Set(users.map(u => cleanCpf(u.cpf)));
     return (rhCollaborators || []).filter(rc => !tiCpfs.has(cleanCpf(rc.cpf)));
   }, [rhCollaborators, users]);
 
-  const filteredRhImports = useMemo(() => {
-    let result = [...pendingRhImports];
+  // Colaboradores com atualizações (CPF existe em TI, mas há campos divergentes)
+  const rhUpdates = useMemo(() => {
+    const result: Array<{ rhColab: any; tiUser: User; diffs: Array<{ label: string; rhKey: string; tiKey: string; rhValue: string; tiValue: string }> }> = [];
+    for (const rc of (rhCollaborators || [])) {
+      const tiUser = users.find(u => cleanCpf(u.cpf) === cleanCpf(rc.cpf));
+      if (!tiUser) continue;
+      const diffs: Array<{ label: string; rhKey: string; tiKey: string; rhValue: string; tiValue: string }> = [];
+      for (const mapping of RH_TI_FIELD_MAP) {
+        const rhVal = String((rc as any)[mapping.rhKey] || '').trim();
+        const tiVal = String((tiUser as any)[mapping.tiKey] || '').trim();
+        if (rhVal !== tiVal && rhVal !== '') {
+          diffs.push({ ...mapping, rhValue: rhVal, tiValue: tiVal });
+        }
+      }
+      if (diffs.length > 0) result.push({ rhColab: rc, tiUser, diffs });
+    }
+    return result;
+  }, [rhCollaborators, users]);
+
+  // Lista combinada para exibição (novos + atualizações)
+  type RhListItem = { kind: 'new'; rc: any } | { kind: 'update'; rc: any; tiUser: User; diffs: Array<{ label: string; rhKey: string; tiKey: string; rhValue: string; tiValue: string }> };
+  const allRhItems = useMemo((): RhListItem[] => {
+    const newItems: RhListItem[] = pendingRhImports.map(rc => ({ kind: 'new' as const, rc }));
+    const updateItems: RhListItem[] = rhUpdates.map(({ rhColab, tiUser, diffs }) => ({ kind: 'update' as const, rc: rhColab, tiUser, diffs }));
+    return [...newItems, ...updateItems];
+  }, [pendingRhImports, rhUpdates]);
+
+  const filteredRhList = useMemo((): RhListItem[] => {
+    let result = [...allRhItems];
+    if (rhFilter === 'new') result = result.filter(i => i.kind === 'new');
+    if (rhFilter === 'update') result = result.filter(i => i.kind === 'update');
     if (rhSearchTerm) {
       const term = rhSearchTerm.toLowerCase();
-      result = result.filter(rc =>
-        rc.fullName.toLowerCase().includes(term) ||
-        (rc.cpf || '').includes(term) ||
-        (rc.role || '').toLowerCase().includes(term)
+      result = result.filter(i =>
+        i.rc.fullName.toLowerCase().includes(term) ||
+        (i.rc.cpf || '').includes(term) ||
+        (i.rc.role || '').toLowerCase().includes(term)
       );
     }
     result.sort((a, b) => {
-      const aVal = (a[rhSortKey] || '') as string;
-      const bVal = (b[rhSortKey] || '') as string;
+      const aVal = (a.rc[rhSortKey] || '') as string;
+      const bVal = (b.rc[rhSortKey] || '') as string;
       return rhSortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
     return result;
-  }, [pendingRhImports, rhSearchTerm, rhSortKey, rhSortDirection]);
+  }, [allRhItems, rhFilter, rhSearchTerm, rhSortKey, rhSortDirection]);
 
   const handleImportCollaborator = async (colab: any) => {
     if (!window.confirm(`Confirmar a importação de "${colab.fullName}" para o módulo de T.I.?`)) return;
@@ -1070,7 +1121,39 @@ const UserManager: React.FC = () => {
       showToast('Erro ao importar colaborador.', 'error');
     }
   };
-  // ────────────────────────────────────────────────────────────────────────────
+
+  const handleSyncCollaborator = (item: Extract<RhListItem, { kind: 'update' }>) => {
+    const { rc, tiUser, diffs } = item;
+    // Monta o formData com os dados atuais do TI + override dos campos divergentes do RH
+    const addressStr = [rc.street, rc.number, rc.complement, rc.neighborhood, rc.city, rc.state]
+      .filter(Boolean).join(', ');
+    setEditingId(tiUser.id);
+    setFormData({
+      ...tiUser,
+      fullName: rc.fullName || tiUser.fullName,
+      cpf: rc.cpf || tiUser.cpf,
+      rg: rc.rg || tiUser.rg,
+      pis: rc.pis || tiUser.pis,
+      email: rc.emailCorporate || rc.emailPersonal || tiUser.email,
+      sectorId: rc.sectorId || tiUser.sectorId,
+      phone: rc.corporatePhone || tiUser.phone,
+      personalPhone: rc.personalPhone || tiUser.personalPhone,
+      zipCode: rc.cep || tiUser.zipCode,
+      street: rc.street || tiUser.street,
+      number: rc.number || tiUser.number,
+      complement: rc.complement || tiUser.complement,
+      neighborhood: rc.neighborhood || tiUser.neighborhood,
+      city: rc.city || tiUser.city,
+      state: rc.state || tiUser.state,
+      address: addressStr || tiUser.address,
+    } as any);
+    setRhSyncTarget(item);
+    setIsRhViewModalOpen(false);
+    setSelectedRhColab(null);
+    setEditReason('');
+    setIsReasonModalOpen(true);
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const columns: Column<User & { assetsCount: number; activeSims: string; devicesInfo: string }>[] = [
     { key: 'fullName', label: 'Nome Completo', minWidth: '350px', sortable: true },
@@ -1270,10 +1353,34 @@ const UserManager: React.FC = () => {
       {showRhImportList ? (
         /* ─── PAINEL: Importar do R.H. ─── */
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
-          {/* Barra de controles */}
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 flex-1 min-w-[220px]">
-              <div className="relative flex-1">
+          {/* Barra de controles e Sub-filtros */}
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-4">
+            {/* Subfiltros: Todos / Novos / Atualizações */}
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+              <button
+                onClick={() => setRhFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${rhFilter === 'all' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                Todos ({allRhItems.length})
+              </button>
+              <button
+                onClick={() => setRhFilter('new')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${rhFilter === 'new' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Novos Cadastros ({pendingRhImports.length})
+              </button>
+              <button
+                onClick={() => setRhFilter('update')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${rhFilter === 'update' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                Atualizações ({rhUpdates.length})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative min-w-[200px]">
                 <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                 <input
                   type="text"
@@ -1283,36 +1390,34 @@ const UserManager: React.FC = () => {
                   onChange={e => setRhSearchTerm(e.target.value)}
                 />
               </div>
+
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Ordenar:
+                {(['fullName', 'role', 'hireDate'] as const).map(key => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (rhSortKey === key) setRhSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                      else { setRhSortKey(key); setRhSortDirection('asc'); }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg border transition-all ${rhSortKey === key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}
+                  >
+                    {key === 'fullName' ? 'Nome' : key === 'role' ? 'Cargo' : 'Admissão'}
+                    {rhSortKey === key && <span className="ml-1">{rhSortDirection === 'asc' ? '↑' : '↓'}</span>}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Ordenar:
-              {(['fullName', 'role', 'hireDate'] as const).map(key => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    if (rhSortKey === key) setRhSortDirection(d => d === 'asc' ? 'desc' : 'asc');
-                    else { setRhSortKey(key); setRhSortDirection('asc'); }
-                  }}
-                  className={`px-3 py-1.5 rounded-lg border transition-all ${rhSortKey === key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-400'}`}
-                >
-                  {key === 'fullName' ? 'Nome' : key === 'role' ? 'Cargo' : 'Admissão'}
-                  {rhSortKey === key && <span className="ml-1">{rhSortDirection === 'asc' ? '↑' : '↓'}</span>}
-                </button>
-              ))}
-            </div>
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">
-              {filteredRhImports.length} colaborador{filteredRhImports.length !== 1 ? 'es' : ''} aguardando importação
-            </span>
           </div>
 
-          {/* Tabela */}
-          {filteredRhImports.length === 0 ? (
+          {/* Tabela de Resultados */}
+          {filteredRhList.length === 0 ? (
             <div className="py-20 text-center">
               <div className="w-16 h-16 bg-indigo-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <UserCheck size={32} className="text-indigo-400" />
               </div>
               <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[11px] tracking-widest">
-                {rhSearchTerm ? 'Nenhum resultado para a busca' : 'Todos os colaboradores do R.H. já estão cadastrados no T.I.'}
+                {rhSearchTerm ? 'Nenhum resultado para a busca' : 'Nenhuma pendência de cadastros ou atualizações do R.H.'}
               </p>
             </div>
           ) : (
@@ -1320,20 +1425,39 @@ const UserManager: React.FC = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Tipo</th>
                     <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Colaborador</th>
                     <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Cargo / Setor</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Admissão</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Contrato</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Divergências / Admissão</th>
                     <th className="px-6 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRhImports.map((rc, idx) => {
+                  {filteredRhList.map((item) => {
+                    const rc = item.rc;
                     const sector = sectors.find(s => s.id === rc.sectorId);
                     const color = getAvatarColor(rc.fullName);
                     const initials = getInitials(rc.fullName);
+                    const isUpdate = item.kind === 'update';
+
                     return (
                       <tr key={rc.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 hover:border-l-indigo-500 transition-all bg-white dark:bg-slate-800">
+                        {/* Tag Tipo */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isUpdate ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              <RefreshCw size={10} className="animate-spin-slow" />
+                              Atualização ({item.diffs.length})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              <UserPlus size={10} />
+                              Novo Cadastro
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Colaborador */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black border ${color.bg} ${color.border} ${color.text} flex-shrink-0`}>
@@ -1345,42 +1469,63 @@ const UserManager: React.FC = () => {
                             </div>
                           </div>
                         </td>
+
+                        {/* Cargo / Setor */}
                         <td className="px-6 py-4">
                           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{rc.role || '---'}</p>
                           <p className="text-[11px] text-slate-400">{sector?.name || '---'}</p>
                         </td>
+
+                        {/* Divergências ou Data de Admissão */}
                         <td className="px-6 py-4">
-                          <p className="text-sm text-slate-700 dark:text-slate-300">
-                            {rc.hireDate ? new Date(rc.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
-                          </p>
+                          {isUpdate ? (
+                            <div>
+                              <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                                {item.diffs.length} campo{item.diffs.length > 1 ? 's' : ''} alterado{item.diffs.length > 1 ? 's' : ''} no R.H.
+                              </p>
+                              <p className="text-[10px] text-slate-400 truncate max-w-[200px]" title={item.diffs.map(d => d.label).join(', ')}>
+                                {item.diffs.map(d => d.label).join(', ')}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
+                              {rc.hireDate ? new Date(rc.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+                            </p>
+                          )}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
-                            ${rc.contractType === 'CLT' ? 'bg-emerald-900/20 text-emerald-400' :
-                              rc.contractType === 'PJ' ? 'bg-blue-900/20 text-blue-400' :
-                              rc.contractType === 'Estágio' ? 'bg-amber-900/20 text-amber-400' :
-                              'bg-slate-900/20 text-slate-400'}`}>
-                            {rc.contractType || '---'}
-                          </span>
-                        </td>
+
+                        {/* Ações */}
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => { setSelectedRhColab(rc); setIsRhViewModalOpen(true); }}
+                              onClick={() => { setSelectedRhColab(item); setIsRhViewModalOpen(true); }}
                               className="p-2 rounded-xl bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 transition-all"
-                              title="Visualizar dados do R.H."
+                              title={isUpdate ? "Comparar diferenças R.H. x T.I." : "Visualizar dados do R.H."}
                             >
                               <Eye size={15} />
                             </button>
-                            <button
-                              onClick={() => handleImportCollaborator(rc)}
-                              disabled={isReadOnly}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-900/20 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300 transition-all text-[10px] font-black uppercase tracking-wider disabled:opacity-40"
-                              title="Importar para T.I."
-                            >
-                              <UserPlus size={13} />
-                              Importar
-                            </button>
+
+                            {isUpdate ? (
+                              <button
+                                onClick={() => handleSyncCollaborator(item)}
+                                disabled={isReadOnly}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-500 transition-all text-[10px] font-black uppercase tracking-wider shadow-md shadow-amber-900/20 disabled:opacity-40"
+                                title="Sincronizar alterações com o T.I."
+                              >
+                                <RefreshCw size={12} />
+                                Sincronizar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleImportCollaborator(rc)}
+                                disabled={isReadOnly}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 transition-all text-[10px] font-black uppercase tracking-wider shadow-md shadow-emerald-900/20 disabled:opacity-40"
+                                title="Importar colaborador para T.I."
+                              >
+                                <UserPlus size={13} />
+                                Importar
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2255,152 +2400,235 @@ const UserManager: React.FC = () => {
           </div>
         </div>
       )}
-      {/* ─── Modal Visualização Restrita R.H. ─── */}
-      {isRhViewModalOpen && selectedRhColab && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-900 to-indigo-700 px-8 py-5 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black border ${getAvatarColor(selectedRhColab.fullName).bg} ${getAvatarColor(selectedRhColab.fullName).border} ${getAvatarColor(selectedRhColab.fullName).text}`}>
-                  {getInitials(selectedRhColab.fullName)}
+      {/* ─── Modal Visualização Restrita / Diff R.H. x T.I. ─── */}
+      {isRhViewModalOpen && selectedRhColab && (() => {
+        const item = selectedRhColab.kind ? selectedRhColab : { kind: 'new', rc: selectedRhColab };
+        const rc = item.rc;
+        const isUpdateItem = item.kind === 'update';
+        const diffs = isUpdateItem ? item.diffs : [];
+        const tiUser = isUpdateItem ? item.tiUser : null;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className={`px-8 py-5 flex justify-between items-center shrink-0 ${isUpdateItem ? 'bg-gradient-to-r from-amber-900 via-amber-800 to-amber-700' : 'bg-gradient-to-r from-indigo-900 to-indigo-700'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black border ${getAvatarColor(rc.fullName).bg} ${getAvatarColor(rc.fullName).border} ${getAvatarColor(rc.fullName).text}`}>
+                    {getInitials(rc.fullName)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-black text-white">{rc.fullName}</h3>
+                      {isUpdateItem ? (
+                        <span className="bg-amber-400 text-amber-950 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                          Atualização no R.H.
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-400 text-emerald-950 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                          Novo Cadastro
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-white/80 font-bold uppercase tracking-widest">{rc.role || 'Sem Cargo'} • CPF: {rc.cpf || '---'}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-black text-white">{selectedRhColab.fullName}</h3>
-                  <p className="text-[11px] text-indigo-200 font-bold uppercase tracking-widest">{selectedRhColab.role || 'Sem Cargo'}</p>
-                </div>
+                <button onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }} className="h-9 w-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-white">
+                  <X size={18} />
+                </button>
               </div>
-              <button onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }} className="h-9 w-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-white">
-                <X size={18} />
-              </button>
-            </div>
 
-            {/* Banner informativo */}
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-200 dark:border-indigo-800/30 px-6 py-2.5 flex items-center gap-2">
-              <Shield size={14} className="text-indigo-500 flex-shrink-0" />
-              <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-bold">Exibindo apenas dados relevantes para importação. Informações sensíveis estão ocultas.</p>
-            </div>
-
-            {/* Corpo */}
-            <div className="overflow-y-auto p-8 space-y-6">
-              {/* Documentos */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><CreditCard size={12}/> Documentos</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CPF</p>
-                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.cpf || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">RG</p>
-                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.rg || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">PIS</p>
-                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.pis || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Admissão</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                      {selectedRhColab.hireDate ? new Date(selectedRhColab.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+              {/* Banner informativo */}
+              <div className={`${isUpdateItem ? 'bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/30' : 'bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-200 dark:border-indigo-800/30'} px-6 py-2.5 flex items-center gap-2`}>
+                {isUpdateItem ? (
+                  <>
+                    <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300 font-bold">
+                      Este colaborador já possui cadastro no T.I., porém foram identificadas {diffs.length} alteração(ões) no R.H. Veja a comparação abaixo.
                     </p>
-                  </div>
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <Shield size={14} className="text-indigo-500 flex-shrink-0" />
+                    <p className="text-[11px] text-indigo-600 dark:text-indigo-300 font-bold">
+                      Exibindo apenas dados relevantes para importação. Informações sensíveis de remuneração e filiação estão ocultas.
+                    </p>
+                  </>
+                )}
               </div>
 
-              {/* Contato */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Mail size={12}/> Contato</p>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 flex items-center gap-3">
-                    <Mail size={14} className="text-indigo-400 flex-shrink-0"/>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">E-mail Corporativo</p>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.emailCorporate || '---'}</p>
+              {/* Corpo do Modal */}
+              <div className="overflow-y-auto p-8 space-y-6">
+                {/* Se for ATUALIZAÇÃO: Tabela comparativa de diferenças */}
+                {isUpdateItem && diffs.length > 0 && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5">
+                    <p className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
+                      <RefreshCw size={14} /> Comparação de Campos Alterados
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-amber-500/30 text-[10px] font-black uppercase text-amber-700 dark:text-amber-300">
+                            <th className="py-2 px-3">Campo</th>
+                            <th className="py-2 px-3">Valor Atual no T.I.</th>
+                            <th className="py-2 px-3">Novo Valor no R.H.</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-amber-500/20">
+                          {diffs.map((d, idx) => {
+                            const isSectorField = d.rhKey === 'sectorId';
+                            const rhDisplay = isSectorField ? (sectors.find(s => s.id === d.rhValue)?.name || d.rhValue) : d.rhValue;
+                            const tiDisplay = isSectorField ? (sectors.find(s => s.id === d.tiValue)?.name || d.tiValue) : d.tiValue;
+
+                            return (
+                              <tr key={idx} className="bg-white/40 dark:bg-slate-900/40">
+                                <td className="py-2.5 px-3 font-bold text-slate-700 dark:text-slate-200">{d.label}</td>
+                                <td className="py-2.5 px-3 font-mono text-rose-600 dark:text-rose-400 line-through bg-rose-500/5 rounded">
+                                  {tiDisplay || '--- (Vazio)'}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded">
+                                  {rhDisplay || '---'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
+                )}
+
+                {/* Dados Cadastrais Gerais do R.H. */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><CreditCard size={12}/> Documentos</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CPF</p>
+                      <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{rc.cpf || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">RG</p>
+                      <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{rc.rg || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">PIS</p>
+                      <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{rc.pis || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Admissão</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {rc.hireDate ? new Date(rc.hireDate + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contato */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Mail size={12}/> Contato</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 flex items-center gap-3">
+                      <Mail size={14} className="text-indigo-400 flex-shrink-0"/>
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">E-mail Corporativo</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.emailCorporate || '---'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Corporativo</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.corporatePhone || '---'}</p>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Pessoal</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.personalPhone || '---'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Função */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Briefcase size={12}/> Função</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cargo</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.role || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Setor</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{sectors.find(s => s.id === rc.sectorId)?.name || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Tipo de Contrato</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.contractType || '---'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Endereço */}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><MapPin size={12}/> Endereço no R.H.</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Corporativo</p>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.corporatePhone || '---'}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CEP</p>
+                      <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{rc.cep || '---'}</p>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Telefone Pessoal</p>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.personalPhone || '---'}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Bairro</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.neighborhood || '---'}</p>
+                    </div>
+                    <div className="col-span-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Logradouro</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {[rc.street, rc.number, rc.complement].filter(Boolean).join(', ') || '---'}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cidade</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.city || '---'}</p>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Estado</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{rc.state || '---'}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Função */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><Briefcase size={12}/> Função</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cargo</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.role || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Setor</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{sectors.find(s => s.id === selectedRhColab.sectorId)?.name || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Tipo de Contrato</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.contractType || '---'}</p>
-                  </div>
-                </div>
-              </div>
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                <button
+                  onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }}
+                  className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-all"
+                >
+                  Fechar
+                </button>
 
-              {/* Endereço */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2"><MapPin size={12}/> Endereço</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">CEP</p>
-                    <p className="text-sm font-mono font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.cep || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Bairro</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.neighborhood || '---'}</p>
-                  </div>
-                  <div className="col-span-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Logradouro</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                      {[selectedRhColab.street, selectedRhColab.number, selectedRhColab.complement].filter(Boolean).join(', ') || '---'}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Cidade</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.city || '---'}</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Estado</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{selectedRhColab.state || '---'}</p>
-                  </div>
-                </div>
+                {isUpdateItem ? (
+                  <button
+                    onClick={() => handleSyncCollaborator(item)}
+                    disabled={isReadOnly}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-amber-600 hover:bg-amber-500 text-white transition-all shadow-lg shadow-amber-900/20 disabled:opacity-40"
+                  >
+                    <RefreshCw size={14} />
+                    Sincronizar Dados com T.I.
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setIsRhViewModalOpen(false); handleImportCollaborator(rc); }}
+                    disabled={isReadOnly}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-40"
+                  >
+                    <UserPlus size={14} />
+                    Importar para T.I.
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end bg-slate-50 dark:bg-slate-800/50 shrink-0">
-              <button
-                onClick={() => { setIsRhViewModalOpen(false); setSelectedRhColab(null); }}
-                className="px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 transition-all"
-              >
-                Fechar
-              </button>
-              <button
-                onClick={() => { setIsRhViewModalOpen(false); handleImportCollaborator(selectedRhColab); }}
-                disabled={isReadOnly}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-40"
-              >
-                <UserPlus size={14} />
-                Importar para T.I.
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       <FilePreviewModal 
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
