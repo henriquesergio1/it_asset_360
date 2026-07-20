@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.81.1',
+    date: 'Hoje',
+    title: 'Formulário ERP de Ponto no RH Idêntico ao Módulo de T.I.',
+    changes: [
+      'Padronização de Layout ERP: A sub-aba Módulo R.H. foi reestruturada para espelhar exatamente a mesma interface do Módulo de T.I.',
+      'Query SQL Customizável: Adicionada área de código mono-espaçada permitindo editar e testar dinamicamente a consulta SQL de banco de horas do relógio de ponto.'
+    ]
+  },
+  {
     version: '3.81.0',
     date: 'Hoje',
     title: 'Integração ERP de Relógio de Ponto e Banco de Horas no RH',

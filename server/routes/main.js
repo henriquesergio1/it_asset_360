@@ -115,7 +115,7 @@ module.exports = (app) => {
 
     app.post('/api/erp/rh-ponto/sync', async (req, res) => {
         try {
-            const { server, database, user, password, port } = req.body;
+            const { server, database, user, password, port, selectionQuery } = req.body;
             const pontoConfig = {
                 server: server || dbConfig.server,
                 database: database || 'PontoSecullum4',
@@ -127,7 +127,7 @@ module.exports = (app) => {
             };
 
             const poolPonto = await sql.connect(pontoConfig);
-            const query = `
+            const defaultQuery = `
                 WITH UltimosFechamentos AS (
                     SELECT 
                         funcionario_id,
@@ -163,7 +163,8 @@ module.exports = (app) => {
                 ORDER BY f.nome;
             `;
 
-            const result = await poolPonto.request().query(query);
+            const finalQuery = (selectionQuery && selectionQuery.trim()) ? selectionQuery : defaultQuery;
+            const result = await poolPonto.request().query(finalQuery);
             try { await poolPonto.close(); } catch (e) {}
             res.json({ success: true, count: result.recordset.length, records: result.recordset });
         } catch (err) {

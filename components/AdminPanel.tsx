@@ -176,53 +176,90 @@ const AdminPanel = () => {
  const { showToast } = useToast();
  
  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE' | 'ZABBIX'>('USERS');
- const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
- const [erpSubTab, setErpSubTab] = useState<'TI' | 'RH'>('TI');
- const [rhPontoServer, setRhPontoServer] = useState(() => localStorage.getItem('rh_ponto_server') || '');
- const [rhPontoDb, setRhPontoDb] = useState(() => localStorage.getItem('rh_ponto_db') || 'PontoSecullum4');
- const [rhPontoUser, setRhPontoUser] = useState(() => localStorage.getItem('rh_ponto_user') || '');
- const [rhPontoPassword, setRhPontoPassword] = useState(() => localStorage.getItem('rh_ponto_password') || '');
- const [rhPontoPort, setRhPontoPort] = useState(() => localStorage.getItem('rh_ponto_port') || '1433');
- const [rhPontoLoading, setRhPontoLoading] = useState(false);
- const [rhPontoRecords, setRhPontoRecords] = useState<any[]>(() => {
-   const saved = localStorage.getItem('rh_banco_horas_cache');
-   return saved ? JSON.parse(saved) : [];
- });
+ const DEFAULT_RH_PONTO_QUERY = `WITH UltimosFechamentos AS (
+    SELECT 
+        funcionario_id,
+        COALESCE(MAX(data), '1900-01-01') AS DataLimite
+    FROM calculos
+    WHERE bajuste_obs = 'Encerramento do Banco de Horas'
+    GROUP BY funcionario_id
+),
+SomaMinutos AS (
+    SELECT 
+        c.funcionario_id,
+        SUM(c.btotal) AS TotalMinutos
+    FROM calculos c
+    INNER JOIN UltimosFechamentos uf ON c.funcionario_id = uf.funcionario_id
+    WHERE c.data > uf.DataLimite
+      AND c.data < CAST(GETDATE() AS DATE)
+    GROUP BY c.funcionario_id
+)
+SELECT 
+    f.id AS funcionario_id,
+    f.nome,
+    f.n_pis,
+    COALESCE(
+        CASE WHEN sm.TotalMinutos < 0 THEN '-' ELSE '' END +
+        CAST(ABS(sm.TotalMinutos) / 60 AS VARCHAR(10)) + ':' +
+        RIGHT('0' + CAST(ABS(sm.TotalMinutos) % 60 AS VARCHAR(2)), 2), 
+        '0:00'
+    ) AS total_banco
+FROM funcionarios f
+LEFT JOIN SomaMinutos sm ON f.id = sm.funcionario_id
+WHERE f.demissao IS NULL
+  AND f.invisivel = 0
+ORDER BY f.nome;`;
 
- const handleSyncRhPonto = async () => {
-   setRhPontoLoading(true);
-   try {
-     localStorage.setItem('rh_ponto_server', rhPontoServer);
-     localStorage.setItem('rh_ponto_db', rhPontoDb);
-     localStorage.setItem('rh_ponto_user', rhPontoUser);
-     localStorage.setItem('rh_ponto_password', rhPontoPassword);
-     localStorage.setItem('rh_ponto_port', rhPontoPort);
+  const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
+  const [erpSubTab, setErpSubTab] = useState<'TI' | 'RH'>('TI');
+  const [rhPontoServer, setRhPontoServer] = useState(() => localStorage.getItem('rh_ponto_server') || '');
+  const [rhPontoDb, setRhPontoDb] = useState(() => localStorage.getItem('rh_ponto_db') || 'PontoSecullum4');
+  const [rhPontoUser, setRhPontoUser] = useState(() => localStorage.getItem('rh_ponto_user') || '');
+  const [rhPontoPassword, setRhPontoPassword] = useState(() => localStorage.getItem('rh_ponto_password') || '');
+  const [rhPontoPort, setRhPontoPort] = useState(() => localStorage.getItem('rh_ponto_port') || '1433');
+  const [rhPontoQuery, setRhPontoQuery] = useState(() => localStorage.getItem('rh_ponto_query') || DEFAULT_RH_PONTO_QUERY);
+  const [rhPontoLoading, setRhPontoLoading] = useState(false);
+  const [rhPontoRecords, setRhPontoRecords] = useState<any[]>(() => {
+    const saved = localStorage.getItem('rh_banco_horas_cache');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-     const res = await fetch('/api/erp/rh-ponto/sync', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({
-         server: rhPontoServer,
-         database: rhPontoDb,
-         user: rhPontoUser,
-         password: rhPontoPassword,
-         port: rhPontoPort
-       })
-     });
-     const data = await res.json();
-     if (data.success) {
-       setRhPontoRecords(data.records || []);
-       localStorage.setItem('rh_banco_horas_cache', JSON.stringify(data.records || []));
-       showToast(`Integração realizada com sucesso! ${data.count} colaboradores pareados pelo relógio.`, 'success');
-     } else {
-       showToast(`Erro na integração: ${data.error}`, 'error');
-     }
-   } catch (err: any) {
-     showToast(`Falha ao conectar no ERP de Ponto: ${err.message}`, 'error');
-   } finally {
-     setRhPontoLoading(false);
-   }
- };
+  const handleSyncRhPonto = async () => {
+    setRhPontoLoading(true);
+    try {
+      localStorage.setItem('rh_ponto_server', rhPontoServer);
+      localStorage.setItem('rh_ponto_db', rhPontoDb);
+      localStorage.setItem('rh_ponto_user', rhPontoUser);
+      localStorage.setItem('rh_ponto_password', rhPontoPassword);
+      localStorage.setItem('rh_ponto_port', rhPontoPort);
+      localStorage.setItem('rh_ponto_query', rhPontoQuery);
+
+      const res = await fetch('/api/erp/rh-ponto/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          server: rhPontoServer,
+          database: rhPontoDb,
+          user: rhPontoUser,
+          password: rhPontoPassword,
+          port: rhPontoPort,
+          selectionQuery: rhPontoQuery
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRhPontoRecords(data.records || []);
+        localStorage.setItem('rh_banco_horas_cache', JSON.stringify(data.records || []));
+        showToast(`Integração realizada com sucesso! ${data.count} colaboradores pareados pelo relógio.`, 'success');
+      } else {
+        showToast(`Erro na integração: ${data.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Falha ao conectar no ERP de Ponto: ${err.message}`, 'error');
+    } finally {
+      setRhPontoLoading(false);
+    }
+  };
 
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -1193,80 +1230,102 @@ const AdminPanel = () => {
           </div>
         </form>
       ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
-            <div>
-              <h3 className="text-md font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <RotateCcw className="text-indigo-500" size={20} /> Conexão ao Relógio de Ponto & Banco de Horas
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Executa o cálculo automático de saldo de minutos pareando com o PIS dos colaboradores do RH.</p>
+        <form onSubmit={(e) => { e.preventDefault(); handleSyncRhPonto(); }} className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <RotateCcw size={20} className="text-indigo-500" /> Configuração de Banco de Dados - Relógio de Ponto (RH)
+            </h3>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleSyncRhPonto}
+                disabled={rhPontoLoading}
+                className="px-4 py-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all disabled:opacity-50"
+              >
+                {rhPontoLoading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                Testar Conexão e Sincronizar
+              </button>
+              <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+                <Save size={14} /> Salvar Configuração
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleSyncRhPonto}
-              disabled={rhPontoLoading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm disabled:opacity-50 shrink-0"
-            >
-              {rhPontoLoading ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
-              Sincronizar Banco de Horas
-            </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Servidor / Host</label>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
+              <select className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold">
+                <option value="SQL Server">SQL Server</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
               <input
-                type="text"
-                placeholder="ex: 192.168.1.100 ou localhost"
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
                 value={rhPontoServer}
                 onChange={e => setRhPontoServer(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="ex: 192.168.1.100 ou sql.empresa.com.br"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Banco de Dados</label>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
               <input
-                type="text"
-                placeholder="PontoSecullum4"
-                value={rhPontoDb}
-                onChange={e => setRhPontoDb(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Porta SQL</label>
-              <input
-                type="text"
-                placeholder="1433"
+                required
+                type="number"
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
                 value={rhPontoPort}
                 onChange={e => setRhPontoPort(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Usuário SQL</label>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário</label>
               <input
-                type="text"
-                placeholder="sa"
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
                 value={rhPontoUser}
                 onChange={e => setRhPontoUser(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Senha SQL</label>
+              <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
               <input
                 type="password"
-                placeholder="••••••••"
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
                 value={rhPontoPassword}
                 onChange={e => setRhPontoPassword(e.target.value)}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
+              <input
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={rhPontoDb}
+                onChange={e => setRhPontoDb(e.target.value)}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL de Seleção (Banco de Horas RH)</label>
+              <div className="relative">
+                <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300" size={18} />
+                <textarea
+                  rows={10}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-indigo-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white"
+                  value={rhPontoQuery}
+                  onChange={e => setRhPontoQuery(e.target.value)}
+                  placeholder="WITH UltimosFechamentos AS (..."
+                />
+              </div>
+              <p className="text-[11px] mt-2 italic text-slate-500">
+                A query deve retornar obrigatoriamente as colunas: <span className="font-bold text-indigo-600 dark:text-indigo-400">funcionario_id, nome, n_pis, total_banco</span>.
+              </p>
             </div>
           </div>
 
           {/* Lista de Registros Pareados */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-center">
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Resultado da Consulta SQL ({rhPontoRecords.length} Colaboradores Retornados)
@@ -1277,7 +1336,7 @@ const AdminPanel = () => {
               <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
                 <RotateCcw className="mx-auto text-slate-400 mb-2" size={36} />
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nenhum cálculo de banco de horas sincronizado ainda.</p>
-                <p className="text-[11px] text-slate-400 mt-1">Preencha os dados de conexão acima e clique em "Sincronizar Banco de Horas".</p>
+                <p className="text-[11px] text-slate-400 mt-1">Preencha os dados de conexão acima e clique em "Testar Conexão e Sincronizar".</p>
               </div>
             ) : (
               <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs max-h-96 overflow-y-auto">
@@ -1314,7 +1373,7 @@ const AdminPanel = () => {
               </div>
             )}
           </div>
-        </div>
+        </form>
       )}
     </div>
   )}
