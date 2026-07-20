@@ -112,4 +112,63 @@ module.exports = (app) => {
             });
         } catch (err) { res.status(500).send(err.message); }
     });
+
+    app.post('/api/erp/rh-ponto/sync', async (req, res) => {
+        try {
+            const { server, database, user, password, port } = req.body;
+            const pontoConfig = {
+                server: server || dbConfig.server,
+                database: database || 'PontoSecullum4',
+                user: user || dbConfig.user,
+                password: password || dbConfig.password,
+                port: port ? parseInt(port) : 1433,
+                options: { encrypt: false, trustServerCertificate: true },
+                requestTimeout: 30000
+            };
+
+            const poolPonto = await sql.connect(pontoConfig);
+            const query = `
+                WITH UltimosFechamentos AS (
+                    SELECT 
+                        funcionario_id,
+                        COALESCE(MAX(data), '1900-01-01') AS DataLimite
+                    FROM calculos
+                    WHERE bajuste_obs = 'Encerramento do Banco de Horas'
+                    GROUP BY funcionario_id
+                ),
+                SomaMinutos AS (
+                    SELECT 
+                        c.funcionario_id,
+                        SUM(c.btotal) AS TotalMinutos
+                    FROM calculos c
+                    INNER JOIN UltimosFechamentos uf ON c.funcionario_id = uf.funcionario_id
+                    WHERE c.data > uf.DataLimite
+                      AND c.data < CAST(GETDATE() AS DATE)
+                    GROUP BY c.funcionario_id
+                )
+                SELECT 
+                    f.id AS funcionario_id,
+                    f.nome,
+                    f.n_pis,
+                    COALESCE(
+                        CASE WHEN sm.TotalMinutos < 0 THEN '-' ELSE '' END +
+                        CAST(ABS(sm.TotalMinutos) / 60 AS VARCHAR(10)) + ':' +
+                        RIGHT('0' + CAST(ABS(sm.TotalMinutos) % 60 AS VARCHAR(2)), 2), 
+                        '0:00'
+                    ) AS total_banco
+                FROM funcionarios f
+                LEFT JOIN SomaMinutos sm ON f.id = sm.funcionario_id
+                WHERE f.demissao IS NULL
+                  AND f.invisivel = 0
+                ORDER BY f.nome;
+            `;
+
+            const result = await poolPonto.request().query(query);
+            try { await poolPonto.close(); } catch (e) {}
+            res.json({ success: true, count: result.recordset.length, records: result.recordset });
+        } catch (err) {
+            console.error("Erro na integração de relógio de ponto RH:", err);
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
 };

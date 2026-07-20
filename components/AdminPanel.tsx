@@ -177,6 +177,53 @@ const AdminPanel = () => {
  
  const [activeTab, setActiveTab] = useState<'USERS' | 'SETTINGS' | 'LOGS' | 'TEMPLATE' | 'IMPORT' | 'ERP' | 'LICENSE' | 'ZABBIX'>('USERS');
  const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
+ const [erpSubTab, setErpSubTab] = useState<'TI' | 'RH'>('TI');
+ const [rhPontoServer, setRhPontoServer] = useState(() => localStorage.getItem('rh_ponto_server') || '');
+ const [rhPontoDb, setRhPontoDb] = useState(() => localStorage.getItem('rh_ponto_db') || 'PontoSecullum4');
+ const [rhPontoUser, setRhPontoUser] = useState(() => localStorage.getItem('rh_ponto_user') || '');
+ const [rhPontoPassword, setRhPontoPassword] = useState(() => localStorage.getItem('rh_ponto_password') || '');
+ const [rhPontoPort, setRhPontoPort] = useState(() => localStorage.getItem('rh_ponto_port') || '1433');
+ const [rhPontoLoading, setRhPontoLoading] = useState(false);
+ const [rhPontoRecords, setRhPontoRecords] = useState<any[]>(() => {
+   const saved = localStorage.getItem('rh_banco_horas_cache');
+   return saved ? JSON.parse(saved) : [];
+ });
+
+ const handleSyncRhPonto = async () => {
+   setRhPontoLoading(true);
+   try {
+     localStorage.setItem('rh_ponto_server', rhPontoServer);
+     localStorage.setItem('rh_ponto_db', rhPontoDb);
+     localStorage.setItem('rh_ponto_user', rhPontoUser);
+     localStorage.setItem('rh_ponto_password', rhPontoPassword);
+     localStorage.setItem('rh_ponto_port', rhPontoPort);
+
+     const res = await fetch('/api/erp/rh-ponto/sync', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         server: rhPontoServer,
+         database: rhPontoDb,
+         user: rhPontoUser,
+         password: rhPontoPassword,
+         port: rhPontoPort
+       })
+     });
+     const data = await res.json();
+     if (data.success) {
+       setRhPontoRecords(data.records || []);
+       localStorage.setItem('rh_banco_horas_cache', JSON.stringify(data.records || []));
+       showToast(`Integração realizada com sucesso! ${data.count} colaboradores pareados pelo relógio.`, 'success');
+     } else {
+       showToast(`Erro na integração: ${data.error}`, 'error');
+     }
+   } catch (err: any) {
+     showToast(`Falha ao conectar no ERP de Ponto: ${err.message}`, 'error');
+   } finally {
+     setRhPontoLoading(false);
+   }
+ };
+
  const [isModalOpen, setIsModalOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
@@ -1035,91 +1082,242 @@ const AdminPanel = () => {
  )}
 
  {activeTab === 'ERP' && (
- <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
- <form onSubmit={(e) => { e.preventDefault(); updateExternalDbConfig(erpForm, currentUser?.name || 'Admin'); alert('Configurações salvas!'); }} className="space-y-8">
- <div className="flex justify-between items-center">
- <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Database size={20} className=""/> Configuração de Banco de Dados Externo</h3>
- <div className="flex gap-3">
- <button 
- type="button"
- onClick={async () => {
- setIsTestingConnection(true);
- try {
- const res = await testExternalDbConnection(erpForm);
- alert(res.message);
- } catch (e) { alert('Erro ao testar conexão.'); }
- finally { setIsTestingConnection(false); }
- }}
- disabled={isTestingConnection}
- className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all disabled:opacity-50"
- >
- {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
- Testar Conexão
- </button>
- <button type="submit"className="text-slate-900 dark:text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"><Save size={14}/> Salvar Configuração</button>
- </div>
- </div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-6">
+      {/* Sub-abas Módulo TI vs Módulo RH */}
+      <div className="flex border-b border-slate-200 dark:border-slate-700 gap-3">
+        <button
+          type="button"
+          onClick={() => setErpSubTab('TI')}
+          className={`pb-3 px-5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${
+            erpSubTab === 'TI'
+              ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Database size={16} /> Módulo T.I. (Ativos)
+        </button>
+        <button
+          type="button"
+          onClick={() => setErpSubTab('RH')}
+          className={`pb-3 px-5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${
+            erpSubTab === 'RH'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <RotateCcw size={16} /> Módulo R.H. (Relógio de Ponto & Banco de Horas)
+        </button>
+      </div>
 
- <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
- <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
- <select className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
- <option value="SQL Server">SQL Server</option>
- </select>
- </div>
- <div className="md:col-span-2">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
- <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
- </div>
- <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
- <input required type="number"className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
- </div>
- <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário</label>
- <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
- </div>
- <div>
- <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
- <input 
- type="password"
- required 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
- value={isPasswordModified ? erpForm.password : (erpForm.password ? '********' : '')} 
- onChange={e => {
- setErpForm({...erpForm, password: e.target.value});
- setIsPasswordModified(true);
- }}
- onFocus={() => {
- if (!isPasswordModified) {
- setErpForm({...erpForm, password: ''});
- setIsPasswordModified(true);
- }
- }}
- />
- </div>
- <div className="md:col-span-3">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
- <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
- </div>
- <div className="md:col-span-3">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL de Seleção</label>
- <div className="relative">
- <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300"size={18}/>
- <textarea 
- rows={8} 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white"
- value={erpForm.selectionQuery} 
- onChange={e => setErpForm({...erpForm, selectionQuery: e.target.value})}
- placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
- />
- </div>
- <p className="text-[11px] mt-2 italic">A query deve retornar obrigatoriamente as colunas: <span className="font-bold">Codigo, Nome, CPF, RG, PIS, ValidaExpediente</span>.</p>
- </div>
- </div>
- </form>
- </div>
- )}
+      {erpSubTab === 'TI' ? (
+        <form onSubmit={(e) => { e.preventDefault(); updateExternalDbConfig(erpForm, currentUser?.name || 'Admin'); alert('Configurações salvas!'); }} className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Database size={20} className=""/> Configuração ERP de Ativos e Dispositivos</h3>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={async () => {
+                  setIsTestingConnection(true);
+                  try {
+                    const res = await testExternalDbConnection(erpForm);
+                    alert(res.message);
+                  } catch (e) { alert('Erro ao testar conexão.'); }
+                  finally { setIsTestingConnection(false); }
+                }}
+                disabled={isTestingConnection}
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700/50 transition-all disabled:opacity-50"
+              >
+                {isTestingConnection ? <Loader2 size={14} className="animate-spin"/> : <RotateCcw size={14}/>}
+                Testar Conexão
+              </button>
+              <button type="submit" className="text-slate-900 dark:text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all"><Save size={14}/> Salvar Configuração</button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
+              <select className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={erpForm.technology} onChange={e => setErpForm({...erpForm, technology: e.target.value})}>
+                <option value="SQL Server">SQL Server</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor</label>
+              <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={erpForm.host} onChange={e => setErpForm({...erpForm, host: e.target.value})} placeholder="ex: 192.168.1.50 ou sql.empresa.com.br"/>
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
+              <input required type="number" className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={erpForm.port} onChange={e => setErpForm({...erpForm, port: parseInt(e.target.value)})}/>
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário</label>
+              <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={erpForm.username} onChange={e => setErpForm({...erpForm, username: e.target.value})}/>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
+              <input 
+                type="password"
+                required 
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={isPasswordModified ? erpForm.password : (erpForm.password ? '********' : '')} 
+                onChange={e => {
+                  setErpForm({...erpForm, password: e.target.value});
+                  setIsPasswordModified(true);
+                }}
+                onFocus={() => {
+                  if (!isPasswordModified) {
+                    setErpForm({...erpForm, password: ''});
+                    setIsPasswordModified(true);
+                  }
+                }}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados</label>
+              <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold" value={erpForm.databaseName} onChange={e => setErpForm({...erpForm, databaseName: e.target.value})}/>
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL de Seleção</label>
+              <div className="relative">
+                <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300" size={18}/>
+                <textarea 
+                  rows={8} 
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white"
+                  value={erpForm.selectionQuery} 
+                  onChange={e => setErpForm({...erpForm, selectionQuery: e.target.value})}
+                  placeholder="SELECT Codigo, Nome, CPF, RG, PIS, ValidaExpediente FROM ..."
+                />
+              </div>
+              <p className="text-[11px] mt-2 italic">A query deve retornar obrigatoriamente as colunas: <span className="font-bold">Codigo, Nome, CPF, RG, PIS, ValidaExpediente</span>.</p>
+            </div>
+          </div>
+        </form>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div>
+              <h3 className="text-md font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <RotateCcw className="text-indigo-500" size={20} /> Conexão ao Relógio de Ponto & Banco de Horas
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Executa o cálculo automático de saldo de minutos pareando com o PIS dos colaboradores do RH.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSyncRhPonto}
+              disabled={rhPontoLoading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm disabled:opacity-50 shrink-0"
+            >
+              {rhPontoLoading ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
+              Sincronizar Banco de Horas
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Servidor / Host</label>
+              <input
+                type="text"
+                placeholder="ex: 192.168.1.100 ou localhost"
+                value={rhPontoServer}
+                onChange={e => setRhPontoServer(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Banco de Dados</label>
+              <input
+                type="text"
+                placeholder="PontoSecullum4"
+                value={rhPontoDb}
+                onChange={e => setRhPontoDb(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Porta SQL</label>
+              <input
+                type="text"
+                placeholder="1433"
+                value={rhPontoPort}
+                onChange={e => setRhPontoPort(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Usuário SQL</label>
+              <input
+                type="text"
+                placeholder="sa"
+                value={rhPontoUser}
+                onChange={e => setRhPontoUser(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Senha SQL</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={rhPontoPassword}
+                onChange={e => setRhPontoPassword(e.target.value)}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Lista de Registros Pareados */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Resultado da Consulta SQL ({rhPontoRecords.length} Colaboradores Retornados)
+              </h4>
+            </div>
+
+            {rhPontoRecords.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <RotateCcw className="mx-auto text-slate-400 mb-2" size={36} />
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nenhum cálculo de banco de horas sincronizado ainda.</p>
+                <p className="text-[11px] text-slate-400 mt-1">Preencha os dados de conexão acima e clique em "Sincronizar Banco de Horas".</p>
+              </div>
+            ) : (
+              <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-xs max-h-96 overflow-y-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-black tracking-wider border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                    <tr>
+                      <th className="px-4 py-3">ID Ponto</th>
+                      <th className="px-4 py-3">Nome no Relógio</th>
+                      <th className="px-4 py-3">Nº PIS</th>
+                      <th className="px-4 py-3 text-right">Saldo Banco de Horas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-150 dark:divide-slate-700/60 bg-white dark:bg-slate-900">
+                    {rhPontoRecords.map((rec, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-4 py-2.5 font-bold text-slate-500">{rec.funcionario_id}</td>
+                        <td className="px-4 py-2.5 font-bold text-slate-800 dark:text-slate-200">{rec.nome}</td>
+                        <td className="px-4 py-2.5 font-mono text-slate-600 dark:text-slate-400">{rec.n_pis || '---'}</td>
+                        <td className="px-4 py-2.5 text-right font-mono font-black">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs ${
+                            rec.total_banco.startsWith('-')
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
+                              : rec.total_banco === '0:00'
+                                ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                          }`}>
+                            ⏱️ {rec.total_banco}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )}
 
  
             {activeTab === 'ZABBIX' && (

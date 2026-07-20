@@ -1431,6 +1431,35 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">PIS</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.pis || '---'}</span>
                       </div>
+                      {(() => {
+                        const cacheStr = localStorage.getItem('rh_banco_horas_cache');
+                        if (cacheStr && selectedColab.pis) {
+                          const cleanPis = selectedColab.pis.replace(/\D/g, '');
+                          try {
+                            const records = JSON.parse(cacheStr);
+                            const matchPonto = records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis);
+                            if (matchPonto) {
+                              return (
+                                <div className="col-span-2 p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
+                                  <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                    <span>⏱️</span> Saldo Banco de Horas (Relógio de Ponto)
+                                  </span>
+                                  <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black ${
+                                    matchPonto.total_banco.startsWith('-')
+                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
+                                      : matchPonto.total_banco === '0:00'
+                                        ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                  }`}>
+                                    {matchPonto.total_banco}
+                                  </span>
+                                </div>
+                              );
+                            }
+                          } catch (e) {}
+                        }
+                        return null;
+                      })()}
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>

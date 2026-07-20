@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.81.0',
+    date: 'Hoje',
+    title: 'Integração ERP de Relógio de Ponto e Banco de Horas no RH',
+    changes: [
+      'Nova Aba Integração ERP: Estruturada navegação por sub-abas no Painel de Administração separando o Módulo T.I. do Módulo R.H.',
+      'Consulta SQL de Banco de Horas: Integrada a consulta oficial de encerramento e cálculo de horas do relógio de ponto.',
+      'Vínculo por PIS: Pareamento automático entre os funcionários do relógio de ponto (n_pis) e os colaboradores do cadastro de RH (pis) para exibição do saldo de banco de horas.'
+    ]
+  },
+  {
     version: '3.80.0',
     date: 'Hoje',
     title: 'Gestão Exclusiva de E-mail e Telefone Corporativo pela T.I.',
