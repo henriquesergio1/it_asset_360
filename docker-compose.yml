@@ -6,7 +6,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: it-asset-360:latest
     container_name: it-asset-360
     restart: unless-stopped
     ports:

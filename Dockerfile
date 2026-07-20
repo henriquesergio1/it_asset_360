@@ -1,31 +1,24 @@
-# Stage 1: Build da aplicação React
-FROM node:20-alpine AS build
+# Imagem oficial do Node.js Alpine
+FROM node:20-alpine
 
+# Define o diretório de trabalho
 WORKDIR /app
 
-# Copia dependências e instala
+# Copia arquivos de pacotes
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps || npm install
 
-# Copia código fonte e gera a build de produção (SPA)
+# Instala todas as dependências
+RUN npm install
+
+# Copia todo o código-fonte da aplicação
 COPY . .
+
+# Garante o modo de produção e gera o build dos arquivos estáticos React (SPA)
 ENV NODE_ENV=production
 RUN CI=false npm run build
 
-# Stage 2: Execução unificada com Node.js + Express
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-ENV NODE_ENV=production
-
-# Copia dependências e scripts
-COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps || npm install --only=production
-
-# Copia código backend e bundle do frontend compilado em /app/build
-COPY . .
-COPY --from=build /app/build ./build
-
+# Expõe a porta interna da aplicação e API
 EXPOSE 5000
 
+# Executa o servidor unificado Node.js + Express
 CMD ["node", "server.js"]
