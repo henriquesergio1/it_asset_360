@@ -141,7 +141,8 @@ const UserManager: React.FC = () => {
     toggleUserActive,
     isReadOnly,
     settings,
-    rhCollaborators
+    rhCollaborators,
+    updateRhCollaborator
   } = useData();
   const { showToast } = useToast();
   const { user: authUser } = useAuth();
@@ -442,6 +443,20 @@ const UserManager: React.FC = () => {
     } else {
       try {
         addUser({ ...dataToSend, id: Math.random().toString(36).substr(2, 9) } as User, adminName);
+        
+        // Sincronização de e-mail e telefone corporativo para o cadastro do RH
+        const userCpf = cleanDocument(sanitizedForm.cpf);
+        if (userCpf && rhCollaborators && updateRhCollaborator) {
+          const targetRhColab = rhCollaborators.find(c => cleanDocument(c.cpf) === userCpf);
+          if (targetRhColab) {
+            updateRhCollaborator({
+              ...targetRhColab,
+              emailCorporate: sanitizedForm.email || targetRhColab.emailCorporate,
+              corporatePhone: sanitizedForm.phone || targetRhColab.corporatePhone
+            }, adminName);
+          }
+        }
+
         setIsModalOpen(false);
         showToast('Colaborador cadastrado com sucesso!', 'success');
       } catch (err) {
@@ -470,6 +485,20 @@ const UserManager: React.FC = () => {
 
     try {
       updateUserData({ id: editingId, ...dataToSend } as User, adminName, editReason);
+
+      // Sincronização de e-mail e telefone corporativo para o cadastro do RH
+      const userCpf = cleanDocument(sanitizedForm.cpf);
+      if (userCpf && rhCollaborators && updateRhCollaborator) {
+        const targetRhColab = rhCollaborators.find(c => cleanDocument(c.cpf) === userCpf);
+        if (targetRhColab) {
+          updateRhCollaborator({
+            ...targetRhColab,
+            emailCorporate: sanitizedForm.email || targetRhColab.emailCorporate,
+            corporatePhone: sanitizedForm.phone || targetRhColab.corporatePhone
+          }, adminName);
+        }
+      }
+
       setIsReasonModalOpen(false);
       setIsModalOpen(false);
       showToast('Dados do colaborador atualizados!', 'success');

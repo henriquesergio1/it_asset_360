@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.80.0',
+    date: 'Hoje',
+    title: 'Gestão Exclusiva de E-mail e Telefone Corporativo pela T.I.',
+    changes: [
+      'Bloqueio de Edição no RH: Os campos E-mail Corporativo e Telefone Corporativo foram configurados como somente leitura no módulo de RH, com indicação visual de atribuição exclusiva pela T.I.',
+      'Sincronização Automática: Ao cadastrar ou alterar o e-mail/telefone corporativo de um usuário de T.I., o valor é refletido automaticamente no cadastro do colaborador de RH vinculado por CPF.'
+    ]
+  },
+  {
     version: '3.79.1',
     date: 'Hoje',
     title: 'Formatador Amigável de Histórico no Modal do Colaborador de T.I.',

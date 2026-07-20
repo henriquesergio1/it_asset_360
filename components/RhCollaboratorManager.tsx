@@ -2239,13 +2239,17 @@ export const RhCollaboratorManager: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tel. Corp.</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center justify-between">
+                          <span>Tel. Corp.</span>
+                          <span className="text-[9px] text-amber-500 font-bold lowercase">(cadastrado pela T.I.)</span>
+                        </label>
                         <input
                           type="text"
-                          placeholder="(00) 00000-0000"
+                          readOnly
+                          disabled
+                          placeholder="Atribuído pela T.I."
                           value={form.corporatePhone || ''}
-                          onChange={e => setForm(p => ({ ...p, corporatePhone: formatPhone(e.target.value) }))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed select-none opacity-80"
                         />
                       </div>
                     </div>
@@ -2261,12 +2265,17 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">E-mail Corp.</label>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 flex items-center justify-between">
+                        <span>E-mail Corp.</span>
+                        <span className="text-[9px] text-amber-500 font-bold lowercase">(cadastrado pela T.I.)</span>
+                      </label>
                       <input
                         type="email"
+                        readOnly
+                        disabled
+                        placeholder="Atribuído pela T.I."
                         value={form.emailCorporate || ''}
-                        onChange={e => setForm(p => ({ ...p, emailCorporate: e.target.value }))}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed select-none opacity-80"
                       />
                     </div>
                   </div>
