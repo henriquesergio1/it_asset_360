@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.77.1',
+    date: 'Hoje',
+    title: 'Correção de Referência do Estado de Anexos do R.H.',
+    changes: [
+      'Correção do Escopo de Anexos: Adicionada a declaração do estado docFileBase64 e o handler handleDocFileSelect no componente do R.H., resolvendo o erro de referência no console.'
+    ]
+  },
+  {
     version: '3.77.0',
     date: 'Hoje',
     title: 'Seletor de Arquivos Real, Visualização, Impressão e Download de Anexos',

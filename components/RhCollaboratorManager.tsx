@@ -521,6 +521,21 @@ export const RhCollaboratorManager: React.FC = () => {
   // Attachments temp state
   const [docCategory, setDocCategory] = useState<'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros'>('RG');
   const [docFileName, setDocFileName] = useState('');
+  const [docFileBase64, setDocFileBase64] = useState<string>('');
+
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!docFileName) {
+        setDocFileName(file.name);
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setDocFileBase64(event.target?.result as string || '');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Cep Lookup
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
