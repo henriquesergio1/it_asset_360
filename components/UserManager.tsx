@@ -899,12 +899,12 @@ const UserManager: React.FC = () => {
 
   const getAvatarColor = (name: string) => {
     const colors = [
-      { bg: 'bg-blue-600/10', border: 'border-blue-500/20', text: 'text-blue-600 dark:text-sky-400' },
-      { bg: 'bg-emerald-600/10', border: 'border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
-      { bg: 'bg-violet-600/10', border: 'border-violet-500/20', text: 'text-violet-400' },
-      { bg: 'bg-amber-600/10', border: 'border-amber-500/20', text: 'text-amber-600 dark:text-amber-400' },
-      { bg: 'bg-rose-600/10', border: 'border-rose-500/20', text: 'text-rose-600 dark:text-red-400' },
-      { bg: 'bg-cyan-600/10', border: 'border-cyan-500/20', text: 'text-cyan-400' },
+      { bg: 'bg-blue-50 dark:bg-blue-950/50', border: 'border-blue-200 dark:border-blue-800/40', text: 'text-blue-700 dark:text-sky-300' },
+      { bg: 'bg-emerald-50 dark:bg-emerald-950/50', border: 'border-emerald-200 dark:border-emerald-800/40', text: 'text-emerald-700 dark:text-emerald-300' },
+      { bg: 'bg-purple-50 dark:bg-purple-950/50', border: 'border-purple-200 dark:border-purple-800/40', text: 'text-purple-700 dark:text-purple-300' },
+      { bg: 'bg-amber-50 dark:bg-amber-950/50', border: 'border-amber-200 dark:border-amber-800/40', text: 'text-amber-800 dark:text-amber-300' },
+      { bg: 'bg-rose-50 dark:bg-rose-950/50', border: 'border-rose-200 dark:border-rose-800/40', text: 'text-rose-700 dark:text-rose-300' },
+      { bg: 'bg-cyan-50 dark:bg-cyan-950/50', border: 'border-cyan-200 dark:border-cyan-800/40', text: 'text-cyan-700 dark:text-cyan-300' },
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -1252,12 +1252,12 @@ const UserManager: React.FC = () => {
           </div>
           <div className="h-12 w-12 bg-slate-100 dark:bg-slate-800/40 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-600/30 group-hover:scale-110 transition-transform"><Briefcase size={24}/></div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-orange-500/30 group">
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-sm">
           <div>
-            <span className="text-[11px] font-black text-orange-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Termos Pend.</span>
+            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block mb-1.5">Termos Pend.</span>
             <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}</p>
           </div>
-          <div className="h-12 w-12 bg-orange-900/20 rounded-2xl flex items-center justify-center text-orange-400 border border-orange-800/30 group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
+          <div className="h-12 w-12 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>
         </div>
       </div>
 
@@ -1273,7 +1273,7 @@ const UserManager: React.FC = () => {
             className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${(!showPendingOnly && !showRhImportList && viewMode === mode) ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300'}`}
           >
             {mode === 'ACTIVE' ? 'Ativos' : mode === 'INACTIVE' ? 'Inativos' : 'Afastados'}
-            <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded text-[10px]">
+            <span className="ml-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded text-[10px] border border-slate-200 dark:border-slate-700">
               {users.filter(u => {
                 if (mode === 'ACTIVE') return u.active && (!u.status || u.status === UserStatus.ACTIVE);
                 if (mode === 'INACTIVE') return !u.active;
@@ -1285,20 +1285,20 @@ const UserManager: React.FC = () => {
         ))}
         <button 
           onClick={() => { setShowPendingOnly(true); setShowRhImportList(false); }} 
-          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-orange-500 text-orange-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-orange-400'}`}
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showPendingOnly ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-amber-600'}`}
         >
           Termos Pendentes
-          <span className="ml-2 bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded-full text-[11px]">
+          <span className="ml-2 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded-full text-[11px] font-bold">
             {users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}
           </span>
         </button>
         <button 
           onClick={() => { setShowRhImportList(true); setShowPendingOnly(false); }} 
-          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showRhImportList ? 'border-indigo-500 text-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-indigo-400'}`}
+          className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider border-b-4 transition-all whitespace-nowrap ${showRhImportList ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-indigo-600'}`}
         >
           Importar do R.H.
           {pendingRhImports.length > 0 && (
-            <span className="ml-2 bg-indigo-900/30 text-indigo-400 px-2 py-0.5 rounded-full text-[11px]">
+            <span className="ml-2 bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 px-2 py-0.5 rounded-full text-[11px] font-bold">
               {pendingRhImports.length}
             </span>
           )}

@@ -3523,10 +3523,16 @@ async function updateUserPendingStatus(pool, userId) {
 
         // Rota coringa para SPA (deve vir depois de todas as rotas de API)
         app.get("*", (req, res, next) => {
-            if (req.url.startsWith('/api')) {
+            if (req.url === '/healthcheck') {
+                res.json({ status: 'ok', version: 'v3.74.1' });
+            } else if (req.url === '/' || req.url === '/index.html') {
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(`<h1>Servidor Rodando</h1><p>Versão v3.74.1</p>`);
+            } else if (req.url.startsWith('/api')) {
                 return next(); // Passa para o tratador de erro 404 de API se chegar aqui
+            } else {
+                res.sendFile(path.join(distPath, "index.html"));
             }
-            res.sendFile(path.join(distPath, "index.html"));
         });
     }
 

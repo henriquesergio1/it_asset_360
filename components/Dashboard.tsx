@@ -1005,21 +1005,21 @@ const Dashboard = () => {
                         {pendingTerms.slice(0, isTermsExpanded ? pendingTerms.length : 5).map(({term, user}) => {
                           const isWaitingApproval = term.signatureStatus === 'WAITING_APPROVAL';
                           return (
-                            <div key={term.id} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isWaitingApproval ? 'border-blue-300 dark:border-sky-700/40 bg-blue-900/5 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-orange-900/30 hover:border-orange-700'}`}>
+                            <div key={term.id} className={`bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border flex flex-col gap-2 group transition-all shadow-sm ${isWaitingApproval ? 'border-blue-300 dark:border-sky-700/40 bg-blue-50/50 dark:bg-sky-950/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-amber-200 dark:border-amber-800/40 hover:border-amber-500'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isWaitingApproval ? 'bg-blue-600 text-white shadow-lg' : 'bg-orange-900/40 text-orange-400'}`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${isWaitingApproval ? 'bg-blue-600 text-white shadow-lg' : 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/40'}`}>
                                     {user.fullName.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                                      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={user.fullName}>{user.fullName}</p>
+                                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={user.fullName}>{user.fullName}</p>
                                       {isWaitingApproval ? (
-                                        <span className="bg-blue-500/20 text-blue-600 dark:text-sky-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-500/30">
+                                        <span className="bg-blue-100 text-blue-700 dark:bg-sky-500/20 dark:text-sky-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shrink-0 animate-pulse border border-blue-200 dark:border-blue-500/30">
                                           Assinado (Validar)
                                         </span>
                                       ) : (
-                                        <span className="bg-orange-900/20 text-orange-400 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0">
+                                        <span className="bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/40 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0">
                                           Pendente
                                         </span>
                                       )}
@@ -1027,14 +1027,14 @@ const Dashboard = () => {
                                     <div className="flex items-center gap-1 shrink-0">
                                       <button 
                                         onClick={() => setResolvingTerm({ termId: term.id, userName: user.fullName })}
-                                        className="p-1.5 hover:bg-red-900/40 text-slate-600 dark:text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                        className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg transition-colors"
                                         title="Resolver sem termo (Contingência)"
                                       >
                                         <AlertCircle size={16} />
                                       </button>
                                       <button 
                                         onClick={() => { setSelectedUserForModal(user); setActiveModalTab('TERMS'); }}
-                                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-3 text-[10px] font-black uppercase ${isWaitingApproval ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' : 'hover:bg-orange-900/40 text-slate-600 dark:text-slate-400 hover:text-orange-400'}`}
+                                        className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-3 text-[10px] font-black uppercase ${isWaitingApproval ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' : 'hover:bg-amber-100 dark:hover:bg-amber-950/40 text-slate-600 dark:text-slate-400 hover:text-amber-800 dark:hover:text-amber-300'}`}
                                       >
                                         {isWaitingApproval ? <>Analisar <ArrowRight size={14} /></> : <FileText size={16} />}
                                       </button>

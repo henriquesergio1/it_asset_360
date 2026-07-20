@@ -27,9 +27,19 @@ const versions = [
       'Compatibilidade HTML5 Date Picker: Sanitização dos campos de datas (Admissão, Nascimento, Vencimento CNH, Períodos de Ocorrência) para garantir a conversão estrita do formato ISO em YYYY-MM-DD.',
       'Eliminação de Avisos no Console: Corrigido o erro de incompatibilidade do formato date input ao carregar/salvar colaboradores e ocorrências do R.H.'
     ]
+  {
+    version: '3.74.1',
+    date: 'Hoje',
+    title: 'Ajuste Geral de Cores e Temas Claro/Escuro (Design System Harmonioso)',
+    changes: [
+      'Remoção de Fundos Marrons e Escuros no Tema Claro: Eliminadas todas as transparências hardcoded de dark mode (bg-amber-900/30, bg-orange-900/30, bg-red-900/40) do modo claro.',
+      'Revitalização do Gerador de Avatares (getAvatarColor): Implementados pares duplos de cores vibrantes e limpas para Light Mode e Dark Mode.',
+      'Card de Tarefas e Prazos: Tarefas no Dashboard agora contam com chips de prazos em caixas coloridas com bordas, e avatares por inicial com alto contraste.',
+      'Badges de Abas e Estatísticas: As contagens de "Termos Pendentes" e "Importar do R.H." ganharam fundos suaves pastel e texto nítido no tema claro.'
+    ]
   },
   {
-    version: '3.73.0',
+    version: '3.74.0',
     date: 'Hoje',
     title: 'Sincronização de Atualizações RH → TI com Diff Visual',
     changes: [

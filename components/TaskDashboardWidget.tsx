@@ -44,42 +44,42 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
           <div 
             key={task.id} 
             onClick={() => onTaskClick(task)}
-            className="bg-white dark:bg-slate-800/50 p-3 rounded-lg border border-indigo-900/30 flex items-center justify-between group hover:border-indigo-700 transition-all cursor-pointer"
+            className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between group hover:border-indigo-500 dark:hover:border-indigo-400 transition-all cursor-pointer shadow-sm"
           >
             <div className="flex flex-1 items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                task.isOverdue ? 'bg-red-900/30 text-red-400' : 
-                task.isNearDue ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : 
-                'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
+                task.isOverdue ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40' : 
+                task.isNearDue ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40' : 
+                'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40'
               }`}>
                 {getAssignedUserName(task.assignedTo).charAt(0)}
               </div>
-              <div className="flex flex-col md:flex-row md:items-center md:gap-x-4 flex-wrap">
-                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:text-indigo-400 transition-colors">
+              <div className="flex flex-col md:flex-row md:items-center md:gap-x-3 flex-wrap">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
                   {task.title}
                 </p>
-                <p className={`text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter w-fit md:mt-0 ${
-                  task.type === 'Manutenção' ? 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' :
-                  task.type === 'Envio de Arquivo' ? 'bg-purple-900/30 text-purple-400' :
-                  'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                <p className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider w-fit md:mt-0 ${
+                  task.type === 'Manutenção' ? 'bg-blue-100 text-blue-700 dark:bg-sky-500/20 dark:text-sky-300 border border-blue-200 dark:border-sky-800/40' :
+                  task.type === 'Envio de Arquivo' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40' :
+                  'bg-slate-200/70 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
                 }`}>
                   {task.type}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-x-4 shrink-0">
+            <div className="flex items-center gap-x-3 shrink-0">
               <div className={`text-[11px] flex items-center gap-1 font-bold ${
-                task.isOverdue ? 'text-red-500' : 
-                task.isNearDue ? 'text-amber-500' : 
+                task.isOverdue ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40 px-2 py-0.5 rounded-md' : 
+                task.isNearDue ? 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40 px-2 py-0.5 rounded-md' : 
                 'text-slate-500 dark:text-slate-400'
               }`}>
                 <Clock size={UI_ICON_SIZE_SMALL} />
                 {task.dueDate ? parseLocalDate(task.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}
               </div>
-              <div className={`w-2 h-2 rounded-full ${
-                task.isOverdue ? 'bg-red-500 animate-pulse' : 
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                task.isOverdue ? 'bg-rose-500 animate-pulse' : 
                 task.isNearDue ? 'bg-amber-500' : 
-                'bg-slate-600'
+                'bg-slate-400 dark:bg-slate-500'
               }`} />
             </div>
           </div>
