@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.77.2',
+    date: 'Hoje',
+    title: 'Sincronização do Módulo R.H. nos Endpoints de Lote Backend (/api/bootstrap e /api/sync)',
+    changes: [
+      'Sincronização Contínua de R.H.: Incluídas as tabelas do R.H. (RhCollaborators, RhOccurrences, RhTermTemplates, RhTerms, RhAssetItems) no endpoint /api/sync.',
+      'Persistência sem Perda de Lista: Ao salvar anexos ou dados no colaborador de R.H., a sincronização em segundo plano preserva integralmente os colaboradores cadastrados na tela.'
+    ]
+  },
+  {
     version: '3.77.1',
     date: 'Hoje',
     title: 'Correção de Referência do Estado de Anexos do R.H.',

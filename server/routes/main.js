@@ -7,7 +7,8 @@ module.exports = (app) => {
             const [
                 devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
                 modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
-                accTypesRes, customFieldsRes, accountsRes, tasksRes, taskLogsRes
+                accTypesRes, customFieldsRes, accountsRes, tasksRes, taskLogsRes,
+                rhColabRes, rhOccRes, rhTplRes, rhTermsRes, rhAssetItemsRes
             ] = await Promise.all([
                 pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, AdditionalUserIds, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
                 pool.request().query(`
@@ -30,7 +31,12 @@ module.exports = (app) => {
                 pool.request().query("SELECT * FROM CustomFields"),
                 pool.request().query("SELECT * FROM SoftwareAccounts"),
                 pool.request().query("SELECT * FROM Tasks"),
-                pool.request().query("SELECT * FROM TaskLogs")
+                pool.request().query("SELECT * FROM TaskLogs"),
+                pool.request().query("SELECT * FROM RhCollaborators"),
+                pool.request().query("SELECT * FROM RhOccurrences"),
+                pool.request().query("SELECT * FROM RhTermTemplates"),
+                pool.request().query("SELECT * FROM RhTerms"),
+                pool.request().query("SELECT * FROM RhAssetItems")
             ]);
 
             const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -48,7 +54,12 @@ module.exports = (app) => {
                 assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
                 sectors: format(sectorsRes), terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
                 customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-                tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes)
+                tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']), taskLogs: format(taskLogsRes),
+                rhCollaborators: format(rhColabRes, ['Documents']),
+                rhOccurrences: format(rhOccRes),
+                rhTemplates: format(rhTplRes),
+                rhTerms: format(rhTermsRes),
+                rhAssetItems: format(rhAssetItemsRes)
             });
         } catch (err) { res.status(500).send(err.message); }
     });
@@ -56,7 +67,10 @@ module.exports = (app) => {
     app.get('/api/sync', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes] = await Promise.all([
+            const [
+                devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes,
+                rhColabRes, rhOccRes, rhTplRes, rhTermsRes, rhAssetItemsRes
+            ] = await Promise.all([
                 pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, CurrentUserId, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
                 pool.request().query(`
                     SELECT 
@@ -69,7 +83,12 @@ module.exports = (app) => {
                 pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
                 pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence FROM Terms"),
                 pool.request().query("SELECT * FROM SoftwareAccounts"),
-                pool.request().query("SELECT * FROM Tasks")
+                pool.request().query("SELECT * FROM Tasks"),
+                pool.request().query("SELECT * FROM RhCollaborators"),
+                pool.request().query("SELECT * FROM RhOccurrences"),
+                pool.request().query("SELECT * FROM RhTermTemplates"),
+                pool.request().query("SELECT * FROM RhTerms"),
+                pool.request().query("SELECT * FROM RhAssetItems")
             ]);
 
             const devices = await Promise.all(devicesRes.recordset.map(async d => {
@@ -84,7 +103,12 @@ module.exports = (app) => {
                 maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
                 terms: format(termsRes).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
                 accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-                tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems'])
+                tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems']),
+                rhCollaborators: format(rhColabRes, ['Documents']),
+                rhOccurrences: format(rhOccRes),
+                rhTemplates: format(rhTplRes),
+                rhTerms: format(rhTermsRes),
+                rhAssetItems: format(rhAssetItemsRes)
             });
         } catch (err) { res.status(500).send(err.message); }
     });
