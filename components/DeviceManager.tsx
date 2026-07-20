@@ -100,12 +100,16 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
  </div>
  {filteredOptions.length > 0 ? filteredOptions.map(opt => (
  <div 
- key={opt.value}
- onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
- className={`px-4 py-3 cursor-pointer hover:bg-blue-50 dark:bg-sky-500/20 border-b border-slate-300 dark:border-slate-600 last:border-0 ${value === opt.value ? 'bg-blue-100 dark:bg-sky-500/20' : ''}`}
+   key={opt.value}
+   onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
+   className={`px-4 py-3 cursor-pointer border-b border-slate-200 dark:border-slate-700/60 last:border-0 transition-colors ${
+     value === opt.value 
+       ? 'bg-blue-100 dark:bg-slate-700 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400' 
+       : 'hover:bg-blue-50 dark:hover:bg-slate-700/60 bg-white dark:bg-slate-800'
+   }`}
  >
- <div className="font-bold text-slate-900 dark:text-white text-sm">{opt.label}</div>
- {opt.subLabel && <div className="text-[11px] font-mono uppercase">{opt.subLabel}</div>}
+   <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">{opt.label}</div>
+   {opt.subLabel && <div className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 mt-0.5">{opt.subLabel}</div>}
  </div>
  )) : (
  <div className="px-4 py-8 text-center text-xs italic">Nenhum resultado.</div>

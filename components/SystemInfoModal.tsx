@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.74.0',
+    date: 'Hoje',
+    title: 'Ajuste Geral de Contraste, Cores e Padronização de Temas (Claro/Escuro)',
+    changes: [
+      'Dropdowns Autocompletar: Corrigida a legibilidade das opções selecionadas/focadas na busca de colaboradores e ativos no tema escuro e claro.',
+      'Configurações de Ativos: Eliminados conflitos de background escuro e blocos brancos nos modais de modelos e marcas.',
+      'Alertas do Sistema: Ajustados contrastes e cores de badges de aviso (Esgotado, Pendente, Lembretes) com chips legíveis e modernos.',
+      'Harmonização de Temas: Unificados os tokens de cores HSL entre os módulos de RH e TI.'
+    ]
+  },
+  {
     version: '3.73.1',
     date: 'Hoje',
     title: 'Sanitização de Formato de Datas nos Formulários de R.H.',

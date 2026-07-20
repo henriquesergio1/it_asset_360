@@ -94,10 +94,14 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({ options, value,
               <div 
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setIsOpen(false); setSearchTerm(''); }}
-                className={`px-4 py-3 cursor-pointer hover:bg-indigo-50 dark:bg-indigo-500/20 border-b border-slate-300 dark:border-slate-600 last:border-b-0 ${value === opt.value ? 'bg-indigo-100 dark:bg-indigo-500/20' : ''}`}
+                className={`px-4 py-3 cursor-pointer border-b border-slate-200 dark:border-slate-700/60 last:border-b-0 transition-colors ${
+                  value === opt.value 
+                    ? 'bg-indigo-100 dark:bg-slate-700 font-bold border-l-4 border-l-indigo-600 dark:border-l-indigo-400' 
+                    : 'hover:bg-indigo-50 dark:hover:bg-slate-700/60 bg-white dark:bg-slate-800'
+                }`}
               >
-                <div className="font-bold text-slate-900 dark:text-white text-sm">{opt.label}</div>
-                {opt.subLabel && <div className="text-[11px] font-mono uppercase text-slate-600 dark:text-slate-400">{opt.subLabel}</div>}
+                <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">{opt.label}</div>
+                {opt.subLabel && <div className="text-[11px] font-mono uppercase text-slate-500 dark:text-slate-400 mt-0.5">{opt.subLabel}</div>}
               </div>
             )) : (
               <div className="px-4 py-8 text-center text-xs italic text-slate-500 dark:text-slate-400">Nenhum resultado.</div>

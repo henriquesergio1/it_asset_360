@@ -204,19 +204,19 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  return (
  <div className="fixed inset-0 bg-black bg-opacity-50 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
  <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-fade-in border border-slate-200 dark:border-slate-700">
- <div className="bg-white dark:bg-slate-800 bg-black px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/10 transition-colors">
+  <div className="bg-white dark:bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-200 dark:border-slate-700 transition-colors">
  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Layers size={20} /> Configurações de Ativos</h3>
  <button onClick={onClose} className="hover:text-slate-900 dark:text-white transition-colors"><X size={24}/></button>
  </div>
 
  <div className="flex flex-1 overflow-hidden">
  <div className="w-64 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 p-4 space-y-2 shrink-0 transition-colors">
- <button onClick={() => setActiveTab('TYPES')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'TYPES' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><Tag size={18} /> Tipos de Ativo</button>
- <button onClick={() => setActiveTab('FIELDS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'FIELDS' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><List size={18} /> Campos Extras</button>
- <button onClick={() => setActiveTab('SECTORS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'SECTORS' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><Briefcase size={18} /> Cargos e Funções</button>
- <button onClick={() => setActiveTab('BRANDS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'BRANDS' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><Box size={18} /> Marcas</button>
- <button onClick={() => setActiveTab('ACCESSORIES')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'ACCESSORIES' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><Plug size={18} /> Acessórios</button>
- <button onClick={() => setActiveTab('MODELS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'MODELS' ? ' bg-blue-900/40 text-blue-600 dark:text-sky-400 ' : ' hover:bg-white dark:bg-slate-800'}`}><Layers size={18} /> Modelos / Fotos</button>
+  <button onClick={() => setActiveTab('TYPES')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'TYPES' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><Tag size={18} /> Tipos de Ativo</button>
+  <button onClick={() => setActiveTab('FIELDS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'FIELDS' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><List size={18} /> Campos Extras</button>
+  <button onClick={() => setActiveTab('SECTORS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'SECTORS' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><Briefcase size={18} /> Cargos e Funções</button>
+  <button onClick={() => setActiveTab('BRANDS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'BRANDS' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><Box size={18} /> Marcas</button>
+  <button onClick={() => setActiveTab('ACCESSORIES')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'ACCESSORIES' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><Plug size={18} /> Acessórios</button>
+  <button onClick={() => setActiveTab('MODELS')} className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === 'MODELS' ? ' bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 font-bold border-l-4 border-l-blue-600 dark:border-l-sky-400 ' : ' text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 '}`}><Layers size={18} /> Modelos / Fotos</button>
  </div>
 
  <div ref={scrollContainerRef} className="flex-1 p-8 overflow-y-auto bg-white dark:bg-slate-800 transition-colors">
@@ -226,7 +226,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <form onSubmit={handleModelSubmit} className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-300 dark:border-slate-600 mb-8 transition-colors">
  <h5 className="font-bold text-slate-700 dark:text-slate-200 mb-4 uppercase text-xs tracking-widest">{modelForm.id ? 'Editando Modelo' : 'Cadastrar Novo Modelo'}</h5>
   {modelForm.id && (
-    <div className="mb-4 p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl flex items-start gap-2.5 text-amber-300 text-xs animate-fade-in">
+    <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl flex items-start gap-2.5 text-amber-800 dark:text-amber-300 text-xs animate-fade-in">
       <AlertTriangle size={16} className="shrink-0 mt-0.5" />
       <div>
         <span className="font-bold uppercase tracking-wider block mb-0.5 text-[10px]">Aviso de Impacto</span>
@@ -257,7 +257,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {modelForm.imageUrl ? <img src={modelForm.imageUrl} className="h-full w-full object-cover"/> : <ImageIcon className=""size={24}/>}
  </div>
  {modelForm.imageUrl ? (
- <button type="button"onClick={() => setModelForm({...modelForm, imageUrl: ''})} className="text-[10px] uppercase tracking-widest bg-red-900/30 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg hover:bg-red-900/50 font-black flex items-center gap-1"><Trash2 size={14}/> Remover</button>
+  <button type="button"onClick={() => setModelForm({...modelForm, imageUrl: ''})} className="text-[10px] uppercase tracking-widest bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 px-3 py-2 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-900/50 font-black flex items-center gap-1 transition-colors"><Trash2 size={14}/> Remover</button>
  ) : (
  <label className="cursor-pointer bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-[10px] uppercase font-black tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700/50 flex items-center gap-2 transition-colors">
  {isUploading ? <RefreshCw size={16} className="animate-spin"/> : <ImageIcon size={16}/>} Carregar Arquivo

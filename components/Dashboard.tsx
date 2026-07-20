@@ -909,7 +909,7 @@ const Dashboard = () => {
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Estoque Crítico
-                          <span className="ml-2 bg-amber-900/40 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                          <span className="ml-2 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {consumableAlerts.length}
                           </span>
                         </h3>
@@ -926,29 +926,29 @@ const Dashboard = () => {
                       
                       <div className={`space-y-3 transition-all duration-300 ${isConsumablesExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
                         {consumableAlerts.map(item => (
-                          <div key={item.id} className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border border-amber-900/30 flex flex-col gap-2 group hover:border-amber-700 transition-all">
+                          <div key={item.id} className="bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border border-amber-200 dark:border-amber-800/30 flex flex-col gap-2 group hover:border-amber-500 transition-all">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 flex-1">
-                                <div className={`w-2 h-2 rounded-full shrink-0 ${item.currentStock === 0 ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`}></div>
+                                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${item.currentStock === 0 ? 'bg-rose-500 animate-pulse' : 'bg-amber-500'}`}></div>
                                 <div className="flex-1 flex items-center justify-between min-w-0">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={item.name}>{item.name}</p>
-                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-red-900/20 text-red-400' : 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
+                                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate" title={item.name}>{item.name}</p>
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${item.currentStock === 0 ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40' : 'bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40'}`}>
                                       {item.currentStock === 0 ? 'Esgotado' : 'Baixo'}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-3 shrink-0">
-                                    <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                                    <p className={`text-sm font-black ${item.currentStock === 0 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
                                       {item.currentStock} {item.unit}
                                     </p>
-                                    <Link to="/consumables" className="p-1.5 hover:bg-blue-900/40 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Repor Estoque">
+                                    <Link to="/consumables" className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Repor Estoque">
                                       <ArrowRight size={16} />
                                     </Link>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400 font-medium pl-5">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium pl-5">
                               <span className="uppercase tracking-tighter">Estoque Mínimo: {item.minStock} {item.unit}</span>
                             </div>
                           </div>
@@ -966,7 +966,7 @@ const Dashboard = () => {
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         Estoque Crítico
-                        <span className="bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                        <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Não há itens apontando baixo estoque.</p>
                     </div>
@@ -977,16 +977,16 @@ const Dashboard = () => {
 
               {/* 3º Alerta de Termos Pendentes */}
               {pendingTerms.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-orange-500 dark:border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 dark:border-l-amber-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-orange-900/30 text-orange-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-lg shrink-0">
                       <FileWarning size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Termos Pendentes
-                          <span className="ml-2 bg-orange-900/40 text-orange-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                          <span className="ml-2 bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {pendingTerms.length}
                           </span>
                         </h3>
