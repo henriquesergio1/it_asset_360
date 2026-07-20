@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.78.0',
+    date: 'Hoje',
+    title: 'Anexo e Ocorrências Diretos sem Edição + Ações Completas e Auditoria de Exclusão',
+    changes: [
+      'Anexo e Lançamentos Diretos: Permite anexar documentos regulamentares e registrar faltas/atestados diretamente nas abas do modal de detalhes, sem necessidade de ativar o modo Editar Dados.',
+      'Ações Completas nos Documentos: Adicionados os botões de Visualização, Impressão, Download e Remoção em cada anexo na aba de detalhes.',
+      'Auditoria Obrigatória de Exclusão: Ao excluir um anexo, o sistema exige um motivo justificado e registra o evento com o usuário no log de auditoria.'
+    ]
+  },
+  {
     version: '3.77.4',
     date: 'Hoje',
     title: 'Botão de Reativação de Colaboradores do R.H. e Unificação de Renderização',

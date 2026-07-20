@@ -523,6 +523,10 @@ export const RhCollaboratorManager: React.FC = () => {
   const [docFileName, setDocFileName] = useState('');
   const [docFileBase64, setDocFileBase64] = useState<string>('');
 
+  // Delete document modal state with Audit
+  const [docToDelete, setDocToDelete] = useState<{ id: string; fileName: string; category: string } | null>(null);
+  const [deleteDocReason, setDeleteDocReason] = useState<string>('');
+
   const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -534,6 +538,97 @@ export const RhCollaboratorManager: React.FC = () => {
         setDocFileBase64(event.target?.result as string || '');
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenDeleteDocModal = (doc: { id: string; fileName: string; category: string }) => {
+    setDocToDelete(doc);
+    setDeleteDocReason('');
+  };
+
+  const handleConfirmDeleteDoc = () => {
+    if (!docToDelete) return;
+    if (!deleteDocReason.trim()) {
+      showToast('Por favor, informe o motivo da exclusão do documento.', 'error');
+      return;
+    }
+
+    if (selectedColab) {
+      const updatedDocs = (selectedColab.documents || []).filter(d => d.id !== docToDelete.id);
+      const updatedColab = { ...selectedColab, documents: updatedDocs };
+      updateRhCollaborator(updatedColab, adminName, `Exclusão de documento regulamentar: ${docToDelete.fileName} (${docToDelete.category}). Motivo: ${deleteDocReason.trim()}`);
+      setSelectedColab(updatedColab);
+      setForm(normalizeColabDates(updatedColab));
+    } else if (isEditing) {
+      const updatedDocs = (form.documents || []).filter(d => d.id !== docToDelete.id);
+      setForm(p => ({ ...p, documents: updatedDocs }));
+    }
+
+    showToast(`Documento "${docToDelete.fileName}" removido com sucesso.`, 'success');
+    setDocToDelete(null);
+    setDeleteDocReason('');
+  };
+
+  const handleAddDocumentDirect = () => {
+    if (!selectedColab) return;
+    if (!docFileName.trim()) {
+      showToast('Por favor, informe o nome do arquivo.', 'error');
+      return;
+    }
+
+    const newDoc: RhDocument = {
+      id: `doc-${Date.now()}`,
+      category: docCategory,
+      fileName: docFileName.trim(),
+      fileUrl: docFileBase64 || `mock_doc_${Date.now()}.pdf`,
+      uploadDate: new Date().toISOString().split('T')[0]
+    };
+
+    const updatedDocs = [...(selectedColab.documents || []), newDoc];
+    const updatedColab = { ...selectedColab, documents: updatedDocs };
+    updateRhCollaborator(updatedColab, adminName, `Anexado documento regulamentar: ${newDoc.fileName} (${newDoc.category})`);
+    setSelectedColab(updatedColab);
+    setForm(normalizeColabDates(updatedColab));
+
+    setDocFileName('');
+    setDocFileBase64('');
+    showToast('Documento anexado com sucesso!', 'success');
+  };
+
+  // Direct Occurrence form state for detail modal
+  const [occType, setOccType] = useState<'Férias' | 'Atestado Médico' | 'Falta Justificada' | 'Falta Injustificada' | 'Licença Maternidade/Paternidade' | 'Outros'>('Atestado Médico');
+  const [occStartDate, setOccStartDate] = useState('');
+  const [occEndDate, setOccEndDate] = useState('');
+  const [occNotes, setOccNotes] = useState('');
+
+  const handleAddOccurrenceDirect = () => {
+    if (!selectedColab) return;
+    if (!occStartDate) {
+      showToast('Por favor, informe a data inicial da ocorrência.', 'error');
+      return;
+    }
+
+    const newOcc: RhOccurrence = {
+      id: `occ-${Date.now()}`,
+      collaboratorId: selectedColab.id,
+      type: occType,
+      startDate: occStartDate,
+      endDate: occEndDate || occStartDate,
+      notes: occNotes,
+      createdAt: new Date().toISOString()
+    };
+
+    addRhOccurrence(newOcc, adminName);
+    setOccStartDate('');
+    setOccEndDate('');
+    setOccNotes('');
+    showToast('Ocorrência lançada com sucesso!', 'success');
+  };
+
+  const handleDeleteOccurrenceDirect = (occId: string) => {
+    if (window.confirm('Deseja remover esta ocorrência?')) {
+      deleteRhOccurrence(occId, adminName);
+      showToast('Ocorrência removida com sucesso.', 'success');
     }
   };
 
@@ -1429,28 +1524,115 @@ export const RhCollaboratorManager: React.FC = () => {
               )}
 
               {detailTab === 'documentos' && (
-                <div className="space-y-8">
-                  {/* Bloco 5: Documentos */}
+                <div className="space-y-6">
+                  {/* Formulário de Anexo Direto */}
+                  <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Anexar Novo Documento Regulamentar</span>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select
+                        value={docCategory}
+                        onChange={e => setDocCategory(e.target.value as any)}
+                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium shrink-0"
+                      >
+                        <option value="RG">RG</option>
+                        <option value="CPF">CPF</option>
+                        <option value="Comprovante de Residência">Comprovante de Residência</option>
+                        <option value="Contrato de Trabalho">Contrato de Trabalho</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+
+                      <label className="cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold transition-all shrink-0">
+                        <Upload size={14} className="text-indigo-500" />
+                        <span>{docFileBase64 ? 'Arquivo Pronto' : 'Selecionar Arquivo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf,.doc,.docx"
+                          className="hidden"
+                          onChange={handleDocFileSelect}
+                        />
+                      </label>
+
+                      <input
+                        type="text"
+                        placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
+                        value={docFileName}
+                        onChange={e => setDocFileName(e.target.value)}
+                        className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddDocumentDirect}
+                        className="bg-indigo-600 text-white text-xs font-black px-6 py-2.5 rounded-xl uppercase hover:bg-indigo-700 transition-all shadow-sm active:scale-95 shrink-0"
+                      >
+                        Adicionar Anexo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bloco 5: Lista de Documentos */}
                   <div className="space-y-3">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({selectedColab.documents?.length || 0})</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {selectedColab.documents && selectedColab.documents.length > 0 ? (
                         selectedColab.documents.map((doc, i) => (
-                          <div key={doc.id || i} className="p-3 bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700/60 rounded-xl flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 rounded-lg shrink-0">
-                                <FileText size={16} />
+                          <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20">
+                                <FileText size={18} />
                               </div>
-                              <div>
-                                <span className="block font-bold text-xs text-slate-800 dark:text-white leading-none">{doc.fileName}</span>
-                                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">{doc.category} • Anexado em {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
+                              <div className="min-w-0">
+                                <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate" title={doc.fileName}>{doc.fileName}</span>
+                                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
                               </div>
                             </div>
-                            <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">Visualizar</span>
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                              {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                      setIsPreviewOpen(true);
+                                    }}
+                                    className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                    title="Visualizar Documento"
+                                  >
+                                    <Eye size={15} />
+                                  </button>
+                                  <a
+                                    href={doc.fileUrl}
+                                    download={doc.fileName}
+                                    className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center justify-center"
+                                    title="Salvar / Baixar Documento"
+                                  >
+                                    <Download size={15} />
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                      setIsPreviewOpen(true);
+                                    }}
+                                    className="p-1.5 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-500/20 rounded-lg transition-colors"
+                                    title="Imprimir Documento"
+                                  >
+                                    <Printer size={15} />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeleteDocModal(doc)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
+                                title="Excluir Anexo (Requer Motivo)"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-slate-400 py-4 col-span-2">Nenhum documento regulamentar anexado.</p>
+                        <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
                       )}
                     </div>
                   </div>
@@ -1588,7 +1770,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                             <CheckSquare size={16} />
                                           </button>
                                         )}
-                                        <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
+                                        <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
                                           <Upload size={16} />
                                           <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(t.id, e)} />
                                         </label>
@@ -1616,48 +1798,117 @@ export const RhCollaboratorManager: React.FC = () => {
               )}
 
               {detailTab === 'ocorrencias' && (
-                <div className="space-y-3">
-                  <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Histórico de Ocorrências e Afastamentos</h3>
-                  {(() => {
-                    const colabOccs = rhOccurrences.filter(o => o.collaboratorId === selectedColab.id);
-                    if (colabOccs.length === 0) {
+                <div className="space-y-6">
+                  {/* Formulário de Lançamento Direto de Ocorrência */}
+                  <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                    <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Lançar Nova Ocorrência / Afastamento</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência</label>
+                        <select
+                          value={occType}
+                          onChange={e => setOccType(e.target.value as any)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                        >
+                          <option value="Atestado Médico">Atestado Médico</option>
+                          <option value="Férias">Férias</option>
+                          <option value="Falta Justificada">Falta Justificada</option>
+                          <option value="Falta Injustificada">Falta Injustificada</option>
+                          <option value="Licença Maternidade/Paternidade">Licença Maternidade/Paternidade</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Data Inicial</label>
+                        <input
+                          type="date"
+                          value={occStartDate}
+                          onChange={e => setOccStartDate(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Data Final</label>
+                        <input
+                          type="date"
+                          value={occEndDate}
+                          onChange={e => setOccEndDate(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Observação / CID</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: CID 10 - Gripe..."
+                          value={occNotes}
+                          onChange={e => setOccNotes(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleAddOccurrenceDirect}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                      >
+                        Lançar Ocorrência
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Ocorrências */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Histórico de Ocorrências e Afastamentos</h3>
+                    {(() => {
+                      const colabOccs = rhOccurrences.filter(o => o.collaboratorId === selectedColab.id);
+                      if (colabOccs.length === 0) {
+                        return (
+                          <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium text-xs">
+                            Nenhuma ocorrência, falta ou atestado médico lançado para este colaborador.
+                          </div>
+                        );
+                      }
                       return (
-                        <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium text-xs">
-                          Nenhuma ocorrência, falta ou atestado médico lançado para este colaborador.
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
+                          {colabOccs.map(occ => (
+                            <div key={occ.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex justify-between items-start">
+                              <div className="space-y-1">
+                                <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
+                                  occ.type === 'Férias'
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                    : occ.type === 'Atestado Médico'
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
+                                      : occ.type.includes('Falta')
+                                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
+                                        : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
+                                }`}>
+                                  {occ.type}
+                                </span>
+                                <div className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5 pt-1">
+                                  <Calendar size={12} className="text-slate-400" />
+                                  <span>{new Date(occ.startDate).toLocaleDateString('pt-BR')}</span>
+                                  {occ.endDate && occ.endDate !== occ.startDate && (
+                                    <span>até {new Date(occ.endDate).toLocaleDateString('pt-BR')}</span>
+                                  )}
+                                </div>
+                                {occ.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">{occ.notes}</p>}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteOccurrenceDirect(occ.id)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors ml-2 shrink-0"
+                                title="Excluir Ocorrência"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       );
-                    }
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
-                        {colabOccs.map(occ => (
-                          <div key={occ.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-150 dark:border-slate-700/60 flex justify-between items-start">
-                            <div className="space-y-1">
-                              <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
-                                occ.type === 'Férias'
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                  : occ.type === 'Atestado Médico'
-                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
-                                    : occ.type.includes('Falta')
-                                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
-                                      : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                              }`}>
-                                {occ.type}
-                              </span>
-                              <p className="text-xs font-black text-slate-800 dark:text-white pt-1">
-                                {new Date(occ.startDate).toLocaleDateString('pt-BR')} até {new Date(occ.endDate).toLocaleDateString('pt-BR')}
-                              </p>
-                              {occ.notes && <p className="text-[11px] text-slate-400 font-medium italic">"{occ.notes}"</p>}
-                            </div>
-                            <div className="flex flex-col items-end gap-2 shrink-0">
-                              <span className="text-xs font-mono font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">
-                                {occ.daysCount} {occ.daysCount === 1 ? 'dia' : 'dias'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                    })()}
+                  </div>
                 </div>
               )}
 
@@ -2945,6 +3196,45 @@ export const RhCollaboratorManager: React.FC = () => {
           fileUrl={previewData.url} 
           fileName={previewData.name} 
         />
+      )}
+      {/* Modal de Confirmação de Exclusão de Anexo com Motivo de Auditoria */}
+      {docToDelete && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-rose-500 font-bold uppercase text-xs tracking-wider">
+              <Trash2 size={18} />
+              <span>Exclusão de Anexo Regulamentar</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Você está prestes a remover o arquivo <strong className="text-slate-900 dark:text-white">{docToDelete.fileName}</strong> ({docToDelete.category}). Informe o motivo da exclusão para registro no log de auditoria:
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Justificativa da Exclusão *</label>
+              <textarea 
+                required
+                placeholder="Ex: Documento desatualizado, arquivo enviado incorretamente..."
+                value={deleteDocReason}
+                onChange={e => setDeleteDocReason(e.target.value)}
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[90px] font-medium"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button 
+                onClick={() => { setDocToDelete(null); setDeleteDocReason(''); }}
+                className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!deleteDocReason.trim()}
+                onClick={handleConfirmDeleteDoc}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
