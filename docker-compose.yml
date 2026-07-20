@@ -1,44 +1,22 @@
 version: '3.8'
 
 services:
-  # Backend API (Node.js)
-  api:
+  # Aplicação Unificada IT Asset 360 (Frontend SPA + Backend Node.js API)
+  it-asset-360:
     build:
       context: .
-      dockerfile: Dockerfile.api.txt
-    container_name: it-asset-360-api
-    hostname: api # Importante para o Nginx encontrar http://api:5000
+      dockerfile: Dockerfile
+    image: it-asset-360:latest
+    container_name: it-asset-360
+    restart: unless-stopped
     ports:
-      - "5001:5000" # Porta 5002 conforme solicitado
+      - "8083:5000" # Expondo a porta 8083 para acesso direto ao sistema
     environment:
+      - NODE_ENV=production
+      - PORT=5000
       - DB_SERVER=10.10.10.100
       - DB_PORT=1433
       - DB_DATABASE=ITAsset360
       - DB_USER=sa
       - DB_PASSWORD=#41nhAsa#@@2
-      - PORT=5000
       - JWT_SECRET=brokerrainha
-    networks:
-      - it-asset-net
-
-  # Frontend Application (React + Nginx)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.txt
-    image: it-asset-new:latest
-    pull_policy: build
-    container_name: it-asset-360-app
-    restart: unless-stopped
-    ports:
-      - "8083:80"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - api
-    networks:
-      - it-asset-net
-
-networks:
-  it-asset-net:
-    driver: bridge

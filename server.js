@@ -3513,26 +3513,23 @@ async function updateUserPendingStatus(pool, userId) {
         const path = require("path");
         const distPath = path.join(process.cwd(), "build");
         
-        // Servir arquivos estáticos APENAS se não for uma rota de API
+        // Servir arquivos estáticos (CSS, JS, imagens) se existirem
         app.use((req, res, next) => {
-            if (!req.url.startsWith('/api')) {
+            if (!req.url.startsWith('/api') && req.url !== '/healthcheck') {
                 return express.static(distPath)(req, res, next);
             }
             next();
         });
 
-        // Rota coringa para SPA (deve vir depois de todas as rotas de API)
+        // Rota de Healthcheck e SPA Fallback
         app.get("*", (req, res, next) => {
-            if (req.url === '/healthcheck') {
-                res.json({ status: 'ok', version: 'v3.74.1' });
-            } else if (req.url === '/' || req.url === '/index.html') {
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(`<h1>Servidor Rodando</h1><p>Versão v3.74.1</p>`);
-            } else if (req.url.startsWith('/api')) {
-                return next(); // Passa para o tratador de erro 404 de API se chegar aqui
-            } else {
-                res.sendFile(path.join(distPath, "index.html"));
+            if (req.url === '/healthcheck' || req.url === '/api/healthcheck') {
+                return res.json({ status: 'ok', version: `v${packageJson.version}` });
             }
+            if (req.url.startsWith('/api')) {
+                return next(); // Passa para o tratador de erro 404 da API
+            }
+            res.sendFile(path.join(distPath, "index.html"));
         });
     }
 

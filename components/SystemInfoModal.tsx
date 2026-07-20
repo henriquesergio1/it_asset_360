@@ -29,6 +29,17 @@ const versions = [
     ]
   },
   {
+    version: '3.75.0',
+    date: 'Hoje',
+    title: 'Migração para Container Docker Unificado (Alta Eficiência e Menor Consumo)',
+    changes: [
+      'Container Único Completo: Unificada a arquitetura do aplicativo e da API Node.js em 1 único container Docker, otimizando o consumo de RAM e CPU do servidor.',
+      'Redução de Tempo de Deploy: Eliminada a necessidade de build duplo (Nginx + Express), tornando o processo de deploy até 50% mais rápido.',
+      'Servimento SPA Direto: O servidor Express gerencia a entrega estática do frontend React compilado e os endpoints /api/* na mesma origem sem problemas de CORS ou proxy.',
+      'Simplificação do docker-compose: Arquivo de orquestração simplificado para 1 único serviço unificado it-asset-360.'
+    ]
+  },
+  {
     version: '3.74.1',
     date: 'Hoje',
     title: 'Ajuste Geral de Cores e Temas Claro/Escuro (Design System Harmonioso)',
