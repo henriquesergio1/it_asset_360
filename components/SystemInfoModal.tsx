@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.79.1',
+    date: 'Hoje',
+    title: 'Formatador Amigável de Histórico no Modal do Colaborador de T.I.',
+    changes: [
+      'Histórico do Usuário de T.I. Padronizado: Integrado o formatador renderFriendlyAuditLog no modal de detalhes do colaborador do módulo de T.I.',
+      'Supressão de Códigos e Base64: Ocultadas strings puras de banco e arquivos base64 na visualização do colaborador de T.I., exibindo os cards amigáveis de De ➔ Para.'
+    ]
+  },
+  {
     version: '3.79.0',
     date: 'Hoje',
     title: 'Formatador Amigável de Histórico Unificado nos Módulos de RH e T.I.',

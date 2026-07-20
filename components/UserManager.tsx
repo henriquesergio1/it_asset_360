@@ -23,6 +23,7 @@ import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_BUTTON_PRIMARY, UI_BUTTON_SECOND
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { generateAndPrintTerm, getTermHtml } from '../utils/termGenerator';
 import FilePreviewModal from './FilePreviewModal';
+import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { useRef } from 'react';
 
 const UserManager: React.FC = () => {
@@ -2252,7 +2253,7 @@ const UserManager: React.FC = () => {
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
-                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
+                            {renderFriendlyAuditLog(log.notes)}
                             <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>

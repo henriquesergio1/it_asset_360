@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.78.0
+// Servidor express unificado com API e SPA React - v3.79.1
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -746,6 +746,7 @@ async function initializeDatabase() {
         const settingsCheck = await pool.request().query('SELECT COUNT(*) as count FROM SystemSettings');
         if (settingsCheck.recordset[0].count === 0) {
             console.log('- Populando SystemSettings com valores padrão...');
+            const SYSTEM_VERSION = '3.79.1';
             await pool.request().query("INSERT INTO SystemSettings (AppName, LogoUrl, AccentColor) VALUES ('IT Asset 360', '', '#2563eb')");
         } else {
             // Verifica se a coluna AccentColor existe

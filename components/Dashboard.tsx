@@ -18,6 +18,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { generateAndPrintTerm } from '../utils/termGenerator';
 import FilePreviewModal from './FilePreviewModal';
+import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { ZabbixMonitorTab } from './ZabbixMonitorTab';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, children }: any) => (
@@ -1944,7 +1945,7 @@ const Dashboard = () => {
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
-                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{log.notes || 'Sem observações registradas.'}</div>
+                            {renderFriendlyAuditLog(log.notes)}
                             <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>
