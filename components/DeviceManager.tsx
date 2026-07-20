@@ -203,18 +203,25 @@ const LogNoteRenderer = ({ log }: { log: AuditLog }) => {
  
  const cleanOld = oldVal?.trim().replace(/'/g, '');
  const cleanNew = newVal?.trim().replace(/'/g, '');
+ const oldResolved = resolveValue(rawKey, cleanOld);
+ const newResolved = resolveValue(rawKey, cleanNew);
+ const isOldVoid = !cleanOld || cleanOld === '---' || cleanOld === 'Nenhum' || cleanOld === '[]' || oldResolved === 'Nenhum' || oldResolved === '[Sem data / Não definida]' || oldResolved.includes('1900-01-01');
 
  return (
- <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
- <span className="font-black uppercase tracking-tighter shrink-0">{fieldLabel}:</span>
- <span className="bg-red-900/20 text-red-400 px-1.5 py-0.5 rounded border border-red-900/30 line-through opacity-70">
- {resolveValue(rawKey, cleanOld)}
- </span>
- <ArrowRight size={UI_ICON_SIZE_SMALL} className="text-slate-700 dark:text-slate-300"/>
- <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-900/40 font-bold">
- {resolveValue(rawKey, cleanNew)}
- </span>
- </div>
+   <div key={i} className="flex flex-wrap items-center gap-1.5 text-[11px] p-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+     <span className="font-bold text-slate-800 dark:text-slate-200 shrink-0">{fieldLabel}:</span>
+     {!isOldVoid && (
+       <>
+         <span className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-500/20 line-through max-w-[200px] truncate" title={oldResolved}>
+           {oldResolved}
+         </span>
+         <ArrowRight size={12} className="text-slate-400"/>
+       </>
+     )}
+     <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/20 font-bold max-w-[250px] truncate" title={newResolved}>
+       {newResolved}
+     </span>
+   </div>
  );
  }
 

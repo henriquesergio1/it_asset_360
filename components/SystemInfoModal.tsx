@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.79.0',
+    date: 'Hoje',
+    title: 'Formatador Amigável de Histórico Unificado nos Módulos de RH e T.I.',
+    changes: [
+      'Omissão de Badges em Inclusões Iniciais: Quando um campo ou anexo é adicionado pela primeira vez, o badge vermelho riscado é ocultado automaticamente, exibindo apenas a nova atribuição em verde.',
+      'Desserialização de JSON de Anexos: Histórico de documentos em formato JSON exibe o nome do arquivo anexado (ex: bg marcas.png) em vez da string de código crua.',
+      'Formatação Estrita de Datas: Todas as datas (admissão, nascimento, demissão, garantia) são formatadas puramente como DD/MM/AAAA sem horários ou fusos GMT.',
+      'Histórico Amigável no Módulo de T.I.: Aplicado o mesmo formatador em cards no histórico dos ativos de T.I.'
+    ]
+  },
+  {
     version: '3.78.3',
     date: 'Hoje',
     title: 'Parser Inteligente de Histórico e Design em Cards com Vermelho Riscado ➔ Verde',
