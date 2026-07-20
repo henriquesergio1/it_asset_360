@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.81.1
+// Servidor express unificado com API e SPA React - v3.81.2
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -3501,6 +3501,80 @@ async function updateUserPendingStatus(pool, userId) {
                 .query("SELECT * FROM TaskLogs WHERE TaskId = @id ORDER BY Timestamp DESC");
             res.json(format(result));
         } catch (err) { res.status(500).send(err.message); }
+    });
+
+    // === INTEGRAÇÃO ERP: Relógio de Ponto RH (Banco de Horas) ===
+    app.post('/api/erp/rh-ponto/sync', async (req, res) => {
+        try {
+            const { server: pontoServer, database, user, password, port, selectionQuery } = req.body;
+
+            if (!pontoServer || !user || !password) {
+                return res.status(400).json({ success: false, error: 'Parâmetros de conexão incompletos. Informe servidor, usuário e senha.' });
+            }
+
+            const pontoConfig = {
+                server: pontoServer,
+                database: database || 'PontoSecullum4',
+                user: user,
+                password: password,
+                port: port ? parseInt(port) : 1433,
+                options: { encrypt: false, trustServerCertificate: true },
+                requestTimeout: 30000,
+                connectionTimeout: 15000
+            };
+
+            const defaultQuery = `
+                WITH UltimosFechamentos AS (
+                    SELECT 
+                        funcionario_id,
+                        COALESCE(MAX(data), '1900-01-01') AS DataLimite
+                    FROM calculos
+                    WHERE bajuste_obs = 'Encerramento do Banco de Horas'
+                    GROUP BY funcionario_id
+                ),
+                SomaMinutos AS (
+                    SELECT 
+                        c.funcionario_id,
+                        SUM(c.btotal) AS TotalMinutos
+                    FROM calculos c
+                    INNER JOIN UltimosFechamentos uf ON c.funcionario_id = uf.funcionario_id
+                    WHERE c.data > uf.DataLimite
+                      AND c.data < CAST(GETDATE() AS DATE)
+                    GROUP BY c.funcionario_id
+                )
+                SELECT 
+                    f.id AS funcionario_id,
+                    f.nome,
+                    f.n_pis,
+                    COALESCE(
+                        CASE WHEN sm.TotalMinutos < 0 THEN '-' ELSE '' END +
+                        CAST(ABS(sm.TotalMinutos) / 60 AS VARCHAR(10)) + ':' +
+                        RIGHT('0' + CAST(ABS(sm.TotalMinutos) % 60 AS VARCHAR(2)), 2),
+                        '0:00'
+                    ) AS total_banco
+                FROM funcionarios f
+                LEFT JOIN SomaMinutos sm ON f.id = sm.funcionario_id
+                WHERE f.demissao IS NULL
+                  AND f.invisivel = 0
+                ORDER BY f.nome;
+            `;
+
+            const finalQuery = (selectionQuery && selectionQuery.trim()) ? selectionQuery : defaultQuery;
+
+            // Usa pool dedicado para o banco do relógio (diferente do banco principal)
+            const poolPonto = await sql.connect(pontoConfig);
+            let result;
+            try {
+                result = await poolPonto.request().query(finalQuery);
+            } finally {
+                try { await poolPonto.close(); } catch (e) {}
+            }
+
+            res.json({ success: true, count: result.recordset.length, records: result.recordset });
+        } catch (err) {
+            console.error('[ERP Ponto] Erro na sincronização do relógio de ponto:', err.message);
+            res.status(500).json({ success: false, error: err.message });
+        }
     });
 
     // Vite middleware para desenvolvimento ou produção

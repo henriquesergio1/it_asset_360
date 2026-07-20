@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.81.2',
+    date: 'Hoje',
+    title: 'Correção do Endpoint de Integração ERP do Relógio de Ponto',
+    changes: [
+      'Bug Fix: A rota POST /api/erp/rh-ponto/sync estava retornando 404 em produção pois estava apenas no módulo auxiliar de rotas (server/routes/main.js) e não no servidor principal (server.js). A rota foi registrada corretamente no servidor Express principal.',
+      'Validação de Parâmetros: Adicionada verificação de campos obrigatórios (servidor, usuário e senha) antes de tentar conectar ao banco de dados do relógio de ponto.'
+    ]
+  },
+  {
     version: '3.81.1',
     date: 'Hoje',
     title: 'Formulário ERP de Ponto no RH Idêntico ao Módulo de T.I.',
