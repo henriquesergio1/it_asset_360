@@ -1312,6 +1312,29 @@ export const RhCollaboratorManager: React.FC = () => {
                 <div className="flex flex-col">
                   <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{selectedColab.role || 'Sem Cargo'}</span>
+                  {/* Badge Banco de Horas vinculado por PIS */}
+                  {(() => {
+                    const cacheStr = localStorage.getItem('rh_banco_horas_cache');
+                    if (!cacheStr) return null;
+                    let records: any[] = [];
+                    try { records = JSON.parse(cacheStr); } catch { return null; }
+                    const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
+                    if (!cleanPis) return null;
+                    const match = records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis);
+                    if (!match) return null;
+                    const isNegative = match.total_banco.startsWith('-');
+                    const isZero = match.total_banco === '0:00';
+                    return (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <RefreshCw size={10} className={isNegative ? 'text-rose-400' : isZero ? 'text-slate-400' : 'text-emerald-400'} />
+                        <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Banco de Horas:</span>
+                        <span className={`text-[10px] font-black font-mono ${
+                          isNegative ? 'text-rose-500 dark:text-rose-400' : isZero ? 'text-slate-500' : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>{match.total_banco}</span>
+                        <span className="text-[9px] text-slate-400">{isNegative ? '(deve horas)' : isZero ? '(zerado)' : '(saldo positivo)'}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <button onClick={() => setIsDetailModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all">

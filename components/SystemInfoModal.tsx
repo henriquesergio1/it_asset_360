@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.81.4',
+    date: 'Hoje',
+    title: 'Correção de Encoding e Reposicionamento do Banco de Horas',
+    changes: [
+      'Bug Fix: Restaurado encoding UTF-8 do RhCollaboratorManager.tsx corrompido por operação PowerShell na v3.81.3.',
+      'Melhoria: Badge de Banco de Horas movido para o cabeçalho do modal do colaborador, logo abaixo do nome — exibindo saldo colorido (verde/vermelho/cinza) de forma discreta e sempre visível.',
+      'Comportamento: O badge só aparece se existir cache de sincronização e o PIS do colaborador tiver correspondência no relógio de ponto.'
+    ]
+  },
+  {
     version: '3.81.3',
     date: 'Hoje',
     title: 'Banco de Horas no Cadastro do Colaborador RH',
