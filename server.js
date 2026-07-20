@@ -3561,8 +3561,8 @@ async function updateUserPendingStatus(pool, userId) {
 
             const finalQuery = (selectionQuery && selectionQuery.trim()) ? selectionQuery : defaultQuery;
 
-            // Usa pool dedicado para o banco do relógio (diferente do banco principal)
-            const poolPonto = await sql.connect(pontoConfig);
+            // Usa ConnectionPool dedicado (isolado do pool principal) para o banco do relógio
+            const poolPonto = await new sql.ConnectionPool(pontoConfig).connect();
             let result;
             try {
                 result = await poolPonto.request().query(finalQuery);

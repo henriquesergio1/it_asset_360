@@ -126,7 +126,7 @@ module.exports = (app) => {
                 requestTimeout: 30000
             };
 
-            const poolPonto = await sql.connect(pontoConfig);
+            const poolPonto = await new sql.ConnectionPool(pontoConfig).connect();
             const defaultQuery = `
                 WITH UltimosFechamentos AS (
                     SELECT 
