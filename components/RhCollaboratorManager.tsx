@@ -660,13 +660,13 @@ export const RhCollaboratorManager: React.FC = () => {
 
   const handleAddDocument = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!docFileName) return;
+    if (!docFileName && !docFileBase64) return;
 
     const newDoc: RhDocument = {
       id: 'doc-' + Math.random().toString(36).substr(2, 9),
       category: docCategory,
-      fileName: docFileName,
-      fileUrl: 'mock_doc_url_' + Math.random().toString(36).substr(2, 5),
+      fileName: docFileName || 'documento_anexo',
+      fileUrl: docFileBase64 || 'mock_doc_url_' + Math.random().toString(36).substr(2, 5),
       uploadDate: new Date().toISOString().split('T')[0]
     };
 
@@ -679,6 +679,7 @@ export const RhCollaboratorManager: React.FC = () => {
     }
 
     setDocFileName('');
+    setDocFileBase64('');
   };
 
   const handleDeleteDoc = (docId: string) => {
@@ -2181,6 +2182,16 @@ export const RhCollaboratorManager: React.FC = () => {
                           <option value="Contrato de Trabalho">Contrato de Trabalho</option>
                           <option value="Outros">Outros</option>
                         </select>
+                        <label className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center gap-2 shrink-0 border border-slate-300 dark:border-slate-600">
+                          <Upload size={14} className="text-indigo-600 dark:text-indigo-400" />
+                          <span>{docFileBase64 ? 'Arquivo Pronto' : 'Selecionar Arquivo'}</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*,.pdf,.doc,.docx"
+                            onChange={handleDocFileSelect}
+                          />
+                        </label>
                         <input
                           type="text"
                           placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
@@ -2201,17 +2212,50 @@ export const RhCollaboratorManager: React.FC = () => {
                         {form.documents && form.documents.length > 0 ? (
                           form.documents.map((doc, i) => (
                             <div key={doc.id || i} className="p-3 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs border border-slate-200 dark:border-slate-700">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase">{doc.category}</span>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[180px]" title={doc.fileName}>{doc.fileName}</span>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase shrink-0">{doc.category}</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px]" title={doc.fileName}>{doc.fileName}</span>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDoc(doc.id)}
-                                className="text-rose-500 hover:text-rose-700 font-bold text-[10px] uppercase tracking-wider pl-2 hover:underline"
-                              >
-                                Remover
-                              </button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                        setIsPreviewOpen(true);
+                                      }}
+                                      className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                      title="Visualizar e Imprimir"
+                                    >
+                                      <Eye size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.fileUrl;
+                                        link.download = doc.fileName;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                      }}
+                                      className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-lg transition-colors"
+                                      title="Baixar Arquivo"
+                                    >
+                                      <Download size={14} />
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDoc(doc.id)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
+                                  title="Remover Anexo"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                           ))
                         ) : (

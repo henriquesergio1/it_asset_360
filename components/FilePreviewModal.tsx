@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, ZoomIn, ZoomOut, Maximize2, FileText, ImageIcon, Loader2, AlertCircle, FileWarning } from 'lucide-react';
+import { X, Download, ZoomIn, ZoomOut, Maximize2, FileText, ImageIcon, Loader2, AlertCircle, FileWarning, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface FilePreviewModalProps {
@@ -29,6 +29,39 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
   );
   const isHTML = !isMultiple && (primaryUrl.includes('text/html') || fileName.toLowerCase().endsWith('.html'));
   const isImage = isMultiple || isDataImage || (!isPDF && !isHTML && (fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) || primaryUrl.startsWith('data:image/')));
+
+  const handlePrint = () => {
+    if (isPDF || isHTML) {
+      const printWin = window.open(primaryUrl, '_blank');
+      if (printWin) {
+        printWin.focus();
+        setTimeout(() => printWin.print(), 500);
+      }
+    } else {
+      const printWin = window.open('', '_blank');
+      if (!printWin) return;
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${fileName}</title>
+            <style>
+              body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fff; }
+              img { max-width: 100%; height: auto; page-break-inside: avoid; margin-bottom: 20px; }
+              @page { margin: 1cm; }
+            </style>
+          </head>
+          <body>
+            ${urls.map(u => `<img src="${u}" />`).join('')}
+            <script>
+              window.onload = function() { window.print(); window.close(); };
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
+  };
 
   const handleDownload = () => {
     urls.forEach((url, index) => {
@@ -151,6 +184,14 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ isOpen, onClose, fi
                 </>
               )}
               <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1" />
+              <button 
+                onClick={handlePrint}
+                className="p-2 text-blue-600 dark:text-sky-400 hover:text-blue-300 hover:bg-blue-50 dark:bg-sky-500/20 rounded-lg transition-all flex items-center gap-2"
+                title="Imprimir Arquivo"
+              >
+                <Printer size={18} />
+                <span className="hidden sm:inline text-[10px] font-black uppercase">Imprimir</span>
+              </button>
               <button 
                 onClick={handleDownload}
                 className="p-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-300 hover:bg-emerald-50 dark:bg-emerald-500/20 rounded-lg transition-all flex items-center gap-2"

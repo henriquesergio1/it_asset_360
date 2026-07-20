@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.77.0',
+    date: 'Hoje',
+    title: 'Seletor de Arquivos Real, Visualização, Impressão e Download de Anexos',
+    changes: [
+      'Seletor de Arquivos Nativo: Adicionado seletor real de arquivos (PDFs, Imagens, Documentos) com leitura imediata em disco.',
+      'Suporte a Impressão e Download: Botões dedicados para imprimir diretamente e baixar anexos e termos regulamentares.',
+      'Visualizador Aprimorado: O modal de visualização de arquivos permite visualizar, dar zoom, baixar e imprimir os documentos anexados.'
+    ]
+  },
+  {
     version: '3.76.1',
     date: 'Hoje',
     title: 'Sanitização de Documentos no Banco e Comparador R.H. x T.I. sem Falsos Positivos',
