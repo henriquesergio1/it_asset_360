@@ -35,9 +35,7 @@ const normalizeColabDates = (c: any) => c ? ({
   hireDate: formatDateForInput(c.hireDate),
   cnhExpiration: formatDateForInput(c.cnhExpiration),
   terminationDate: formatDateForInput(c.terminationDate)
-}) : c;
-
-const FIELD_LABELS: Record<string, string> = {
+}) : c;const FIELD_LABELS: Record<string, string> = {
   fullName: 'Nome Completo',
   birthDate: 'Data de Nascimento',
   gender: 'Gênero',
@@ -68,7 +66,7 @@ const FIELD_LABELS: Record<string, string> = {
   contractType: 'Tipo de Contrato',
   hireDate: 'Data de Admissão',
   terminationDate: 'Data de Demissão',
-  salary: 'Salário',
+  salary: 'Salário (R$)',
   weeklyHours: 'Carga Horária Semanal',
   documents: 'Documentos Anexados',
   status: 'Status',
@@ -79,33 +77,39 @@ const FIELD_LABELS: Record<string, string> = {
 const formatLogValue = (val: string): string => {
   if (!val || val === 'undefined' || val === 'null' || val === "''" || val === '""') return '[Não informado]';
   
-  if (val.includes('data:image/') || val.includes('base64,') || val.length > 150) {
-    if (val.includes('doc-') || val.includes('fileName')) return '[Arquivo Anexado / Atualizado]';
-    return '[Imagem / Conteúdo Omitido]';
+  const cleanVal = val.trim().replace(/^'|'$/g, '').replace(/^"|"$/g, '');
+
+  if (cleanVal.includes('data:image/') || cleanVal.includes('base64,') || cleanVal.length > 150) {
+    if (cleanVal.includes('doc-') || cleanVal.includes('fileName')) return '[Anexos de Documentos]';
+    return '[Arquivo de Imagem]';
   }
 
-  if (val.includes('GMT') || val.match(/^\'?\d{4}-\d{2}-\d{2}/)) {
-    const cleanStr = val.replace(/\'/g, '').trim();
-    const d = new Date(cleanStr);
+  // Verifica data zerada ou MSSQL UTC padrao 1900/1899
+  if (cleanVal.includes('1900-01-01') || cleanVal.includes('1899-12-31') || cleanVal.includes('Jan 01 1900') || cleanVal.includes('Dec 31 1899')) {
+    return '[Não informada / Zerada]';
+  }
+
+  if (cleanVal.includes('GMT') || cleanVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const d = new Date(cleanVal);
     if (!isNaN(d.getTime())) {
-      if (d.getFullYear() <= 1900) return '[Sem data / Não definida]';
+      if (d.getFullYear() <= 1900) return '[Não informada / Zerada]';
       return d.toLocaleDateString('pt-BR');
     }
   }
 
-  if (val.startsWith("'[") || val.startsWith("[{")) {
+  if (cleanVal.startsWith('[') || cleanVal.startsWith('{')) {
     try {
-      const parsed = JSON.parse(val.replace(/^'|'$/g, ''));
+      const parsed = JSON.parse(cleanVal);
       if (Array.isArray(parsed)) {
-        if (parsed.length === 0) return '[Nenhum documento]';
-        return `${parsed.length} documento(s) (${parsed.map((d: any) => d.fileName || d.category || 'Anexo').join(', ')})`;
+        if (parsed.length === 0) return '[Sem documentos]';
+        return `${parsed.length} anexo(s): ` + parsed.map((d: any) => d.fileName || d.category || 'Anexo').join(', ');
       }
     } catch (e) {
       return '[Anexos Atualizados]';
     }
   }
 
-  return val.replace(/^'|'$/g, '');
+  return cleanVal;
 };
 
 const renderFriendlyAuditLog = (notes: string) => {
@@ -113,47 +117,74 @@ const renderFriendlyAuditLog = (notes: string) => {
 
   let cleanNotes = notes.replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, '[Imagem Base64]');
   
-  const changeRegex = /(\w+):\s*('(?:[^'\\]|\\.)*'|[^\s\->]+)\s*->\s*('(?:[^'\\]|\\.)*'|[^\n,]+)/g;
-  const matches = Array.from(cleanNotes.matchAll(changeRegex));
+  const knownKeys = Object.keys(FIELD_LABELS);
+  const keyPattern = new RegExp(`(?:^|\\s)(${knownKeys.join('|')}):`, 'g');
+  
+  const matches: { key: string; index: number }[] = [];
+  let match;
+  while ((match = keyPattern.exec(cleanNotes)) !== null) {
+    matches.push({ key: match[1], index: match.index });
+  }
 
   if (matches.length > 0) {
-    return (
-      <div className="space-y-1.5 pt-1">
-        {matches.map((m, idx) => {
-          const fieldKey = m[1];
-          const rawOld = m[2];
-          const rawNew = m[3];
+    const parsedChanges: { label: string; oldVal: string; newVal: string }[] = [];
 
-          const label = FIELD_LABELS[fieldKey] || fieldKey;
-          const oldVal = formatLogValue(rawOld);
-          const newVal = formatLogValue(rawNew);
+    for (let i = 0; i < matches.length; i++) {
+      const key = matches[i].key;
+      const start = matches[i].index + key.length + 1; // apos 'key:'
+      const end = (i + 1 < matches.length) ? matches[i + 1].index : cleanNotes.length;
+      const segment = cleanNotes.substring(start, end).trim();
 
-          return (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs p-2.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/70 gap-1.5 shadow-2xs">
-              <span className="font-bold text-slate-700 dark:text-slate-200 shrink-0 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                {label}
+      const arrowSplit = segment.split(/➔|->/);
+      if (arrowSplit.length >= 2) {
+        const rawOld = arrowSplit[0].trim();
+        const rawNew = arrowSplit.slice(1).join('->').trim();
+
+        const oldVal = formatLogValue(rawOld);
+        const newVal = formatLogValue(rawNew);
+
+        // Suprimir se ambas as datas ou valores forem zerados sem alteracao real
+        const isFalsyZeroDate = (oldVal === '[Não informada / Zerada]' && newVal === '[Não informada / Zerada]') ||
+                                (oldVal === '[Não informado]' && newVal === '[Não informado]') ||
+                                (oldVal === newVal);
+
+        if (!isFalsyZeroDate) {
+          parsedChanges.push({
+            label: FIELD_LABELS[key] || key,
+            oldVal,
+            newVal
+          });
+        }
+      }
+    }
+
+    if (parsedChanges.length > 0) {
+      return (
+        <div className="space-y-2 pt-1">
+          {parsedChanges.map((change, idx) => (
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 gap-2 shadow-xs">
+              <span className="font-bold text-slate-800 dark:text-slate-200 shrink-0 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                {change.label}:
               </span>
-              <div className="flex items-center gap-2 flex-wrap text-[11px]">
-                {oldVal !== '[Não informado]' && oldVal !== '[Sem data / Não definida]' && (
-                  <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium line-through max-w-[200px] truncate" title={oldVal}>
-                    {oldVal}
-                  </span>
-                )}
-                {oldVal !== '[Não informado]' && oldVal !== '[Sem data / Não definida]' && <span className="text-slate-400 font-bold">➔</span>}
-                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold max-w-[250px] truncate" title={newVal}>
-                  {newVal}
+              <div className="flex items-center gap-2 flex-wrap text-[11px] min-w-0">
+                <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold line-through border border-rose-200 dark:border-rose-500/20 max-w-[220px] truncate" title={change.oldVal}>
+                  {change.oldVal}
+                </span>
+                <span className="text-slate-400 font-bold text-xs">➔</span>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-500/20 max-w-[280px] truncate" title={change.newVal}>
+                  {change.newVal}
                 </span>
               </div>
             </div>
-          );
-        })}
-      </div>
-    );
+          ))}
+        </div>
+      );
+    }
   }
 
   return (
-    <div className="p-2.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/70 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-relaxed">
+    <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-relaxed shadow-xs">
       {cleanNotes}
     </div>
   );

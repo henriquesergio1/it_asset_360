@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.78.3',
+    date: 'Hoje',
+    title: 'Parser Inteligente de Histórico e Design em Cards com Vermelho Riscado ➔ Verde',
+    changes: [
+      'Nomes Amigáveis de Formulário: Traduzidos todos os nomes técnicos do banco de dados para os rótulos idênticos aos exibidos nos formulários.',
+      'Supressão de Falsas Alterações: Omitidas comparações de datas zeradas que não tiveram modificação real.',
+      'Novo Layout Visual de Diffs: Exibição das alterações em cards individuais destacando o valor antigo em vermelho riscado e o valor novo em verde.'
+    ]
+  },
+  {
     version: '3.78.2',
     date: 'Hoje',
     title: 'Formatador Amigável de Histórico e Supressão de Base64',
