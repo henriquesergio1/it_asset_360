@@ -9,6 +9,24 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.78.2',
+    date: 'Hoje',
+    title: 'Formatador Amigável de Histórico e Supressão de Base64',
+    changes: [
+      'Supressão de Base64 em Logs: Ocultadas automaticamente strings extensas em formato Base64 da visualização de histórico de auditoria, evitando sobrecarga e travamento da interface.',
+      'Histórico Amigável ao Operador: Traduzidos nomes de campos técnicos (ex: birthDate -> Data de Nascimento) e formatadas datas do banco para o padrão brasileiro com cards visuais de Antes/Depois.'
+    ]
+  },
+  {
+    version: '3.78.1',
+    date: 'Hoje',
+    title: 'Miniatura (Thumbnail) de Anexos com Visualização ao Clicar',
+    changes: [
+      'Miniatura Inteligente de Anexo: Substituído o ícone padrão de papel pela miniatura real da imagem nos anexos do colaborador.',
+      'Abertura Rápida: Clicar sobre a própria miniatura ou caixa do ícone dispara a abertura imediata da visualização do documento.'
+    ]
+  },
+  {
     version: '3.78.0',
     date: 'Hoje',
     title: 'Anexo e Ocorrências Diretos sem Edição + Ações Completas e Auditoria de Exclusão',

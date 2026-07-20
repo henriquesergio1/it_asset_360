@@ -37,6 +37,128 @@ const normalizeColabDates = (c: any) => c ? ({
   terminationDate: formatDateForInput(c.terminationDate)
 }) : c;
 
+const FIELD_LABELS: Record<string, string> = {
+  fullName: 'Nome Completo',
+  birthDate: 'Data de Nascimento',
+  gender: 'Gênero',
+  maritalStatus: 'Estado Civil',
+  motherName: 'Nome da Mãe',
+  fatherName: 'Nome do Pai',
+  personalPhone: 'Telefone Pessoal',
+  corporatePhone: 'Telefone Corporativo',
+  emailPersonal: 'E-mail Pessoal',
+  emailCorporate: 'E-mail Corporativo',
+  cep: 'CEP',
+  street: 'Rua',
+  number: 'Número',
+  complement: 'Complemento',
+  neighborhood: 'Bairro',
+  city: 'Cidade',
+  state: 'Estado',
+  rg: 'RG',
+  cpf: 'CPF',
+  pis: 'PIS',
+  electorTitle: 'Título de Eleitor',
+  ctps: 'CTPS',
+  cnhNumber: 'Nº CNH',
+  cnhCategory: 'Categoria CNH',
+  cnhExpiration: 'Validade CNH',
+  role: 'Cargo / Função',
+  sectorId: 'Setor',
+  contractType: 'Tipo de Contrato',
+  hireDate: 'Data de Admissão',
+  terminationDate: 'Data de Demissão',
+  salary: 'Salário',
+  weeklyHours: 'Carga Horária Semanal',
+  documents: 'Documentos Anexados',
+  status: 'Status',
+  terminationReason: 'Motivo da Demissão',
+  photo: 'Foto de Perfil'
+};
+
+const formatLogValue = (val: string): string => {
+  if (!val || val === 'undefined' || val === 'null' || val === "''" || val === '""') return '[Não informado]';
+  
+  if (val.includes('data:image/') || val.includes('base64,') || val.length > 150) {
+    if (val.includes('doc-') || val.includes('fileName')) return '[Arquivo Anexado / Atualizado]';
+    return '[Imagem / Conteúdo Omitido]';
+  }
+
+  if (val.includes('GMT') || val.match(/^\'?\d{4}-\d{2}-\d{2}/)) {
+    const cleanStr = val.replace(/\'/g, '').trim();
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) {
+      if (d.getFullYear() <= 1900) return '[Sem data / Não definida]';
+      return d.toLocaleDateString('pt-BR');
+    }
+  }
+
+  if (val.startsWith("'[") || val.startsWith("[{")) {
+    try {
+      const parsed = JSON.parse(val.replace(/^'|'$/g, ''));
+      if (Array.isArray(parsed)) {
+        if (parsed.length === 0) return '[Nenhum documento]';
+        return `${parsed.length} documento(s) (${parsed.map((d: any) => d.fileName || d.category || 'Anexo').join(', ')})`;
+      }
+    } catch (e) {
+      return '[Anexos Atualizados]';
+    }
+  }
+
+  return val.replace(/^'|'$/g, '');
+};
+
+const renderFriendlyAuditLog = (notes: string) => {
+  if (!notes) return <span className="text-slate-400 italic">Sem observações registradas.</span>;
+
+  let cleanNotes = notes.replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, '[Imagem Base64]');
+  
+  const changeRegex = /(\w+):\s*('(?:[^'\\]|\\.)*'|[^\s\->]+)\s*->\s*('(?:[^'\\]|\\.)*'|[^\n,]+)/g;
+  const matches = Array.from(cleanNotes.matchAll(changeRegex));
+
+  if (matches.length > 0) {
+    return (
+      <div className="space-y-1.5 pt-1">
+        {matches.map((m, idx) => {
+          const fieldKey = m[1];
+          const rawOld = m[2];
+          const rawNew = m[3];
+
+          const label = FIELD_LABELS[fieldKey] || fieldKey;
+          const oldVal = formatLogValue(rawOld);
+          const newVal = formatLogValue(rawNew);
+
+          return (
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs p-2.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/70 gap-1.5 shadow-2xs">
+              <span className="font-bold text-slate-700 dark:text-slate-200 shrink-0 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                {label}
+              </span>
+              <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                {oldVal !== '[Não informado]' && oldVal !== '[Sem data / Não definida]' && (
+                  <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-medium line-through max-w-[200px] truncate" title={oldVal}>
+                    {oldVal}
+                  </span>
+                )}
+                {oldVal !== '[Não informado]' && oldVal !== '[Sem data / Não definida]' && <span className="text-slate-400 font-bold">➔</span>}
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold max-w-[250px] truncate" title={newVal}>
+                  {newVal}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-2.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/70 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-relaxed">
+      {cleanNotes}
+    </div>
+  );
+};
+
 export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
@@ -1574,17 +1696,51 @@ export const RhCollaboratorManager: React.FC = () => {
                     <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({selectedColab.documents?.length || 0})</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {selectedColab.documents && selectedColab.documents.length > 0 ? (
-                        selectedColab.documents.map((doc, i) => (
-                          <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20">
-                                <FileText size={18} />
+                        selectedColab.documents.map((doc, i) => {
+                          const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
+                          return (
+                            <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {isImage ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                      setIsPreviewOpen(true);
+                                    }}
+                                    className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 shadow-sm hover:scale-105 hover:border-indigo-500 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-800"
+                                    title="Clique para visualizar o documento"
+                                  >
+                                    <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
+                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                        setIsPreviewOpen(true);
+                                      }
+                                    }}
+                                    className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-all cursor-pointer"
+                                    title="Clique para visualizar o documento"
+                                  >
+                                    <FileText size={18} />
+                                  </button>
+                                )}
+                                <div 
+                                  className="min-w-0 cursor-pointer" 
+                                  onClick={() => {
+                                    if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
+                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                      setIsPreviewOpen(true);
+                                    }
+                                  }}
+                                >
+                                  <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
+                                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate" title={doc.fileName}>{doc.fileName}</span>
-                                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
-                              </div>
-                            </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
                               {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
                                 <>
@@ -1630,7 +1786,8 @@ export const RhCollaboratorManager: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                        ))
+                        );
+                      })
                       ) : (
                         <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
                       )}
@@ -1971,7 +2128,7 @@ export const RhCollaboratorManager: React.FC = () => {
                               </div>
                               <span className="text-[10px] font-black text-slate-600 uppercase">AUDIT#{log.id.slice(0,5).toUpperCase()}</span>
                             </div>
-                            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{log.notes || 'Sem observações registradas.'}</div>
+                            {renderFriendlyAuditLog(log.notes)}
                             <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
                               <UserIcon size={12} className="text-slate-600"/> Executor: {log.adminUser}
                             </div>
@@ -2506,12 +2663,39 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
                         {form.documents && form.documents.length > 0 ? (
-                          form.documents.map((doc, i) => (
-                            <div key={doc.id || i} className="p-3 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs border border-slate-200 dark:border-slate-700">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase shrink-0">{doc.category}</span>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px]" title={doc.fileName}>{doc.fileName}</span>
-                              </div>
+                          form.documents.map((doc, i) => {
+                            const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
+                            return (
+                              <div key={doc.id || i} className="p-3 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs border border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {isImage ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                        setIsPreviewOpen(true);
+                                      }}
+                                      className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900"
+                                      title="Clique para visualizar"
+                                    >
+                                      <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
+                                    </button>
+                                  ) : (
+                                    <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase shrink-0">{doc.category}</span>
+                                  )}
+                                  <span 
+                                    className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px] cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" 
+                                    title={doc.fileName}
+                                    onClick={() => {
+                                      if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
+                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                        setIsPreviewOpen(true);
+                                      }
+                                    }}
+                                  >
+                                    {doc.fileName}
+                                  </span>
+                                </div>
                               <div className="flex items-center gap-1.5 shrink-0">
                                 {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
                                   <>
@@ -2553,7 +2737,8 @@ export const RhCollaboratorManager: React.FC = () => {
                                 </button>
                               </div>
                             </div>
-                          ))
+                          );
+                        })
                         ) : (
                           <div className="text-slate-400 py-6 text-center col-span-2 font-medium">Nenhum documento regulamentar anexado ainda.</div>
                         )}
