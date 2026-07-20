@@ -741,7 +741,8 @@ export const RhCollaboratorManager: React.FC = () => {
     const matchesSector = !filterSector || c.sectorId === filterSector;
     const matchesContract = !filterContractType || c.contractType === filterContractType;
     
-    const isColabDemitido = !!c.terminationDate || c.status === 'Demitido';
+    const hasValidTerminationDate = !!c.terminationDate && c.terminationDate !== '1900-01-01' && !c.terminationDate.startsWith('1900-01-01');
+    const isColabDemitido = hasValidTerminationDate || c.status === 'Demitido';
     let matchesStatus = true;
     if (filterStatus === 'Ativo') {
       matchesStatus = !isColabDemitido;

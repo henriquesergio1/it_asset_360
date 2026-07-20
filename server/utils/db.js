@@ -165,9 +165,18 @@ const getBase64FromBuffer = (buffer) => {
 
 const format = (set, jsonKeys = []) => set.recordset.map(row => {
     const entry = {};
+    const lowerJsonKeys = jsonKeys.map(k => k.toLowerCase());
     for (let key in row) {
         const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-        entry[camelKey] = jsonKeys.includes(key) && row[key] ? JSON.parse(row[key]) : row[key];
+        let val = row[key];
+        
+        if (typeof val === 'string' && val.startsWith('1900-01-01')) {
+            val = null;
+        } else if (val instanceof Date && val.getFullYear() === 1900) {
+            val = null;
+        }
+
+        entry[camelKey] = lowerJsonKeys.includes(key.toLowerCase()) && val ? (typeof val === 'string' ? JSON.parse(val) : val) : val;
     }
     return entry;
 });

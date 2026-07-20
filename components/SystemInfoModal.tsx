@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.77.3',
+    date: 'Hoje',
+    title: 'Tratamento de Datas Zeradas (1900-01-01) no Filtro de Colaboradores R.H.',
+    changes: [
+      'Ajuste de Filtro R.H.: A verificação de colaboradores demitidos desconsidera a data zerada padrão do banco de dados (1900-01-01), garantindo que colaboradores ativos permaneçam visíveis na lista.',
+      'Normalização de Datas nulas: Tratamento de formatação de datas zeradas no backend SQL.'
+    ]
+  },
+  {
     version: '3.77.2',
     date: 'Hoje',
     title: 'Sincronização do Módulo R.H. nos Endpoints de Lote Backend (/api/bootstrap e /api/sync)',
