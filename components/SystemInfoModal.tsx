@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.81.3',
+    date: 'Hoje',
+    title: 'Banco de Horas no Cadastro do Colaborador RH',
+    changes: [
+      'Novo: Card dedicado "5. Banco de Horas (Relógio de Ponto)" exibido na aba Cadastro do modal do colaborador, vinculado automaticamente via número PIS.',
+      'Visual: O card muda de cor conforme o saldo — verde (saldo positivo), vermelho (deve horas), cinza (banco zerado ou sem correspondência).',
+      'Aviso amigável quando PIS não está cadastrado no colaborador ou não há correspondência no relógio de ponto.',
+      'Alerta de sincronização pendente quando o cache do relógio de ponto ainda não foi gerado.'
+    ]
+  },
+  {
     version: '3.81.2',
     date: 'Hoje',
     title: 'Correção do Endpoint de Integração ERP do Relógio de Ponto',

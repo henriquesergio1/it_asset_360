@@ -22,11 +22,11 @@ import {
 const COLUMN_OPTIONS = [
   { id: 'fullName', label: 'Nome Completo' },
   { id: 'cpf', label: 'CPF' },
-  { id: 'role', label: 'Cargo / Função' },
+  { id: 'role', label: 'Cargo / FunÃ§Ã£o' },
   { id: 'sectorId', label: 'Setor' },
   { id: 'contractType', label: 'Contrato' },
-  { id: 'hireDate', label: 'Admissão' },
-  { id: 'salary', label: 'Salário' },
+  { id: 'hireDate', label: 'AdmissÃ£o' },
+  { id: 'salary', label: 'SalÃ¡rio' },
 ];
 
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
@@ -75,7 +75,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const [resolvingManualTerm, setResolvingManualTerm] = useState<RhTerm | null>(null);
   const [resolveManualReason, setResolveManualReason] = useState('');
 
-  // Estados para trava de alteração cadastral obrigatória com justificativa
+  // Estados para trava de alteraÃ§Ã£o cadastral obrigatÃ³ria com justificativa
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [editReasonText, setEditReasonText] = useState('');
   const [pendingSaveData, setPendingSaveData] = useState<RhCollaborator | null>(null);
@@ -100,7 +100,7 @@ export const RhCollaboratorManager: React.FC = () => {
   // Tabs for viewing collaborator detail modal
   const [detailTab, setDetailTab] = useState<'cadastro' | 'documentos' | 'ocorrencias'>('cadastro');
 
-  // --- Funções de Auditoria e Trava de Edição de Cadastro ---
+  // --- FunÃ§Ãµes de Auditoria e Trava de EdiÃ§Ã£o de Cadastro ---
   const handleConfirmEditReason = () => {
     if (!pendingSaveData || !editReasonText.trim()) return;
     
@@ -112,7 +112,7 @@ export const RhCollaboratorManager: React.FC = () => {
     
     updateRhCollaborator(finalData, adminName);
     
-    // Sincronização automática da foto para o colaborador de T.I. vinculado por CPF
+    // SincronizaÃ§Ã£o automÃ¡tica da foto para o colaborador de T.I. vinculado por CPF
     const cleanCpf = (finalData.cpf || '').replace(/\D/g, '');
     if (cleanCpf && finalData.photo && users && updateUserData) {
       const tiUser = users.find(u => u.cpf && u.cpf.replace(/\D/g, '') === cleanCpf);
@@ -128,7 +128,7 @@ export const RhCollaboratorManager: React.FC = () => {
     setIsEditing(false);
   };
 
-  // --- Funções de Gestão de Termos de Comodato do RH ---
+  // --- FunÃ§Ãµes de GestÃ£o de Termos de Comodato do RH ---
   const handleUploadTermFile = async (termId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -146,7 +146,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleDeleteTermFile = async (termId: string) => {
     if (window.confirm("Deseja realmente excluir o anexo deste termo?")) {
       try {
-        await deleteTermFile(termId, '', 'Remoção do anexo pelo gestor', adminName);
+        await deleteTermFile(termId, '', 'RemoÃ§Ã£o do anexo pelo gestor', adminName);
         showToast('Anexo removido do termo', 'success');
         fetchData(true);
       } catch (err) {
@@ -195,7 +195,7 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   const handleRejectSignature = async (termId: string) => {
-    if (window.confirm("Deseja realmente rejeitar esta assinatura? O colaborador terá que assinar novamente.")) {
+    if (window.confirm("Deseja realmente rejeitar esta assinatura? O colaborador terÃ¡ que assinar novamente.")) {
       try {
         const res = await fetch(`/api/rh-terms/${termId}/reject-signature`, { method: 'POST' });
         if (res.ok) {
@@ -250,17 +250,17 @@ export const RhCollaboratorManager: React.FC = () => {
     const template = rhTemplates.find(t => t.id === term.templateId);
 
     if (!collaborator || !template) {
-      alert("Colaborador ou template não localizado.");
+      alert("Colaborador ou template nÃ£o localizado.");
       return;
     }
 
-    const sectorName = sectors?.find(s => s.id === collaborator.sectorId)?.name || 'Não Informado';
+    const sectorName = sectors?.find(s => s.id === collaborator.sectorId)?.name || 'NÃ£o Informado';
     const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // Substituições
+    // SubstituiÃ§Ãµes
     const replacements: Record<string, string> = {
       '{NOME_EMPRESA}': settings?.appName || 'Minha Empresa',
-      '{CNPJ}': settings?.cnpj || 'Não Informado',
+      '{CNPJ}': settings?.cnpj || 'NÃ£o Informado',
       '{NOME_COLABORADOR}': collaborator.fullName,
       '{CPF}': collaborator.cpf,
       '{RG}': collaborator.rg || '-',
@@ -271,7 +271,7 @@ export const RhCollaboratorManager: React.FC = () => {
       '{DATA_ATUAL}': today
     };
 
-    let processedDeclaration = term.snapshotDeclaration || template.declaration || (template.type === 'DEVOLUCAO' ? 'Declaro ter devolvido os itens abaixo na presente data.' : 'Declaro ter recebido os itens abaixo em perfeitas condições de uso.');
+    let processedDeclaration = term.snapshotDeclaration || template.declaration || (template.type === 'DEVOLUCAO' ? 'Declaro ter devolvido os itens abaixo na presente data.' : 'Declaro ter recebido os itens abaixo em perfeitas condiÃ§Ãµes de uso.');
     let processedContent = term.snapshotClauses || template.content || '';
 
     Object.keys(replacements).forEach(key => {
@@ -281,7 +281,7 @@ export const RhCollaboratorManager: React.FC = () => {
     });
 
     const isEntrega = (term.type || template.type || 'ENTREGA') === 'ENTREGA';
-    const headerTitle = isEntrega ? 'Termo de Responsabilidade de Comodato' : 'Termo de Devolução de Comodato';
+    const headerTitle = isEntrega ? 'Termo de Responsabilidade de Comodato' : 'Termo de DevoluÃ§Ã£o de Comodato';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -308,9 +308,9 @@ export const RhCollaboratorManager: React.FC = () => {
                 </td>
                 <td style="width: 75%; text-align: right; vertical-align: middle;">
                   <h1 style="margin: 0; font-size: 16px; font-weight: bold; color: #000;">${settings?.appName || 'Minha Empresa'}</h1>
-                  <p style="margin: 0; font-size: 10px; color: #000;">CNPJ: ${settings?.cnpj || 'Não Informado'}</p>
+                  <p style="margin: 0; font-size: 10px; color: #000;">CNPJ: ${settings?.cnpj || 'NÃ£o Informado'}</p>
                   <h2 style="margin: 3px 0 0 0; text-transform: uppercase; font-size: 13px; color: #000; letter-spacing: 0.5px;">${headerTitle}</h2>
-                  <p style="margin: 0; font-size: 9px; color: #000; text-transform: uppercase; font-weight: bold;">GESTÃO DE PESSOAS / RECURSOS HUMANOS</p>
+                  <p style="margin: 0; font-size: 9px; color: #000; text-transform: uppercase; font-weight: bold;">GESTÃƒO DE PESSOAS / RECURSOS HUMANOS</p>
                 </td>
               </tr>
             </table>
@@ -325,15 +325,15 @@ export const RhCollaboratorManager: React.FC = () => {
                   <td style="width: 30%; font-family: monospace; padding: 3px 0;">${collaborator.cpf}</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: bold; padding: 3px 0;">Cargo / Função:</td>
-                  <td style="padding: 4px 0;">${collaborator.role || 'Não Informado'}</td>
+                  <td style="font-weight: bold; padding: 3px 0;">Cargo / FunÃ§Ã£o:</td>
+                  <td style="padding: 4px 0;">${collaborator.role || 'NÃ£o Informado'}</td>
                   <td style="font-weight: bold; padding: 3px 0;">Setor:</td>
                   <td style="padding: 3px 0;">${sectorName}</td>
                 </tr>
               </table>
             </div>
 
-            <!-- DECLARAÇÃO -->
+            <!-- DECLARAÃ‡ÃƒO -->
             <div style="text-align: justify; font-size: 10.5px; margin-bottom: 12px; color: #000; line-height: 1.5;">
               ${processedDeclaration}
             </div>
@@ -344,7 +344,7 @@ export const RhCollaboratorManager: React.FC = () => {
               <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px;">
                 <thead>
                   <tr style="background-color: #f1f5f9;">
-                    <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; color: #000;">Descrição do Item</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px; text-align: left; color: #000;">DescriÃ§Ã£o do Item</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -355,34 +355,34 @@ export const RhCollaboratorManager: React.FC = () => {
               </table>
             </div>
 
-            <!-- OBSERVAÇÕES -->
+            <!-- OBSERVAÃ‡Ã•ES -->
             ${term.notes ? `
               <div style="margin-bottom: 12px; font-size: 10px; color: #000; background-color: #fffbeb; padding: 10px; border: 1px solid #fcd34d; border-radius: 6px;">
-                <strong>Observações:</strong> ${term.notes}
+                <strong>ObservaÃ§Ãµes:</strong> ${term.notes}
               </div>
             ` : ''}
 
-            <!-- CLÁUSULAS -->
+            <!-- CLÃUSULAS -->
             <div style="font-size: 10px; color: #000; margin-bottom: 15px; line-height: 1.4; white-space: pre-line; text-align: justify;">
               ${processedContent}
             </div>
 
             <!-- ASSINATURAS -->
             <div style="margin-top: 25px; page-break-inside: avoid; color: #000;">
-              <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">São José dos Campos, ${today}</p>
+              <p style="text-align: center; margin-bottom: 35px; font-size: 10.5px;">SÃ£o JosÃ© dos Campos, ${today}</p>
               
               <div style="width: 60%; margin: 0 auto; text-align: center;">
                 <div style="border-top: 1.5px solid #000; padding-top: 6px;">
                   <strong style="font-size: 11px; color: #000; text-transform: uppercase;">${collaborator.fullName}</strong><br>
                   <span style="font-size: 9px; color: #000; font-weight: bold;">Assinatura do Colaborador</span><br>
-                  <span style="font-size: 9px; color: #000; font-family: monospace;">Documento de Identificação (CPF): ${collaborator.cpf}</span>
+                  <span style="font-size: 9px; color: #000; font-family: monospace;">Documento de IdentificaÃ§Ã£o (CPF): ${collaborator.cpf}</span>
                   
                   ${term.status === 'ASSINADO' ? `
                     <div style="margin-top: 15px; font-size: 7px; color: #166534; text-align: center; border: 1px dashed #a7f3d0; padding: 6px; border-radius: 6px; background: #ecfdf5;">
-                      <strong style="text-transform: uppercase; color: #065f46;">AUTENTICAÇÃO DIGITAL DE R.H.</strong><br>
-                      <strong>HASH CRIPTOGRÁFICO:</strong> ${term.signatureHash?.toUpperCase() || ''}<br>
+                      <strong style="text-transform: uppercase; color: #065f46;">AUTENTICAÃ‡ÃƒO DIGITAL DE R.H.</strong><br>
+                      <strong>HASH CRIPTOGRÃFICO:</strong> ${term.signatureHash?.toUpperCase() || ''}<br>
                       IP: ${term.signatureIp || '177.45.190.22'} | DATA: ${term.signatureDate ? new Date(term.signatureDate).toLocaleString('pt-BR') : ''}<br>
-                      LOCAL: ${term.signatureLocation || 'São José dos Campos, SP'}
+                      LOCAL: ${term.signatureLocation || 'SÃ£o JosÃ© dos Campos, SP'}
                     </div>
                   ` : ''}
                 </div>
@@ -390,7 +390,7 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
 
             <div style="margin-top: 25px; text-align: center; font-size: 8px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px;">
-              Documento gerado digitalmente pelo sistema IT Asset 360 • Módulo R.H. • ${new Date().toLocaleString()}
+              Documento gerado digitalmente pelo sistema IT Asset 360 â€¢ MÃ³dulo R.H. â€¢ ${new Date().toLocaleString()}
             </div>
           </div>
           
@@ -458,12 +458,12 @@ export const RhCollaboratorManager: React.FC = () => {
 
   // Dismiss Flow
   const [isDismissModalOpen, setIsDismissModalOpen] = useState(false);
-  const [dismissReason, setDismissReason] = useState('Demissão sem Justa Causa');
+  const [dismissReason, setDismissReason] = useState('DemissÃ£o sem Justa Causa');
   const [dismissCustomNote, setDismissCustomNote] = useState('');
   const [confirmDismissWithPending, setConfirmDismissWithPending] = useState(false);
 
   // Quick Occurrence form states
-  const [quickOccType, setQuickOccType] = useState<string>('Atestado Médico');
+  const [quickOccType, setQuickOccType] = useState<string>('Atestado MÃ©dico');
   const [quickOccStart, setQuickOccStart] = useState('');
   const [quickOccEnd, setQuickOccEnd] = useState('');
   const [quickOccNotes, setQuickOccNotes] = useState('');
@@ -520,7 +520,7 @@ export const RhCollaboratorManager: React.FC = () => {
   });
 
   // Attachments temp state
-  const [docCategory, setDocCategory] = useState<'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros'>('RG');
+  const [docCategory, setDocCategory] = useState<'RG' | 'CPF' | 'Comprovante de ResidÃªncia' | 'Contrato de Trabalho' | 'Outros'>('RG');
   const [docFileName, setDocFileName] = useState('');
   const [docFileBase64, setDocFileBase64] = useState<string>('');
 
@@ -550,14 +550,14 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleConfirmDeleteDoc = () => {
     if (!docToDelete) return;
     if (!deleteDocReason.trim()) {
-      showToast('Por favor, informe o motivo da exclusão do documento.', 'error');
+      showToast('Por favor, informe o motivo da exclusÃ£o do documento.', 'error');
       return;
     }
 
     if (selectedColab) {
       const updatedDocs = (selectedColab.documents || []).filter(d => d.id !== docToDelete.id);
       const updatedColab = { ...selectedColab, documents: updatedDocs };
-      updateRhCollaborator(updatedColab, adminName, `Exclusão de documento regulamentar: ${docToDelete.fileName} (${docToDelete.category}). Motivo: ${deleteDocReason.trim()}`);
+      updateRhCollaborator(updatedColab, adminName, `ExclusÃ£o de documento regulamentar: ${docToDelete.fileName} (${docToDelete.category}). Motivo: ${deleteDocReason.trim()}`);
       setSelectedColab(updatedColab);
       setForm(normalizeColabDates(updatedColab));
     } else if (isEditing) {
@@ -597,7 +597,7 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   // Direct Occurrence form state for detail modal
-  const [occType, setOccType] = useState<'Férias' | 'Atestado Médico' | 'Falta Justificada' | 'Falta Injustificada' | 'Licença Maternidade/Paternidade' | 'Outros'>('Atestado Médico');
+  const [occType, setOccType] = useState<'FÃ©rias' | 'Atestado MÃ©dico' | 'Falta Justificada' | 'Falta Injustificada' | 'LicenÃ§a Maternidade/Paternidade' | 'Outros'>('Atestado MÃ©dico');
   const [occStartDate, setOccStartDate] = useState('');
   const [occEndDate, setOccEndDate] = useState('');
   const [occNotes, setOccNotes] = useState('');
@@ -605,7 +605,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleAddOccurrenceDirect = () => {
     if (!selectedColab) return;
     if (!occStartDate) {
-      showToast('Por favor, informe a data inicial da ocorrência.', 'error');
+      showToast('Por favor, informe a data inicial da ocorrÃªncia.', 'error');
       return;
     }
 
@@ -623,13 +623,13 @@ export const RhCollaboratorManager: React.FC = () => {
     setOccStartDate('');
     setOccEndDate('');
     setOccNotes('');
-    showToast('Ocorrência lançada com sucesso!', 'success');
+    showToast('OcorrÃªncia lanÃ§ada com sucesso!', 'success');
   };
 
   const handleDeleteOccurrenceDirect = (occId: string) => {
-    if (window.confirm('Deseja remover esta ocorrência?')) {
+    if (window.confirm('Deseja remover esta ocorrÃªncia?')) {
       deleteRhOccurrence(occId, adminName);
-      showToast('Ocorrência removida com sucesso.', 'success');
+      showToast('OcorrÃªncia removida com sucesso.', 'success');
     }
   };
 
@@ -662,38 +662,38 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validações básicas
+    // ValidaÃ§Ãµes bÃ¡sicas
     if (!form.fullName || !form.cpf || !form.sectorId) {
-      alert('Nome Completo, CPF e Setor são obrigatórios.');
+      alert('Nome Completo, CPF e Setor sÃ£o obrigatÃ³rios.');
       return;
     }
 
     if (!validateCPF(form.cpf)) {
-      alert('CPF inválido. Por favor, verifique o número informado.');
+      alert('CPF invÃ¡lido. Por favor, verifique o nÃºmero informado.');
       return;
     }
 
     if (form.emailPersonal && !validateEmail(form.emailPersonal)) {
-      alert('E-mail pessoal inválido.');
+      alert('E-mail pessoal invÃ¡lido.');
       return;
     }
 
     if (form.emailCorporate && !validateEmail(form.emailCorporate)) {
-      alert('E-mail corporativo inválido.');
+      alert('E-mail corporativo invÃ¡lido.');
       return;
     }
 
     if (form.personalPhone && !validatePhone(form.personalPhone)) {
-      alert('Telefone pessoal deve ter pelo menos 10 dígitos.');
+      alert('Telefone pessoal deve ter pelo menos 10 dÃ­gitos.');
       return;
     }
 
     if (form.cep && !validateCEP(form.cep)) {
-      alert('CEP deve ter 8 dígitos.');
+      alert('CEP deve ter 8 dÃ­gitos.');
       return;
     }
 
-    // Normalização de dados
+    // NormalizaÃ§Ã£o de dados
     const normalizedForm = {
       ...form,
       fullName: normalizeName(form.fullName || ''),
@@ -714,7 +714,7 @@ export const RhCollaboratorManager: React.FC = () => {
       status: form.status || 'Ativo'
     };
 
-    // Trava de duplicidade de documentos (apenas para criação ou se mudou o documento)
+    // Trava de duplicidade de documentos (apenas para criaÃ§Ã£o ou se mudou o documento)
     const checkDuplicate = (docType: 'cpf' | 'rg' | 'pis', value: string) => {
       if (!value) return false;
       return rhCollaborators.some(c => 
@@ -724,17 +724,17 @@ export const RhCollaboratorManager: React.FC = () => {
     };
 
     if (checkDuplicate('cpf', normalizedForm.cpf)) {
-      alert(`Já existe um colaborador cadastrado com este CPF (${formatCPF(normalizedForm.cpf)}).`);
+      alert(`JÃ¡ existe um colaborador cadastrado com este CPF (${formatCPF(normalizedForm.cpf)}).`);
       return;
     }
 
     if (normalizedForm.rg && checkDuplicate('rg', normalizedForm.rg)) {
-      alert(`Já existe um colaborador cadastrado com este RG (${normalizedForm.rg}).`);
+      alert(`JÃ¡ existe um colaborador cadastrado com este RG (${normalizedForm.rg}).`);
       return;
     }
 
     if (normalizedForm.pis && checkDuplicate('pis', normalizedForm.pis)) {
-      alert(`Já existe um colaborador cadastrado com este PIS (${normalizedForm.pis}).`);
+      alert(`JÃ¡ existe um colaborador cadastrado com este PIS (${normalizedForm.pis}).`);
       return;
     }
 
@@ -746,7 +746,7 @@ export const RhCollaboratorManager: React.FC = () => {
       };
       addRhCollaborator(newColab, adminName);
 
-      // Sincronização automática da foto para o colaborador de T.I. se já existir por CPF
+      // SincronizaÃ§Ã£o automÃ¡tica da foto para o colaborador de T.I. se jÃ¡ existir por CPF
       const cleanCpf = (newColab.cpf || '').replace(/\D/g, '');
       if (cleanCpf && newColab.photo && users && updateUserData) {
         const tiUser = users.find(u => u.cpf && u.cpf.replace(/\D/g, '') === cleanCpf);
@@ -874,11 +874,11 @@ export const RhCollaboratorManager: React.FC = () => {
   const columns: Column<RhCollaborator>[] = [
     ...(visibleColumns.includes('fullName') ? [{ key: 'fullName', label: 'Nome Completo', sortable: true } as Column<RhCollaborator>] : []),
     ...(visibleColumns.includes('cpf') ? [{ key: 'cpf', label: 'CPF', sortable: true } as Column<RhCollaborator>] : []),
-    ...(visibleColumns.includes('role') ? [{ key: 'role', label: 'Cargo / Função', sortable: true } as Column<RhCollaborator>] : []),
+    ...(visibleColumns.includes('role') ? [{ key: 'role', label: 'Cargo / FunÃ§Ã£o', sortable: true } as Column<RhCollaborator>] : []),
     ...(visibleColumns.includes('sectorId') ? [{ key: 'sectorId', label: 'Setor', sortable: true } as Column<RhCollaborator>] : []),
     ...(visibleColumns.includes('contractType') ? [{ key: 'contractType', label: 'Contrato', sortable: true } as Column<RhCollaborator>] : []),
-    ...(visibleColumns.includes('hireDate') ? [{ key: 'hireDate', label: 'Admissão', sortable: true } as Column<RhCollaborator>] : []),
-    ...(visibleColumns.includes('salary') ? [{ key: 'salary', label: 'Salário', sortable: true } as Column<RhCollaborator>] : []),
+    ...(visibleColumns.includes('hireDate') ? [{ key: 'hireDate', label: 'AdmissÃ£o', sortable: true } as Column<RhCollaborator>] : []),
+    ...(visibleColumns.includes('salary') ? [{ key: 'salary', label: 'SalÃ¡rio', sortable: true } as Column<RhCollaborator>] : []),
     ...(visibleColumns.includes('docs') ? [{ key: 'docs', label: 'Anexos', sortable: false } as Column<RhCollaborator>] : [])
   ];
 
@@ -957,7 +957,7 @@ export const RhCollaboratorManager: React.FC = () => {
     const exportData = filtered.map(c => ({
       'Nome Completo': c.fullName,
       'Data de Nascimento': c.birthDate || '',
-      'Gênero': c.gender || '',
+      'GÃªnero': c.gender || '',
       'Estado Civil': c.maritalStatus || '',
       'Telefone Pessoal': c.personalPhone || '',
       'Telefone Corporativo': c.corporatePhone || '',
@@ -967,9 +967,9 @@ export const RhCollaboratorManager: React.FC = () => {
       'RG': c.rg || '',
       'Cargo': c.role || '',
       'Tipo de Contrato': c.contractType,
-      'Data de Admissão': c.hireDate || '',
-      'Salário Mensal': c.salary || 0,
-      'Carga Horária Semanal': c.weeklyHours || 44
+      'Data de AdmissÃ£o': c.hireDate || '',
+      'SalÃ¡rio Mensal': c.salary || 0,
+      'Carga HorÃ¡ria Semanal': c.weeklyHours || 44
     }));
     exportToCSV(exportData, 'colaboradores_rh');
   };
@@ -978,7 +978,7 @@ export const RhCollaboratorManager: React.FC = () => {
     const exportData = filtered.map(c => ({
       'Nome Completo': c.fullName,
       'Data de Nascimento': c.birthDate || '',
-      'Gênero': c.gender || '',
+      'GÃªnero': c.gender || '',
       'Estado Civil': c.maritalStatus || '',
       'Telefone Pessoal': c.personalPhone || '',
       'Telefone Corporativo': c.corporatePhone || '',
@@ -988,15 +988,15 @@ export const RhCollaboratorManager: React.FC = () => {
       'RG': c.rg || '',
       'Cargo': c.role || '',
       'Tipo de Contrato': c.contractType,
-      'Data de Admissão': c.hireDate || '',
-      'Salário Mensal': c.salary || 0,
-      'Carga Horária Semanal': c.weeklyHours || 44
+      'Data de AdmissÃ£o': c.hireDate || '',
+      'SalÃ¡rio Mensal': c.salary || 0,
+      'Carga HorÃ¡ria Semanal': c.weeklyHours || 44
     }));
     exportToExcel(exportData, 'colaboradores_rh');
   };
 
   const handleExportPDF = () => {
-    const headers = ['Nome Completo', 'CPF', 'Cargo', 'Contrato', 'Admissão', 'Salário'];
+    const headers = ['Nome Completo', 'CPF', 'Cargo', 'Contrato', 'AdmissÃ£o', 'SalÃ¡rio'];
     const exportData = filtered.map(c => [
       c.fullName,
       c.cpf,
@@ -1005,7 +1005,7 @@ export const RhCollaboratorManager: React.FC = () => {
       c.hireDate ? new Date(c.hireDate).toLocaleDateString('pt-BR') : '',
       new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.salary || 0)
     ]);
-    exportToPDF(headers, exportData, 'colaboradores_rh', 'Relatório de Colaboradores de R.H.');
+    exportToPDF(headers, exportData, 'colaboradores_rh', 'RelatÃ³rio de Colaboradores de R.H.');
   };
 
   return (
@@ -1014,7 +1014,7 @@ export const RhCollaboratorManager: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 id="rh-collaborators-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">CADASTRO DE COLABORADORES (R.H.)</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gestão integral de dados pessoais, contratos e documentos regulamentares</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">GestÃ£o integral de dados pessoais, contratos e documentos regulamentares</p>
         </div>
         <button
           onClick={() => {
@@ -1081,7 +1081,7 @@ export const RhCollaboratorManager: React.FC = () => {
             <option value="">Todos os Contratos</option>
             <option value="CLT">CLT</option>
             <option value="PJ">PJ</option>
-            <option value="Estágio">Estágio</option>
+            <option value="EstÃ¡gio">EstÃ¡gio</option>
             <option value="Cooperado">Cooperado</option>
           </select>
 
@@ -1097,7 +1097,7 @@ export const RhCollaboratorManager: React.FC = () => {
             {isColumnSelectorOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-2xl z-[500] overflow-hidden animate-fade-in shadow-2xl ring-1 ring-white/5">
                 <div className="bg-slate-50 dark:bg-slate-900 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center text-slate-600 dark:text-slate-400">
-                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar Visão</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Personalizar VisÃ£o</span>
                   <button
                     type="button"
                     onClick={() => setIsColumnSelectorOpen(false)}
@@ -1216,7 +1216,7 @@ export const RhCollaboratorManager: React.FC = () => {
                   <td className="px-6 py-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {revealSalaries[c.id] 
                       ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.salary || 0)
-                      : 'R$ •••••••'
+                      : 'R$ â€¢â€¢â€¢â€¢â€¢â€¢â€¢'
                     }
                     <button
                       type="button"
@@ -1352,7 +1352,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                3. Faltas / Férias / Atestados
+                3. Faltas / FÃ©rias / Atestados
               </button>
               <button
                 type="button"
@@ -1364,7 +1364,7 @@ export const RhCollaboratorManager: React.FC = () => {
                 }`}
               >
                 <History size={12} />
-                4. Histórico
+                4. HistÃ³rico
               </button>
             </div>
 
@@ -1381,7 +1381,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.birthDate ? new Date(selectedColab.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Gênero</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">GÃªnero</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.gender || '---'}</span>
                       </div>
                       <div>
@@ -1389,7 +1389,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.maritalStatus || '---'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Mãe</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">MÃ£e</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.motherName || '---'}</span>
                       </div>
                       <div>
@@ -1417,7 +1417,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Bloco 2 */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">2. Documentação Regulamentar</h3>
+                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">2. DocumentaÃ§Ã£o Regulamentar</h3>
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CPF</span>
@@ -1442,7 +1442,7 @@ export const RhCollaboratorManager: React.FC = () => {
                               return (
                                 <div className="col-span-2 p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
                                   <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
-                                    <span>⏱️</span> Saldo Banco de Horas (Relógio de Ponto)
+                                    <span>â±ï¸</span> Saldo Banco de Horas (RelÃ³gio de Ponto)
                                   </span>
                                   <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black ${
                                     matchPonto.total_banco.startsWith('-')
@@ -1465,13 +1465,13 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">TÃ­tulo de Eleitor</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
                       </div>
                       <div className="col-span-2">
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
-                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''}) - Vence em ${selectedColab.cnhExpiration ? new Date(selectedColab.cnhExpiration).toLocaleDateString('pt-BR') : ''}` : 'Não cadastrada'}
+                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''}) - Vence em ${selectedColab.cnhExpiration ? new Date(selectedColab.cnhExpiration).toLocaleDateString('pt-BR') : ''}` : 'NÃ£o cadastrada'}
                         </span>
                       </div>
                     </div>
@@ -1479,13 +1479,13 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Bloco 3 */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">3. Endereço Residencial</h3>
+                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">3. EndereÃ§o Residencial</h3>
                     <div className="text-xs space-y-2 flex items-start gap-3">
                       <MapPin size={20} className="text-slate-400 mt-1 shrink-0" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-800 dark:text-slate-200 block">
-                            {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
+                            {selectedColab.street || 'EndereÃ§o nÃ£o cadastrado'}, nÂº {selectedColab.number || 'S/N'}
                             {selectedColab.complement && ` - ${selectedColab.complement}`}
                           </span>
                           {selectedColab.street && (
@@ -1503,7 +1503,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           )}
                         </div>
                         <span className="text-slate-400 block text-[10px] font-bold">
-                          {selectedColab.neighborhood || ''} • {selectedColab.city || ''} - {selectedColab.state || ''}
+                          {selectedColab.neighborhood || ''} â€¢ {selectedColab.city || ''} - {selectedColab.state || ''}
                         </span>
                         <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep ? formatCEP(selectedColab.cep) : '---'}</span>
                       </div>
@@ -1512,10 +1512,10 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Bloco 4 */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">4. Cargo e Remuneração</h3>
+                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">4. Cargo e RemuneraÃ§Ã£o</h3>
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de AdmissÃ£o</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</span>
                       </div>
                       <div>
@@ -1531,12 +1531,12 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.contractType || '---'}</span>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Salário Mensal</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">SalÃ¡rio Mensal</span>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="font-mono font-bold text-md text-emerald-600 dark:text-emerald-400">
                             {revealSalaries[selectedColab.id] 
                               ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedColab.salary || 0)
-                              : 'R$ •••••••'
+                              : 'R$ â€¢â€¢â€¢â€¢â€¢â€¢â€¢'
                             }
                           </span>
                           <button
@@ -1550,12 +1550,63 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Card Banco de Horas - Relógio de Ponto */}
+                  {(() => {
+                    const cacheStr = localStorage.getItem('rh_banco_horas_cache');
+                    if (!cacheStr) return (
+                      <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700/60 p-4 flex items-center gap-3 text-xs text-slate-400">
+                        <RefreshCw size={16} className="shrink-0 text-slate-300" />
+                        <span>Banco de horas não disponível. Realize a sincronização em <span className="font-bold">Administração → Integração ERP → Módulo R.H.</span></span>
+                      </div>
+                    );
+                    let records: any[] = [];
+                    try { records = JSON.parse(cacheStr); } catch { return null; }
+                    const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
+                    const match = cleanPis ? records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis) : null;
+                    const isNegative = match && match.total_banco.startsWith('-');
+                    const isZero = match && match.total_banco === '0:00';
+                    return (
+                      <div className={`rounded-2xl border p-4 space-y-3 ${!match ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40' : isNegative ? 'border-rose-200 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-950/30' : isZero ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40' : 'border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30'}`}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                            <RefreshCw size={14} className={!match ? 'text-slate-400' : isNegative ? 'text-rose-500' : isZero ? 'text-slate-400' : 'text-emerald-500'} />
+                            5. Banco de Horas (Relógio de Ponto)
+                          </h3>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Vinculado por PIS</span>
+                        </div>
+                        {!match ? (
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <AlertTriangle size={14} className="text-amber-400 shrink-0" />
+                            <span>{!cleanPis ? 'PIS não cadastrado para este colaborador.' : `Nenhum registro encontrado no relógio de ponto para o PIS ${selectedColab.pis}.`}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                              <p className="text-[10px] font-bold uppercase text-slate-400">Funcionário no Relógio</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{match.nome}</p>
+                              <p className="text-[10px] font-mono text-slate-400">ID Ponto: {match.funcionario_id} &bull; PIS: {match.n_pis}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Saldo Atual</p>
+                              <span className={`px-4 py-2 rounded-xl text-xl font-black font-mono tracking-tight ${isNegative ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300' : isZero ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'}`}>
+                                {match.total_banco}
+                              </span>
+                              <p className="text-[10px] text-slate-400 mt-1.5 text-right">
+                                {isNegative ? 'Colaborador deve horas' : isZero ? 'Banco zerado' : 'Saldo positivo de horas'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
               {detailTab === 'documentos' && (
                 <div className="space-y-6">
-                  {/* Formulário de Anexo Direto */}
+                  {/* FormulÃ¡rio de Anexo Direto */}
                   <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
                     <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Anexar Novo Documento Regulamentar</span>
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -1566,7 +1617,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       >
                         <option value="RG">RG</option>
                         <option value="CPF">CPF</option>
-                        <option value="Comprovante de Residência">Comprovante de Residência</option>
+                        <option value="Comprovante de ResidÃªncia">Comprovante de ResidÃªncia</option>
                         <option value="Contrato de Trabalho">Contrato de Trabalho</option>
                         <option value="Outros">Outros</option>
                       </select>
@@ -1584,7 +1635,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       <input
                         type="text"
-                        placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
+                        placeholder="Nome amigÃ¡vel do arquivo (ex: RG_Frente)..."
                         value={docFileName}
                         onChange={e => setDocFileName(e.target.value)}
                         className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
@@ -1646,7 +1697,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                   }}
                                 >
                                   <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
-                                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
+                                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} â€¢ {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
                                 </div>
                               </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -1708,7 +1759,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     {(() => {
                       const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab.id);
                       if (colabTerms.length === 0) {
-                        return <div className="text-slate-400 py-6 text-center font-medium text-xs">Nenhum termo de comodato (entrega/devolução) gerado para este colaborador.</div>;
+                        return <div className="text-slate-400 py-6 text-center font-medium text-xs">Nenhum termo de comodato (entrega/devoluÃ§Ã£o) gerado para este colaborador.</div>;
                       }
                       return (
                         <div className="grid grid-cols-1 gap-3">
@@ -1721,7 +1772,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                     {t.type === 'ENTREGA' ? <FileSignature className="text-indigo-600 dark:text-indigo-400" size={24} /> : <RefreshCw className="text-blue-600 dark:text-sky-400" size={24} />}
                                   </div>
                                   <div>
-                                    <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{t.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
+                                    <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{t.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de DevoluÃ§Ã£o'}</div>
                                     <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase flex flex-col gap-0.5 mt-1">
                                       <div className="flex items-center gap-2">
                                         <span className="text-indigo-500/80">EMITIDO EM: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
@@ -1746,7 +1797,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                       {t.isManual ? 'Manual' : (t.fileUrl || t.hasFile || (t.signatureDate && t.signatureStatus === 'APPROVED') ? 'Assinado' : (t.signatureStatus === 'WAITING_APPROVAL' ? 'Validar' : 'Pendente'))}
                                     </span>
                                     {t.isManual && (
-                                      <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">Resolução Manual</div>
+                                      <div className="text-[9px] font-bold text-orange-500/70 mt-0.5 uppercase tracking-tighter">ResoluÃ§Ã£o Manual</div>
                                     )}
                                   </div>
                                   <div className="flex gap-2">
@@ -1815,10 +1866,10 @@ export const RhCollaboratorManager: React.FC = () => {
                                             await handleViewSignatureEvidences(t.id);
                                           }}
                                           className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
-                                          title="Ver Evidências de Identidade (Doc + Selfie)"
+                                          title="Ver EvidÃªncias de Identidade (Doc + Selfie)"
                                         >
                                           <Camera size={14} className="text-indigo-650 dark:text-indigo-400" />
-                                          <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
+                                          <span className="text-[9px] font-black uppercase tracking-widest px-1">EvidÃªncias</span>
                                         </button>
                                       </div>
                                     )}
@@ -1830,7 +1881,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                             type="button"
                                             onClick={() => setResolvingManualTerm(t)}
                                             className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
-                                            title="Resolução Manual"
+                                            title="ResoluÃ§Ã£o Manual"
                                           >
                                             <CheckSquare size={16} />
                                           </button>
@@ -1864,22 +1915,22 @@ export const RhCollaboratorManager: React.FC = () => {
 
               {detailTab === 'ocorrencias' && (
                 <div className="space-y-6">
-                  {/* Formulário de Lançamento Direto de Ocorrência */}
+                  {/* FormulÃ¡rio de LanÃ§amento Direto de OcorrÃªncia */}
                   <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
-                    <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Lançar Nova Ocorrência / Afastamento</span>
+                    <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">LanÃ§ar Nova OcorrÃªncia / Afastamento</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência</label>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Tipo de OcorrÃªncia</label>
                         <select
                           value={occType}
                           onChange={e => setOccType(e.target.value as any)}
                           className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
                         >
-                          <option value="Atestado Médico">Atestado Médico</option>
-                          <option value="Férias">Férias</option>
+                          <option value="Atestado MÃ©dico">Atestado MÃ©dico</option>
+                          <option value="FÃ©rias">FÃ©rias</option>
                           <option value="Falta Justificada">Falta Justificada</option>
                           <option value="Falta Injustificada">Falta Injustificada</option>
-                          <option value="Licença Maternidade/Paternidade">Licença Maternidade/Paternidade</option>
+                          <option value="LicenÃ§a Maternidade/Paternidade">LicenÃ§a Maternidade/Paternidade</option>
                           <option value="Outros">Outros</option>
                         </select>
                       </div>
@@ -1902,7 +1953,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Observação / CID</label>
+                        <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">ObservaÃ§Ã£o / CID</label>
                         <input
                           type="text"
                           placeholder="Ex: CID 10 - Gripe..."
@@ -1918,20 +1969,20 @@ export const RhCollaboratorManager: React.FC = () => {
                         onClick={handleAddOccurrenceDirect}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95"
                       >
-                        Lançar Ocorrência
+                        LanÃ§ar OcorrÃªncia
                       </button>
                     </div>
                   </div>
 
-                  {/* Lista de Ocorrências */}
+                  {/* Lista de OcorrÃªncias */}
                   <div className="space-y-3">
-                    <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Histórico de Ocorrências e Afastamentos</h3>
+                    <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">HistÃ³rico de OcorrÃªncias e Afastamentos</h3>
                     {(() => {
                       const colabOccs = rhOccurrences.filter(o => o.collaboratorId === selectedColab.id);
                       if (colabOccs.length === 0) {
                         return (
                           <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium text-xs">
-                            Nenhuma ocorrência, falta ou atestado médico lançado para este colaborador.
+                            Nenhuma ocorrÃªncia, falta ou atestado mÃ©dico lanÃ§ado para este colaborador.
                           </div>
                         );
                       }
@@ -1941,9 +1992,9 @@ export const RhCollaboratorManager: React.FC = () => {
                             <div key={occ.id} className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex justify-between items-start">
                               <div className="space-y-1">
                                 <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
-                                  occ.type === 'Férias'
+                                  occ.type === 'FÃ©rias'
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                    : occ.type === 'Atestado Médico'
+                                    : occ.type === 'Atestado MÃ©dico'
                                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
                                       : occ.type.includes('Falta')
                                         ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
@@ -1955,7 +2006,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                   <Calendar size={12} className="text-slate-400" />
                                   <span>{new Date(occ.startDate).toLocaleDateString('pt-BR')}</span>
                                   {occ.endDate && occ.endDate !== occ.startDate && (
-                                    <span>até {new Date(occ.endDate).toLocaleDateString('pt-BR')}</span>
+                                    <span>atÃ© {new Date(occ.endDate).toLocaleDateString('pt-BR')}</span>
                                   )}
                                 </div>
                                 {occ.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">{occ.notes}</p>}
@@ -1964,7 +2015,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                 type="button"
                                 onClick={() => handleDeleteOccurrenceDirect(occ.id)}
                                 className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors ml-2 shrink-0"
-                                title="Excluir Ocorrência"
+                                title="Excluir OcorrÃªncia"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -2019,11 +2070,11 @@ export const RhCollaboratorManager: React.FC = () => {
                       }
 
                       return colabLogs.map(log => {
-                        const statusClass = log.action.includes('Criação') ? 'bg-indigo-950 text-indigo-400' :
-                                           log.action.includes('Atualização') ? 'bg-blue-950 text-blue-400' :
-                                           log.action.includes('Exclusão') ? 'bg-red-950 text-red-400' :
+                        const statusClass = log.action.includes('CriaÃ§Ã£o') ? 'bg-indigo-950 text-indigo-400' :
+                                           log.action.includes('AtualizaÃ§Ã£o') ? 'bg-blue-950 text-blue-400' :
+                                           log.action.includes('ExclusÃ£o') ? 'bg-red-950 text-red-400' :
                                            log.action.includes('Demitir') ? 'bg-red-950 text-red-400' :
-                                           log.action.includes('Resolução Manual') ? 'bg-orange-950 text-orange-400' :
+                                           log.action.includes('ResoluÃ§Ã£o Manual') ? 'bg-orange-950 text-orange-400' :
                                            'bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400';
                         return (
                           <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-350 dark:hover:border-slate-650 transition-all">
@@ -2143,7 +2194,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                3. Faltas / Férias / Ocorrências
+                3. Faltas / FÃ©rias / OcorrÃªncias
               </button>
             </div>
 
@@ -2151,7 +2202,7 @@ export const RhCollaboratorManager: React.FC = () => {
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-8 w-full overflow-x-hidden">
               {activeTab === 'cadastro' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {/* Seção 1: Dados Pessoais */}
+                  {/* SeÃ§Ã£o 1: Dados Pessoais */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
                       Dados Pessoais
@@ -2218,7 +2269,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Gênero</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">GÃªnero</label>
                         <select
                           value={form.gender || 'Masculino'}
                           onChange={e => setForm(p => ({ ...p, gender: e.target.value as any }))}
@@ -2241,13 +2292,13 @@ export const RhCollaboratorManager: React.FC = () => {
                         <option>Solteiro</option>
                         <option>Casado</option>
                         <option>Divorciado</option>
-                        <option>Viúvo</option>
+                        <option>ViÃºvo</option>
                         <option>Outro</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome da Mãe</label>
+                      <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome da MÃ£e</label>
                       <input
                         type="text"
                         value={form.motherName || ''}
@@ -2276,7 +2327,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           type="text"
                           readOnly
                           disabled
-                          placeholder="Atribuído pela T.I."
+                          placeholder="AtribuÃ­do pela T.I."
                           value={form.corporatePhone || ''}
                           className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed select-none opacity-80"
                         />
@@ -2302,17 +2353,17 @@ export const RhCollaboratorManager: React.FC = () => {
                         type="email"
                         readOnly
                         disabled
-                        placeholder="Atribuído pela T.I."
+                        placeholder="AtribuÃ­do pela T.I."
                         value={form.emailCorporate || ''}
                         className="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400 font-medium cursor-not-allowed select-none opacity-80"
                       />
                     </div>
                   </div>
 
-                  {/* Seção 2: Documentos e Endereço */}
+                  {/* SeÃ§Ã£o 2: Documentos e EndereÃ§o */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
-                      Documentação e Endereço
+                      DocumentaÃ§Ã£o e EndereÃ§o
                     </h3>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -2361,7 +2412,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                     <div className="grid grid-cols-3 gap-2">
                       <div className="col-span-2">
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CNH (Nº)</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CNH (NÂº)</label>
                         <input
                           type="text"
                           value={form.cnhNumber || ''}
@@ -2391,10 +2442,10 @@ export const RhCollaboratorManager: React.FC = () => {
                       />
                     </div>
 
-                    {/* Endereço */}
+                    {/* EndereÃ§o */}
                     <div className="space-y-3 pt-2">
                       <div className="relative">
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CEP (Busca automática)</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CEP (Busca automÃ¡tica)</label>
                         <div className="relative">
                           <input
                             type="text"
@@ -2419,7 +2470,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nº</label>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">NÂº</label>
                           <input
                             type="text"
                             value={form.number || ''}
@@ -2452,10 +2503,10 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Seção 3: Dados Contratuais */}
+                  {/* SeÃ§Ã£o 3: Dados Contratuais */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
-                      Contratação e Cargo
+                      ContrataÃ§Ã£o e Cargo
                     </h3>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -2473,7 +2524,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / Função</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / FunÃ§Ã£o</label>
                         <input
                           type="text"
                           value={form.role || ''}
@@ -2493,12 +2544,12 @@ export const RhCollaboratorManager: React.FC = () => {
                         >
                           <option value="CLT">CLT</option>
                           <option value="PJ">PJ</option>
-                          <option value="Estágio">Estágio</option>
+                          <option value="EstÃ¡gio">EstÃ¡gio</option>
                           <option value="Cooperado">Cooperado</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Carga Horária Semanal</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Carga HorÃ¡ria Semanal</label>
                         <input
                           type="number"
                           value={form.weeklyHours || 44}
@@ -2510,7 +2561,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Admissão</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de AdmissÃ£o</label>
                         <input
                           type="date"
                           value={formatDateForInput(form.hireDate)}
@@ -2519,7 +2570,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Salário Mensal (R$)</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">SalÃ¡rio Mensal (R$)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -2548,7 +2599,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         >
                           <option value="RG">RG</option>
                           <option value="CPF">CPF</option>
-                          <option value="Comprovante de Residência">Comprovante de Residência</option>
+                          <option value="Comprovante de ResidÃªncia">Comprovante de ResidÃªncia</option>
                           <option value="Contrato de Trabalho">Contrato de Trabalho</option>
                           <option value="Outros">Outros</option>
                         </select>
@@ -2564,7 +2615,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
+                          placeholder="Nome amigÃ¡vel do arquivo (ex: RG_Frente)..."
                           value={docFileName}
                           onChange={e => setDocFileName(e.target.value)}
                           className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
@@ -2665,18 +2716,18 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Termos de Comodato vinculados */}
                   <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60">
-                    <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-3">Histórico de Termos de Comodato vinculados</span>
+                    <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-3">HistÃ³rico de Termos de Comodato vinculados</span>
                     
                     <div className="space-y-3">
                       {isCreating ? (
-                        <div className="text-slate-400 py-6 text-center font-medium">Os termos de comodato estarão disponíveis após salvar o cadastro do colaborador.</div>
+                        <div className="text-slate-400 py-6 text-center font-medium">Os termos de comodato estarÃ£o disponÃ­veis apÃ³s salvar o cadastro do colaborador.</div>
                       ) : (
                         <>
                           {(() => {
                             const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab?.id);
                             
                             if (colabTerms.length === 0) {
-                              return <div className="text-slate-400 py-6 text-center font-medium">Nenhum termo de comodato (entrega/devolução) gerado para este colaborador.</div>;
+                              return <div className="text-slate-400 py-6 text-center font-medium">Nenhum termo de comodato (entrega/devoluÃ§Ã£o) gerado para este colaborador.</div>;
                             }
 
                             return (
@@ -2691,7 +2742,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' 
                                             : 'bg-indigo-100 text-indigo-850 dark:bg-indigo-500/20 dark:text-indigo-400'
                                         }`}>
-                                          {isDevolucao ? 'DEVOLUÇÃO' : 'ENTREGA'}
+                                          {isDevolucao ? 'DEVOLUÃ‡ÃƒO' : 'ENTREGA'}
                                         </span>
                                         <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
                                           t.status === 'ASSINADO'
@@ -2724,33 +2775,33 @@ export const RhCollaboratorManager: React.FC = () => {
                 <div className="space-y-6">
                   {isCreating ? (
                     <div className="text-slate-400 py-12 text-center font-medium bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-                      As ocorrências de afastamentos, faltas e férias podem ser visualizadas e lançadas após salvar o cadastro do colaborador.
+                      As ocorrÃªncias de afastamentos, faltas e fÃ©rias podem ser visualizadas e lanÃ§adas apÃ³s salvar o cadastro do colaborador.
                     </div>
                   ) : (
                     <>
-                      {/* Lançamento de Nova Ocorrência Rápida */}
+                      {/* LanÃ§amento de Nova OcorrÃªncia RÃ¡pida */}
                       <div className="bg-indigo-50/40 dark:bg-slate-900/60 p-6 rounded-2xl border border-indigo-100 dark:indigo-500/10 space-y-4">
-                        <span className="block text-xs font-black uppercase text-indigo-750 dark:text-indigo-400">Registrar Nova Ocorrência (Falta / Férias / Atestado)</span>
+                        <span className="block text-xs font-black uppercase text-indigo-750 dark:text-indigo-400">Registrar Nova OcorrÃªncia (Falta / FÃ©rias / Atestado)</span>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de OcorrÃªncia</label>
                             <select
                               value={quickOccType}
                               onChange={e => setQuickOccType(e.target.value)}
                               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white font-bold"
                             >
-                              <option value="Atestado Médico">Atestado Médico</option>
+                              <option value="Atestado MÃ©dico">Atestado MÃ©dico</option>
                               <option value="Falta Justificada">Falta Justificada</option>
                               <option value="Falta Injustificada">Falta Injustificada</option>
-                              <option value="Licença Maternidade">Licença Maternidade</option>
-                              <option value="Licença Paternidade">Licença Paternidade</option>
+                              <option value="LicenÃ§a Maternidade">LicenÃ§a Maternidade</option>
+                              <option value="LicenÃ§a Paternidade">LicenÃ§a Paternidade</option>
                               <option value="Afastamento INSS">Afastamento INSS</option>
-                              <option value="Férias">Férias</option>
+                              <option value="FÃ©rias">FÃ©rias</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Início</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de InÃ­cio</label>
                             <input
                               type="date"
                               value={formatDateForInput(quickOccStart)}
@@ -2771,12 +2822,12 @@ export const RhCollaboratorManager: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end font-medium">
                           <div className="md:col-span-3">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Observações / Notas</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">ObservaÃ§Ãµes / Notas</label>
                             <input
                               type="text"
                               value={quickOccNotes}
                               onChange={e => setQuickOccNotes(e.target.value)}
-                              placeholder="Observações complementares ou CID..."
+                              placeholder="ObservaÃ§Ãµes complementares ou CID..."
                               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
                             />
                           </div>
@@ -2784,7 +2835,7 @@ export const RhCollaboratorManager: React.FC = () => {
                             type="button"
                             onClick={() => {
                               if (!quickOccStart || !quickOccEnd) {
-                                alert('Por favor, informe a data de início e fim da ocorrência.');
+                                alert('Por favor, informe a data de inÃ­cio e fim da ocorrÃªncia.');
                                 return;
                               }
 
@@ -2815,21 +2866,21 @@ export const RhCollaboratorManager: React.FC = () => {
                             }}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95 text-center"
                           >
-                            Lançar Registro
+                            LanÃ§ar Registro
                           </button>
                         </div>
                       </div>
 
-                      {/* Lista de Ocorrências Atuais */}
+                      {/* Lista de OcorrÃªncias Atuais */}
                       <div className="space-y-3">
-                        <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400">Histórico de Ocorrências e Afastamentos</span>
+                        <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400">HistÃ³rico de OcorrÃªncias e Afastamentos</span>
                         {(() => {
                           const colabOccs = rhOccurrences.filter(o => o.collaboratorId === selectedColab?.id);
                           
                           if (colabOccs.length === 0) {
                             return (
                               <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium">
-                                Nenhuma ocorrência, falta ou atestado médico lançado para este colaborador.
+                                Nenhuma ocorrÃªncia, falta ou atestado mÃ©dico lanÃ§ado para este colaborador.
                               </div>
                             );
                           }
@@ -2840,9 +2891,9 @@ export const RhCollaboratorManager: React.FC = () => {
                                 <div key={occ.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-start">
                                   <div className="space-y-1">
                                     <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
-                                      occ.type === 'Férias'
+                                      occ.type === 'FÃ©rias'
                                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                        : occ.type === 'Atestado Médico'
+                                        : occ.type === 'Atestado MÃ©dico'
                                           ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
                                           : occ.type.includes('Falta')
                                             ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
@@ -2851,7 +2902,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                       {occ.type}
                                     </span>
                                     <p className="text-xs font-black text-slate-800 dark:text-white pt-1">
-                                      {new Date(occ.startDate).toLocaleDateString('pt-BR')} até {new Date(occ.endDate).toLocaleDateString('pt-BR')}
+                                      {new Date(occ.startDate).toLocaleDateString('pt-BR')} atÃ© {new Date(occ.endDate).toLocaleDateString('pt-BR')}
                                     </p>
                                     {occ.notes && <p className="text-[11px] text-slate-400 font-medium italic">"{occ.notes}"</p>}
                                   </div>
@@ -2862,7 +2913,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        if (window.confirm('Excluir este lançamento de ocorrência?')) {
+                                        if (window.confirm('Excluir este lanÃ§amento de ocorrÃªncia?')) {
                                           deleteRhOccurrence(occ.id, adminName);
                                         }
                                       }}
@@ -2897,7 +2948,7 @@ export const RhCollaboratorManager: React.FC = () => {
                 onClick={handleSave}
                 className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl uppercase tracking-wider hover:shadow-md transition-all"
               >
-                Salvar Alterações
+                Salvar AlteraÃ§Ãµes
               </button>
             </div>
           </div>
@@ -2929,38 +2980,38 @@ export const RhCollaboratorManager: React.FC = () => {
             {/* Body */}
             <div className="p-6 overflow-y-auto space-y-4 text-xs">
               <div className="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-150 dark:border-slate-700/40">
-                <p className="font-bold text-slate-700 dark:text-slate-300">Você está iniciando o processo de demissão de:</p>
+                <p className="font-bold text-slate-700 dark:text-slate-300">VocÃª estÃ¡ iniciando o processo de demissÃ£o de:</p>
                 <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 mt-1">{selectedColab.fullName}</p>
-                <p className="text-slate-400 mt-1 uppercase text-[10px] font-bold">Cargo: {selectedColab.role || 'Sem Cargo'} • Admissão: {selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</p>
+                <p className="text-slate-400 mt-1 uppercase text-[10px] font-bold">Cargo: {selectedColab.role || 'Sem Cargo'} â€¢ AdmissÃ£o: {selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</p>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Motivo da Demissão</label>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Motivo da DemissÃ£o</label>
                 <select
                   value={dismissReason}
                   onChange={e => setDismissReason(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white font-bold"
                 >
-                  <option value="Demissão sem Justa Causa">Demissão sem Justa Causa</option>
-                  <option value="Demissão com Justa Causa">Demissão com Justa Causa</option>
-                  <option value="Pedido de Demissão pelo Colaborador">Pedido de Demissão pelo Colaborador</option>
-                  <option value="Fim de Contrato de Experiência">Fim de Contrato de Experiência</option>
-                  <option value="Rescisão Amigável / Acordo">Rescisão Amigável / Acordo</option>
+                  <option value="DemissÃ£o sem Justa Causa">DemissÃ£o sem Justa Causa</option>
+                  <option value="DemissÃ£o com Justa Causa">DemissÃ£o com Justa Causa</option>
+                  <option value="Pedido de DemissÃ£o pelo Colaborador">Pedido de DemissÃ£o pelo Colaborador</option>
+                  <option value="Fim de Contrato de ExperiÃªncia">Fim de Contrato de ExperiÃªncia</option>
+                  <option value="RescisÃ£o AmigÃ¡vel / Acordo">RescisÃ£o AmigÃ¡vel / Acordo</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Observações / Notas do Desligamento</label>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">ObservaÃ§Ãµes / Notas do Desligamento</label>
                 <textarea
                   value={dismissCustomNote}
                   onChange={e => setDismissCustomNote(e.target.value)}
-                  placeholder="Informe detalhes adicionais ou observações se necessário..."
+                  placeholder="Informe detalhes adicionais ou observaÃ§Ãµes se necessÃ¡rio..."
                   rows={3}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
                 />
               </div>
 
-              {/* Verificação de comodatos pendentes */}
+              {/* VerificaÃ§Ã£o de comodatos pendentes */}
               {(() => {
                 const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab.id);
                 const entregas = colabTerms.filter(t => t.type === 'ENTREGA' && (t.status === 'ASSINADO' || t.status === 'PENDENTE'));
@@ -2978,10 +3029,10 @@ export const RhCollaboratorManager: React.FC = () => {
                   <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 p-4 rounded-xl space-y-2">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold">
                       <AlertTriangle size={16} />
-                      <span className="uppercase tracking-wider font-black">Pendências de Comodato Ativas!</span>
+                      <span className="uppercase tracking-wider font-black">PendÃªncias de Comodato Ativas!</span>
                     </div>
                     <p className="text-[11px] text-amber-800 dark:text-amber-300">
-                      Este colaborador possui <strong>{entregasSemDevolucao.length} termo(s) de entrega de ativos</strong> sem o correspondente termo de devolução finalizando o fluxo:
+                      Este colaborador possui <strong>{entregasSemDevolucao.length} termo(s) de entrega de ativos</strong> sem o correspondente termo de devoluÃ§Ã£o finalizando o fluxo:
                     </p>
                     <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-800 dark:text-amber-300 font-mono pl-1 max-h-24 overflow-y-auto">
                       {entregasSemDevolucao.map(e => (
@@ -2991,7 +3042,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       ))}
                     </ul>
                     <p className="text-[11px] text-amber-800 dark:text-amber-300 italic">
-                      Recomenda-se realizar o fluxo de devolução do comodato para dar baixa no estoque de ativos de R.H. antes de demitir.
+                      Recomenda-se realizar o fluxo de devoluÃ§Ã£o do comodato para dar baixa no estoque de ativos de R.H. antes de demitir.
                     </p>
                     <label className="flex items-start gap-2 mt-3 p-2 bg-amber-100/50 dark:bg-amber-950/40 rounded-lg cursor-pointer">
                       <input
@@ -3001,7 +3052,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         className="mt-0.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
                       />
                       <span className="text-[11px] text-amber-900 dark:text-amber-200 font-bold">
-                        Confirmo que estou ciente das pendências de ativos acima e desejo demitir o colaborador mesmo assim.
+                        Confirmo que estou ciente das pendÃªncias de ativos acima e desejo demitir o colaborador mesmo assim.
                       </span>
                     </label>
                   </div>
@@ -3047,7 +3098,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         : 'bg-slate-350 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                     }`}
                   >
-                    Confirmar Demissão
+                    Confirmar DemissÃ£o
                   </button>
                 );
               })()}
@@ -3091,7 +3142,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         [blob.type]: blob
                       })
                     ]);
-                    alert('Imagem copiada para a área de transferência!');
+                    alert('Imagem copiada para a Ã¡rea de transferÃªncia!');
                   } catch (err) {
                     alert('Erro ao copiar imagem: ' + err);
                   }
@@ -3129,7 +3180,7 @@ export const RhCollaboratorManager: React.FC = () => {
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl relative">
             <h3 className="text-sm font-black uppercase text-indigo-500 tracking-wider mb-2">Link de Assinatura Digital</h3>
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Envie o link abaixo para o colaborador assinar o termo digitalmente através de geolocalização e fotos de evidência:
+              Envie o link abaixo para o colaborador assinar o termo digitalmente atravÃ©s de geolocalizaÃ§Ã£o e fotos de evidÃªncia:
             </p>
             <div className="flex gap-2 p-2 bg-black/40 border border-slate-700 rounded-2xl mb-4">
               <input 
@@ -3160,22 +3211,22 @@ export const RhCollaboratorManager: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Resolução Manual */}
+      {/* Modal de ResoluÃ§Ã£o Manual */}
       {resolvingManualTerm && (
         <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-orange-500 font-bold uppercase text-xs tracking-wider">
               <CheckSquare size={18} />
-              <span>Resolução Manual de Termo</span>
+              <span>ResoluÃ§Ã£o Manual de Termo</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Use esta opção se o colaborador assinou o documento físico em papel ou via outro meio e você deseja dar baixa manual sem exigir a assinatura eletrônica.
+              Use esta opÃ§Ã£o se o colaborador assinou o documento fÃ­sico em papel ou via outro meio e vocÃª deseja dar baixa manual sem exigir a assinatura eletrÃ´nica.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Observação da Resolução</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / ObservaÃ§Ã£o da ResoluÃ§Ã£o</label>
               <textarea 
                 required
-                placeholder="Ex: Assinado fisicamente em papel e arquivado na pasta de prontuário do colaborador."
+                placeholder="Ex: Assinado fisicamente em papel e arquivado na pasta de prontuÃ¡rio do colaborador."
                 value={resolveManualReason}
                 onChange={e => setResolveManualReason(e.target.value)}
                 className="w-full border border-slate-700 rounded-xl p-3 focus:border-orange-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
@@ -3200,14 +3251,14 @@ export const RhCollaboratorManager: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Evidências da Assinatura Digital */}
+      {/* Modal de EvidÃªncias da Assinatura Digital */}
       {signatureData && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-4 shrink-0">
               <h3 className="text-xs font-black uppercase text-indigo-500 tracking-wider flex items-center gap-2">
                 <Camera size={16} />
-                <span>Evidências de Assinatura Digital (Doc + Selfie)</span>
+                <span>EvidÃªncias de Assinatura Digital (Doc + Selfie)</span>
               </h3>
               <button 
                 onClick={() => setSignatureData(null)} 
@@ -3224,7 +3275,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     <img src={signatureData.documentPhoto} className="max-h-60 object-contain" alt="Documento" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">NÃ£o coletada</div>
                 )}
               </div>
               <div className="space-y-2">
@@ -3234,7 +3285,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     <img src={signatureData.selfiePhoto} className="max-h-60 object-contain" alt="Selfie" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">NÃ£o coletada</div>
                 )}
               </div>
             </div>
@@ -3250,22 +3301,22 @@ export const RhCollaboratorManager: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Justificativa de Alteração Cadastral (Obrigatório) */}
+      {/* Modal de Justificativa de AlteraÃ§Ã£o Cadastral (ObrigatÃ³rio) */}
       {isReasonModalOpen && pendingSaveData && (
         <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-indigo-500 font-bold uppercase text-xs tracking-wider">
               <AlertTriangle size={18} className="text-amber-500" />
-              <span>Justificativa de Alteração</span>
+              <span>Justificativa de AlteraÃ§Ã£o</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-bold">
-              Para prosseguir e salvar as alterações cadastrais do colaborador de R.H., por favor, informe brevemente o motivo desta alteração.
+              Para prosseguir e salvar as alteraÃ§Ãµes cadastrais do colaborador de R.H., por favor, informe brevemente o motivo desta alteraÃ§Ã£o.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo da Alteração</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo da AlteraÃ§Ã£o</label>
               <textarea 
                 required
-                placeholder="Ex: Ajuste salarial acordado em convenção coletiva / Correção de grafia no nome."
+                placeholder="Ex: Ajuste salarial acordado em convenÃ§Ã£o coletiva / CorreÃ§Ã£o de grafia no nome."
                 value={editReasonText}
                 onChange={e => setEditReasonText(e.target.value)}
                 className="w-full border border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
@@ -3299,19 +3350,19 @@ export const RhCollaboratorManager: React.FC = () => {
           fileName={previewData.name} 
         />
       )}
-      {/* Modal de Confirmação de Exclusão de Anexo com Motivo de Auditoria */}
+      {/* Modal de ConfirmaÃ§Ã£o de ExclusÃ£o de Anexo com Motivo de Auditoria */}
       {docToDelete && (
         <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-2 text-rose-500 font-bold uppercase text-xs tracking-wider">
               <Trash2 size={18} />
-              <span>Exclusão de Anexo Regulamentar</span>
+              <span>ExclusÃ£o de Anexo Regulamentar</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Você está prestes a remover o arquivo <strong className="text-slate-900 dark:text-white">{docToDelete.fileName}</strong> ({docToDelete.category}). Informe o motivo da exclusão para registro no log de auditoria:
+              VocÃª estÃ¡ prestes a remover o arquivo <strong className="text-slate-900 dark:text-white">{docToDelete.fileName}</strong> ({docToDelete.category}). Informe o motivo da exclusÃ£o para registro no log de auditoria:
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Justificativa da Exclusão *</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Justificativa da ExclusÃ£o *</label>
               <textarea 
                 required
                 placeholder="Ex: Documento desatualizado, arquivo enviado incorretamente..."
@@ -3332,7 +3383,7 @@ export const RhCollaboratorManager: React.FC = () => {
                 onClick={handleConfirmDeleteDoc}
                 className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
               >
-                Confirmar Exclusão
+                Confirmar ExclusÃ£o
               </button>
             </div>
           </div>
