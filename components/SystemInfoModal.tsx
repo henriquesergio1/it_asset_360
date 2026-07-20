@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.77.4',
+    date: 'Hoje',
+    title: 'Botão de Reativação de Colaboradores do R.H. e Unificação de Renderização',
+    changes: [
+      'Renderização Precisa de Status: Unificada a função checkIsColabDemitido para ignorar datas de demissão zeradas (ano <= 1900) em todas as exibições da tabela do R.H.',
+      'Botão Reativar Colaborador: Adicionada a ação para reativar colaboradores no modal do R.H., restaurando o status Ativo e limpando dados de rescisão.'
+    ]
+  },
+  {
     version: '3.77.3',
     date: 'Hoje',
     title: 'Tratamento de Datas Zeradas (1900-01-01) no Filtro de Colaboradores R.H.',

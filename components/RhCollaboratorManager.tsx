@@ -7,7 +7,7 @@ import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
   Search, Plus, Edit2, Trash2, Eye, EyeOff, MapPin, FileText, 
-  Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, Info, 
+  Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, UserCheck, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
   FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon
@@ -735,14 +735,35 @@ export const RhCollaboratorManager: React.FC = () => {
     setIsDetailModalOpen(false);
   };
 
+  const checkIsColabDemitido = (c: RhCollaborator) => {
+    if (c.status === 'Demitido') return true;
+    if (!c.terminationDate) return false;
+    if (c.terminationDate.startsWith('1900-01-01') || c.terminationDate === '1900-01-01') return false;
+    const d = new Date(c.terminationDate);
+    return !isNaN(d.getTime()) && d.getFullYear() > 1900;
+  };
+
+  const handleReactivateColab = (colab: RhCollaborator) => {
+    if (window.confirm(`Deseja reativar o colaborador ${colab.fullName}?`)) {
+      const updatedColab: RhCollaborator = {
+        ...colab,
+        status: 'Ativo',
+        terminationDate: undefined,
+        terminationReason: undefined
+      };
+      updateRhCollaborator(updatedColab, adminName);
+      setSelectedColab(updatedColab);
+      setForm(normalizeColabDates(updatedColab));
+    }
+  };
+
   // Filter Logic
   const filtered = rhCollaborators.filter(c => {
     const matchesSearch = c.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || c.cpf.includes(searchTerm);
     const matchesSector = !filterSector || c.sectorId === filterSector;
     const matchesContract = !filterContractType || c.contractType === filterContractType;
     
-    const hasValidTerminationDate = !!c.terminationDate && c.terminationDate !== '1900-01-01' && !c.terminationDate.startsWith('1900-01-01');
-    const isColabDemitido = hasValidTerminationDate || c.status === 'Demitido';
+    const isColabDemitido = checkIsColabDemitido(c);
     let matchesStatus = true;
     if (filterStatus === 'Ativo') {
       matchesStatus = !isColabDemitido;
@@ -1049,7 +1070,7 @@ export const RhCollaboratorManager: React.FC = () => {
           emptyMessage="Nenhum colaborador encontrado com os filtros atuais."
           renderRow={(c) => {
             const sectorName = sectors.find(s => s.id === c.sectorId)?.name || 'Sem Setor';
-            const isColabDemitido = !!c.terminationDate || c.status === 'Demitido';
+            const isColabDemitido = checkIsColabDemitido(c);
             return (
               <tr
                 key={c.id}
@@ -1714,16 +1735,24 @@ export const RhCollaboratorManager: React.FC = () => {
 
             {/* Modal Actions */}
             <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
-              {selectedColab.status !== 'Demitido' && !selectedColab.terminationDate ? (
+              {!checkIsColabDemitido(selectedColab) ? (
                 <button
                   onClick={() => setIsDismissModalOpen(true)}
-                  className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider shadow-sm"
+                  className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider shadow-sm transition-all"
                 >
                   <UserMinus size={14} /> Demitir Colaborador
                 </button>
               ) : (
-                <div className="flex items-center gap-2 text-rose-500 font-bold text-xs uppercase tracking-wider bg-rose-50 dark:bg-rose-500/10 px-3 py-1.5 rounded-lg">
-                  <AlertTriangle size={14} /> Colaborador Demitido
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-rose-500 font-bold text-xs uppercase tracking-wider bg-rose-50 dark:bg-rose-500/10 px-3 py-2 rounded-xl border border-rose-500/20">
+                    <AlertTriangle size={14} /> Colaborador Demitido
+                  </div>
+                  <button
+                    onClick={() => handleReactivateColab(selectedColab)}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all"
+                  >
+                    <UserCheck size={14} /> Reativar Colaborador
+                  </button>
                 </div>
               )}
               <div className="flex gap-2">
