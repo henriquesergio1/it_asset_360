@@ -41,6 +41,8 @@ export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
     sectors, 
+    users,
+    updateUser: updateUserData,
     addRhCollaborator, 
     updateRhCollaborator, 
     deleteRhCollaborator, 
@@ -108,6 +110,16 @@ export const RhCollaboratorManager: React.FC = () => {
     };
     
     updateRhCollaborator(finalData, adminName);
+    
+    // Sincronização automática da foto para o colaborador de T.I. vinculado por CPF
+    const cleanCpf = (finalData.cpf || '').replace(/\D/g, '');
+    if (cleanCpf && finalData.photo && users && updateUserData) {
+      const tiUser = users.find(u => u.cpf && u.cpf.replace(/\D/g, '') === cleanCpf);
+      if (tiUser && tiUser.photo !== finalData.photo) {
+        updateUserData({ ...tiUser, photo: finalData.photo }, adminName);
+      }
+    }
+
     setSelectedColab(finalData);
     setIsReasonModalOpen(false);
     setPendingSaveData(null);
@@ -622,6 +634,16 @@ export const RhCollaboratorManager: React.FC = () => {
         documents: form.documents || []
       };
       addRhCollaborator(newColab, adminName);
+
+      // Sincronização automática da foto para o colaborador de T.I. se já existir por CPF
+      const cleanCpf = (newColab.cpf || '').replace(/\D/g, '');
+      if (cleanCpf && newColab.photo && users && updateUserData) {
+        const tiUser = users.find(u => u.cpf && u.cpf.replace(/\D/g, '') === cleanCpf);
+        if (tiUser && tiUser.photo !== newColab.photo) {
+          updateUserData({ ...tiUser, photo: newColab.photo }, adminName);
+        }
+      }
+
       setSelectedColab(newColab);
       setIsCreating(false);
       setIsEditing(false);

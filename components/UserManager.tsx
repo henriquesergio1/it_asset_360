@@ -1112,6 +1112,7 @@ const UserManager: React.FC = () => {
       birthDate: colab.birthDate || '',
       hireDate: colab.hireDate || new Date().toISOString().split('T')[0],
       notes: 'Importado automaticamente do módulo de R.H.',
+      photo: colab.photo || '',
       terms: [],
     } as any;
     try {
@@ -1146,6 +1147,7 @@ const UserManager: React.FC = () => {
       city: rc.city || tiUser.city,
       state: rc.state || tiUser.state,
       address: addressStr || tiUser.address,
+      photo: rc.photo || tiUser.photo || '',
     } as any);
     setRhSyncTarget(item);
     setIsRhViewModalOpen(false);
@@ -1568,6 +1570,18 @@ const UserManager: React.FC = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {(() => {
+                      const cleanCpf = u.cpf ? u.cpf.replace(/\D/g, '') : '';
+                      const rhColab = cleanCpf ? (rhCollaborators || []).find(rc => rc.cpf && rc.cpf.replace(/\D/g, '') === cleanCpf) : null;
+                      const photoUrl = u.photo || rhColab?.photo;
+
+                      if (photoUrl) {
+                        return (
+                          <div className="h-9 w-9 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0 shadow-sm overflow-hidden bg-slate-100 dark:bg-slate-800">
+                            <img src={photoUrl} alt={u.fullName} className="w-full h-full object-cover" />
+                          </div>
+                        );
+                      }
+
                       const color = getAvatarColor(u.fullName);
                       return (
                         <div className={`h-9 w-9 rounded-xl ${color.bg} flex items-center justify-center border ${color.border} shrink-0 shadow-sm overflow-hidden`}>
@@ -1691,6 +1705,25 @@ const UserManager: React.FC = () => {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {(() => {
+                      const cleanCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
+                      const rhColab = cleanCpf ? (rhCollaborators || []).find(rc => rc.cpf && rc.cpf.replace(/\D/g, '') === cleanCpf) : null;
+                      const photoUrl = formData.photo || rhColab?.photo;
+                      if (!photoUrl) return null;
+                      return (
+                        <div className="md:col-span-2 flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                          <div className="h-16 w-16 rounded-2xl border border-slate-300 dark:border-slate-600 overflow-hidden shrink-0 shadow-md">
+                            <img src={photoUrl} alt={formData.fullName} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50 mb-1">
+                              <Camera size={12} /> Foto do Colaborador (Sincronizada R.H.)
+                            </span>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Foto vinculada via CPF do Módulo de R.H.</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="md:col-span-2">
                       <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Nome Completo</label>
                       <input disabled={isViewOnly} required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" value={formData.fullName || ''} onChange={e => setFormData({...formData, fullName: e.target.value})} />

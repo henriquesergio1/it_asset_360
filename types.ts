@@ -204,6 +204,7 @@ export interface User {
   internalCode?: string; 
   active: boolean;
   status?: UserStatus; // Adicionado para suportar status "Afastado"
+  photo?: string;
   terms?: Term[];
   hasPendingIssues?: boolean; 
   pendingIssuesNote?: string;

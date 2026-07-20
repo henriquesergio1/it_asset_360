@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.76.0',
+    date: 'Hoje',
+    title: 'Sincronização Automática de Fotos R.H. → T.I. por CPF',
+    changes: [
+      'Exibição de Fotos no Módulo de T.I.: A lista e o cadastro de colaboradores do T.I. identificam a foto enviada pelo R.H. vinculada via CPF sanitizado.',
+      'Substituição Visual: A foto salva no R.H. substitui automaticamente o avatar com iniciais na tabela de colaboradores de T.I.',
+      'Sincronização em Tempo Real: Ao salvar a foto de um colaborador no R.H., o registro de T.I. correspondente é atualizado instantaneamente.'
+    ]
+  },
+  {
     version: '3.75.2',
     date: 'Hoje',
     title: 'Remoção de Redes Customizadas Extra (Zero Conflitos de IP no Portainer)',
