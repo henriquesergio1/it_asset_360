@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.82.1',
+    date: 'Hoje',
+    title: 'Correção de Persistência de Anexos em Ocorrências (RH)',
+    changes: [
+      'Bug Fix: Corrigido o mapeamento dinâmico da rota POST/PUT /api/rh-occurrences para direcionar o atributo fileUrl para a coluna correta (FileUrl NVARCHAR) ao invés de tentar inserir em FileBinary (que gerava erro 500 no banco).',
+      'Compatibilidade: Garantida a verificação automática de existência da coluna FileUrl na tabela RhOccurrences durante a inicialização do banco.'
+    ]
+  },
+  {
     version: '3.82.0',
     date: 'Hoje',
     title: 'Anexo de Arquivos em Faltas, Férias e Atestados (RH)',

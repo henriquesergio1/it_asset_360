@@ -21,7 +21,7 @@ module.exports = (app) => {
                     if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
                     else if (key === 'imageUrl') dbKey = 'ImageBinary';
                     else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
-                    else if (key === 'fileUrl') dbKey = 'FileBinary';
+                    else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
 
                     if (processedKeys.has(dbKey)) continue;
                     processedKeys.add(dbKey);
@@ -73,7 +73,7 @@ module.exports = (app) => {
                     if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
                     else if (key === 'imageUrl') dbKey = 'ImageBinary';
                     else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
-                    else if (key === 'fileUrl') dbKey = 'FileBinary';
+                    else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
 
                     if (processedKeys.has(dbKey)) continue;
                     processedKeys.add(dbKey);

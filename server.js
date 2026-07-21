@@ -1476,11 +1476,11 @@ async function updateUserPendingStatus(pool, userId) {
                 const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
-                // Map legacy URL columns to Binary columns
+                // Map legacy URL columns to Binary columns (exceto para RhOccurrences onde FileUrl é NVARCHAR(MAX))
                 if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
-                else if (key === 'fileUrl') dbKey = 'FileBinary';
+                else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
 
                 if (processedKeys.has(dbKey)) continue;
                 processedKeys.add(dbKey);
@@ -1545,11 +1545,11 @@ async function updateUserPendingStatus(pool, userId) {
 
                 let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
 
-                // Map legacy URL columns to Binary columns
+                // Map legacy URL columns to Binary columns (exceto para RhOccurrences onde FileUrl é NVARCHAR(MAX))
                 if (key === 'purchaseInvoiceUrl') dbKey = 'PurchaseInvoiceBinary';
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
-                else if (key === 'fileUrl') dbKey = 'FileBinary';
+                else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
 
                 if (processedKeys.has(dbKey)) continue;
                 processedKeys.add(dbKey);
