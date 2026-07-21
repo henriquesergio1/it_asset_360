@@ -1026,7 +1026,7 @@ app.get('/api/bootstrap', async (req, res) => {
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes), systemUsers: sysUsersRes?.recordset || [],
+            devices, sims: format(simsRes), users: format(usersRes), systemUsers: format(sysUsersRes),
             settings: settingsRes?.recordset?.[0] || { appName: 'IT Asset', logoUrl: '' }, 
             models: format(modelsRes), 
             brands: format(brandsRes),

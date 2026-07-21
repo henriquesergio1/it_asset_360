@@ -709,29 +709,33 @@ ORDER BY f.nome;`;
              </tr>
            </thead>
            <tbody className="divide-y divide-slate-800">
-             {systemUsers.map(u => {
-               const uProfileId = u.ID_Perfil || u.idPerfil || (u.role && !isNaN(Number(u.role)) ? Number(u.role) : null);
-               const userProfile = profiles.find(p => p.ID_Perfil === uProfileId);
-               const profileName = userProfile ? userProfile.Nome : (u.role === SystemRole.ADMIN ? 'Administrador (Legado)' : 'Operador (Legado)');
-               const isProfileActive = userProfile ? userProfile.Ativo : true;
-               return (
-                 <tr key={u.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-blue-500 bg-white dark:bg-slate-800">
-                   <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{u.name}</td>
-                   <td className="px-6 py-4 font-medium">{u.email}</td>
-                   <td className="px-6 py-4">
-                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${(u.role === SystemRole.ADMIN || userProfile?.Permissoes?.admin) ? ' bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 ' : ' bg-slate-100 dark:bg-slate-800 '}`}>
-                       {profileName} {!isProfileActive && '(Inativo)'}
-                     </span>
-                   </td>
-                   <td className="px-6 py-4 text-right">
-                     <div className="flex justify-end gap-2">
-                       <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
-                       <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(u.id, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
-                     </div>
-                   </td>
-                 </tr>
-               );
-             })}
+                     {systemUsers.map(u => {
+                const uId = u.id || (u as any).Id;
+                const uName = u.name || (u as any).Name || '---';
+                const uEmail = u.email || (u as any).Email || '---';
+                const uRole = u.role || (u as any).Role;
+                const uProfileId = u.ID_Perfil || u.idPerfil || (uRole && !isNaN(Number(uRole)) ? Number(uRole) : null);
+                const userProfile = profiles.find(p => p.ID_Perfil === uProfileId);
+                const profileName = userProfile ? userProfile.Nome : (uRole === SystemRole.ADMIN ? 'Administrador (Legado)' : 'Operador (Legado)');
+                const isProfileActive = userProfile ? userProfile.Ativo : true;
+                return (
+                  <tr key={uId} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-blue-500 bg-white dark:bg-slate-800">
+                    <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{uName}</td>
+                    <td className="px-6 py-4 font-medium">{uEmail}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${(uRole === SystemRole.ADMIN || userProfile?.Permissoes?.admin) ? ' bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 ' : ' bg-slate-100 dark:bg-slate-800 '}`}>
+                        {profileName} {!isProfileActive && '(Inativo)'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => handleOpenModal(u)} className="p-1.5 hover:bg-blue-900/40 rounded-lg"><Edit2 size={16}/></button>
+                        <button onClick={() => { if(window.confirm('Excluir acesso?')) deleteSystemUser(uId, currentUser?.name || 'Admin') }} className="p-1.5 text-red-400 hover:bg-red-900/40 rounded-lg"><Trash2 size={16}/></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
            </tbody>
          </table>
        </div>
