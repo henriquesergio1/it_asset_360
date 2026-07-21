@@ -982,7 +982,7 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes
+            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes
         ] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
@@ -1014,7 +1014,8 @@ app.get('/api/bootstrap', async (req, res) => {
             safeQuery(pool, "SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             safeQuery(pool, "SELECT * FROM RhTermTemplates"),
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
-            safeQuery(pool, "SELECT * FROM RhAssetItems")
+            safeQuery(pool, "SELECT * FROM RhAssetItems"),
+            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -1050,6 +1051,7 @@ app.get('/api/bootstrap', async (req, res) => {
                     }))
                 };
             }),
+            rhCompanies: format(rhCompaniesRes),
             rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
@@ -1066,7 +1068,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
                 SELECT 
@@ -1088,7 +1090,8 @@ app.get('/api/sync', async (req, res) => {
             safeQuery(pool, "SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             safeQuery(pool, "SELECT * FROM RhTermTemplates"),
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
-            safeQuery(pool, "SELECT * FROM RhAssetItems")
+            safeQuery(pool, "SELECT * FROM RhAssetItems"),
+            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -1123,6 +1126,7 @@ app.get('/api/sync', async (req, res) => {
                     }))
                 };
             }),
+            rhCompanies: format(rhCompaniesRes),
             rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
@@ -2723,6 +2727,57 @@ async function updateUserPendingStatus(pool, userId) {
     crud('RhTermTemplates', 'rh-templates', 'RhTermTemplate');
     crud('RhTerms', 'rh-terms', 'RhTerm');
     crud('RhAssetItems', 'rh-assets', 'RhAssetItem');
+
+    // --- Rotas Explícitas de RH Empresas ---
+    app.get('/api/rh-companies', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC");
+            res.json(format(result));
+        } catch (err) {
+            console.error('ERRO GET /api/rh-companies:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/rh-companies', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            
+            // Auto-criação defensiva da tabela RhCompanies
+            try {
+                await pool.request().query(`
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhCompanies')
+                    BEGIN
+                        CREATE TABLE RhCompanies (
+                            Id NVARCHAR(255) PRIMARY KEY,
+                            Cnpj NVARCHAR(50) NOT NULL,
+                            CompanyName NVARCHAR(255) NOT NULL,
+                            CreatedAt DATETIME DEFAULT GETDATE()
+                        );
+                    END
+                `);
+            } catch (tblErr) {}
+
+            const { id, cnpj, companyName, _adminUser } = req.body;
+            const compId = id || `comp-${Date.now()}`;
+            await pool.request()
+                .input('Id', sql.NVarChar, compId)
+                .input('Cnpj', sql.NVarChar, cnpj)
+                .input('CompanyName', sql.NVarChar, companyName)
+                .query(`
+                    INSERT INTO RhCompanies (Id, Cnpj, CompanyName, CreatedAt)
+                    VALUES (@Id, @Cnpj, @CompanyName, GETDATE())
+                `);
+            
+            await logAction(compId, 'RhCompany', 'Criação', _adminUser || 'Gestor R.H.', companyName, `Empresa cadastrada: ${companyName} (${cnpj})`);
+
+            res.json({ success: true, id: compId });
+        } catch (err) {
+            console.error('ERRO POST /api/rh-companies:', err);
+            res.status(500).send(err.message);
+        }
+    });
 
     // --- Rotas Explícitas de RH Colaboradores ---
     app.post('/api/rh-collaborators', async (req, res) => {

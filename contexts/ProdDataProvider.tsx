@@ -135,14 +135,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const externalDbConfig = externalDbConfigData || null;
  const expedienteAlerts = expedienteAlertsData || [];
  const consumableTransactions = consumableTransactionsData || syncData?.consumableTransactions || bootstrapData?.consumableTransactions || [];
-const consumables = syncData?.consumables || bootstrapData?.consumables || [];
+ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
 
-  const rhCollaborators = syncData?.rhCollaborators || bootstrapData?.rhCollaborators || [];
-  const rhDependents = syncData?.rhDependents || bootstrapData?.rhDependents || [];
-  const rhOccurrences = syncData?.rhOccurrences || bootstrapData?.rhOccurrences || [];
- const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
- const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
- const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
+   const rhCollaborators = syncData?.rhCollaborators || bootstrapData?.rhCollaborators || [];
+   const rhCompanies = syncData?.rhCompanies || bootstrapData?.rhCompanies || [];
+   const rhDependents = syncData?.rhDependents || bootstrapData?.rhDependents || [];
+   const rhOccurrences = syncData?.rhOccurrences || bootstrapData?.rhOccurrences || [];
+   const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
+   const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
+   const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -813,11 +814,22 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  },
  updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride,
   rhCollaborators,
+  rhCompanies,
   rhDependents,
   rhOccurrences,
   rhTemplates,
   rhTerms,
   rhAssetItems,
+  addRhCompany: async (company: any, adminName: string) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-companies', { ...company, _adminUser: adminName });
+      fetchData(true);
+      showToast('Empresa cadastrada com sucesso!', 'success');
+    } catch (err) {
+      showToast('Erro ao cadastrar empresa', 'error');
+    }
+  },
   addRhCollaborator: async (c) => {
     if (checkReadOnly()) return;
     try {

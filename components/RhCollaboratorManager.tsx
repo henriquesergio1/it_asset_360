@@ -10,7 +10,7 @@ import {
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, UserCheck, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
-  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon
+  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
@@ -30,6 +30,14 @@ const COLUMN_OPTIONS = [
 ];
 
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
+const formatCNPJ = (v: string) => {
+  const digits = v.replace(/\D/g, '').slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+};
 const normalizeColabDates = (c: any) => c ? ({
   ...c,
   birthDate: formatDateForInput(c.birthDate),
@@ -41,7 +49,8 @@ const normalizeColabDates = (c: any) => c ? ({
 export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
-    rhDependents = [],
+    rhCompanies = [],
+    rhDependents = [], 
     addRhDependent,
     deleteRhDependent,
     sectors, 
@@ -63,11 +72,32 @@ export const RhCollaboratorManager: React.FC = () => {
     resolveTermManual,
     fetchData,
     isReadOnly,
-    logs
+    logs,
+    addRhCompany
   } = useData();
   const { user } = useAuth();
   const { showToast } = useToast();
   const adminName = user?.name || 'Gestor R.H.';
+
+  // Estados locais para modal de cadastro rápido de Empresa do Grupo
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [newCompanyCnpj, setNewCompanyCnpj] = useState('');
+  const [newCompanyName, setNewCompanyName] = useState('');
+
+  const handleSaveCompany = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCompanyName.trim() || !newCompanyCnpj.trim()) {
+      showToast('Preencha a Razão Social e o CNPJ da empresa.', 'error');
+      return;
+    }
+    const compId = `comp-${Date.now()}`;
+    const newComp = { id: compId, cnpj: newCompanyCnpj.trim(), companyName: newCompanyName.trim() };
+    addRhCompany(newComp, adminName);
+    setForm(p => ({ ...p, companyCnpj: newCompanyCnpj.trim() }));
+    setNewCompanyName('');
+    setNewCompanyCnpj('');
+    setShowCompanyModal(false);
+  };
 
   // Estados locais para controle de Termos de Comodato do RH
   const [previewData, setPreviewData] = useState<{ url: any; name: string } | null>(null);
@@ -1682,8 +1712,17 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Bloco 4 */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">4. Cargo e Remuneração</h3>
+                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">4. Empresa, Cargo e Remuneração</h3>
                     <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="col-span-2 bg-indigo-50/60 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+                        <span className="text-[10px] font-black uppercase text-indigo-500 block tracking-wider">Empresa de Registro (CNPJ)</span>
+                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 block mt-0.5">
+                          {(() => {
+                            const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
+                            return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
+                          })()}
+                        </span>
+                      </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</span>
@@ -1717,10 +1756,6 @@ export const RhCollaboratorManager: React.FC = () => {
                             {revealSalaries[selectedColab.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
                         </div>
-                      </div>
-                      <div className="col-span-2 border-t border-slate-100 dark:border-slate-700/50 pt-2 mt-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Empresa de Registro (CNPJ)</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.companyCnpj || 'Não informado'}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Possui Veículo?</span>
@@ -2726,6 +2761,39 @@ export const RhCollaboratorManager: React.FC = () => {
                       Contratação e Cargo
                     </h3>
 
+                    {/* Empresa de Registro (No TOPO) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-black uppercase text-slate-400">Empresa de Registro (CNPJ) *</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowCompanyModal(true)}
+                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                        >
+                          + Nova Empresa
+                        </button>
+                      </div>
+                      <select
+                        value={form.companyCnpj || ''}
+                        onChange={e => {
+                          if (e.target.value === '__new__') {
+                            setShowCompanyModal(true);
+                          } else {
+                            setForm(p => ({ ...p, companyCnpj: e.target.value }));
+                          }
+                        }}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                      >
+                        <option value="">-- Selecione a Empresa de Registro --</option>
+                        {rhCompanies.map(c => (
+                          <option key={c.id} value={c.cnpj}>
+                            {c.companyName} - CNPJ: {c.cnpj}
+                          </option>
+                        ))}
+                        <option value="__new__">+ Cadastrar Nova Empresa...</option>
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Setor</label>
@@ -2798,19 +2866,8 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Empresa de Registro, Veículo e Benefício de Transporte */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-3">
-                      <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Empresa de Registro (CNPJ)</label>
-                        <input
-                          type="text"
-                          placeholder="Informe o CNPJ ou Nome da Empresa do Grupo"
-                          value={form.companyCnpj || ''}
-                          onChange={e => setForm(p => ({ ...p, companyCnpj: e.target.value }))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
-                        />
-                      </div>
-
+                    {/* Veículo e Benefício de Transporte */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Possui Veículo?</label>
@@ -3941,6 +3998,69 @@ export const RhCollaboratorManager: React.FC = () => {
                 Confirmar Exclusão
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cadastro Rápido de Empresa do Grupo */}
+      {showCompanyModal && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[220] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase text-xs tracking-wider">
+                <Building2 size={18} />
+                <span>Nova Empresa do Grupo</span>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowCompanyModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCompany} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 ml-1">Razão Social / Nome Fantasia *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="Ex: Rainha Logística e Transportes LTDA"
+                  value={newCompanyName}
+                  onChange={e => setNewCompanyName(e.target.value)}
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 ml-1">CNPJ da Empresa *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="00.000.000/0000-00"
+                  value={newCompanyCnpj}
+                  onChange={e => setNewCompanyCnpj(formatCNPJ(e.target.value))}
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-medium focus:ring-2 focus:ring-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button 
+                  type="button"
+                  onClick={() => setShowCompanyModal(false)}
+                  className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+                >
+                  Salvar e Selecionar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

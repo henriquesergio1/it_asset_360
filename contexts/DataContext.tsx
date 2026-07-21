@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhCompany } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -30,6 +30,7 @@ export interface DataContextType {
 
  // Módulo R.H.
  rhCollaborators: RhCollaborator[];
+ rhCompanies: RhCompany[];
  rhDependents: RhDependent[];
  rhOccurrences: RhOccurrence[];
  rhTemplates: RhTermTemplate[];
@@ -180,6 +181,7 @@ export interface DataContextType {
  addRhAssetItem: (item: RhAssetItem, adminName: string) => void;
  updateRhAssetItem: (item: RhAssetItem, adminName: string) => void;
  deleteRhAssetItem: (id: string, adminName: string) => void;
+ addRhCompany: (company: RhCompany, adminName: string) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

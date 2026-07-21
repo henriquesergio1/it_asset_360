@@ -172,6 +172,11 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions, audits,
     isReadOnly,
     rhCollaborators,
+    rhCompanies: [
+      { id: 'company-1', cnpj: '10.213.373/0001-02', companyName: 'Rainha Logística e Transportes LTDA' },
+      { id: 'company-2', cnpj: '20.456.789/0001-34', companyName: 'Rainha Armazéns Gerais LTDA' },
+      { id: 'company-3', cnpj: '30.987.654/0001-56', companyName: 'Rainha Express Encomendas LTDA' }
+    ],
     rhDependents: [],
     rhOccurrences,
     rhTemplates,
@@ -483,7 +488,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchConsumableTransactions: async () => [],
     addAccessoryType: () => {},
     updateAccessoryType: () => {},
-    deleteAccessoryType: () => {}
+    deleteAccessoryType: () => {},
+    addRhCompany: () => {}
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

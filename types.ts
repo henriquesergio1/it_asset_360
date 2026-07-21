@@ -582,4 +582,11 @@ export interface RhAssetItem {
   notes?: string;
 }
 
+export interface RhCompany {
+  id: string;
+  cnpj: string;
+  companyName: string;
+  createdAt?: string;
+}
+
 
