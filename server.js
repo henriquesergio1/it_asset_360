@@ -941,19 +941,19 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM AssetTypes"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
             pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate, Checklist as checklist FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot, Checklist as checklist FROM Terms"),
             pool.request().query("SELECT * FROM AccessoryTypes"),
             pool.request().query("SELECT * FROM CustomFields"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
-            pool.request().query("SELECT TOP 20 * FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT * FROM Tasks"),
+            pool.request().query("SELECT TOP 20 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT * FROM RhCollaborators"),
+            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
             pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
+            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
@@ -970,12 +970,14 @@ app.get('/api/bootstrap', async (req, res) => {
             models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim', 'checklist']).map(t => ({ ...t, hasFile: t.hasFile === 1 })), accessoryTypes: format(accTypesRes),
+            sectors: format(sectorsRes), terms: format(termsRes, ['accessories', 'linkedSim', 'checklist']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })), accessoryTypes: format(accTypesRes),
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']), logs: format(logsRes), taskLogs: format(taskLogsRes),
+            tasks: format(tasksRes, ['MaintenanceItems', 'RecurrenceConfig']).map(t => ({ ...t, hasEvidenceUrls: t.hasEvidenceUrls === 1, hasManualAttachments: t.hasManualAttachments === 1 })), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
                 ...c,
+                photo: undefined,
+                hasPhoto: c.hasPhoto === 1,
                 documents: (c.documents || []).map(d => ({
                     id: d.id,
                     category: d.category,
@@ -986,7 +988,7 @@ app.get('/api/bootstrap', async (req, res) => {
             })),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
             rhTemplates: format(rhTemplatesRes),
-            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -1007,16 +1009,16 @@ app.get('/api/sync', async (req, res) => {
             `),
             pool.request().query("SELECT * FROM Users"),
             pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, SnapshotTemplate as snapshotTemplate FROM Terms"),
+            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot FROM Terms"),
             pool.request().query("SELECT * FROM SoftwareAccounts"),
-            pool.request().query("SELECT * FROM Tasks"),
-            pool.request().query("SELECT TOP 10 * FROM AuditLogs ORDER BY Timestamp DESC"),
+            pool.request().query("SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
+            pool.request().query("SELECT TOP 10 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT * FROM RhCollaborators"),
+            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
             pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
+            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
         ]);
 
@@ -1030,14 +1032,16 @@ app.get('/api/sync', async (req, res) => {
         res.json({
             devices, sims: format(simsRes), users: format(usersRes),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
-            terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
+            terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
-            tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']),
+            tasks: format(tasksRes, ['MaintenanceItems', 'RecurrenceConfig']).map(t => ({ ...t, hasEvidenceUrls: t.hasEvidenceUrls === 1, hasManualAttachments: t.hasManualAttachments === 1 })),
             logs: format(logsRes),
             consumables: format(consumablesRes),
             audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
                 ...c,
+                photo: undefined,
+                hasPhoto: c.hasPhoto === 1,
                 documents: (c.documents || []).map(d => ({
                     id: d.id,
                     category: d.category,
@@ -1048,7 +1052,7 @@ app.get('/api/sync', async (req, res) => {
             })),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
             rhTemplates: format(rhTemplatesRes),
-            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
+            rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
     } catch (err) { res.status(500).send(err.message); }
@@ -1319,6 +1323,45 @@ app.get('/api/rh-collaborators/:colabId/document/:docId', async (req, res) => {
         try { docs = JSON.parse(row.Documents); } catch(e) {}
         const doc = docs.find(d => d.id === req.params.docId);
         res.json({ fileUrl: doc?.fileUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/terms/:id/snapshot', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT SnapshotTemplate FROM Terms WHERE Id=@Id");
+        const row = result.recordset[0];
+        res.json({ snapshotTemplate: row ? row.SnapshotTemplate : '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-terms/:id/snapshot', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT SnapshotDeclaration, SnapshotClauses FROM RhTerms WHERE Id=@Id");
+        const row = result.recordset[0];
+        res.json({ snapshotDeclaration: row?.SnapshotDeclaration || '', snapshotClauses: row?.SnapshotClauses || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-collaborators/:id/photo', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
+        const row = result.recordset[0];
+        res.json({ photo: row ? row.Photo : '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/tasks/:id/attachments', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT EvidenceUrls, ManualAttachments FROM Tasks WHERE Id=@Id");
+        const row = result.recordset[0];
+        let evidenceUrls = [], manualAttachments = [];
+        try { evidenceUrls = JSON.parse(row?.EvidenceUrls || '[]'); } catch(e) {}
+        try { manualAttachments = JSON.parse(row?.ManualAttachments || '[]'); } catch(e) {}
+        res.json({ evidenceUrls, manualAttachments });
     } catch (err) { res.status(500).send(err.message); }
 });
 

@@ -47,10 +47,10 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const res = await fetch(`${API_URL}/api/sync`);
  return safeJson(res, '/api/sync');
  },
+ enabled: false,
  refetchInterval: 120000,
  refetchOnWindowFocus: false,
  staleTime: 60000,
- enabled: !!bootstrapData,
  });
 
  const { data: externalDbConfigData } = useQuery({

@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.84.0',
+    date: 'Hoje',
+    title: 'Otimização Definitiva de Bootstrap (Remoção Global de HTML/Base64)',
+    changes: [
+      'Desempenho: Omitidos todos os HTMLs de Termos (SnapshotTemplate, SnapshotDeclaration, SnapshotClauses), fotos de colaboradores (Photo), anexos de tarefas e dumps de auditoria do /api/bootstrap.',
+      'Carga Leve: O tamanho da resposta /api/bootstrap foi reduzido de 165 MB para ~200 KB.',
+      'Endpoints por Demanda: Criadas rotas dedicadas para buscar snapshots de termos, fotos e anexos somente quando solicitados na interface.',
+      'Prevenção de Carga Dupla: Desativado o disparo simultâneo de /api/sync na abertura da aplicação.'
+    ]
+  },
+  {
     version: '3.83.0',
     date: 'Hoje',
     title: 'Otimização Extrema de Desempenho no Bootstrap (Carregamento por Demanda)',
