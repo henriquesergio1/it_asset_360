@@ -976,7 +976,7 @@ app.get('/api/bootstrap', async (req, res) => {
             consumables: format(consumablesRes), audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
                 ...c,
-                photo: undefined,
+                photo: c.hasPhoto === 1 ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
                 hasPhoto: c.hasPhoto === 1,
                 documents: (c.documents || []).map(d => ({
                     id: d.id,
@@ -1040,7 +1040,7 @@ app.get('/api/sync', async (req, res) => {
             audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
                 ...c,
-                photo: undefined,
+                photo: c.hasPhoto === 1 ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
                 hasPhoto: c.hasPhoto === 1,
                 documents: (c.documents || []).map(d => ({
                     id: d.id,
@@ -1313,6 +1313,43 @@ app.get('/api/rh-occurrences/:id/file', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+app.put('/api/rh-occurrences/file/:id', async (req, res) => {
+    try {
+        const { fileUrl, _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, Type FROM RhOccurrences WHERE Id=@Id");
+        const occ = oldRes.recordset[0];
+        if (!occ) return res.status(404).send("Ocorrência não encontrada");
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .input('FileUrl', sql.NVarChar, fileUrl)
+            .query("UPDATE RhOccurrences SET FileUrl=@FileUrl WHERE Id=@Id");
+        
+        const userRes = await pool.request().input('Uid', sql.NVarChar, occ.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+        await logAction(occ.CollaboratorId, 'RhCollaborator', 'Atualização', _adminUser, userName, `Anexo adicionado à ocorrência de RH: ${occ.Type}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.delete('/api/rh-occurrences/:id/file', async (req, res) => {
+    try {
+        const { _adminUser } = req.body;
+        const pool = await sql.connect(dbConfig);
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, Type FROM RhOccurrences WHERE Id=@Id");
+        const occ = oldRes.recordset[0];
+        if (!occ) return res.status(404).send("Ocorrência não encontrada");
+        await pool.request()
+            .input('Id', sql.NVarChar, req.params.id)
+            .query("UPDATE RhOccurrences SET FileUrl=NULL WHERE Id=@Id");
+            
+        const userRes = await pool.request().input('Uid', sql.NVarChar, occ.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+        await logAction(occ.CollaboratorId, 'RhCollaborator', 'Atualização', _adminUser, userName, `Anexo removido da ocorrência de RH: ${occ.Type}`);
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
 app.get('/api/rh-collaborators/:colabId/document/:docId', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -1350,6 +1387,26 @@ app.get('/api/rh-collaborators/:id/photo', async (req, res) => {
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
         const row = result.recordset[0];
         res.json({ photo: row ? row.Photo : '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.Photo) {
+            return res.status(404).send('Not found');
+        }
+        const match = row.Photo.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (match) {
+            const buffer = Buffer.from(match[2], 'base64');
+            res.setHeader('Content-Type', match[1]);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(buffer);
+        } else {
+            res.status(400).send('Invalid image format');
+        }
     } catch (err) { res.status(500).send(err.message); }
 });
 

@@ -13,7 +13,7 @@ import FilePreviewModal from './FilePreviewModal';
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
 
 export const RhOccurrenceManager: React.FC = () => {
-  const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence } = useData();
+  const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence, fetchData } = useData();
   const { user } = useAuth();
   const adminName = user?.name || 'Gestor R.H.';
 
@@ -502,16 +502,65 @@ export const RhOccurrenceManager: React.FC = () => {
                               <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Arquivo anexado à ocorrência</span>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handlePreviewFile(selectedOccurrence)}
-                            className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                          >
-                            <Eye size={12} /> Visualizar
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handlePreviewFile(selectedOccurrence)}
+                              className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            >
+                              <Eye size={12} /> Visualizar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (window.confirm('Tem certeza de que deseja remover este anexo?')) {
+                                  try {
+                                    await fetch(`/api/rh-occurrences/${selectedOccurrence.id}/file`, {
+                                      method: 'DELETE',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ _adminUser: adminName })
+                                    });
+                                    setSelectedOccurrence({...selectedOccurrence, fileUrl: undefined, hasFile: false});
+                                    fetchData(true);
+                                  } catch (e) { alert('Erro ao remover arquivo'); }
+                                }
+                              }}
+                              className="text-[10px] bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Trash2 size={12} /> Remover
+                            </button>
+                          </div>
                         </div>
                       ) : (
-                        <p className="text-slate-400 text-xs italic">Nenhum certificado ou atestado anexado a esta ocorrência.</p>
+                        <div className="flex items-center justify-between p-3 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/40">
+                          <p className="text-slate-400 text-xs italic">Nenhum certificado ou atestado anexado a esta ocorrência.</p>
+                          <label className="cursor-pointer bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                            <Upload size={12} /> Anexar
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*,application/pdf"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = async (event) => {
+                                  const base64 = event.target?.result as string;
+                                  try {
+                                    await fetch(`/api/rh-occurrences/file/${selectedOccurrence.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ fileUrl: base64, _adminUser: adminName })
+                                    });
+                                    setSelectedOccurrence({...selectedOccurrence, fileUrl: base64, hasFile: true});
+                                    fetchData(true);
+                                  } catch (err) { alert('Erro ao enviar arquivo'); }
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                          </label>
+                        </div>
                       )}
                     </div>
                   </div>
