@@ -983,7 +983,8 @@ app.get('/api/bootstrap', async (req, res) => {
                     category: d.category,
                     fileName: d.fileName,
                     uploadDate: d.uploadDate,
-                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0)
+                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
+                    fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
@@ -1047,7 +1048,8 @@ app.get('/api/sync', async (req, res) => {
                     category: d.category,
                     fileName: d.fileName,
                     uploadDate: d.uploadDate,
-                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0)
+                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
+                    fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
@@ -1360,6 +1362,29 @@ app.get('/api/rh-collaborators/:colabId/document/:docId', async (req, res) => {
         try { docs = JSON.parse(row.Documents); } catch(e) {}
         const doc = docs.find(d => d.id === req.params.docId);
         res.json({ fileUrl: doc?.fileUrl || '' });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-collaborators/:colabId/document/:docId/raw', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.colabId).query("SELECT Documents FROM RhCollaborators WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.Documents) return res.status(404).send('Not found');
+        let docs = [];
+        try { docs = JSON.parse(row.Documents); } catch(e) {}
+        const doc = docs.find(d => d.id === req.params.docId);
+        if (!doc || !doc.fileUrl) return res.status(404).send('Not found');
+        
+        const match = doc.fileUrl.match(/^data:(.+?);base64,(.+)$/);
+        if (match) {
+            const buffer = Buffer.from(match[2], 'base64');
+            res.setHeader('Content-Type', match[1]);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(buffer);
+        } else {
+            res.status(400).send('Invalid format');
+        }
     } catch (err) { res.status(500).send(err.message); }
 });
 
