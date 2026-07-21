@@ -115,11 +115,15 @@ export const RhOccurrenceManager: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Tem certeza de que deseja remover este lançamento de ocorrência de R.H.?')) {
-      deleteRhOccurrence(id, adminName);
-      setSelectedOccurrence(null);
-      setIsDetailModalOpen(false);
+    const reason = window.prompt('Informe o motivo da exclusão desta ocorrência:');
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert('É necessário informar o motivo para excluir a ocorrência.');
+      return;
     }
+    deleteRhOccurrence(id, adminName, reason.trim());
+    setSelectedOccurrence(null);
+    setIsDetailModalOpen(false);
   };
 
   // Filter Logic

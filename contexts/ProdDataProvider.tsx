@@ -855,10 +855,14 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
       showToast('Erro ao registrar ocorrência', 'error');
     }
   },
-  deleteRhOccurrence: async (id) => {
+  deleteRhOccurrence: async (id, adminName, reason) => {
     if (checkReadOnly()) return;
     try {
-      await fetch(`${API_URL}/api/rh-occurrences/${id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/api/rh-occurrences/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _adminUser: adminName, reason: reason || 'Não informado' })
+      });
       fetchData(true);
       showToast('Ocorrência removida do R.H.', 'success');
     } catch (err) {

@@ -1370,6 +1370,35 @@ app.delete('/api/rh-occurrences/:id/file', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+app.delete('/api/rh-occurrences/:id', async (req, res) => {
+    try {
+        const { reason, _adminUser } = req.body || {};
+        const pool = await sql.connect(dbConfig);
+        const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, Type, StartDate, EndDate FROM RhOccurrences WHERE Id=@Id");
+        const occ = oldRes.recordset[0];
+        if (!occ) return res.status(404).send("Ocorrência não encontrada");
+
+        await pool.request().input('Id', sql.NVarChar, req.params.id).query("DELETE FROM RhOccurrences WHERE Id=@Id");
+
+        const userRes = await pool.request().input('Uid', sql.NVarChar, occ.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Uid");
+        const userName = userRes.recordset[0]?.FullName || 'Colaborador';
+        const startFmt = occ.StartDate ? new Date(occ.StartDate).toLocaleDateString('pt-BR') : '';
+        const endFmt = occ.EndDate ? new Date(occ.EndDate).toLocaleDateString('pt-BR') : '';
+        const dateRange = startFmt ? (endFmt && endFmt !== startFmt ? `${startFmt} até ${endFmt}` : startFmt) : '';
+
+        await logAction(
+            occ.CollaboratorId,
+            'RhCollaborator',
+            'Exclusão',
+            _adminUser || 'Gestor R.H.',
+            userName,
+            `Ocorrência de R.H. excluída: ${occ.Type}${dateRange ? ' (' + dateRange + ')' : ''}. Motivo: ${reason || 'Não informado'}`
+        );
+
+        res.json({ success: true });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
 app.get('/api/rh-collaborators/:colabId/document/:docId', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);

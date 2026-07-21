@@ -167,7 +167,7 @@ export interface DataContextType {
  updateRhCollaborator: (collaborator: RhCollaborator, adminName: string) => void;
  deleteRhCollaborator: (id: string, adminName: string) => void;
  addRhOccurrence: (occurrence: RhOccurrence, adminName: string) => void;
- deleteRhOccurrence: (id: string, adminName: string) => void;
+ deleteRhOccurrence: (id: string, adminName: string, reason?: string) => void;
  addRhTemplate: (template: RhTermTemplate, adminName: string) => void;
  updateRhTemplate: (template: RhTermTemplate, adminName: string) => void;
  deleteRhTemplate: (id: string, adminName: string) => void;

@@ -192,7 +192,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setRhOccurrences(p => [...p, o]);
       showToast('Ocorrência de R.H. lançada (Mock)', 'success');
     },
-    deleteRhOccurrence: (id) => {
+    deleteRhOccurrence: (id, adminName, reason) => {
       setRhOccurrences(p => p.filter(x => x.id !== id));
       showToast('Ocorrência removida (Mock)', 'success');
     },
