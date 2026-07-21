@@ -118,10 +118,27 @@ export const formatLogValue = (val: string): { formatted: string; isVoid: boolea
 };
 
 export const renderFriendlyAuditLog = (notes: string) => {
-  if (!notes) return <span className="text-slate-400 italic">Sem observações registradas.</span>;
+  if (!notes) return <span className="text-slate-400 italic text-xs">Sem observações registradas.</span>;
 
   let cleanNotes = notes.replace(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g, '[Imagem Base64]');
   
+  // Caso 1: Logs com motivo/justificativa (ex: Exclusão de ocorrência ou documento)
+  if (cleanNotes.includes('Motivo:') || cleanNotes.includes('Justificativa:')) {
+    const parts = cleanNotes.split(/(?:Motivo|Justificativa):/i);
+    const mainDesc = parts[0].trim().replace(/\.$/, '');
+    const reasonText = parts.slice(1).join('Motivo:').trim();
+    return (
+      <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs space-y-2 shadow-xs">
+        <p className="font-bold text-slate-800 dark:text-slate-200 leading-snug">{mainDesc}</p>
+        <div className="p-2.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg flex items-start gap-2 text-amber-900 dark:text-amber-300 font-medium">
+          <span className="font-black text-[9px] uppercase tracking-wider bg-amber-200/60 dark:bg-amber-500/30 px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-200 shrink-0 mt-0.5">Motivo</span>
+          <span className="text-[11px] leading-relaxed break-words">{reasonText}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Caso 2: Alteração de campos de cadastro (formato key: old ➔ new)
   const knownKeys = Object.keys(RH_AND_TI_FIELD_LABELS);
   const keyPattern = new RegExp(`(?:^|\\s)(${knownKeys.join('|')}):`, 'g');
   
@@ -136,7 +153,8 @@ export const renderFriendlyAuditLog = (notes: string) => {
 
     for (let i = 0; i < matches.length; i++) {
       const key = matches[i].key;
-      const start = matches[i].index + key.length + 1; // apos 'key:'
+      const colonPos = cleanNotes.indexOf(':', matches[i].index);
+      const start = colonPos + 1;
       const end = (i + 1 < matches.length) ? matches[i + 1].index : cleanNotes.length;
       const segment = cleanNotes.substring(start, end).trim();
 
@@ -148,7 +166,7 @@ export const renderFriendlyAuditLog = (notes: string) => {
         const oldValObj = formatLogValue(rawOld);
         const newValObj = formatLogValue(rawNew);
 
-        // Suprimir se ambos os valores forem nulos/zerados sem alteracao real
+        // Suprimir se ambos os valores forem nulos/zerados (ex: datas 1900 de banco) ou sem alteração real
         const isBothVoid = (oldValObj.isVoid && newValObj.isVoid) || (oldValObj.formatted === newValObj.formatted);
 
         if (!isBothVoid) {
@@ -188,10 +206,16 @@ export const renderFriendlyAuditLog = (notes: string) => {
         </div>
       );
     }
+
+    return (
+      <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-medium text-slate-500 dark:text-slate-400 italic">
+        Atualização de dados cadastrais (campos padrão mantidos).
+      </div>
+    );
   }
 
   return (
-    <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-relaxed shadow-xs">
+    <div className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-semibold text-slate-700 dark:text-slate-200 leading-relaxed shadow-xs break-words">
       {cleanNotes}
     </div>
   );
