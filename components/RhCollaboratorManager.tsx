@@ -2770,7 +2770,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           }
                           return (
                             <div className="grid grid-cols-1 gap-3">
-                              {colabTerms.map(t => {
+                              {colabTerms.map((t: any) => {
                                 const isDevolucao = t.type === 'DEVOLUCAO';
                                 return (
                                   <div key={t.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
