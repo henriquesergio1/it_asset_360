@@ -984,7 +984,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT Id, Name, Email, Role, AvatarUrl, ID_Perfil, IdPerfil, Nome_Perfil, Permissoes FROM SystemUsers"),
+            pool.request().query("SELECT * FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
             pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
@@ -1044,7 +1044,10 @@ app.get('/api/bootstrap', async (req, res) => {
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
-    } catch (err) { res.status(500).send(err.message); }
+    } catch (err) {
+        console.error('[BOOTSTRAP ERROR]:', err);
+        res.status(500).send(err.message);
+    }
 });
 
 // --- SYNC ENDPOINT (v2.12.51 - Lightweight) ---
@@ -1111,7 +1114,10 @@ app.get('/api/sync', async (req, res) => {
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
         });
-    } catch (err) { res.status(500).send(err.message); }
+    } catch (err) {
+        console.error('[SYNC ERROR]:', err);
+        res.status(500).send(err.message);
+    }
 });
 
 app.get('/api/logs/paginated', async (req, res) => {
