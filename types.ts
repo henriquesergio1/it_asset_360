@@ -546,9 +546,30 @@ export interface RhCollaborator {
   salary: number;
   weeklyHours: number;
   
+  // CNPJ da Empresa de Registro
+  companyCnpj?: string;
+
+  // Informações de Veículo
+  hasVehicle?: 'Sim' | 'Não';
+  vehicleType?: string;
+  vehiclePlate?: string;
+
+  // Opção de Benefício de Transporte
+  transportOption?: 'Vale Transporte' | 'Auxílio Combustível' | 'Não Optante';
+
   // Relacionados
   documents: RhDocument[];
   photo?: string;
+}
+
+export interface RhDependent {
+  id: string;
+  collaboratorId: string;
+  name: string;
+  relationshipType: 'Filho(a)' | 'Cônjuge/Esposa' | 'Pai/Mãe' | 'Outro';
+  cpf?: string;
+  birthDate?: string;
+  notes?: string;
 }
 
 export interface RhAssetItem {

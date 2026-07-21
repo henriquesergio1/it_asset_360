@@ -172,6 +172,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions, audits,
     isReadOnly,
     rhCollaborators,
+    rhDependents: [],
     rhOccurrences,
     rhTemplates,
     rhTerms,
@@ -188,6 +189,9 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setRhCollaborators(p => p.filter(x => x.id !== id));
       showToast('Colaborador removido do R.H. (Mock)', 'success');
     },
+    addRhDependent: () => {},
+    updateRhDependent: () => {},
+    deleteRhDependent: () => {},
     addRhOccurrence: (o) => {
       setRhOccurrences(p => [...p, o]);
       showToast('Ocorrência de R.H. lançada (Mock)', 'success');

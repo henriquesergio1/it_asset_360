@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -30,6 +30,7 @@ export interface DataContextType {
 
  // Módulo R.H.
  rhCollaborators: RhCollaborator[];
+ rhDependents: RhDependent[];
  rhOccurrences: RhOccurrence[];
  rhTemplates: RhTermTemplate[];
  rhTerms: RhTerm[];
@@ -166,6 +167,9 @@ export interface DataContextType {
  addRhCollaborator: (collaborator: RhCollaborator, adminName: string) => void;
  updateRhCollaborator: (collaborator: RhCollaborator, adminName: string) => void;
  deleteRhCollaborator: (id: string, adminName: string) => void;
+ addRhDependent: (dependent: RhDependent, adminName: string) => void;
+ updateRhDependent: (dependent: RhDependent, adminName: string) => void;
+ deleteRhDependent: (id: string, adminName: string) => void;
  addRhOccurrence: (occurrence: RhOccurrence, adminName: string) => void;
  deleteRhOccurrence: (id: string, adminName: string, reason?: string) => void;
  addRhTemplate: (template: RhTermTemplate, adminName: string) => void;

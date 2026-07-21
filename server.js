@@ -780,6 +780,38 @@ async function initializeDatabase() {
             console.log('  ... Usuário admin@admin criado (Senha: admin — armazenada com bcrypt).');
         }
 
+        // Migração RH: Colunas de Empresa, Veículo e Benefício em RhCollaborators
+        const checkRhCompany = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = 'CompanyCnpj'");
+        if (checkRhCompany.recordset.length === 0) {
+            console.log('- Adicionando novas colunas em RhCollaborators (CompanyCnpj, HasVehicle, VehicleType, VehiclePlate, TransportOption)...');
+            await pool.request().query(`
+                ALTER TABLE RhCollaborators ADD 
+                    CompanyCnpj NVARCHAR(50) NULL,
+                    HasVehicle NVARCHAR(10) NULL,
+                    VehicleType NVARCHAR(50) NULL,
+                    VehiclePlate NVARCHAR(20) NULL,
+                    TransportOption NVARCHAR(50) NULL
+            `);
+        }
+
+        // Tabela RhDependents
+        const checkRhDependents = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhDependents'");
+        if (checkRhDependents.recordset.length === 0) {
+            console.log('- Criando tabela RhDependents...');
+            await pool.request().query(`
+                CREATE TABLE RhDependents (
+                    Id NVARCHAR(255) PRIMARY KEY,
+                    CollaboratorId NVARCHAR(255) NOT NULL,
+                    Name NVARCHAR(255) NOT NULL,
+                    RelationshipType NVARCHAR(50) NOT NULL,
+                    Cpf NVARCHAR(20) NULL,
+                    BirthDate NVARCHAR(50) NULL,
+                    Notes NVARCHAR(500) NULL,
+                    CreatedAt DATETIME DEFAULT GETDATE()
+                )
+            `);
+        }
+
         // Garante que a tabela de ExternalDbConfig tenha pelo menos uma linha
         const extDbCheck = await pool.request().query('SELECT COUNT(*) as count FROM ExternalDbConfig');
         if (extDbCheck.recordset[0].count === 0) {
@@ -999,7 +1031,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
                 SELECT 
@@ -1016,7 +1048,8 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT TOP 10 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
+            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, CompanyCnpj, HasVehicle, VehicleType, VehiclePlate, TransportOption, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
+            pool.request().query("SELECT * FROM RhDependents"),
             pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
             pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
@@ -1052,6 +1085,7 @@ app.get('/api/sync', async (req, res) => {
                     fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
+            rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
@@ -2645,6 +2679,7 @@ async function updateUserPendingStatus(pool, userId) {
     });
     crud('TechnicalAudits', 'audits', 'Audit');
     crud('RhCollaborators', 'rh-collaborators', 'RhCollaborator');
+    crud('RhDependents', 'rh-dependents', 'RhDependent');
     crud('RhOccurrences', 'rh-occurrences', 'RhOccurrence');
     crud('RhTermTemplates', 'rh-templates', 'RhTermTemplate');
     crud('RhTerms', 'rh-terms', 'RhTerm');

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { RhCollaborator, RhDocument, RhOccurrence, RhTerm } from '../types';
+import { RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTerm } from '../types';
 import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
@@ -10,7 +10,7 @@ import {
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, UserCheck, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
-  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon
+  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
@@ -41,6 +41,9 @@ const normalizeColabDates = (c: any) => c ? ({
 export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
+    rhDependents = [],
+    addRhDependent,
+    deleteRhDependent,
     sectors, 
     users,
     updateUser: updateUserData,
@@ -95,10 +98,30 @@ export const RhCollaboratorManager: React.FC = () => {
   const [cepLoading, setCepLoading] = useState(false);
 
   // Tabs for creating/editing collaborator modal
-  const [activeTab, setActiveTab] = useState<'cadastro' | 'documentos' | 'ocorrencias'>('cadastro');
+  const [activeTab, setActiveTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'ocorrencias'>('cadastro');
 
   // Tabs for viewing collaborator detail modal
-  const [detailTab, setDetailTab] = useState<'cadastro' | 'documentos' | 'ocorrencias'>('cadastro');
+  const [detailTab, setDetailTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'ocorrencias' | 'historico'>('cadastro');
+
+  // Estados locais para cadastro de dependentes
+  const [depName, setDepName] = useState('');
+  const [depRelationship, setDepRelationship] = useState<'Filho(a)' | 'Cônjuge/Esposa' | 'Pai/Mãe' | 'Outro'>('Filho(a)');
+  const [depCpf, setDepCpf] = useState('');
+  const [depBirthDate, setDepBirthDate] = useState('');
+  const [depNotes, setDepNotes] = useState('');
+
+  const calculateAge = (birthDateStr?: string) => {
+    if (!birthDateStr) return '';
+    const birth = new Date(birthDateStr);
+    if (isNaN(birth.getTime())) return '';
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age >= 1 ? `${age} ano(s)` : 'Menos de 1 ano';
+  };
 
   // --- Funções de Auditoria e Trava de Edição de Cadastro ---
   const handleConfirmEditReason = () => {
@@ -515,6 +538,11 @@ export const RhCollaboratorManager: React.FC = () => {
     hireDate: '',
     salary: 0,
     weeklyHours: 44,
+    companyCnpj: '',
+    hasVehicle: 'Não',
+    vehicleType: 'Carro',
+    vehiclePlate: '',
+    transportOption: 'Não Optante',
     documents: [],
     photo: ''
   });
@@ -645,6 +673,40 @@ export const RhCollaboratorManager: React.FC = () => {
     setOccFileBase64('');
     setOccFileName('');
     showToast('Ocorrência lançada com sucesso!', 'success');
+  };
+
+  const handleAddDependent = () => {
+    const colabTargetId = selectedColab?.id || form.id;
+    if (!colabTargetId) {
+      showToast('Salve primeiro o colaborador antes de cadastrar dependentes.', 'error');
+      return;
+    }
+    if (!depName.trim()) {
+      showToast('Informe o nome do dependente.', 'error');
+      return;
+    }
+
+    const newDep: RhDependent = {
+      id: `dep-${Date.now()}`,
+      collaboratorId: colabTargetId,
+      name: depName.trim(),
+      relationshipType: depRelationship,
+      cpf: depCpf.trim() || undefined,
+      birthDate: depBirthDate || undefined,
+      notes: depNotes.trim() || undefined
+    };
+
+    addRhDependent(newDep, adminName);
+    setDepName('');
+    setDepCpf('');
+    setDepBirthDate('');
+    setDepNotes('');
+    showToast('Dependente cadastrado com sucesso!', 'success');
+  };
+
+  const handleDeleteDependent = (depId: string) => {
+    deleteRhDependent(depId, adminName);
+    showToast('Dependente excluído com sucesso!', 'success');
   };
 
   const handlePreviewColabDoc = async (doc: RhDocument) => {
@@ -1431,6 +1493,17 @@ export const RhCollaboratorManager: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setDetailTab('dependentes')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'dependentes'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                2. Dependentes ({selectedColab ? rhDependents.filter(d => d.collaboratorId === selectedColab.id).length : 0})
+              </button>
+              <button
+                type="button"
                 onClick={() => setDetailTab('documentos')}
                 className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
                   detailTab === 'documentos'
@@ -1438,7 +1511,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                2. Documentos & Termos
+                3. Documentos & Termos
               </button>
               <button
                 type="button"
@@ -1449,7 +1522,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                3. Faltas / Férias / Atestados
+                4. Faltas / Férias / Atestados
               </button>
               <button
                 type="button"
@@ -1461,7 +1534,7 @@ export const RhCollaboratorManager: React.FC = () => {
                 }`}
               >
                 <History size={12} />
-                4. Histórico
+                5. Histórico
               </button>
             </div>
 
@@ -1645,7 +1718,81 @@ export const RhCollaboratorManager: React.FC = () => {
                           </button>
                         </div>
                       </div>
+                      <div className="col-span-2 border-t border-slate-100 dark:border-slate-700/50 pt-2 mt-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Empresa de Registro (CNPJ)</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.companyCnpj || 'Não informado'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Possui Veículo?</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedColab.hasVehicle === 'Sim' ? `${selectedColab.vehicleType || 'Veículo'} (${selectedColab.vehiclePlate || 'Sem placa'})` : 'Não'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Opção de Transporte</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.transportOption || 'Não Optante'}</span>
+                      </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'dependentes' && selectedColab && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                    <div>
+                      <h4 className="text-xs font-black uppercase text-indigo-500 tracking-wider">Dependentes Cadastrados</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Filhos, cônjuges e outros dependentes vinculados ao colaborador.</p>
+                    </div>
+                    {(() => {
+                      const deps = rhDependents.filter(d => d.collaboratorId === selectedColab.id);
+                      return (
+                        <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-black text-xs rounded-xl border border-indigo-200 dark:border-indigo-500/20">
+                          {deps.length} dependente(s)
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(() => {
+                      const deps = rhDependents.filter(d => d.collaboratorId === selectedColab.id);
+                      if (deps.length === 0) {
+                        return (
+                          <div className="col-span-2 text-center py-12 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                            <UsersIcon className="mx-auto text-slate-400 mb-2" size={36} />
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Nenhum dependente cadastrado para este colaborador.</p>
+                          </div>
+                        );
+                      }
+                      return deps.map(dep => (
+                        <div key={dep.id} className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3 shadow-xs">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-slate-800 dark:text-white truncate">{dep.name}</span>
+                              <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase tracking-wider rounded-lg border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+                                {dep.relationshipType}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                              {dep.cpf && <p>CPF: <span className="font-mono">{formatCPF(dep.cpf)}</span></p>}
+                              {dep.birthDate && (
+                                <p>Data de Nasc.: {new Date(dep.birthDate).toLocaleDateString('pt-BR')} {calculateAge(dep.birthDate) && <span className="font-bold text-indigo-500">({calculateAge(dep.birthDate)})</span>}</p>
+                              )}
+                              {dep.notes && <p className="italic text-slate-400 text-[10px] mt-1">{dep.notes}</p>}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDependent(dep.id)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors shrink-0"
+                            title="Excluir Dependente"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               )}
@@ -2235,6 +2382,17 @@ export const RhCollaboratorManager: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('dependentes')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
+                  activeTab === 'dependentes'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                2. Dependentes
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('documentos')}
                 className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
                   activeTab === 'documentos'
@@ -2242,7 +2400,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                2. Anexos & Termos
+                3. Anexos & Termos
               </button>
               <button
                 type="button"
@@ -2253,7 +2411,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                3. Faltas / Férias / Ocorrências
+                4. Faltas / Férias / Ocorrências
               </button>
             </div>
 
@@ -2638,6 +2796,205 @@ export const RhCollaboratorManager: React.FC = () => {
                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium font-mono text-slate-900 dark:text-white"
                         />
                       </div>
+                    </div>
+
+                    {/* Empresa de Registro, Veículo e Benefício de Transporte */}
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-3">
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Empresa de Registro (CNPJ)</label>
+                        <input
+                          type="text"
+                          placeholder="Informe o CNPJ ou Nome da Empresa do Grupo"
+                          value={form.companyCnpj || ''}
+                          onChange={e => setForm(p => ({ ...p, companyCnpj: e.target.value }))}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Possui Veículo?</label>
+                          <select
+                            value={form.hasVehicle || 'Não'}
+                            onChange={e => setForm(p => ({ ...p, hasVehicle: e.target.value as any }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          >
+                            <option value="Não">Não</option>
+                            <option value="Sim">Sim</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Opção de Transporte</label>
+                          <select
+                            value={form.transportOption || 'Não Optante'}
+                            onChange={e => setForm(p => ({ ...p, transportOption: e.target.value as any }))}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          >
+                            <option value="Não Optante">Não Optante</option>
+                            <option value="Vale Transporte">Vale Transporte</option>
+                            <option value="Auxílio Combustível">Auxílio Combustível</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {form.hasVehicle === 'Sim' && (
+                        <div className="grid grid-cols-2 gap-3 p-3 bg-slate-100/60 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Veículo</label>
+                            <select
+                              value={form.vehicleType || 'Carro'}
+                              onChange={e => setForm(p => ({ ...p, vehicleType: e.target.value }))}
+                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
+                            >
+                              <option value="Carro">Carro</option>
+                              <option value="Moto">Moto</option>
+                              <option value="Van">Van</option>
+                              <option value="Outro">Outro</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Placa do Veículo</label>
+                            <input
+                              type="text"
+                              placeholder="ABC-1234"
+                              value={form.vehiclePlate || ''}
+                              onChange={e => setForm(p => ({ ...p, vehiclePlate: e.target.value.toUpperCase() }))}
+                              className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium uppercase font-mono text-slate-900 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'dependentes' && (
+                <div className="space-y-8">
+                  {/* Bloco de Cadastro de Novo Dependente */}
+                  <div className="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-700/60 space-y-4">
+                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-200 dark:border-slate-700/40 pb-2 flex items-center justify-between">
+                      <span>Adicionar Novo Dependente</span>
+                      <span className="text-[10px] text-slate-400 font-normal lowercase">(filho, esposa, pai, etc)</span>
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Grau de Parentesco / Tipo *</label>
+                        <select
+                          value={depRelationship}
+                          onChange={e => setDepRelationship(e.target.value as any)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        >
+                          <option value="Filho(a)">Filho(a)</option>
+                          <option value="Cônjuge/Esposa">Cônjuge / Esposa / Marido</option>
+                          <option value="Pai/Mãe">Pai / Mãe</option>
+                          <option value="Outro">Outro Dependente</option>
+                        </select>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Nome Completo do Dependente *</label>
+                        <input
+                          type="text"
+                          placeholder="Digite o nome completo"
+                          value={depName}
+                          onChange={e => setDepName(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">CPF do Dependente</label>
+                        <input
+                          type="text"
+                          placeholder="000.000.000-00"
+                          value={depCpf}
+                          onChange={e => setDepCpf(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Nascimento</label>
+                        <input
+                          type="date"
+                          value={depBirthDate}
+                          onChange={e => setDepBirthDate(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Observações / Notas</label>
+                        <input
+                          type="text"
+                          placeholder="Notas opcionais"
+                          value={depNotes}
+                          onChange={e => setDepNotes(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={handleAddDependent}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl uppercase tracking-wider shadow-sm transition-all flex items-center gap-2"
+                      >
+                        <Plus size={14} /> Cadastrar Dependente
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista dos Dependentes Cadastrados */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                      Dependentes Vinculados
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        const targetId = selectedColab?.id || form.id;
+                        const deps = rhDependents.filter(d => d.collaboratorId === targetId);
+                        if (deps.length === 0) {
+                          return (
+                            <div className="col-span-2 text-center py-12 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                              <UsersIcon className="mx-auto text-slate-400 mb-2" size={36} />
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Nenhum dependente vinculado até o momento.</p>
+                            </div>
+                          );
+                        }
+                        return deps.map(dep => (
+                          <div key={dep.id} className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3 shadow-xs">
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-slate-800 dark:text-white truncate">{dep.name}</span>
+                                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase tracking-wider rounded-lg border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+                                  {dep.relationshipType}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                                {dep.cpf && <p>CPF: <span className="font-mono">{formatCPF(dep.cpf)}</span></p>}
+                                {dep.birthDate && (
+                                  <p>Data de Nasc.: {new Date(dep.birthDate).toLocaleDateString('pt-BR')} {calculateAge(dep.birthDate) && <span className="font-bold text-indigo-500">({calculateAge(dep.birthDate)})</span>}</p>
+                                )}
+                                {dep.notes && <p className="italic text-slate-400 text-[10px] mt-1">{dep.notes}</p>}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDependent(dep.id)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors shrink-0"
+                              title="Excluir Dependente"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>

@@ -137,8 +137,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const consumableTransactions = consumableTransactionsData || syncData?.consumableTransactions || bootstrapData?.consumableTransactions || [];
 const consumables = syncData?.consumables || bootstrapData?.consumables || [];
 
- const rhCollaborators = syncData?.rhCollaborators || bootstrapData?.rhCollaborators || [];
- const rhOccurrences = syncData?.rhOccurrences || bootstrapData?.rhOccurrences || [];
+  const rhCollaborators = syncData?.rhCollaborators || bootstrapData?.rhCollaborators || [];
+  const rhDependents = syncData?.rhDependents || bootstrapData?.rhDependents || [];
+  const rhOccurrences = syncData?.rhOccurrences || bootstrapData?.rhOccurrences || [];
  const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
  const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
  const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
@@ -812,6 +813,7 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
  },
  updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride,
   rhCollaborators,
+  rhDependents,
   rhOccurrences,
   rhTemplates,
   rhTerms,
@@ -844,6 +846,36 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
       showToast('Colaborador excluído do R.H.', 'success');
     } catch (err) {
       showToast('Erro ao excluir colaborador', 'error');
+    }
+  },
+  addRhDependent: async (d) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-dependents', d);
+      fetchData(true);
+      showToast('Dependente cadastrado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao cadastrar dependente', 'error');
+    }
+  },
+  updateRhDependent: async (d) => {
+    if (checkReadOnly()) return;
+    try {
+      await putData('rh-dependents', d);
+      fetchData(true);
+      showToast('Dependente atualizado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao atualizar dependente', 'error');
+    }
+  },
+  deleteRhDependent: async (id) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-dependents/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Dependente excluído do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir dependente', 'error');
     }
   },
   addRhOccurrence: async (o) => {
