@@ -801,6 +801,17 @@ async function initializeDatabase() {
             }
         }
 
+        // Garantir coluna Permissoes em SystemUsers
+        try {
+            const checkPerms = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemUsers' AND COLUMN_NAME = 'Permissoes'");
+            if (checkPerms.recordset.length === 0) {
+                console.log('- Adicionando coluna Permissoes em SystemUsers...');
+                await pool.request().query("ALTER TABLE SystemUsers ADD Permissoes NVARCHAR(MAX) NULL");
+            }
+        } catch (pErr) {
+            console.error('Erro ao verificar/adicionar coluna Permissoes em SystemUsers:', pErr.message);
+        }
+
         // Tabela RhDependents
         const checkRhDependents = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhDependents'");
         if (checkRhDependents.recordset.length === 0) {
