@@ -1667,8 +1667,10 @@ async function updateUserPendingStatus(pool, userId) {
 
     const IGexternal_CRUD_KEYS = [
         'ID_Perfil', 'idPerfil', 'Nome_Perfil', 'Permissoes', 'permissoes', 'avatarUrl',
-        'accessories', 'terms', 'hasInvoice', 'hasFile', 'customDataStr', 
-        'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId',
+        'accessories', 'terms', 'hasInvoice', 'hasFile', 'hasPhoto', 'hasSnapshot',
+        'hasEvidence', 'hasEvidenceUrls', 'hasManualAttachments',
+        'hasSignatureCanvas', 'hasSignaturePhoto', 'hasSignatureSelfiePhoto',
+        'customDataStr', 'hasDueDate', 'isRecurring', 'recurrenceConfig', 'parentId',
         'assetsCount', 'activeSims', 'devicesInfo', 'sectorName', 'userName',
         'modelName', 'brandName', 'typeName', 'currentUserName', 'linkedSimNumber'
     ];
@@ -1748,10 +1750,24 @@ async function updateUserPendingStatus(pool, userId) {
                 // v3.26.3: Ignora o ID para evitar violação de Primary Key
                 if (key.toLowerCase() === 'id') continue;
 
-                // Ignora chaves que terminam em 'Binary' vindas do frontend (são buffers de leitura)
-                if (key.endsWith('Binary')) continue;
+                // Ignora chaves virtuais de fotos sob demanda se forem URLs de API
+                if (key === 'photo' && typeof req.body[key] === 'string' && req.body[key].startsWith('/api/')) continue;
 
-                const val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
+                let val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
+
+                // Preserva o Base64 original dos documentos no banco se o frontend enviou uma URL /api/.../raw
+                if (key === 'documents' && Array.isArray(req.body[key])) {
+                    let prevDocs = [];
+                    try { prevDocs = JSON.parse(prev?.Documents || '[]'); } catch(e) {}
+                    const mergedDocs = req.body[key].map(d => {
+                        if (d.fileUrl && typeof d.fileUrl === 'string' && d.fileUrl.startsWith('/api/')) {
+                            const matchOld = prevDocs.find(oldD => oldD.id === d.id);
+                            return { ...d, fileUrl: matchOld ? matchOld.fileUrl : '' };
+                        }
+                        return d;
+                    });
+                    val = JSON.stringify(mergedDocs);
+                }
                 
                 // Se o valor for nulo ou indefinido, pulamos a atualização deste campo
                 if (val === null || val === undefined) continue; 
