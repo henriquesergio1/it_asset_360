@@ -362,9 +362,32 @@ export const RhOccurrenceManager: React.FC = () => {
                 <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{o.daysCount} dias</td>
                 <td className="px-6 py-4">
                   {(o.fileUrl || o.hasFile) ? (
-                    <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-extrabold text-[9px] px-2 py-0.5 rounded uppercase border border-indigo-500/20 flex items-center gap-1 w-max">
-                      <Paperclip size={10} /> 1 anexo
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreviewFile(o);
+                        }}
+                        className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-sm"
+                        title="Visualizar anexo"
+                      >
+                        <img
+                          src={o.fileUrl || `/api/rh-occurrences/${o.id}/file/raw`}
+                          alt="Anexo"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.parentElement) {
+                              e.currentTarget.parentElement.innerHTML = '<span class="text-indigo-500 font-bold text-[8px]">DOC</span>';
+                            }
+                          }}
+                        />
+                      </button>
+                      <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-extrabold text-[9px] px-2 py-0.5 rounded uppercase border border-indigo-500/20 flex items-center gap-1">
+                        <Paperclip size={10} /> 1 anexo
+                      </span>
+                    </div>
                   ) : (
                     <span className="text-slate-400">-</span>
                   )}

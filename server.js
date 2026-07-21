@@ -987,7 +987,7 @@ app.get('/api/bootstrap', async (req, res) => {
                     fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
-            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
+            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
@@ -1052,7 +1052,7 @@ app.get('/api/sync', async (req, res) => {
                     fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
-            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
+            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
@@ -1312,6 +1312,24 @@ app.get('/api/rh-occurrences/:id/file', async (req, res) => {
         const row = result.recordset[0];
         if (!row || !row.FileUrl) return res.json({ fileUrl: '' });
         res.json({ fileUrl: row.FileUrl });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-occurrences/:id/file/raw', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM RhOccurrences WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.FileUrl) return res.status(404).send('Not found');
+        const match = row.FileUrl.match(/^data:(.+?);base64,(.+)$/);
+        if (match) {
+            const buffer = Buffer.from(match[2], 'base64');
+            res.setHeader('Content-Type', match[1]);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.send(buffer);
+        } else {
+            res.status(400).send('Invalid format');
+        }
     } catch (err) { res.status(500).send(err.message); }
 });
 

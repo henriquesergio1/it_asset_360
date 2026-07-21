@@ -2015,11 +2015,29 @@ export const RhCollaboratorManager: React.FC = () => {
                                 </div>
                                 {occ.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">{occ.notes}</p>}
                                 { (occ.fileUrl || occ.hasFile) && (
-                                  <div className="pt-2">
+                                  <div className="pt-2 flex items-center gap-3">
                                     <button
                                       type="button"
                                       onClick={() => handlePreviewOccurrenceAnexo(occ)}
-                                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all cursor-pointer border border-indigo-200 dark:border-indigo-500/30"
+                                      className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-sm"
+                                      title="Visualizar miniatura do atestado"
+                                    >
+                                      <img
+                                        src={occ.fileUrl || `/api/rh-occurrences/${occ.id}/file/raw`}
+                                        alt="Atestado"
+                                        className="w-full h-full object-cover group-hover:opacity-90"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          if (e.currentTarget.parentElement) {
+                                            e.currentTarget.parentElement.innerHTML = '<span class="text-indigo-500 font-bold text-[9px]">DOC</span>';
+                                          }
+                                        }}
+                                      />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handlePreviewOccurrenceAnexo(occ)}
+                                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all cursor-pointer border border-indigo-200 dark:border-indigo-500/30"
                                       title="Visualizar anexo da ocorrência"
                                     >
                                       <Eye size={12} />
@@ -2649,21 +2667,32 @@ export const RhCollaboratorManager: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
                         {form.documents && form.documents.length > 0 ? (
                           form.documents.map((doc, i) => {
-                            const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
+                            const hasUrl = !!(doc.fileUrl || doc.hasFile);
                             return (
                               <div key={doc.id || i} className="p-3 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs border border-slate-200 dark:border-slate-700">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  {isImage ? (
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {hasUrl ? (
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+                                        setPreviewData({ url: doc.fileUrl || `/api/rh-collaborators/${selectedColab?.id}/document/${doc.id}/raw`, name: doc.fileName });
                                         setIsPreviewOpen(true);
                                       }}
-                                      className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900"
+                                      className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900 flex items-center justify-center relative shadow-sm"
                                       title="Clique para visualizar"
                                     >
-                                      <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
+                                      <img 
+                                        src={doc.fileUrl || `/api/rh-collaborators/${selectedColab?.id}/document/${doc.id}/raw`} 
+                                        alt={doc.fileName} 
+                                        className="w-full h-full object-cover group-hover:opacity-90"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          if (e.currentTarget.parentElement) {
+                                            e.currentTarget.parentElement.classList.add('bg-indigo-50', 'dark:bg-indigo-500/10', 'text-indigo-600', 'dark:text-indigo-400', 'font-black', 'text-[9px]', 'uppercase');
+                                            e.currentTarget.parentElement.innerText = doc.category.substring(0, 3);
+                                          }
+                                        }}
+                                      />
                                     </button>
                                   ) : (
                                     <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase shrink-0">{doc.category}</span>
