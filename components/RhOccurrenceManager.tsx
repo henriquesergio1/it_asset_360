@@ -30,6 +30,10 @@ export const RhOccurrenceManager: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{ url: string; name: string }>({ url: '', name: '' });
 
+  // Delete modal state
+  const [occToDelete, setOccToDelete] = useState<RhOccurrence | null>(null);
+  const [deleteOccReason, setDeleteOccReason] = useState<string>('');
+
   // Form State
   const [form, setForm] = useState({
     collaboratorId: '',
@@ -115,13 +119,19 @@ export const RhOccurrenceManager: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    const reason = window.prompt('Informe o motivo da exclusão desta ocorrência:');
-    if (reason === null) return;
-    if (!reason.trim()) {
-      alert('É necessário informar o motivo para excluir a ocorrência.');
-      return;
+    const occ = rhOccurrences.find(o => o.id === id);
+    if (occ) {
+      setOccToDelete(occ);
+      setDeleteOccReason('');
     }
-    deleteRhOccurrence(id, adminName, reason.trim());
+  };
+
+  const handleConfirmDelete = () => {
+    if (!occToDelete) return;
+    if (!deleteOccReason.trim()) return;
+    deleteRhOccurrence(occToDelete.id, adminName, deleteOccReason.trim());
+    setOccToDelete(null);
+    setDeleteOccReason('');
     setSelectedOccurrence(null);
     setIsDetailModalOpen(false);
   };
@@ -745,6 +755,46 @@ export const RhOccurrenceManager: React.FC = () => {
         fileUrl={previewData.url}
         fileName={previewData.name}
       />
+
+      {/* Modal de Confirmação de Exclusão de Ocorrência com Motivo de Auditoria */}
+      {occToDelete && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-rose-500 font-bold uppercase text-xs tracking-wider">
+              <Trash2 size={18} />
+              <span>Exclusão de Ocorrência / Afastamento</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Você está prestes a remover o registro <strong className="text-slate-900 dark:text-white">{occToDelete.type}</strong> ({new Date(occToDelete.startDate).toLocaleDateString('pt-BR')}{occToDelete.endDate && occToDelete.endDate !== occToDelete.startDate ? ` até ${new Date(occToDelete.endDate).toLocaleDateString('pt-BR')}` : ''}). Informe o motivo da exclusão para registro no log de auditoria:
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Justificativa da Exclusão *</label>
+              <textarea 
+                required
+                placeholder="Ex: Lançamento duplicado por engano, atestado cancelado pelo médico..."
+                value={deleteOccReason}
+                onChange={e => setDeleteOccReason(e.target.value)}
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[90px] font-medium"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button 
+                onClick={() => { setOccToDelete(null); setDeleteOccReason(''); }}
+                className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!deleteOccReason.trim()}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

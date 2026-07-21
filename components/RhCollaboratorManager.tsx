@@ -528,6 +528,10 @@ export const RhCollaboratorManager: React.FC = () => {
   const [docToDelete, setDocToDelete] = useState<{ id: string; fileName: string; category: string } | null>(null);
   const [deleteDocReason, setDeleteDocReason] = useState<string>('');
 
+  // Delete occurrence modal state with Audit
+  const [occToDelete, setOccToDelete] = useState<RhOccurrence | null>(null);
+  const [deleteOccReason, setDeleteOccReason] = useState<string>('');
+
   const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -684,14 +688,23 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   const handleDeleteOccurrenceDirect = (occId: string) => {
-    const reason = window.prompt('Informe o motivo da exclusão desta ocorrência:');
-    if (reason === null) return;
-    if (!reason.trim()) {
-      alert('É necessário informar o motivo para excluir a ocorrência.');
+    const occ = rhOccurrences.find(o => o.id === occId);
+    if (occ) {
+      setOccToDelete(occ);
+      setDeleteOccReason('');
+    }
+  };
+
+  const handleConfirmDeleteOcc = () => {
+    if (!occToDelete) return;
+    if (!deleteOccReason.trim()) {
+      showToast('Por favor, informe o motivo da exclusão da ocorrência.', 'error');
       return;
     }
-    deleteRhOccurrence(occId, adminName, reason.trim());
+    deleteRhOccurrence(occToDelete.id, adminName, deleteOccReason.trim());
     showToast('Ocorrência removida com sucesso.', 'success');
+    setOccToDelete(null);
+    setDeleteOccReason('');
   };
 
   // Cep Lookup
@@ -3438,6 +3451,46 @@ export const RhCollaboratorManager: React.FC = () => {
               <button 
                 disabled={!deleteDocReason.trim()}
                 onClick={handleConfirmDeleteDoc}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão de Ocorrência com Motivo de Auditoria */}
+      {occToDelete && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-rose-500 font-bold uppercase text-xs tracking-wider">
+              <Trash2 size={18} />
+              <span>Exclusão de Ocorrência / Afastamento</span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Você está prestes a remover o registro <strong className="text-slate-900 dark:text-white">{occToDelete.type}</strong> ({new Date(occToDelete.startDate).toLocaleDateString('pt-BR')}{occToDelete.endDate && occToDelete.endDate !== occToDelete.startDate ? ` até ${new Date(occToDelete.endDate).toLocaleDateString('pt-BR')}` : ''}). Informe o motivo da exclusão para registro no log de auditoria:
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Justificativa da Exclusão *</label>
+              <textarea 
+                required
+                placeholder="Ex: Lançamento duplicado por engano, atestado cancelado pelo médico..."
+                value={deleteOccReason}
+                onChange={e => setDeleteOccReason(e.target.value)}
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-rose-500 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[90px] font-medium"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button 
+                onClick={() => { setOccToDelete(null); setDeleteOccReason(''); }}
+                className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                disabled={!deleteOccReason.trim()}
+                onClick={handleConfirmDeleteOcc}
                 className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
               >
                 Confirmar Exclusão
