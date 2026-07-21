@@ -781,17 +781,24 @@ async function initializeDatabase() {
         }
 
         // Migração RH: Colunas de Empresa, Veículo e Benefício em RhCollaborators
-        const checkRhCompany = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = 'CompanyCnpj'");
-        if (checkRhCompany.recordset.length === 0) {
-            console.log('- Adicionando novas colunas em RhCollaborators (CompanyCnpj, HasVehicle, VehicleType, VehiclePlate, TransportOption)...');
-            await pool.request().query(`
-                ALTER TABLE RhCollaborators ADD 
-                    CompanyCnpj NVARCHAR(50) NULL,
-                    HasVehicle NVARCHAR(10) NULL,
-                    VehicleType NVARCHAR(50) NULL,
-                    VehiclePlate NVARCHAR(20) NULL,
-                    TransportOption NVARCHAR(50) NULL
-            `);
+        const rhCollsCols = [
+            { name: 'CompanyCnpj', type: 'NVARCHAR(255) NULL' },
+            { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
+            { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
+            { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
+            { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+        ];
+
+        for (const col of rhCollsCols) {
+            try {
+                const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = '${col.name}'`);
+                if (check.recordset.length === 0) {
+                    console.log(`- Adicionando coluna ${col.name} em RhCollaborators...`);
+                    await pool.request().query(`ALTER TABLE RhCollaborators ADD ${col.name} ${col.type}`);
+                }
+            } catch (colErr) {
+                console.error(`Erro ao adicionar coluna ${col.name} em RhCollaborators:`, colErr.message);
+            }
         }
 
         // Tabela RhDependents
@@ -803,8 +810,8 @@ async function initializeDatabase() {
                     Id NVARCHAR(255) PRIMARY KEY,
                     CollaboratorId NVARCHAR(255) NOT NULL,
                     Name NVARCHAR(255) NOT NULL,
-                    RelationshipType NVARCHAR(50) NOT NULL,
-                    Cpf NVARCHAR(20) NULL,
+                    RelationshipType NVARCHAR(100) NOT NULL,
+                    Cpf NVARCHAR(50) NULL,
                     BirthDate NVARCHAR(50) NULL,
                     Notes NVARCHAR(500) NULL,
                     CreatedAt DATETIME DEFAULT GETDATE()
@@ -955,7 +962,7 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes, auditsRes, rhCollaboratorsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes
+            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes
         ] = await Promise.all([
             pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             pool.request().query(`
@@ -966,7 +973,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
             pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT Id as id, Name as name, Email as email, Role as role FROM SystemUsers"),
+            pool.request().query("SELECT Id, Name, Email, Role, AvatarUrl, ID_Perfil, IdPerfil, Nome_Perfil, Permissoes FROM SystemUsers"),
             pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
             pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
             pool.request().query("SELECT * FROM Brands"),
@@ -982,7 +989,8 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
+            pool.request().query("SELECT *, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
+            pool.request().query("SELECT * FROM RhDependents"),
             pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
             pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
@@ -1019,6 +1027,7 @@ app.get('/api/bootstrap', async (req, res) => {
                     fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
                 }))
             })),
+            rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
@@ -1048,7 +1057,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT TOP 10 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT Id, FullName, BirthDate, Gender, MaritalStatus, MotherName, FatherName, PersonalPhone, CorporatePhone, EmailPersonal, EmailCorporate, Cep, Street, Number, Complement, Neighborhood, City, State, Rg, Cpf, Pis, ElectorTitle, Ctps, CnhNumber, CnhCategory, CnhExpiration, Role, SectorId, ContractType, HireDate, TerminationDate, Salary, WeeklyHours, Status, Documents, CompanyCnpj, HasVehicle, VehicleType, VehiclePlate, TransportOption, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
+            pool.request().query("SELECT *, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
             pool.request().query("SELECT * FROM RhDependents"),
             pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
@@ -2679,11 +2688,94 @@ async function updateUserPendingStatus(pool, userId) {
     });
     crud('TechnicalAudits', 'audits', 'Audit');
     crud('RhCollaborators', 'rh-collaborators', 'RhCollaborator');
-    crud('RhDependents', 'rh-dependents', 'RhDependent');
     crud('RhOccurrences', 'rh-occurrences', 'RhOccurrence');
     crud('RhTermTemplates', 'rh-templates', 'RhTermTemplate');
     crud('RhTerms', 'rh-terms', 'RhTerm');
     crud('RhAssetItems', 'rh-assets', 'RhAssetItem');
+
+    // --- Rotas Explícitas de RH Dependentes ---
+    app.get('/api/rh-dependents', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT * FROM RhDependents");
+            res.json(format(result));
+        } catch (err) {
+            console.error('ERRO GET /api/rh-dependents:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/rh-dependents', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { id, collaboratorId, name, relationshipType, cpf, birthDate, notes, _adminUser } = req.body;
+            const depId = id || `dep-${Date.now()}`;
+            await pool.request()
+                .input('Id', sql.NVarChar, depId)
+                .input('ColabId', sql.NVarChar, collaboratorId)
+                .input('Name', sql.NVarChar, name)
+                .input('RelType', sql.NVarChar, relationshipType)
+                .input('Cpf', sql.NVarChar, cpf || null)
+                .input('BirthDate', sql.NVarChar, birthDate || null)
+                .input('Notes', sql.NVarChar, notes || null)
+                .query(`
+                    INSERT INTO RhDependents (Id, CollaboratorId, Name, RelationshipType, Cpf, BirthDate, Notes, CreatedAt)
+                    VALUES (@Id, @ColabId, @Name, @RelType, @Cpf, @BirthDate, @Notes, GETDATE())
+                `);
+            
+            const colabRes = await pool.request().input('Cid', sql.NVarChar, collaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Cid");
+            const colabName = colabRes.recordset[0]?.FullName || 'Colaborador';
+            await logAction(collaboratorId, 'RhCollaborator', 'Atualização', _adminUser || 'Gestor R.H.', colabName, `Dependente cadastrado: ${name} (${relationshipType})`);
+
+            res.json({ success: true, id: depId });
+        } catch (err) {
+            console.error('ERRO POST /api/rh-dependents:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.put('/api/rh-dependents/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { name, relationshipType, cpf, birthDate, notes, _adminUser } = req.body;
+            await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .input('Name', sql.NVarChar, name)
+                .input('RelType', sql.NVarChar, relationshipType)
+                .input('Cpf', sql.NVarChar, cpf || null)
+                .input('BirthDate', sql.NVarChar, birthDate || null)
+                .input('Notes', sql.NVarChar, notes || null)
+                .query(`
+                    UPDATE RhDependents 
+                    SET Name=@Name, RelationshipType=@RelType, Cpf=@Cpf, BirthDate=@BirthDate, Notes=@Notes
+                    WHERE Id=@Id
+                `);
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO PUT /api/rh-dependents:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.delete('/api/rh-dependents/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT CollaboratorId, Name, RelationshipType FROM RhDependents WHERE Id=@Id");
+            const dep = oldRes.recordset[0];
+            await pool.request().input('Id', sql.NVarChar, req.params.id).query("DELETE FROM RhDependents WHERE Id=@Id");
+
+            if (dep) {
+                const colabRes = await pool.request().input('Cid', sql.NVarChar, dep.CollaboratorId).query("SELECT FullName FROM RhCollaborators WHERE Id=@Cid");
+                const colabName = colabRes.recordset[0]?.FullName || 'Colaborador';
+                await logAction(dep.CollaboratorId, 'RhCollaborator', 'Atualização', req.body?._adminUser || 'Gestor R.H.', colabName, `Dependente removido: ${dep.Name} (${dep.RelationshipType})`);
+            }
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO DELETE /api/rh-dependents:', err);
+            res.status(500).send(err.message);
+        }
+    });
     // v2.18.14: Custom Device CRUD to handle SIM card status
     app.post('/api/devices', async (req, res) => {
         try {
