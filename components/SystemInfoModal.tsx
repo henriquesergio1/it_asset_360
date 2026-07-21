@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.84.1',
+    date: 'Hoje',
+    title: 'Otimização Real do Bootstrap (Truncamento de Dumps de Auditoria)',
+    changes: [
+      'Bug Fix Crítico: O /api/bootstrap ainda estava baixando dumps massivos de JSON em Base64 porque o campo Notes da tabela AuditLogs acumulava os dados das edições dos usuários.',
+      'Performance: O campo Notes do AuditLogs agora é truncado pelo banco de dados em 500 caracteres durante o carregamento inicial, eliminando cargas abusivas (como strings de 37MB) do frontend.'
+    ]
+  },
+  {
     version: '3.84.0',
     date: 'Hoje',
     title: 'Otimização Definitiva de Bootstrap (Remoção Global de HTML/Base64)',
