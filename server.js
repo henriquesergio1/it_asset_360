@@ -2613,59 +2613,137 @@ async function updateUserPendingStatus(pool, userId) {
     crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     crud('SoftwareAccounts', 'accounts', 'Account');
     crud('Users', 'users', 'User');
-    // --- SystemUsers: rotas customizadas com hash de senha (bcrypt) ---
-    // POST /api/system-users — criação com hash
+    // --- SystemUsers: rotas customizadas com hash de senha (bcrypt) e migração defensiva de schema ---
     app.post('/api/system-users', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            
+            // Auto-migração defensiva de colunas para SystemUsers
+            try {
+                await pool.request().query(`
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='SystemUsers' AND COLUMN_NAME='ID_Perfil')
+                    BEGIN
+                        ALTER TABLE SystemUsers ADD ID_Perfil NVARCHAR(255) NULL;
+                    END;
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='SystemUsers' AND COLUMN_NAME='Permissoes')
+                    BEGIN
+                        ALTER TABLE SystemUsers ADD Permissoes NVARCHAR(MAX) NULL;
+                    END;
+                `);
+            } catch (migErr) {
+                console.warn('[SystemUsers] Alerta na migração defensiva:', migErr.message);
+            }
+
             const body = { ...req.body };
-            // Hasheia a senha antes de persistir, se fornecida
-            if (body.password && !body.password.startsWith('$2')) {
-                body.password = await bcrypt.hash(body.password, 10);
+            const userId = body.id || body.Id || `usr-${Date.now()}`;
+            const userName = body.name || body.Name || 'Novo Operador';
+            const userEmail = body.email || body.Email || '';
+            const rawRole = body.role || body.Role || '1';
+            let rawPassword = body.password || body.Password || '123456';
+            
+            if (rawPassword && !rawPassword.startsWith('$2')) {
+                rawPassword = await bcrypt.hash(rawPassword, 10);
             }
-            const request = pool.request();
-            let columns = [], values = [];
-            const IGNORE = ['_adminUser', '_notes', '_reason', 'Permissoes', 'permissoes', 'Nome_Perfil', 'auditLog'];
-            for (let key in body) {
-                if (key.startsWith('_') || IGNORE.includes(key)) continue;
-                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
-                request.input(dbKey, sql.NVarChar, body[key] != null ? String(body[key]) : null);
-                columns.push(dbKey);
-                values.push('@' + dbKey);
-            }
-            await request.query(`INSERT INTO SystemUsers (${columns.join(',')}) VALUES (${values.join(',')})`);
-            await logAction(body.id, 'SystemUser', 'Criação', body._adminUser || req.body._adminUser, body.name, 'Usuário do sistema criado');
-            res.json({ success: true });
+
+            const profileId = body.ID_Perfil || body.idPerfil || body.IdPerfil || (rawRole && !isNaN(Number(rawRole)) ? String(rawRole) : null);
+            const permissoesObj = body.permissoes || body.Permissoes || null;
+            const permissoesStr = permissoesObj ? (typeof permissoesObj === 'object' ? JSON.stringify(permissoesObj) : String(permissoesObj)) : null;
+            const avatarUrl = body.avatarUrl || body.AvatarUrl || null;
+
+            await pool.request()
+                .input('Id', sql.NVarChar, userId)
+                .input('Name', sql.NVarChar, userName)
+                .input('Email', sql.NVarChar, userEmail)
+                .input('Password', sql.NVarChar, rawPassword)
+                .input('Role', sql.NVarChar, String(rawRole))
+                .input('AvatarUrl', sql.NVarChar, avatarUrl)
+                .input('ID_Perfil', sql.NVarChar, profileId ? String(profileId) : null)
+                .input('Permissoes', sql.NVarChar, permissoesStr)
+                .query(`
+                    INSERT INTO SystemUsers (Id, Name, Email, Password, Role, AvatarUrl, ID_Perfil, Permissoes)
+                    VALUES (@Id, @Name, @Email, @Password, @Role, @AvatarUrl, @ID_Perfil, @Permissoes)
+                `);
+
+            await logAction(userId, 'SystemUser', 'Criação', body._adminUser || req.body._adminUser || 'Admin', userName, 'Usuário do sistema criado com sucesso');
+            res.json({ success: true, id: userId });
         } catch (err) {
             console.error('ERRO POST /api/system-users:', err);
             res.status(500).send(err.message);
         }
     });
-    // PUT /api/system-users/:id — atualização com hash condicional
+
     app.put('/api/system-users/:id', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            
+            // Auto-migração defensiva de colunas para SystemUsers
+            try {
+                await pool.request().query(`
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='SystemUsers' AND COLUMN_NAME='ID_Perfil')
+                    BEGIN
+                        ALTER TABLE SystemUsers ADD ID_Perfil NVARCHAR(255) NULL;
+                    END;
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='SystemUsers' AND COLUMN_NAME='Permissoes')
+                    BEGIN
+                        ALTER TABLE SystemUsers ADD Permissoes NVARCHAR(MAX) NULL;
+                    END;
+                `);
+            } catch (migErr) {}
+
             const body = { ...req.body };
-            // Hasheia a senha apenas se vier alterada e ainda não for um hash bcrypt
-            if (body.password) {
-                if (!body.password.startsWith('$2')) {
-                    body.password = await bcrypt.hash(body.password, 10);
-                }
-            }
+            const targetId = req.params.id;
+            const userName = body.name || body.Name || 'Operador';
+            const userEmail = body.email || body.Email || '';
+            const rawRole = body.role || body.Role;
+
             const request = pool.request();
+            request.input('TargetId', sql.NVarChar, targetId);
+            
             let sets = [];
-            const IGNORE = ['_adminUser', '_notes', '_reason', 'Permissoes', 'permissoes', 'Nome_Perfil', 'auditLog', 'id', 'Id'];
-            for (let key in body) {
-                if (key.startsWith('_') || IGNORE.includes(key)) continue;
-                if (body[key] === null || body[key] === undefined) continue;
-                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
-                request.input(dbKey, sql.NVarChar, String(body[key]));
-                sets.push(`${dbKey}=@${dbKey}`);
+
+            if (body.name || body.Name) {
+                request.input('Name', sql.NVarChar, userName);
+                sets.push('Name=@Name');
             }
-            if (sets.length === 0) return res.json({ success: true });
-            request.input('TargetId', req.params.id);
-            await request.query(`UPDATE SystemUsers SET ${sets.join(',')} WHERE Id=@TargetId`);
-            await logAction(req.params.id, 'SystemUser', 'Atualização', body._adminUser || req.body._adminUser, body.name, body._notes || 'Usuário do sistema atualizado');
+            if (body.email || body.Email) {
+                request.input('Email', sql.NVarChar, userEmail);
+                sets.push('Email=@Email');
+            }
+            if (body.password || body.Password) {
+                let pass = body.password || body.Password;
+                if (!pass.startsWith('$2')) {
+                    pass = await bcrypt.hash(pass, 10);
+                }
+                request.input('Password', sql.NVarChar, pass);
+                sets.push('Password=@Password');
+            }
+            if (rawRole !== undefined && rawRole !== null) {
+                request.input('Role', sql.NVarChar, String(rawRole));
+                sets.push('Role=@Role');
+            }
+            if (body.avatarUrl || body.AvatarUrl !== undefined) {
+                request.input('AvatarUrl', sql.NVarChar, body.avatarUrl || body.AvatarUrl || null);
+                sets.push('AvatarUrl=@AvatarUrl');
+            }
+
+            const profileId = body.ID_Perfil || body.idPerfil || body.IdPerfil;
+            if (profileId !== undefined && profileId !== null) {
+                request.input('ID_Perfil', sql.NVarChar, String(profileId));
+                sets.push('ID_Perfil=@ID_Perfil');
+            }
+
+            const permissoesObj = body.permissoes || body.Permissoes;
+            if (permissoesObj !== undefined && permissoesObj !== null) {
+                const permissoesStr = typeof permissoesObj === 'object' ? JSON.stringify(permissoesObj) : String(permissoesObj);
+                request.input('Permissoes', sql.NVarChar, permissoesStr);
+                sets.push('Permissoes=@Permissoes');
+            }
+
+            if (sets.length > 0) {
+                await request.query(`UPDATE SystemUsers SET ${sets.join(',')} WHERE Id=@TargetId`);
+            }
+
+            await logAction(targetId, 'SystemUser', 'Atualização', body._adminUser || req.body._adminUser || 'Admin', userName, body._notes || 'Usuário do sistema atualizado');
             res.json({ success: true });
         } catch (err) {
             console.error('ERRO PUT /api/system-users/:id:', err);
