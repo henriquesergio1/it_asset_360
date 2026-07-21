@@ -1643,70 +1643,129 @@ ORDER BY f.nome;`;
  <label htmlFor="profile-admin" className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase select-none">Acesso Total (Administrador TI)</label>
  </div>
 
- <div>
- <label className="block text-[11px] font-black uppercase mb-2 ml-1 text-slate-600 dark:text-slate-400">Matriz de Permissões</label>
- <div className="bg-slate-100 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
-   <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700">
-     <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Módulo</span>
-     <div className="flex gap-8">
-       <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Leitura</span>
-       <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Escrita</span>
-     </div>
-   </div>
-   {[
-    { label: '📊 Dashboard', readKey: 'dashboard_leitura', writeKey: 'dashboard_escrita' },
-    { label: '📱 Dispositivos', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
-    { label: '👥 Colaboradores', readKey: 'colaboradores_leitura', writeKey: 'colaboradores_escrita' },
-    { label: '📳 Chips / SIMs', readKey: 'chips_leitura', writeKey: 'chips_escrita' },
-    { label: '🌐 Licenças / Contas', readKey: 'licencas_leitura', writeKey: 'licencas_escrita' },
-    { label: '📦 Consumíveis', readKey: 'consumiveis_leitura', writeKey: 'consumiveis_escrita' },
-    { label: '✅ Gestão de Tarefas', readKey: 'tarefas_leitura', writeKey: 'tarefas_escrita' },
-    { label: '📄 Relatórios', readKey: 'relatorios_leitura', writeKey: 'relatorios_escrita' },
-    { label: '🔄 Entrega / Devolução', readKey: 'entrega_leitura', writeKey: 'entrega_escrita' },
-    { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' }
-  ].map(m => (
-     <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-100 dark:hover:bg-slate-700/20 rounded-lg">
-       <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
-       <div className="flex gap-8">
-         <div className="w-16 flex justify-center">
-           <input 
-             type="checkbox" 
-             disabled={profileForm.Permissoes?.admin}
-             checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey]} 
-             onChange={e => {
-               setProfileForm({
-                 ...profileForm,
-                 Permissoes: {
-                   ...profileForm.Permissoes,
-                   [m.readKey]: e.target.checked
-                 }
-               });
-             }}
-             className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
-           />
-         </div>
-         <div className="w-16 flex justify-center">
-           <input 
-             type="checkbox" 
-             disabled={profileForm.Permissoes?.admin}
-             checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
-             onChange={e => {
-               setProfileForm({
-                 ...profileForm,
-                 Permissoes: {
-                   ...profileForm.Permissoes,
-                   [m.writeKey]: e.target.checked
-                 }
-               });
-             }}
-             className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
-           />
-         </div>
-       </div>
-     </div>
-   ))}
- </div>
- </div>
+  <div>
+  <label className="block text-[11px] font-black uppercase mb-2 ml-1 text-slate-600 dark:text-slate-400">Matriz de Permissões</label>
+  <div className="bg-slate-100 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[380px] overflow-y-auto custom-scrollbar">
+    <div className="flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-slate-100 dark:bg-slate-800 z-10">
+      <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Módulo e Recurso</span>
+      <div className="flex gap-8">
+        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Leitura</span>
+        <span className="text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 w-16 text-center">Escrita</span>
+      </div>
+    </div>
+
+    {/* Seção Módulo T.I. */}
+    <div className="space-y-1">
+      <span className="text-[10px] font-black uppercase text-blue-600 dark:text-sky-400 tracking-wider block px-2 pb-1 border-b border-blue-500/20">Módulo T.I. (Ativos e Tecnologia)</span>
+      {[
+        { label: '📊 Dashboard T.I.', readKey: 'dashboard_leitura', writeKey: 'dashboard_escrita' },
+        { label: '📱 Dispositivos', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
+        { label: '👥 Colaboradores T.I.', readKey: 'colaboradores_leitura', writeKey: 'colaboradores_escrita' },
+        { label: '📳 Chips / SIMs', readKey: 'chips_leitura', writeKey: 'chips_escrita' },
+        { label: '🌐 Licenças / Contas', readKey: 'licencas_leitura', writeKey: 'licencas_escrita' },
+        { label: '📦 Consumíveis T.I.', readKey: 'consumiveis_leitura', writeKey: 'consumiveis_escrita' },
+        { label: '✅ Gestão de Tarefas T.I.', readKey: 'tarefas_leitura', writeKey: 'tarefas_escrita' },
+        { label: '📄 Relatórios T.I.', readKey: 'relatorios_leitura', writeKey: 'relatorios_escrita' },
+        { label: '🔄 Entrega / Devolução T.I.', readKey: 'entrega_leitura', writeKey: 'entrega_escrita' },
+        { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' }
+      ].map(m => (
+        <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
+          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
+          <div className="flex gap-8">
+            <div className="w-16 flex justify-center">
+              <input 
+                type="checkbox" 
+                disabled={profileForm.Permissoes?.admin}
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey]} 
+                onChange={e => {
+                  setProfileForm({
+                    ...profileForm,
+                    Permissoes: {
+                      ...profileForm.Permissoes,
+                      [m.readKey]: e.target.checked
+                    }
+                  });
+                }}
+                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+            </div>
+            <div className="w-16 flex justify-center">
+              <input 
+                type="checkbox" 
+                disabled={profileForm.Permissoes?.admin}
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
+                onChange={e => {
+                  setProfileForm({
+                    ...profileForm,
+                    Permissoes: {
+                      ...profileForm.Permissoes,
+                      [m.writeKey]: e.target.checked
+                    }
+                  });
+                }}
+                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Seção Módulo R.H. */}
+    <div className="space-y-1 pt-3 border-t border-slate-200 dark:border-slate-700/60">
+      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider block px-2 pb-1 border-b border-indigo-500/20">Módulo R.H. (Recursos Humanos)</span>
+      {[
+        { label: '📈 Dashboard R.H.', readKey: 'rh_dashboard_leitura', writeKey: 'rh_dashboard_escrita' },
+        { label: '👨‍💼 Colaboradores R.H.', readKey: 'rh_colaboradores_leitura', writeKey: 'rh_colaboradores_escrita' },
+        { label: '📋 Termos / Comodato R.H.', readKey: 'rh_comodato_leitura', writeKey: 'rh_comodato_escrita' },
+        { label: '🏥 Ocorrências & Faltas R.H.', readKey: 'rh_ocorrencias_leitura', writeKey: 'rh_ocorrencias_escrita' },
+        { label: '✍️ Modelos de Termos R.H.', readKey: 'rh_modelos_leitura', writeKey: 'rh_modelos_escrita' },
+        { label: '🥾 Estoque de Itens / EPI R.H.', readKey: 'rh_estoque_leitura', writeKey: 'rh_estoque_escrita' },
+        { label: '📊 Relatórios R.H.', readKey: 'rh_relatorios_leitura', writeKey: 'rh_relatorios_escrita' }
+      ].map(m => (
+        <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
+          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
+          <div className="flex gap-8">
+            <div className="w-16 flex justify-center">
+              <input 
+                type="checkbox" 
+                disabled={profileForm.Permissoes?.admin}
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', '')] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', 's')]} 
+                onChange={e => {
+                  setProfileForm({
+                    ...profileForm,
+                    Permissoes: {
+                      ...profileForm.Permissoes,
+                      [m.readKey]: e.target.checked
+                    }
+                  });
+                }}
+                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+              />
+            </div>
+            <div className="w-16 flex justify-center">
+              <input 
+                type="checkbox" 
+                disabled={profileForm.Permissoes?.admin}
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
+                onChange={e => {
+                  setProfileForm({
+                    ...profileForm,
+                    Permissoes: {
+                      ...profileForm.Permissoes,
+                      [m.writeKey]: e.target.checked
+                    }
+                  });
+                }}
+                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+  </div>
  </div>
  <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
  <button type="button" onClick={() => setIsProfileModalOpen(false)} className={`px-6 py-2 rounded-xl ${UI_BUTTON_SECONDARY} text-xs`}>Cancelar</button>

@@ -62,8 +62,21 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const hasRhAccess = isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard');
-  const hasTiAccess = isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura');
+  const hasRhAccess = isAdmin || hasPermission(user, 'admin') || 
+    hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
+    hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura') || 
+    hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura') || 
+    hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura') || 
+    hasPermission(user, 'rh_modelos') || hasPermission(user, 'rh_modelos_leitura') || 
+    hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura') || 
+    hasPermission(user, 'rh_relatorios') || hasPermission(user, 'rh_relatorios_leitura');
+
+  const hasTiAccess = isAdmin || hasPermission(user, 'admin') || 
+    hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura') || 
+    hasPermission(user, 'colaboradores_leitura') || hasPermission(user, 'chips_leitura') || 
+    hasPermission(user, 'licencas_leitura') || hasPermission(user, 'consumiveis_leitura') || 
+    hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
+    hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
 
   // Determinar módulo padrão com base no acesso
   const [currentModule, setCurrentModule] = useState<'TI' | 'RH'>(() => {
@@ -188,11 +201,11 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             </>
           ) : (
             <>
-              {(isAdmin || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'rh_atestados') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'rh_ativos') || hasPermission(user, 'admin')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} />}
             </>
           )}
           
