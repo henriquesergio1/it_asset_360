@@ -2489,7 +2489,7 @@ export const RhCollaboratorManager: React.FC = () => {
                           {form.photo && (
                             <button
                               type="button"
-                              onClick={() => setForm(p => ({ ...p, photo: '' }))}
+                              onClick={() => setForm(p => ({ ...p, photo: null as any, hasPhoto: false }))}
                               className="px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 font-black text-[10px] uppercase rounded-lg border border-red-500/20 transition-all hover:bg-red-100 dark:hover:bg-red-500/30"
                             >
                               Remover

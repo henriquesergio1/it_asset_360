@@ -2857,6 +2857,25 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
+    // --- Rota Binária da Foto do Colaborador RH ---
+    app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request()
+                .input('Id', sql.NVarChar, req.params.id)
+                .query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
+            const photoBinary = result.recordset[0]?.Photo;
+            if (!photoBinary) {
+                return res.status(404).send("Foto não encontrada");
+            }
+            res.contentType('image/jpeg');
+            res.send(photoBinary);
+        } catch (err) {
+            console.error('ERRO GET /api/rh-collaborators/:id/photo/raw:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
     // --- Rotas Explícitas de RH Colaboradores ---
     app.post('/api/rh-collaborators', async (req, res) => {
         try {
@@ -2869,7 +2888,9 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
-                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
+                { name: 'Photo', type: 'VARBINARY(MAX) NULL' },
+                { name: 'HasPhoto', type: 'INT DEFAULT 0' }
             ];
             for (const col of colsToAdd) {
                 try {
@@ -2899,6 +2920,15 @@ async function updateUserPendingStatus(pool, userId) {
                 values.push('@' + dbKey);
             }
 
+            // Tratamento explícito da foto
+            if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
+                const photoBuffer = getBufferFromBase64(body.photo);
+                request.input('Photo', sql.VarBinary, photoBuffer);
+                request.input('HasPhoto', sql.Int, 1);
+                columns.push('Photo', 'HasPhoto');
+                values.push('@Photo', '@HasPhoto');
+            }
+
             await request.query(`INSERT INTO RhCollaborators (${columns.join(',')}) VALUES (${values.join(',')})`);
             
             const colabName = body.fullName || 'Colaborador';
@@ -2922,7 +2952,9 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
-                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
+                { name: 'Photo', type: 'VARBINARY(MAX) NULL' },
+                { name: 'HasPhoto', type: 'INT DEFAULT 0' }
             ];
             for (const col of colsToAdd) {
                 try {
@@ -2949,6 +2981,20 @@ async function updateUserPendingStatus(pool, userId) {
                 }
                 request.input(dbKey, val !== null ? String(val) : null);
                 sets.push(`${dbKey}=@${dbKey}`);
+            }
+
+            // Tratamento explícito da foto no PUT (atualização ou remoção)
+            if (body.photo !== undefined) {
+                if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
+                    const photoBuffer = getBufferFromBase64(body.photo);
+                    request.input('Photo', sql.VarBinary, photoBuffer);
+                    request.input('HasPhoto', sql.Int, 1);
+                    sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
+                } else {
+                    request.input('Photo', sql.VarBinary, null);
+                    request.input('HasPhoto', sql.Int, 0);
+                    sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
+                }
             }
 
             if (sets.length > 0) {
