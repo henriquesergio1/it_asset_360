@@ -956,7 +956,16 @@ async function startServer() {
 
 
 
-const format = (set, jsonKeys = []) => set.recordset.map(row => {
+const safeQuery = async (pool, queryStr) => {
+    try {
+        return await pool.request().query(queryStr);
+    } catch (err) {
+        console.warn(`[SQL WARN] Consulta tolerada ("${queryStr.slice(0, 50)}..."):`, err.message);
+        return { recordset: [] };
+    }
+};
+
+const format = (set, jsonKeys = []) => (set?.recordset || []).map(row => {
     const entry = {};
     for (let key in row) {
         const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
@@ -965,7 +974,7 @@ const format = (set, jsonKeys = []) => set.recordset.map(row => {
     return entry;
 });
 
-// --- BOOTSTRAP ENDPOINT (v2.12.51 - Completo) ---
+// --- BOOTSTRAP ENDPOINT (v2.12.51 - Completo & Blindado) ---
 app.get('/api/bootstrap', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
@@ -975,49 +984,49 @@ app.get('/api/bootstrap', async (req, res) => {
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
             consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes
         ] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
-            pool.request().query(`
+            safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            safeQuery(pool, `
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
                     COALESCE(s.CurrentUserId, d.CurrentUserId) as CurrentUserId
                 FROM SimCards s
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
-            pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT * FROM SystemUsers"),
-            pool.request().query("SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
-            pool.request().query("SELECT Id, Name, BrandId, TypeId FROM Models"), 
-            pool.request().query("SELECT * FROM Brands"),
-            pool.request().query("SELECT * FROM AssetTypes"),
-            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT * FROM Sectors"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot, Checklist as checklist FROM Terms"),
-            pool.request().query("SELECT * FROM AccessoryTypes"),
-            pool.request().query("SELECT * FROM CustomFields"),
-            pool.request().query("SELECT * FROM SoftwareAccounts"),
-            pool.request().query("SELECT TOP 20 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
-            pool.request().query("SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
-            pool.request().query("SELECT * FROM Consumables"),
-            pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT *, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
-            pool.request().query("SELECT * FROM RhDependents"),
-            pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
-            pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
-            pool.request().query("SELECT * FROM RhAssetItems")
+            safeQuery(pool, "SELECT * FROM Users"),
+            safeQuery(pool, "SELECT * FROM SystemUsers"),
+            safeQuery(pool, "SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
+            safeQuery(pool, "SELECT Id, Name, BrandId, TypeId FROM Models"), 
+            safeQuery(pool, "SELECT * FROM Brands"),
+            safeQuery(pool, "SELECT * FROM AssetTypes"),
+            safeQuery(pool, "SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            safeQuery(pool, "SELECT * FROM Sectors"),
+            safeQuery(pool, "SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot, Checklist as checklist FROM Terms"),
+            safeQuery(pool, "SELECT * FROM AccessoryTypes"),
+            safeQuery(pool, "SELECT * FROM CustomFields"),
+            safeQuery(pool, "SELECT * FROM SoftwareAccounts"),
+            safeQuery(pool, "SELECT TOP 20 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            safeQuery(pool, "SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
+            safeQuery(pool, "SELECT * FROM TaskLogs WHERE Timestamp > DATEADD(day, -15, GETDATE())"),
+            safeQuery(pool, "SELECT * FROM Consumables"),
+            safeQuery(pool, "SELECT * FROM TechnicalAudits"),
+            safeQuery(pool, "SELECT * FROM RhCollaborators"),
+            safeQuery(pool, "SELECT * FROM RhDependents"),
+            safeQuery(pool, "SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
+            safeQuery(pool, "SELECT * FROM RhTermTemplates"),
+            safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
+            safeQuery(pool, "SELECT * FROM RhAssetItems")
         ]);
 
-        const devices = await Promise.all(devicesRes.recordset.map(async d => {
-            const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
+        const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
+            const acc = await safeQuery(pool, `SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId='${d.Id}'`);
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset || []
             };
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes), systemUsers: sysUsersRes.recordset,
-            settings: settingsRes.recordset[0] || { appName: 'IT Asset', logoUrl: '' }, 
+            devices, sims: format(simsRes), users: format(usersRes), systemUsers: sysUsersRes?.recordset || [],
+            settings: settingsRes?.recordset?.[0] || { appName: 'IT Asset', logoUrl: '' }, 
             models: format(modelsRes), 
             brands: format(brandsRes),
             assetTypes: format(typesRes, ['CustomFieldIds']), maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
@@ -1025,19 +1034,22 @@ app.get('/api/bootstrap', async (req, res) => {
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['MaintenanceItems', 'RecurrenceConfig']).map(t => ({ ...t, hasEvidenceUrls: t.hasEvidenceUrls === 1, hasManualAttachments: t.hasManualAttachments === 1 })), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes),
-            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
-                ...c,
-                photo: c.hasPhoto === 1 ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
-                hasPhoto: c.hasPhoto === 1,
-                documents: (c.documents || []).map(d => ({
-                    id: d.id,
-                    category: d.category,
-                    fileName: d.fileName,
-                    uploadDate: d.uploadDate,
-                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
-                    fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
-                }))
-            })),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
+                const hasPhoto = !!(c.photo && c.photo.length > 0) || c.hasPhoto === 1;
+                return {
+                    ...c,
+                    photo: hasPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    hasPhoto: hasPhoto,
+                    documents: (c.documents || []).map(d => ({
+                        id: d.id,
+                        category: d.category,
+                        fileName: d.fileName,
+                        uploadDate: d.uploadDate,
+                        hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
+                        fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
+                    }))
+                };
+            }),
             rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
@@ -1050,39 +1062,39 @@ app.get('/api/bootstrap', async (req, res) => {
     }
 });
 
-// --- SYNC ENDPOINT (v2.12.51 - Lightweight) ---
+// --- SYNC ENDPOINT (v2.12.51 - Blindado) ---
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes] = await Promise.all([
-            pool.request().query("SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
-            pool.request().query(`
+            safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
+            safeQuery(pool, `
                 SELECT 
                     s.Id, s.PhoneNumber, s.Operator, s.Iccid, s.Status, s.PlanDetails,
                     COALESCE(s.CurrentUserId, d.CurrentUserId) as CurrentUserId
                 FROM SimCards s
                 LEFT JOIN Devices d ON d.LinkedSimId = s.Id
             `),
-            pool.request().query("SELECT * FROM Users"),
-            pool.request().query("SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
-            pool.request().query("SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot FROM Terms"),
-            pool.request().query("SELECT * FROM SoftwareAccounts"),
-            pool.request().query("SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
-            pool.request().query("SELECT TOP 10 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
-            pool.request().query("SELECT * FROM Consumables"),
-            pool.request().query("SELECT * FROM TechnicalAudits"),
-            pool.request().query("SELECT *, (CASE WHEN Photo IS NOT NULL AND Photo != '' THEN 1 ELSE 0 END) as hasPhoto FROM RhCollaborators"),
-            pool.request().query("SELECT * FROM RhDependents"),
-            pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
-            pool.request().query("SELECT * FROM RhTermTemplates"),
-            pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
-            pool.request().query("SELECT * FROM RhAssetItems")
+            safeQuery(pool, "SELECT * FROM Users"),
+            safeQuery(pool, "SELECT Id, DeviceId, Description, Cost, Date, Type, Provider, (CASE WHEN InvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM MaintenanceRecords"),
+            safeQuery(pool, "SELECT Id, UserId, Type, AssetDetails, Date, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Condition as condition, DamageDescription as damageDescription, Notes as notes, (CASE WHEN EvidenceBinary IS NOT NULL OR Evidence2Binary IS NOT NULL OR Evidence3Binary IS NOT NULL THEN 1 ELSE 0 END) as hasEvidence, Accessories as accessories, LinkedSimData as linkedSim, AssetId as assetId, AssetType as assetType, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, SignatureStatus as signatureStatus, (CASE WHEN SnapshotTemplate IS NOT NULL AND SnapshotTemplate != '' THEN 1 ELSE 0 END) as hasSnapshot FROM Terms"),
+            safeQuery(pool, "SELECT * FROM SoftwareAccounts"),
+            safeQuery(pool, "SELECT Id, Title, Description, Type, Status, CreatedAt, DueDate, AssignedTo, Comments, Instructions, DeviceId, MaintenanceType, MaintenanceCost, MaintenanceItems, HasDueDate, IsRecurring, RecurrenceConfig, (CASE WHEN EvidenceUrls IS NOT NULL AND EvidenceUrls != '' THEN 1 ELSE 0 END) as hasEvidenceUrls, (CASE WHEN ManualAttachments IS NOT NULL AND ManualAttachments != '' THEN 1 ELSE 0 END) as hasManualAttachments FROM Tasks"),
+            safeQuery(pool, "SELECT TOP 10 Id, AssetId, AssetType, Action, Timestamp, AdminUser, TargetName, CAST(Notes AS NVARCHAR(500)) as Notes FROM AuditLogs ORDER BY Timestamp DESC"),
+            safeQuery(pool, "SELECT * FROM Consumables"),
+            safeQuery(pool, "SELECT * FROM TechnicalAudits"),
+            safeQuery(pool, "SELECT * FROM RhCollaborators"),
+            safeQuery(pool, "SELECT * FROM RhDependents"),
+            safeQuery(pool, "SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
+            safeQuery(pool, "SELECT * FROM RhTermTemplates"),
+            safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
+            safeQuery(pool, "SELECT * FROM RhAssetItems")
         ]);
 
-        const devices = await Promise.all(devicesRes.recordset.map(async d => {
-            const acc = await pool.request().input('DevId', sql.NVarChar, d.Id).query("SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId=@DevId");
+        const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
+            const acc = await safeQuery(pool, `SELECT Id as id, DeviceId as deviceId, AccessoryTypeId as accessoryTypeId, Name as name FROM DeviceAccessories WHERE DeviceId='${d.Id}'`);
             return {
-                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset
+                id: d.Id, modelId: d.ModelId, serialNumber: d.SerialNumber, assetTag: d.AssetTag, internalCode: d.InternalCode, imei: d.Imei, pulsusId: d.PulsusId, zabbixHostId: d.ZabbixHostId, status: d.Status, currentUserId: d.CurrentUserId, additionalUserIds: d.AdditionalUserIds ? JSON.parse(d.AdditionalUserIds) : [], sectorId: d.SectorId, costCenter: d.CostCenter, linkedSimId: d.LinkedSimId, purchaseDate: d.PurchaseDate, purchaseCost: d.PurchaseCost, invoiceNumber: d.InvoiceNumber, supplier: d.Supplier, hasInvoice: d.hasInvoice === 1, customData: d.CustomData ? JSON.parse(d.CustomData) : {}, accessories: acc.recordset || []
             };
         }));
 
@@ -1095,19 +1107,22 @@ app.get('/api/sync', async (req, res) => {
             logs: format(logsRes),
             consumables: format(consumablesRes),
             audits: format(auditsRes),
-            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
-                ...c,
-                photo: c.hasPhoto === 1 ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
-                hasPhoto: c.hasPhoto === 1,
-                documents: (c.documents || []).map(d => ({
-                    id: d.id,
-                    category: d.category,
-                    fileName: d.fileName,
-                    uploadDate: d.uploadDate,
-                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
-                    fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
-                }))
-            })),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
+                const hasPhoto = !!(c.photo && c.photo.length > 0) || c.hasPhoto === 1;
+                return {
+                    ...c,
+                    photo: hasPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    hasPhoto: hasPhoto,
+                    documents: (c.documents || []).map(d => ({
+                        id: d.id,
+                        category: d.category,
+                        fileName: d.fileName,
+                        uploadDate: d.uploadDate,
+                        hasFile: !!(d.fileUrl && d.fileUrl.length > 0),
+                        fileUrl: (d.fileUrl && d.fileUrl.length > 0) ? `/api/rh-collaborators/${c.id}/document/${d.id}/raw` : undefined
+                    }))
+                };
+            }),
             rhDependents: format(rhDependentsRes),
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
