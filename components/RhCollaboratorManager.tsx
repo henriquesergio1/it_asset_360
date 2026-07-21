@@ -1826,8 +1826,8 @@ export const RhCollaboratorManager: React.FC = () => {
                                         <button 
                                           type="button"
                                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); generateAndPrintRhTerm(t); }}
-                                          className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-slate-900 dark:text-white transition-all border border-slate-200 dark:border-slate-700"
-                                          title="Gerar Termo"
+                                          className="p-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700"
+                                          title="Gerar / Baixar Termo"
                                         >
                                           <Download size={16} />
                                         </button>
@@ -2184,7 +2184,7 @@ export const RhCollaboratorManager: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
-                  className="px-5 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider"
+                  className="px-5 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 dark:hover:text-white font-black text-xs rounded-xl uppercase tracking-wider transition-all"
                 >
                   Fechar
                 </button>
@@ -3097,7 +3097,7 @@ export const RhCollaboratorManager: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setIsCreating(false); setIsEditing(false); }}
-                className="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
+                className="px-6 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 dark:hover:text-white font-black text-xs rounded-xl uppercase tracking-wider transition-all"
               >
                 Cancelar
               </button>
