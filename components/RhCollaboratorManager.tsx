@@ -2645,199 +2645,271 @@ export const RhCollaboratorManager: React.FC = () => {
 
               {activeTab === 'documentos' && (
                 <div className="space-y-6">
-                  {/* Anexos de documentos */}
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60">
-                    <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-3">Anexos de Documentos Regulamentares ({form.documents?.length || 0})</span>
-                    
-                    <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <select
-                          value={docCategory}
-                          onChange={e => setDocCategory(e.target.value as any)}
-                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-800 dark:text-white font-bold outline-none"
-                        >
-                          <option value="RG">RG</option>
-                          <option value="CPF">CPF</option>
-                          <option value="Comprovante de Residência">Comprovante de Residência</option>
-                          <option value="Contrato de Trabalho">Contrato de Trabalho</option>
-                          <option value="Outros">Outros</option>
-                        </select>
-                        <label className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center gap-2 shrink-0 border border-slate-300 dark:border-slate-600">
-                          <Upload size={14} className="text-indigo-600 dark:text-indigo-400" />
-                          <span>{docFileBase64 ? 'Arquivo Pronto' : 'Selecionar Arquivo'}</span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*,.pdf,.doc,.docx"
-                            onChange={handleDocFileSelect}
-                          />
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
-                          value={docFileName}
-                          onChange={e => setDocFileName(e.target.value)}
-                          className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddDocument}
-                          className="bg-indigo-600 text-white text-xs font-black px-6 py-2.5 rounded-xl uppercase hover:bg-indigo-700 transition-all shadow-sm active:scale-95 shrink-0"
-                        >
-                          Adicionar Anexo
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
-                        {form.documents && form.documents.length > 0 ? (
-                          form.documents.map((doc, i) => {
-                            const hasUrl = !!(doc.fileUrl || doc.hasFile);
-                            return (
-                              <div key={doc.id || i} className="p-3 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs border border-slate-200 dark:border-slate-700">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  {hasUrl ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setPreviewData({ url: doc.fileUrl || `/api/rh-collaborators/${selectedColab?.id}/document/${doc.id}/raw`, name: doc.fileName });
-                                        setIsPreviewOpen(true);
-                                      }}
-                                      className="w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900 flex items-center justify-center relative shadow-sm"
-                                      title="Clique para visualizar"
-                                    >
-                                      <img 
-                                        src={doc.fileUrl || `/api/rh-collaborators/${selectedColab?.id}/document/${doc.id}/raw`} 
-                                        alt={doc.fileName} 
-                                        className="w-full h-full object-cover group-hover:opacity-90"
-                                        onError={(e) => {
-                                          e.currentTarget.style.display = 'none';
-                                          if (e.currentTarget.parentElement) {
-                                            e.currentTarget.parentElement.classList.add('bg-indigo-50', 'dark:bg-indigo-500/10', 'text-indigo-600', 'dark:text-indigo-400', 'font-black', 'text-[9px]', 'uppercase');
-                                            e.currentTarget.parentElement.innerText = doc.category.substring(0, 3);
-                                          }
-                                        }}
-                                      />
-                                    </button>
-                                  ) : (
-                                    <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[9px] font-black rounded uppercase shrink-0">{doc.category}</span>
-                                  )}
-                                  <span 
-                                    className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[140px] cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" 
-                                    title={doc.fileName}
-                                    onClick={() => {
-                                      if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
-                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                        setIsPreviewOpen(true);
-                                      }
-                                    }}
-                                  >
-                                    {doc.fileName}
-                                  </span>
-                                </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                        setIsPreviewOpen(true);
-                                      }}
-                                      className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
-                                      title="Visualizar e Imprimir"
-                                    >
-                                      <Eye size={14} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const link = document.createElement('a');
-                                        link.href = doc.fileUrl;
-                                        link.download = doc.fileName;
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                      }}
-                                      className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 rounded-lg transition-colors"
-                                      title="Baixar Arquivo"
-                                    >
-                                      <Download size={14} />
-                                    </button>
-                                  </>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteDoc(doc.id)}
-                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
-                                  title="Remover Anexo"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                        ) : (
-                          <div className="text-slate-400 py-6 text-center col-span-2 font-medium">Nenhum documento regulamentar anexado ainda.</div>
-                        )}
-                      </div>
+                  {isCreating ? (
+                    <div className="text-slate-400 py-12 text-center font-medium bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+                      Os documentos regulamentares e termos de comodato estarão disponíveis após salvar o cadastro inicial do colaborador.
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Anexar Novo Documento Regulamentar */}
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                        <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Anexar Novo Documento Regulamentar</span>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <select
+                            value={docCategory}
+                            onChange={e => setDocCategory(e.target.value as any)}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-800 dark:text-white font-bold outline-none"
+                          >
+                            <option value="RG">RG</option>
+                            <option value="CPF">CPF</option>
+                            <option value="Comprovante de Residência">Comprovante de Residência</option>
+                            <option value="Contrato de Trabalho">Contrato de Trabalho</option>
+                            <option value="Outros">Outros</option>
+                          </select>
+                          <label className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center gap-2 shrink-0 border border-slate-300 dark:border-slate-600">
+                            <Upload size={14} className="text-indigo-600 dark:text-indigo-400" />
+                            <span>{docFileBase64 ? 'Arquivo Pronto' : 'Selecionar Arquivo'}</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*,.pdf,.doc,.docx"
+                              onChange={handleDocFileSelect}
+                            />
+                          </label>
 
-                  {/* Termos de Comodato vinculados */}
-                  <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60">
-                    <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-3">Histórico de Termos de Comodato vinculados</span>
-                    
-                    <div className="space-y-3">
-                      {isCreating ? (
-                        <div className="text-slate-400 py-6 text-center font-medium">Os termos de comodato estarão disponíveis após salvar o cadastro do colaborador.</div>
-                      ) : (
-                        <>
-                          {(() => {
-                            const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab?.id);
-                            
-                            if (colabTerms.length === 0) {
-                              return <div className="text-slate-400 py-6 text-center font-medium">Nenhum termo de comodato (entrega/devolução) gerado para este colaborador.</div>;
-                            }
+                          <input
+                            type="text"
+                            placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
+                            value={docFileName}
+                            onChange={e => setDocFileName(e.target.value)}
+                            className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddDocumentDirect}
+                            className="bg-indigo-600 text-white text-xs font-black px-6 py-2.5 rounded-xl uppercase hover:bg-indigo-700 transition-all shadow-sm active:scale-95 shrink-0"
+                          >
+                            Adicionar Anexo
+                          </button>
+                        </div>
+                      </div>
 
-                            return (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {colabTerms.map(t => {
-                                  const isDevolucao = t.type === 'DEVOLUCAO';
-                                  return (
-                                    <div key={t.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 relative">
-                                      <div className="flex justify-between items-start">
-                                        <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
-                                          isDevolucao 
-                                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' 
-                                            : 'bg-indigo-100 text-indigo-850 dark:bg-indigo-500/20 dark:text-indigo-400'
-                                        }`}>
-                                          {isDevolucao ? 'DEVOLUÇÃO' : 'ENTREGA'}
-                                        </span>
-                                        <span className={`px-2 py-0.5 text-[9px] font-black rounded uppercase tracking-wider ${
-                                          t.status === 'ASSINADO'
-                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                            : t.status === 'RECUSADO'
-                                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
-                                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                                        }`}>
-                                          {t.status}
-                                        </span>
+                      {/* Lista de Documentos */}
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({selectedColab?.documents?.length || form.documents?.length || 0})</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {(selectedColab?.documents || form.documents) && (selectedColab?.documents || form.documents).length > 0 ? (
+                            (selectedColab?.documents || form.documents).map((doc: any, i: number) => {
+                              const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
+                              return (
+                                <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    {isImage ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewColabDoc(doc)}
+                                        className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 shadow-sm hover:scale-105 hover:border-indigo-500 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-800"
+                                        title="Clique para visualizar o documento"
+                                      >
+                                        <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewColabDoc(doc)}
+                                        className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-all cursor-pointer"
+                                        title="Clique para visualizar o documento"
+                                      >
+                                        <FileText size={18} />
+                                      </button>
+                                    )}
+                                    <div 
+                                      className="min-w-0 cursor-pointer" 
+                                      onClick={() => handlePreviewColabDoc(doc)}
+                                    >
+                                      <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
+                                      <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('pt-BR') : '---'}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                                    {(doc.fileUrl || doc.hasFile) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewColabDoc(doc)}
+                                        className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                        title="Visualizar Documento"
+                                      >
+                                        <Eye size={15} />
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenDeleteDocModal(doc)}
+                                      className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
+                                      title="Excluir Anexo"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Termos de Comodato vinculados */}
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-150 dark:border-slate-700/60 space-y-4">
+                        <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Termos de Comodato Vinculados</span>
+                        {(() => {
+                          const colabTerms = rhTerms.filter(t => t.collaboratorId === selectedColab?.id);
+                          if (colabTerms.length === 0) {
+                            return <div className="text-slate-400 py-6 text-center font-medium text-xs">Nenhum termo de comodato (entrega/devolução) gerado para este colaborador.</div>;
+                          }
+                          return (
+                            <div className="grid grid-cols-1 gap-3">
+                              {colabTerms.map(t => {
+                                const isDevolucao = t.type === 'DEVOLUCAO';
+                                return (
+                                  <div key={t.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+                                    <div className="flex items-center gap-4">
+                                      <div className="h-12 w-12 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                                        {t.type === 'ENTREGA' ? <FileSignature className="text-indigo-600 dark:text-indigo-400" size={24} /> : <RefreshCw className="text-blue-600 dark:text-sky-400" size={24} />}
                                       </div>
-                                      <p className="text-xs font-bold text-slate-800 dark:text-white truncate" title={t.assetDetails}>{t.assetDetails}</p>
-                                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                        <span>Data: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                      <div>
+                                        <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">{t.type === 'ENTREGA' ? 'Termo de Entrega' : 'Termo de Devolução'}</div>
+                                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase flex flex-col gap-0.5 mt-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-indigo-500/80">EMITIDO EM: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                                          </div>
+                                          <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium max-w-sm truncate" title={t.assetDetails}>
+                                            {t.assetDetails || '---'}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
-                        </>
-                      )}
-                    </div>
-                  </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-right">
+                                        <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-lg ${
+                                          t.isManual 
+                                            ? 'bg-orange-600 text-white shadow-orange-500/20' 
+                                            : (t.fileUrl || t.hasFile || (t.signatureDate && t.signatureStatus === 'APPROVED')) 
+                                              ? 'bg-emerald-600 text-white shadow-emerald-500/20' 
+                                              : t.signatureStatus === 'PENDING_APPROVAL' 
+                                                ? 'bg-amber-500 text-white shadow-amber-500/20' 
+                                                : 'bg-indigo-600 text-white shadow-indigo-500/20'
+                                        }`}>
+                                          {t.isManual 
+                                            ? `Resolvido Manualmente (${t.resolutionReason || 'Motivo N/I'})` 
+                                            : (t.fileUrl || t.hasFile || (t.signatureDate && t.signatureStatus === 'APPROVED')) 
+                                              ? 'Assinado & Arquivado' 
+                                              : t.signatureStatus === 'PENDING_APPROVAL' 
+                                                ? 'Aguardando Aprovação' 
+                                                : 'Pendente de Assinatura'}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1.5">
+                                        {(t.fileUrl || t.hasFile || t.isManual) && (
+                                          <button 
+                                            type="button"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const fileUrl = await getTermFile(t.id);
+                                              if (fileUrl) {
+                                                setPreviewData({ url: fileUrl, name: `Termo_${t.type}_${t.id}` });
+                                                setIsPreviewOpen(true);
+                                              } else {
+                                                showToast('Arquivo do termo não disponível', 'error');
+                                              }
+                                            }}
+                                            className="p-2 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-all border border-slate-200 dark:border-slate-700"
+                                            title="Visualizar Termo Assinado"
+                                          >
+                                            <Eye size={16} />
+                                          </button>
+                                        )}
+
+                                        {t.signatureStatus === 'PENDING_APPROVAL' && (
+                                          <div className="flex gap-1.5">
+                                            <button 
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleApproveSignature(t.id); }}
+                                              className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-350 dark:border-emerald-700/30"
+                                              title="Aprovar Assinatura"
+                                            >
+                                              <Check size={12} />
+                                              Aprovar
+                                            </button>
+                                            <button 
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleRejectSignature(t.id); }}
+                                              className="p-1.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-rose-350 dark:border-rose-700/30"
+                                              title="Rejeitar Assinatura"
+                                            >
+                                              <X size={12} />
+                                              Rejeitar
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {!!(t.hasSignaturePhoto || t.hasSignatureSelfiePhoto) && (
+                                          <div className="flex gap-2">
+                                            <button 
+                                              type="button"
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                await handleViewSignatureEvidences(t.id);
+                                              }}
+                                              className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
+                                              title="Ver Evidências de Identidade (Doc + Selfie)"
+                                            >
+                                              <Camera size={14} className="text-indigo-650 dark:text-indigo-400" />
+                                              <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {!(t.fileUrl || t.hasFile) ? (
+                                          <div className="flex gap-2">
+                                            {!t.isManual && (
+                                              <button 
+                                                type="button"
+                                                onClick={() => setResolvingManualTerm(t)}
+                                                className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                                title="Resolução Manual"
+                                              >
+                                                <CheckSquare size={16} />
+                                              </button>
+                                            )}
+                                            <label className="p-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-all border border-slate-200 dark:border-slate-700 cursor-pointer" title="Upload Assinado">
+                                              <Upload size={16} />
+                                              <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(t.id, e)} />
+                                            </label>
+                                          </div>
+                                        ) : (
+                                          <button 
+                                            type="button"
+                                            onClick={() => handleDeleteTermFile(t.id)}
+                                            className="p-2 bg-white dark:bg-slate-800 text-red-400 rounded-lg hover:bg-red-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                            title="Excluir/Alterar Anexo"
+                                          >
+                                            <Trash2 size={16} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -2849,147 +2921,163 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   ) : (
                     <>
-                      {/* Lançamento de Nova Ocorrência Rápida */}
-                      <div className="bg-indigo-50/40 dark:bg-slate-900/60 p-6 rounded-2xl border border-indigo-100 dark:indigo-500/10 space-y-4">
-                        <span className="block text-xs font-black uppercase text-indigo-750 dark:text-indigo-400">Registrar Nova Ocorrência (Falta / Férias / Atestado)</span>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Formulário de Lançamento Direto de Ocorrência */}
+                      <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
+                        <span className="block text-xs font-black uppercase text-indigo-500 tracking-widest">Lançar Nova Ocorrência / Afastamento</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência</label>
+                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Tipo de Ocorrência</label>
                             <select
-                              value={quickOccType}
-                              onChange={e => setQuickOccType(e.target.value)}
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white font-bold"
+                              value={occType}
+                              onChange={e => setOccType(e.target.value as any)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
                             >
                               <option value="Atestado Médico">Atestado Médico</option>
+                              <option value="Férias">Férias</option>
                               <option value="Falta Justificada">Falta Justificada</option>
                               <option value="Falta Injustificada">Falta Injustificada</option>
-                              <option value="Licença Maternidade">Licença Maternidade</option>
-                              <option value="Licença Paternidade">Licença Paternidade</option>
-                              <option value="Afastamento INSS">Afastamento INSS</option>
-                              <option value="Férias">Férias</option>
+                              <option value="Licença Maternidade/Paternidade">Licença Maternidade/Paternidade</option>
+                              <option value="Outros">Outros</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Início</label>
+                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Data Inicial</label>
                             <input
                               type="date"
-                              value={formatDateForInput(quickOccStart)}
-                              onChange={e => setQuickOccStart(e.target.value)}
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
+                              value={occStartDate}
+                              onChange={e => setOccStartDate(e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Fim</label>
+                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Data Final</label>
                             <input
                               type="date"
-                              value={formatDateForInput(quickOccEnd)}
-                              onChange={e => setQuickOccEnd(e.target.value)}
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
+                              value={occEndDate}
+                              onChange={e => setOccEndDate(e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] font-black uppercase text-slate-400 mb-1">Observação / CID</label>
+                            <input
+                              type="text"
+                              placeholder="Ex: CID 10 - Gripe..."
+                              value={occNotes}
+                              onChange={e => setOccNotes(e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
                             />
                           </div>
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end font-medium">
-                          <div className="md:col-span-3">
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Observações / Notas</label>
-                            <input
-                              type="text"
-                              value={quickOccNotes}
-                              onChange={e => setQuickOccNotes(e.target.value)}
-                              placeholder="Observações complementares ou CID..."
-                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white"
-                            />
+                        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
+                          <div className="flex-1 min-w-0">
+                            <label className="cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold transition-all">
+                              <Upload size={14} className="text-indigo-500 shrink-0" />
+                              <span className="truncate">{occFileName ? occFileName : 'Anexar Cópia do Atestado / Comprovante...'}</span>
+                              <input
+                                type="file"
+                                accept="image/*,.pdf,.doc,.docx"
+                                className="hidden"
+                                onChange={handleOccFileSelect}
+                              />
+                            </label>
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!quickOccStart || !quickOccEnd) {
-                                alert('Por favor, informe a data de início e fim da ocorrência.');
-                                return;
-                              }
-
-                              const start = new Date(quickOccStart);
-                              const end = new Date(quickOccEnd);
-                              const diffTime = Math.abs(end.getTime() - start.getTime());
-                              const computedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-                              if (selectedColab) {
-                                const finalOccurrence: RhOccurrence = {
-                                  id: 'occ-' + Math.random().toString(36).substr(2, 9),
-                                  collaboratorId: selectedColab.id,
-                                  type: quickOccType as any,
-                                  startDate: quickOccStart,
-                                  endDate: quickOccEnd,
-                                  daysCount: computedDays,
-                                  notes: quickOccNotes || '',
-                                  fileUrl: 'mock_cert_url_' + Math.random().toString(36).substr(2, 4)
-                                };
-
-                                addRhOccurrence(finalOccurrence, adminName);
-                                
-                                // Reset
-                                setQuickOccStart('');
-                                setQuickOccEnd('');
-                                setQuickOccNotes('');
-                              }
-                            }}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95 text-center"
+                            onClick={handleAddOccurrenceDirect}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95 shrink-0"
                           >
-                            Lançar Registro
+                            Lançar Ocorrência
                           </button>
                         </div>
                       </div>
 
-                      {/* Lista de Ocorrências Atuais */}
+                      {/* Lista de Ocorrências */}
                       <div className="space-y-3">
-                        <span className="block text-xs font-black uppercase text-slate-500 dark:text-slate-400">Histórico de Ocorrências e Afastamentos</span>
+                        <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Histórico de Ocorrências e Afastamentos</h3>
                         {(() => {
-                          const colabOccs = rhOccurrences.filter(o => o.collaboratorId === selectedColab?.id);
-                          
+                          const targetId = selectedColab?.id || form.id;
+                          const colabOccs = rhOccurrences.filter(o => o.collaboratorId === targetId);
                           if (colabOccs.length === 0) {
                             return (
-                              <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium">
+                              <div className="text-slate-400 py-8 text-center bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-700 rounded-2xl font-medium text-xs">
                                 Nenhuma ocorrência, falta ou atestado médico lançado para este colaborador.
                               </div>
                             );
                           }
-
                           return (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto pr-2">
+                            <div className="flex flex-col gap-2.5">
                               {colabOccs.map(occ => (
-                                <div key={occ.id} className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-start">
-                                  <div className="space-y-1">
-                                    <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
-                                      occ.type === 'Férias'
-                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                        : occ.type === 'Atestado Médico'
-                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
-                                          : occ.type.includes('Falta')
-                                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
-                                            : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
-                                    }`}>
-                                      {occ.type}
-                                    </span>
-                                    <p className="text-xs font-black text-slate-800 dark:text-white pt-1">
-                                      {new Date(occ.startDate).toLocaleDateString('pt-BR')} até {new Date(occ.endDate).toLocaleDateString('pt-BR')}
-                                    </p>
-                                    {occ.notes && <p className="text-[11px] text-slate-400 font-medium italic">"{occ.notes}"</p>}
+                                <div key={occ.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    {(occ.fileUrl || occ.hasFile) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewOccurrenceAnexo(occ)}
+                                        className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 hover:scale-105 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-sm"
+                                        title="Visualizar miniatura do atestado"
+                                      >
+                                        <img
+                                          src={occ.fileUrl || `/api/rh-occurrences/${occ.id}/file/raw`}
+                                          alt="Atestado"
+                                          className="w-full h-full object-cover group-hover:opacity-90"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            if (e.currentTarget.parentElement) {
+                                              e.currentTarget.parentElement.innerHTML = '<span class="text-indigo-500 font-bold text-[9px]">DOC</span>';
+                                            }
+                                          }}
+                                        />
+                                      </button>
+                                    )}
+                                    <div className="space-y-0.5 min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`px-2 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${
+                                          occ.type === 'Férias'
+                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                            : occ.type === 'Atestado Médico'
+                                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400'
+                                              : occ.type.includes('Falta')
+                                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'
+                                                : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'
+                                        }`}>
+                                          {occ.type}
+                                        </span>
+                                        <div className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                                          <Calendar size={12} className="text-slate-400" />
+                                          <span>{new Date(occ.startDate).toLocaleDateString('pt-BR')}</span>
+                                          <span className="text-slate-400">até</span>
+                                          <span>{new Date(occ.endDate).toLocaleDateString('pt-BR')}</span>
+                                        </div>
+                                        <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                          {occ.daysCount} {occ.daysCount === 1 ? 'dia' : 'dias'}
+                                        </span>
+                                      </div>
+                                      {occ.notes && (
+                                        <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium truncate" title={occ.notes}>
+                                          {occ.notes}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col items-end gap-2 shrink-0">
-                                    <span className="text-xs font-mono font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">
-                                      {occ.daysCount} {occ.daysCount === 1 ? 'dia' : 'dias'}
-                                    </span>
+                                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                    {(occ.fileUrl || occ.hasFile) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePreviewOccurrenceAnexo(occ)}
+                                        className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+                                      >
+                                        <Eye size={14} />
+                                        <span>Ver Anexo</span>
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        if (window.confirm('Excluir este lançamento de ocorrência?')) {
-                                          deleteRhOccurrence(occ.id, adminName);
-                                        }
-                                      }}
-                                      className="text-[9px] font-black text-rose-500 hover:text-rose-700 hover:underline uppercase tracking-wider"
+                                      onClick={() => handleDeleteOccurrenceDirect(occ.id)}
+                                      className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
+                                      title="Excluir Ocorrência"
                                     >
-                                      Excluir
+                                      <Trash2 size={15} />
                                     </button>
                                   </div>
                                 </div>
