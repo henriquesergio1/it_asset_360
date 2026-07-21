@@ -38,7 +38,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const res = await fetch(`${API_URL}/api/bootstrap`);
  return safeJson(res, '/api/bootstrap');
  },
- staleTime: Infinity,
+ staleTime: 0,
  });
 
  const { data: syncData, isLoading: isSyncLoading, error: syncError } = useQuery({
@@ -47,10 +47,9 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  const res = await fetch(`${API_URL}/api/sync`);
  return safeJson(res, '/api/sync');
  },
- enabled: false,
  refetchInterval: 120000,
  refetchOnWindowFocus: false,
- staleTime: 60000,
+ staleTime: 0,
  });
 
  const { data: externalDbConfigData } = useQuery({
@@ -154,14 +153,16 @@ const consumables = syncData?.consumables || bootstrapData?.consumables || [];
   return false;
  };
 
- const fetchData = async (silent: boolean = false) => {
-  if (silent) {
-    await queryClient.invalidateQueries({ queryKey: ['sync'] });
-  } else {
-    await queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
-    await queryClient.invalidateQueries({ queryKey: ['sync'] });
-  }
- };
+  const fetchData = async (silent: boolean = false) => {
+    if (silent) {
+      await queryClient.refetchQueries({ queryKey: ['sync'] });
+    } else {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['bootstrap'] }),
+        queryClient.refetchQueries({ queryKey: ['sync'] })
+      ]);
+    }
+  };
 
  const getLogDetail = async (id: string): Promise<AuditLog> => {
  const res = await fetch(`${API_URL}/api/logs/${id}`);
