@@ -2719,11 +2719,119 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
     crud('TechnicalAudits', 'audits', 'Audit');
-    crud('RhCollaborators', 'rh-collaborators', 'RhCollaborator');
     crud('RhOccurrences', 'rh-occurrences', 'RhOccurrence');
     crud('RhTermTemplates', 'rh-templates', 'RhTermTemplate');
     crud('RhTerms', 'rh-terms', 'RhTerm');
     crud('RhAssetItems', 'rh-assets', 'RhAssetItem');
+
+    // --- Rotas Explícitas de RH Colaboradores ---
+    app.post('/api/rh-collaborators', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const body = { ...req.body };
+            
+            // Auto-migração defensiva de colunas
+            const colsToAdd = [
+                { name: 'CompanyCnpj', type: 'NVARCHAR(255) NULL' },
+                { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
+                { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
+                { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
+                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+            ];
+            for (const col of colsToAdd) {
+                try {
+                    await pool.request().query(`
+                        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = '${col.name}')
+                        BEGIN
+                            ALTER TABLE RhCollaborators ADD ${col.name} ${col.type};
+                        END
+                    `);
+                } catch (e) {}
+            }
+
+            const request = pool.request();
+            let columns = [], values = [];
+            const IGNORE = ['_adminUser', '_notes', '_reason', 'photo', 'hasPhoto', 'documents', 'auditLog'];
+            
+            for (let key in body) {
+                if (key.startsWith('_') || IGNORE.includes(key)) continue;
+                if (body[key] === undefined) continue;
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                let val = body[key];
+                if (typeof val === 'object' && val !== null) {
+                    val = JSON.stringify(val);
+                }
+                request.input(dbKey, val !== null ? String(val) : null);
+                columns.push(dbKey);
+                values.push('@' + dbKey);
+            }
+
+            await request.query(`INSERT INTO RhCollaborators (${columns.join(',')}) VALUES (${values.join(',')})`);
+            
+            const colabName = body.fullName || 'Colaborador';
+            await logAction(body.id, 'RhCollaborator', 'Criação', body._adminUser || 'Gestor R.H.', colabName, 'Novo colaborador cadastrado no R.H.');
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO POST /api/rh-collaborators:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.put('/api/rh-collaborators/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const body = { ...req.body };
+            
+            // Auto-migração defensiva de colunas
+            const colsToAdd = [
+                { name: 'CompanyCnpj', type: 'NVARCHAR(255) NULL' },
+                { name: 'HasVehicle', type: 'NVARCHAR(50) NULL' },
+                { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
+                { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
+                { name: 'TransportOption', type: 'NVARCHAR(100) NULL' }
+            ];
+            for (const col of colsToAdd) {
+                try {
+                    await pool.request().query(`
+                        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RhCollaborators' AND COLUMN_NAME = '${col.name}')
+                        BEGIN
+                            ALTER TABLE RhCollaborators ADD ${col.name} ${col.type};
+                        END
+                    `);
+                } catch (e) {}
+            }
+
+            const request = pool.request();
+            let sets = [];
+            const IGNORE = ['_adminUser', '_notes', '_reason', 'photo', 'hasPhoto', 'documents', 'auditLog', 'id', 'Id'];
+            
+            for (let key in body) {
+                if (key.startsWith('_') || IGNORE.includes(key)) continue;
+                if (body[key] === undefined) continue;
+                let dbKey = key.charAt(0).toUpperCase() + key.slice(1);
+                let val = body[key];
+                if (typeof val === 'object' && val !== null) {
+                    val = JSON.stringify(val);
+                }
+                request.input(dbKey, val !== null ? String(val) : null);
+                sets.push(`${dbKey}=@${dbKey}`);
+            }
+
+            if (sets.length > 0) {
+                request.input('TargetId', req.params.id);
+                await request.query(`UPDATE RhCollaborators SET ${sets.join(',')} WHERE Id=@TargetId`);
+            }
+
+            const colabName = body.fullName || 'Colaborador';
+            await logAction(req.params.id, 'RhCollaborator', 'Atualização', body._adminUser || 'Gestor R.H.', colabName, body._notes || 'Dados cadastrais do colaborador atualizados');
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO PUT /api/rh-collaborators/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
 
     // --- Rotas Explícitas de RH Dependentes ---
     app.get('/api/rh-dependents', async (req, res) => {
@@ -2740,6 +2848,26 @@ async function updateUserPendingStatus(pool, userId) {
     app.post('/api/rh-dependents', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            
+            // Auto-criação defensiva da tabela RhDependents
+            try {
+                await pool.request().query(`
+                    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhDependents')
+                    BEGIN
+                        CREATE TABLE RhDependents (
+                            Id NVARCHAR(255) PRIMARY KEY,
+                            CollaboratorId NVARCHAR(255) NOT NULL,
+                            Name NVARCHAR(255) NOT NULL,
+                            RelationshipType NVARCHAR(100) NOT NULL,
+                            Cpf NVARCHAR(50) NULL,
+                            BirthDate NVARCHAR(50) NULL,
+                            Notes NVARCHAR(500) NULL,
+                            CreatedAt DATETIME DEFAULT GETDATE()
+                        );
+                    END
+                `);
+            } catch (tblErr) {}
+
             const { id, collaboratorId, name, relationshipType, cpf, birthDate, notes, _adminUser } = req.body;
             const depId = id || `dep-${Date.now()}`;
             await pool.request()
