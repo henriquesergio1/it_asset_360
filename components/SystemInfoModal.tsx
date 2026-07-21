@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.82.0',
+    date: 'Hoje',
+    title: 'Anexo de Arquivos em Faltas, Férias e Atestados (RH)',
+    changes: [
+      'Novo: Suporte para anexar comprovantes, atestados médicos e documentos (PDF, imagens e Word) ao cadastrar ocorrências e afastamentos.',
+      'Interface: Inclusão de botão de upload no formulário de ocorrência do colaborador e na gestão geral de ocorrências.',
+      'Visualização: Botão "Ver Anexo / Comprovante" integrado no histórico de ocorrências com modal de pré-visualização instantânea (FilePreviewModal) e download.'
+    ]
+  },
+  {
     version: '3.81.4',
     date: 'Hoje',
     title: 'Correção de Encoding e Reposicionamento do Banco de Horas',

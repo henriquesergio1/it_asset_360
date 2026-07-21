@@ -6,8 +6,9 @@ import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
   Plus, Trash2, Calendar, FileText, AlertTriangle, Search, X, 
-  Download, ChevronLeft, ChevronRight, Briefcase, Paperclip, Check
+  Download, ChevronLeft, ChevronRight, Briefcase, Paperclip, Check, Eye, Upload
 } from 'lucide-react';
+import FilePreviewModal from './FilePreviewModal';
 
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
 
@@ -25,6 +26,10 @@ export const RhOccurrenceManager: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
+  // Preview Modal
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<{ url: string; name: string }>({ url: '', name: '' });
+
   // Form State
   const [form, setForm] = useState({
     collaboratorId: '',
@@ -35,8 +40,21 @@ export const RhOccurrenceManager: React.FC = () => {
     fileUrl: ''
   });
 
-  // File upload state simulator
+  // File upload state
   const [attachedFileName, setAttachedFileName] = useState('');
+  const [fileBase64, setFileBase64] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachedFileName(file.name);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFileBase64(event.target?.result as string || '');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +76,7 @@ export const RhOccurrenceManager: React.FC = () => {
       endDate: form.endDate,
       daysCount: computedDays,
       notes: form.notes || '',
-      fileUrl: attachedFileName ? 'mock_cert_url_' + Math.random().toString(36).substr(2, 4) : ''
+      fileUrl: fileBase64 || form.fileUrl || ''
     };
 
     addRhOccurrence(finalOccurrence, adminName);
@@ -73,6 +91,7 @@ export const RhOccurrenceManager: React.FC = () => {
       fileUrl: ''
     });
     setAttachedFileName('');
+    setFileBase64('');
     setShowCreate(false);
   };
 
@@ -454,11 +473,20 @@ export const RhOccurrenceManager: React.FC = () => {
                               <FileText size={16} />
                             </div>
                             <div>
-                              <span className="block font-bold text-xs text-slate-800 dark:text-white leading-none">atestado_medico_oficial.pdf</span>
-                              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Atestado Médico / Licença oficial validada</span>
+                              <span className="block font-bold text-xs text-slate-800 dark:text-white leading-none">Cópia do Atestado / Comprovante</span>
+                              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Arquivo anexado à ocorrência</span>
                             </div>
                           </div>
-                          <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer">Download</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreviewData({ url: selectedOccurrence.fileUrl!, name: `Atestado_${selectedOccurrence.type}` });
+                              setIsPreviewOpen(true);
+                            }}
+                            className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                          >
+                            <Eye size={12} /> Visualizar
+                          </button>
                         </div>
                       ) : (
                         <p className="text-slate-400 text-xs italic">Nenhum certificado ou atestado anexado a esta ocorrência.</p>
@@ -570,25 +598,19 @@ export const RhOccurrenceManager: React.FC = () => {
                 />
               </div>
 
-              {/* Upload de Atestado Simulado */}
+              {/* Upload de Atestado / Comprovante */}
               <div className="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-150 dark:border-slate-700/60">
-                <span className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Anexar Atestado / Certificado de Justificativa</span>
-                <div className="flex items-center gap-3">
+                <span className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Anexar Cópia do Atestado / Comprovante</span>
+                <label className="cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold transition-all">
+                  <Upload size={16} className="text-indigo-500 shrink-0" />
+                  <span className="truncate">{attachedFileName ? attachedFileName : 'Selecionar arquivo (PDF, Imagem, Doc)...'}</span>
                   <input
-                    type="text"
-                    placeholder="Nome do arquivo..."
-                    value={attachedFileName}
-                    onChange={e => setAttachedFileName(e.target.value)}
-                    className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs"
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={handleFileChange}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setAttachedFileName('atestado_medico_validado.pdf')}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-4 py-2 rounded-xl uppercase transition-all"
-                  >
-                    Simular Upload
-                  </button>
-                </div>
+                </label>
                 {attachedFileName && (
                   <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-2 flex items-center gap-1">
                     <Check size={12} /> Arquivo '{attachedFileName}' carregado com sucesso.
@@ -617,6 +639,14 @@ export const RhOccurrenceManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Pré-visualização de Arquivos */}
+      <FilePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        fileUrl={previewData.url}
+        fileName={previewData.name}
+      />
     </div>
   );
 };

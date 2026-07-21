@@ -601,6 +601,20 @@ export const RhCollaboratorManager: React.FC = () => {
   const [occStartDate, setOccStartDate] = useState('');
   const [occEndDate, setOccEndDate] = useState('');
   const [occNotes, setOccNotes] = useState('');
+  const [occFileBase64, setOccFileBase64] = useState<string>('');
+  const [occFileName, setOccFileName] = useState<string>('');
+
+  const handleOccFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setOccFileName(file.name);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setOccFileBase64(event.target?.result as string || '');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAddOccurrenceDirect = () => {
     if (!selectedColab) return;
@@ -616,6 +630,7 @@ export const RhCollaboratorManager: React.FC = () => {
       startDate: occStartDate,
       endDate: occEndDate || occStartDate,
       notes: occNotes,
+      fileUrl: occFileBase64 || undefined,
       createdAt: new Date().toISOString()
     };
 
@@ -623,6 +638,8 @@ export const RhCollaboratorManager: React.FC = () => {
     setOccStartDate('');
     setOccEndDate('');
     setOccNotes('');
+    setOccFileBase64('');
+    setOccFileName('');
     showToast('Ocorrência lançada com sucesso!', 'success');
   };
 
@@ -1935,11 +1952,23 @@ export const RhCollaboratorManager: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <div className="flex justify-end pt-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-1">
+                      <div className="flex-1 min-w-0">
+                        <label className="cursor-pointer bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold transition-all">
+                          <Upload size={14} className="text-indigo-500 shrink-0" />
+                          <span className="truncate">{occFileName ? occFileName : 'Anexar Cópia do Atestado / Comprovante...'}</span>
+                          <input
+                            type="file"
+                            accept="image/*,.pdf,.doc,.docx"
+                            className="hidden"
+                            onChange={handleOccFileSelect}
+                          />
+                        </label>
+                      </div>
                       <button
                         type="button"
                         onClick={handleAddOccurrenceDirect}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all active:scale-95 shrink-0"
                       >
                         Lançar Ocorrência
                       </button>
@@ -1982,6 +2011,22 @@ export const RhCollaboratorManager: React.FC = () => {
                                   )}
                                 </div>
                                 {occ.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">{occ.notes}</p>}
+                                {occ.fileUrl && (
+                                  <div className="pt-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPreviewData({ url: occ.fileUrl!, name: `Anexo_${occ.type}_${occ.startDate}` });
+                                        setIsPreviewOpen(true);
+                                      }}
+                                      className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all cursor-pointer border border-indigo-200 dark:border-indigo-500/30"
+                                      title="Visualizar anexo da ocorrência"
+                                    >
+                                      <Eye size={12} />
+                                      <span>Ver Anexo / Comprovante</span>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                               <button
                                 type="button"
