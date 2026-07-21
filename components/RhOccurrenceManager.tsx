@@ -95,6 +95,25 @@ export const RhOccurrenceManager: React.FC = () => {
     setShowCreate(false);
   };
 
+  const handlePreviewFile = async (occ: RhOccurrence) => {
+    if (occ.fileUrl && occ.fileUrl.startsWith('data:')) {
+      setPreviewData({ url: occ.fileUrl, name: `Atestado_${occ.type}` });
+      setIsPreviewOpen(true);
+      return;
+    }
+    if (occ.hasFile || occ.fileUrl) {
+      try {
+        const res = await fetch(`/api/rh-occurrences/${occ.id}/file`);
+        const data = await res.json();
+        if (data.fileUrl) {
+          setPreviewData({ url: data.fileUrl, name: `Atestado_${occ.type}` });
+          setIsPreviewOpen(true);
+          return;
+        }
+      } catch (e) { console.error('Erro ao carregar anexo:', e); }
+    }
+  };
+
   const handleDelete = (id: string) => {
     if (window.confirm('Tem certeza de que deseja remover este lançamento de ocorrência de R.H.?')) {
       deleteRhOccurrence(id, adminName);
@@ -342,7 +361,7 @@ export const RhOccurrenceManager: React.FC = () => {
                 <td className="px-6 py-4 text-slate-500">{new Date(o.endDate).toLocaleDateString('pt-BR')}</td>
                 <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{o.daysCount} dias</td>
                 <td className="px-6 py-4">
-                  {o.fileUrl ? (
+                  {(o.fileUrl || o.hasFile) ? (
                     <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-extrabold text-[9px] px-2 py-0.5 rounded uppercase border border-indigo-500/20 flex items-center gap-1 w-max">
                       <Paperclip size={10} /> 1 anexo
                     </span>
@@ -368,53 +387,59 @@ export const RhOccurrenceManager: React.FC = () => {
                   setCurrentPage(1);
                 }}
               >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={40}>40</option>
-                <option value="ALL">Todos</option>
+                <option value={10}>10 por pg.</option>
+                <option value={25}>25 por pg.</option>
+                <option value={50}>50 por pg.</option>
+                <option value="ALL">Mostrar Todos</option>
               </select>
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total: {totalItems} ocorrências</p>
+            <span className="text-xs text-slate-500 font-medium">
+              Exibindo <strong className="text-slate-800 dark:text-slate-200">{paginatedData.length}</strong> de <strong className="text-slate-800 dark:text-slate-200">{filtered.length}</strong> ocorrências
+            </span>
           </div>
 
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => p - 1)}
-                className={`p-2 rounded-lg transition-all ${currentPage === 1 ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-indigo-600 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className="p-2 bg-slate-100 dark:bg-slate-700 disabled:opacity-30 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={16} />
               </button>
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-black text-indigo-600 bg-indigo-500/10 px-3 py-1.5 rounded-lg">{currentPage}</span>
-                <span className="text-xs font-bold uppercase mx-1 text-slate-400">de</span>
-                <span className="text-xs font-black text-slate-700 dark:text-slate-300">{totalPages}</span>
-              </div>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Página {currentPage} de {totalPages}
+              </span>
               <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(p => p + 1)}
-                className={`p-2 rounded-lg transition-all ${currentPage === totalPages ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'text-indigo-600 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className="p-2 bg-slate-100 dark:bg-slate-700 disabled:opacity-30 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={16} />
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* DETALHES DA OCORRÊNCIA MODAL (Popup de visualização polida) */}
+      {/* DETALHES DA OCORRÊNCIA MODAL */}
       {isDetailModalOpen && selectedOccurrence && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
             {/* Header */}
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
-                <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[10px] font-black rounded uppercase tracking-wider">{selectedOccurrence.type}</span>
-                <div className="flex flex-col">
-                  <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">Ocorrência de R.H.</h2>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lançamento ID: {selectedOccurrence.id}</span>
-                </div>
+                <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider ${
+                  selectedOccurrence.type === 'Atestado Médico' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400' :
+                  selectedOccurrence.type.includes('Licença') ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-400' :
+                  selectedOccurrence.type.includes('Injustificada') ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400' :
+                  'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                }`}>
+                  {selectedOccurrence.type}
+                </span>
+                <h2 className="text-sm font-black text-slate-900 dark:text-white leading-none">
+                  Detalhes do Afastamento
+                </h2>
               </div>
               <button onClick={() => { setIsDetailModalOpen(false); setSelectedOccurrence(null); }} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all">
                 <X size={20} />
@@ -466,7 +491,7 @@ export const RhOccurrenceManager: React.FC = () => {
                     {/* Anexos de certificado/atestado */}
                     <div className="space-y-2">
                       <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block leading-none">Anexo Regulamentar</span>
-                      {selectedOccurrence.fileUrl ? (
+                      {(selectedOccurrence.fileUrl || selectedOccurrence.hasFile) ? (
                         <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 rounded-lg shrink-0">
@@ -479,10 +504,7 @@ export const RhOccurrenceManager: React.FC = () => {
                           </div>
                           <button
                             type="button"
-                            onClick={() => {
-                              setPreviewData({ url: selectedOccurrence.fileUrl!, name: `Atestado_${selectedOccurrence.type}` });
-                              setIsPreviewOpen(true);
-                            }}
+                            onClick={() => handlePreviewFile(selectedOccurrence)}
                             className="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                           >
                             <Eye size={12} /> Visualizar

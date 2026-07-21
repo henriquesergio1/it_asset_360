@@ -951,7 +951,7 @@ app.get('/api/bootstrap', async (req, res) => {
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
             pool.request().query("SELECT * FROM RhCollaborators"),
-            pool.request().query("SELECT * FROM RhOccurrences"),
+            pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
             pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
@@ -974,8 +974,17 @@ app.get('/api/bootstrap', async (req, res) => {
             customFields: format(customFieldsRes), accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
             tasks: format(tasksRes, ['EvidenceUrls', 'ManualAttachments', 'MaintenanceItems', 'RecurrenceConfig']), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes),
-            rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
-            rhOccurrences: format(rhOccurrencesRes),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
+                ...c,
+                documents: (c.documents || []).map(d => ({
+                    id: d.id,
+                    category: d.category,
+                    fileName: d.fileName,
+                    uploadDate: d.uploadDate,
+                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0)
+                }))
+            })),
+            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
@@ -1005,7 +1014,7 @@ app.get('/api/sync', async (req, res) => {
             pool.request().query("SELECT * FROM Consumables"),
             pool.request().query("SELECT * FROM TechnicalAudits"),
             pool.request().query("SELECT * FROM RhCollaborators"),
-            pool.request().query("SELECT * FROM RhOccurrences"),
+            pool.request().query("SELECT Id, CollaboratorId, Type, StartDate, EndDate, DaysCount, Cid, Crm, Notes, (CASE WHEN FileUrl IS NOT NULL AND FileUrl != '' THEN 1 ELSE 0 END) as hasFile FROM RhOccurrences"),
             pool.request().query("SELECT * FROM RhTermTemplates"),
             pool.request().query("SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, SnapshotDeclaration as snapshotDeclaration, SnapshotClauses as snapshotClauses, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto FROM RhTerms"),
             pool.request().query("SELECT * FROM RhAssetItems")
@@ -1027,8 +1036,17 @@ app.get('/api/sync', async (req, res) => {
             logs: format(logsRes),
             consumables: format(consumablesRes),
             audits: format(auditsRes),
-            rhCollaborators: format(rhCollaboratorsRes, ['Documents']),
-            rhOccurrences: format(rhOccurrencesRes),
+            rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => ({
+                ...c,
+                documents: (c.documents || []).map(d => ({
+                    id: d.id,
+                    category: d.category,
+                    fileName: d.fileName,
+                    uploadDate: d.uploadDate,
+                    hasFile: !!(d.fileUrl && d.fileUrl.length > 0)
+                }))
+            })),
+            rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1 })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1 })),
             rhAssetItems: format(rhAssetItemsRes)
@@ -1278,6 +1296,29 @@ app.get('/api/rh-terms/:id/file', async (req, res) => {
         const row = result.recordset[0];
         if (!row) return res.json({ fileUrl: '' });
         res.json({ fileUrl: getBase64FromBuffer(row.FileBinary) });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-occurrences/:id/file', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileUrl FROM RhOccurrences WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.FileUrl) return res.json({ fileUrl: '' });
+        res.json({ fileUrl: row.FileUrl });
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-collaborators/:colabId/document/:docId', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.colabId).query("SELECT Documents FROM RhCollaborators WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.Documents) return res.json({ fileUrl: '' });
+        let docs = [];
+        try { docs = JSON.parse(row.Documents); } catch(e) {}
+        const doc = docs.find(d => d.id === req.params.docId);
+        res.json({ fileUrl: doc?.fileUrl || '' });
     } catch (err) { res.status(500).send(err.message); }
 });
 

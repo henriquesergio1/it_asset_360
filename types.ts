@@ -447,6 +447,7 @@ export interface RhDocument {
   fileName: string;
   fileUrl: string;
   uploadDate: string;
+  hasFile?: boolean;
 }
 
 export interface RhOccurrence {
@@ -460,6 +461,7 @@ export interface RhOccurrence {
   crm?: string;
   notes?: string;
   fileUrl?: string;
+  hasFile?: boolean;
 }
 
 export interface RhTermTemplate {

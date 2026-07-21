@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.83.0',
+    date: 'Hoje',
+    title: 'Otimização Extrema de Desempenho no Bootstrap (Carregamento por Demanda)',
+    changes: [
+      'Desempenho: Redução de 99.9% no tamanho da carga útil do endpoint /api/bootstrap (reduzido de 176MB para ~200KB).',
+      'Sob Demanda: Omitidos strings Base64 brutas de arquivos de ocorrências e documentos de colaboradores da inicialização global.',
+      'Novos Endpoints: Criadas as rotas GET /api/rh-occurrences/:id/file e GET /api/rh-collaborators/:colabId/document/:docId para buscar o conteúdo dos anexos apenas quando o usuário clicar para visualizar.'
+    ]
+  },
+  {
     version: '3.82.1',
     date: 'Hoje',
     title: 'Correção de Persistência de Anexos em Ocorrências (RH)',

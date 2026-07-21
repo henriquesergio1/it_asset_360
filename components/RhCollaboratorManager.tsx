@@ -643,6 +643,46 @@ export const RhCollaboratorManager: React.FC = () => {
     showToast('Ocorrência lançada com sucesso!', 'success');
   };
 
+  const handlePreviewColabDoc = async (doc: RhDocument) => {
+    if (doc.fileUrl && doc.fileUrl.startsWith('data:')) {
+      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+      setIsPreviewOpen(true);
+      return;
+    }
+    if ((doc.hasFile || doc.fileUrl) && selectedColab) {
+      try {
+        const res = await fetch(`/api/rh-collaborators/${selectedColab.id}/document/${doc.id}`);
+        const data = await res.json();
+        if (data.fileUrl) {
+          setPreviewData({ url: data.fileUrl, name: doc.fileName });
+          setIsPreviewOpen(true);
+          return;
+        }
+      } catch (e) { console.error('Erro ao carregar documento:', e); }
+    }
+    showToast('Arquivo não disponível.', 'error');
+  };
+
+  const handlePreviewOccurrenceAnexo = async (occ: RhOccurrence) => {
+    if (occ.fileUrl && occ.fileUrl.startsWith('data:')) {
+      setPreviewData({ url: occ.fileUrl, name: `Anexo_${occ.type}_${occ.startDate}` });
+      setIsPreviewOpen(true);
+      return;
+    }
+    if (occ.hasFile || occ.fileUrl) {
+      try {
+        const res = await fetch(`/api/rh-occurrences/${occ.id}/file`);
+        const data = await res.json();
+        if (data.fileUrl) {
+          setPreviewData({ url: data.fileUrl, name: `Anexo_${occ.type}_${occ.startDate}` });
+          setIsPreviewOpen(true);
+          return;
+        }
+      } catch (e) { console.error('Erro ao carregar ocorrência:', e); }
+    }
+    showToast('Anexo não disponível.', 'error');
+  };
+
   const handleDeleteOccurrenceDirect = (occId: string) => {
     if (window.confirm('Deseja remover esta ocorrência?')) {
       deleteRhOccurrence(occId, adminName);
@@ -1652,10 +1692,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                 {isImage ? (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                      setIsPreviewOpen(true);
-                                    }}
+                                    onClick={() => handlePreviewColabDoc(doc)}
                                     className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 shadow-sm hover:scale-105 hover:border-indigo-500 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-800"
                                     title="Clique para visualizar o documento"
                                   >
@@ -1664,12 +1701,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                 ) : (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
-                                        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                        setIsPreviewOpen(true);
-                                      }
-                                    }}
+                                    onClick={() => handlePreviewColabDoc(doc)}
                                     className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-all cursor-pointer"
                                     title="Clique para visualizar o documento"
                                   >
@@ -1678,51 +1710,22 @@ export const RhCollaboratorManager: React.FC = () => {
                                 )}
                                 <div 
                                   className="min-w-0 cursor-pointer" 
-                                  onClick={() => {
-                                    if (doc.fileUrl && !doc.fileUrl.startsWith('mock_')) {
-                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                      setIsPreviewOpen(true);
-                                    }
-                                  }}
+                                  onClick={() => handlePreviewColabDoc(doc)}
                                 >
                                   <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
                                   <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
                                 </div>
                               </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
-                              {doc.fileUrl && !doc.fileUrl.startsWith('mock_') && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                      setIsPreviewOpen(true);
-                                    }}
-                                    className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
-                                    title="Visualizar Documento"
-                                  >
-                                    <Eye size={15} />
-                                  </button>
-                                  <a
-                                    href={doc.fileUrl}
-                                    download={doc.fileName}
-                                    className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center justify-center"
-                                    title="Salvar / Baixar Documento"
-                                  >
-                                    <Download size={15} />
-                                  </a>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-                                      setIsPreviewOpen(true);
-                                    }}
-                                    className="p-1.5 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-500/20 rounded-lg transition-colors"
-                                    title="Imprimir Documento"
-                                  >
-                                    <Printer size={15} />
-                                  </button>
-                                </>
+                              {(doc.fileUrl || doc.hasFile) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePreviewColabDoc(doc)}
+                                  className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                  title="Visualizar Documento"
+                                >
+                                  <Eye size={15} />
+                                </button>
                               )}
                               <button
                                 type="button"
@@ -2011,14 +2014,11 @@ export const RhCollaboratorManager: React.FC = () => {
                                   )}
                                 </div>
                                 {occ.notes && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight pt-1">{occ.notes}</p>}
-                                {occ.fileUrl && (
+                                { (occ.fileUrl || occ.hasFile) && (
                                   <div className="pt-2">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setPreviewData({ url: occ.fileUrl!, name: `Anexo_${occ.type}_${occ.startDate}` });
-                                        setIsPreviewOpen(true);
-                                      }}
+                                      onClick={() => handlePreviewOccurrenceAnexo(occ)}
                                       className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all cursor-pointer border border-indigo-200 dark:border-indigo-500/30"
                                       title="Visualizar anexo da ocorrência"
                                     >
