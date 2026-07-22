@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.14
+// Servidor express unificado com API e SPA React - v3.92.15
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -987,7 +987,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.14', 
+            version: '3.92.15', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1076,11 +1076,12 @@ app.get('/api/bootstrap', async (req, res) => {
             tasks: format(tasksRes, ['MaintenanceItems', 'RecurrenceConfig']).map(t => ({ ...t, hasEvidenceUrls: t.hasEvidenceUrls === 1, hasManualAttachments: t.hasManualAttachments === 1 })), logs: format(logsRes), taskLogs: format(taskLogsRes),
             consumables: format(consumablesRes), audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
-                const hasPhoto = !!(c.photo && c.photo.length > 0) || c.hasPhoto === 1;
+                const rawP = c.photo || c.Photo;
+                const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...c,
-                    photo: hasPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
-                    hasPhoto: hasPhoto,
+                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
                         id: d.id,
                         category: d.category,
@@ -3141,13 +3142,22 @@ async function updateUserPendingStatus(pool, userId) {
                 values.push('@' + dbKey);
             }
 
-            // Tratamento explícito da foto
+            // Tratamento explícito da foto no POST
             if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
-                const photoBuffer = getBufferFromBase64(body.photo);
-                request.input('Photo', sql.VarBinary, photoBuffer);
-                request.input('HasPhoto', sql.Int, 1);
-                columns.push('Photo', 'HasPhoto');
-                values.push('@Photo', '@HasPhoto');
+                if (!body.photo.startsWith('/api/')) {
+                    let photoBuffer = null;
+                    if (isBase64(body.photo)) {
+                        photoBuffer = getBufferFromBase64(body.photo);
+                    } else {
+                        photoBuffer = Buffer.from(body.photo.trim(), 'base64');
+                    }
+                    if (photoBuffer && photoBuffer.length > 0) {
+                        request.input('Photo', sql.VarBinary, photoBuffer);
+                        request.input('HasPhoto', sql.Int, 1);
+                        columns.push('Photo', 'HasPhoto');
+                        values.push('@Photo', '@HasPhoto');
+                    }
+                }
             }
 
             await request.query(`INSERT INTO RhCollaborators (${columns.join(',')}) VALUES (${values.join(',')})`);
@@ -3204,13 +3214,22 @@ async function updateUserPendingStatus(pool, userId) {
                 sets.push(`${dbKey}=@${dbKey}`);
             }
 
-            // Tratamento explícito da foto no PUT (atualização ou remoção)
+            // Tratamento explícito da foto no PUT (atualização, preservação de URL interna ou remoção)
             if (body.photo !== undefined) {
                 if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
-                    const photoBuffer = getBufferFromBase64(body.photo);
-                    request.input('Photo', sql.VarBinary, photoBuffer);
-                    request.input('HasPhoto', sql.Int, 1);
-                    sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
+                    if (body.photo.startsWith('/api/')) {
+                        // Se for uma URL interna de API, a foto existente no banco NÃO MUDOU (preserva a foto)
+                    } else if (isBase64(body.photo)) {
+                        const photoBuffer = getBufferFromBase64(body.photo);
+                        request.input('Photo', sql.VarBinary, photoBuffer);
+                        request.input('HasPhoto', sql.Int, 1);
+                        sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
+                    } else {
+                        const photoBuffer = Buffer.from(body.photo.trim(), 'base64');
+                        request.input('Photo', sql.VarBinary, photoBuffer);
+                        request.input('HasPhoto', sql.Int, 1);
+                        sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
+                    }
                 } else {
                     request.input('Photo', sql.VarBinary, null);
                     request.input('HasPhoto', sql.Int, 0);
