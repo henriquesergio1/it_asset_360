@@ -256,7 +256,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             <NotificationCenter />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.name}</p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{user?.Nome_Perfil || (user?.role === 'ADMIN' ? 'Administrador TI' : 'Operador Suporte')}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-sky-500/20 flex items-center justify-center text-blue-600 dark:text-sky-400 font-bold border border-blue-200 dark:border-sky-500/30 shadow-inner">
               {user?.name.charAt(0)}
@@ -285,11 +285,35 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   );
 };
 
-const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
-    const { isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, module }: { children?: React.ReactNode; module?: 'TI' | 'RH' }) => {
+    const { isAuthenticated, user, isAdmin } = useAuth();
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
     }
+
+    const hasRhAccess = isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
+      hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura') || 
+      hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura') || 
+      hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura') || 
+      hasPermission(user, 'rh_modelos') || hasPermission(user, 'rh_modelos_leitura') || 
+      hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura') || 
+      hasPermission(user, 'rh_relatorios') || hasPermission(user, 'rh_relatorios_leitura');
+
+    const hasTiAccess = isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura') || 
+      hasPermission(user, 'colaboradores_leitura') || hasPermission(user, 'chips_leitura') || 
+      hasPermission(user, 'licencas_leitura') || hasPermission(user, 'consumiveis_leitura') || 
+      hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
+      hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
+
+    if (module === 'TI' && !hasTiAccess && hasRhAccess) {
+        return <Navigate to="/rh/dashboard" replace />;
+    }
+    if (module === 'RH' && !hasRhAccess && hasTiAccess) {
+        return <Navigate to="/" replace />;
+    }
+
     return <Layout>{children}</Layout>;
 };
 
@@ -316,19 +340,35 @@ const AppRoutes = () => {
         }
     }, [settings?.appName]);
 
+    const hasRhAccess = isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
+      hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura') || 
+      hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura') || 
+      hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura') || 
+      hasPermission(user, 'rh_modelos') || hasPermission(user, 'rh_modelos_leitura') || 
+      hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura') || 
+      hasPermission(user, 'rh_relatorios') || hasPermission(user, 'rh_relatorios_leitura');
+
+    const hasTiAccess = isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura') || 
+      hasPermission(user, 'colaboradores_leitura') || hasPermission(user, 'chips_leitura') || 
+      hasPermission(user, 'licencas_leitura') || hasPermission(user, 'consumiveis_leitura') || 
+      hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
+      hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
+
     return (
         <Routes>
-            <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/devices" element={<ProtectedRoute><DeviceManager /></ProtectedRoute>} />
-            <Route path="/sims" element={<ProtectedRoute><SimManager /></ProtectedRoute>} />
-            <Route path="/accounts" element={<ProtectedRoute><AccountManager /></ProtectedRoute>} />
-            <Route path="/consumables" element={<ProtectedRoute><Consumables /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><UserManager /></ProtectedRoute>} />
-            <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+            <Route path="/login" element={isAuthenticated ? (!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : <Navigate to="/" replace />) : <Login />} />
+            <Route path="/" element={<ProtectedRoute module="TI">{!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : <Dashboard />}</ProtectedRoute>} />
+            <Route path="/devices" element={<ProtectedRoute module="TI"><DeviceManager /></ProtectedRoute>} />
+            <Route path="/sims" element={<ProtectedRoute module="TI"><SimManager /></ProtectedRoute>} />
+            <Route path="/accounts" element={<ProtectedRoute module="TI"><AccountManager /></ProtectedRoute>} />
+            <Route path="/consumables" element={<ProtectedRoute module="TI"><Consumables /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute module="TI"><Reports /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute module="TI"><UserManager /></ProtectedRoute>} />
+            <Route path="/operations" element={<ProtectedRoute module="TI"><Operations /></ProtectedRoute>} />
             <Route path="/tasks" element={
-                <ProtectedRoute>
+                <ProtectedRoute module="TI">
                     <TaskManager 
                         tasks={tasks} 
                         systemUsers={systemUsers}
@@ -345,14 +385,14 @@ const AppRoutes = () => {
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             
             {/* Módulo R.H. Routes */}
-            <Route path="/rh/dashboard" element={<ProtectedRoute><RhDashboard /></ProtectedRoute>} />
-            <Route path="/rh/collaborators" element={<ProtectedRoute><RhCollaboratorManager /></ProtectedRoute>} />
-            <Route path="/rh/comodato" element={<ProtectedRoute><RhComodatoManager /></ProtectedRoute>} />
-            <Route path="/rh/occurrences" element={<ProtectedRoute><RhOccurrenceManager /></ProtectedRoute>} />
-            <Route path="/rh/assets" element={<ProtectedRoute><RhAssetManager /></ProtectedRoute>} />
+            <Route path="/rh/dashboard" element={<ProtectedRoute module="RH"><RhDashboard /></ProtectedRoute>} />
+            <Route path="/rh/collaborators" element={<ProtectedRoute module="RH"><RhCollaboratorManager /></ProtectedRoute>} />
+            <Route path="/rh/comodato" element={<ProtectedRoute module="RH"><RhComodatoManager /></ProtectedRoute>} />
+            <Route path="/rh/occurrences" element={<ProtectedRoute module="RH"><RhOccurrenceManager /></ProtectedRoute>} />
+            <Route path="/rh/assets" element={<ProtectedRoute module="RH"><RhAssetManager /></ProtectedRoute>} />
 
             <Route path="/sign-term/:token" element={<DigitalSignature />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to={!hasTiAccess && hasRhAccess ? "/rh/dashboard" : "/"} replace />} />
         </Routes>
     );
 }

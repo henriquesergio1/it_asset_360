@@ -2778,7 +2778,7 @@ async function updateUserPendingStatus(pool, userId) {
             const pool = await sql.connect(dbConfig);
             const result = await pool.request()
                 .input('Email', sql.NVarChar, email)
-                .query('SELECT Id as id, Name as name, Email as email, Password as password, Role as role FROM SystemUsers WHERE Email=@Email');
+                .query('SELECT Id as id, Name as name, Email as email, Password as password, Role as role, ID_Perfil, Permissoes FROM SystemUsers WHERE Email=@Email');
             const user = result.recordset[0];
             if (!user) return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
             let passwordValid = false;
@@ -2799,8 +2799,20 @@ async function updateUserPendingStatus(pool, userId) {
                 }
             }
             if (!passwordValid) return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
-            // Retorna o usuário SEM a senha
+            // Retorna o usuário SEM a senha, incluindo ID_Perfil e Permissoes processadas
             const { password: _omit, ...safeUser } = user;
+            if (safeUser.ID_Perfil && !isNaN(Number(safeUser.ID_Perfil))) {
+                safeUser.ID_Perfil = Number(safeUser.ID_Perfil);
+                safeUser.idPerfil = safeUser.ID_Perfil;
+            }
+            if (safeUser.Permissoes && typeof safeUser.Permissoes === 'string') {
+                try {
+                    safeUser.Permissoes = JSON.parse(safeUser.Permissoes);
+                    safeUser.permissoes = safeUser.Permissoes;
+                } catch (e) {
+                    safeUser.Permissoes = {};
+                }
+            }
             res.json({ success: true, user: safeUser });
         } catch (err) {
             console.error('ERRO POST /api/auth/login:', err);

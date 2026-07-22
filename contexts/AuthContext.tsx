@@ -14,7 +14,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
- const { systemUsers } = useData();
+ const { systemUsers, profiles } = useData();
  
  // Sincronização IMEDIATA na inicialização para evitar que o isAuthenticated seja false por alguns ms
  const [user, setUser] = useState<SystemUser | null>(() => {
@@ -25,6 +25,20 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
  return null;
  }
  });
+
+ // Re-resolve permissões do usuário logado se os perfis do banco forem sincronizados/atualizados
+ useEffect(() => {
+   if (user && profiles && profiles.length > 0) {
+     const updatedUser = resolveUserPermissions(user, profiles);
+     if (
+       JSON.stringify(updatedUser.Permissoes) !== JSON.stringify(user.Permissoes) || 
+       updatedUser.Nome_Perfil !== user.Nome_Perfil
+     ) {
+       setUser(updatedUser);
+       localStorage.setItem('it_asset_user', JSON.stringify(updatedUser));
+     }
+   }
+ }, [profiles]);
 
  const login = async (email: string, pass: string) => {
   // Tenta autenticar via endpoint seguro do servidor (bcrypt no backend)
@@ -37,7 +51,7 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
     if (response.ok) {
       const data = await response.json();
       if (data.success && data.user) {
-        const resolved = resolveUserPermissions(data.user);
+        const resolved = resolveUserPermissions(data.user, profiles);
         setUser(resolved);
         localStorage.setItem('it_asset_user', JSON.stringify(resolved));
         return true;
@@ -51,7 +65,7 @@ export const AuthProvider: React.FC<{ children?: React.ReactNode }> = ({ childre
   // Fallback mock: compara contra usuários carregados em memória (sem banco)
   const foundUser = systemUsers.find(u => u.email === email && (u as any).password === pass);
   if (foundUser) {
-    const resolved = resolveUserPermissions(foundUser);
+    const resolved = resolveUserPermissions(foundUser, profiles);
     setUser(resolved);
     localStorage.setItem('it_asset_user', JSON.stringify(resolved));
     return true;

@@ -89,15 +89,17 @@ export function hasPermission(user: any, key: string): boolean {
 /**
  * Resolve as permissões dinamicamente para um usuário com base no seu perfil cadastrado.
  */
-export function resolveUserPermissions(user: any): any {
+export function resolveUserPermissions(user: any, customProfiles?: Perfil[]): any {
   if (!user) return null;
 
-  let profiles: Perfil[] = [];
-  const saved = localStorage.getItem('rbac_profiles');
-  if (saved) {
-    try {
-      profiles = JSON.parse(saved);
-    } catch (e) {}
+  let profiles: Perfil[] = customProfiles && customProfiles.length > 0 ? customProfiles : [];
+  if (profiles.length === 0) {
+    const saved = localStorage.getItem('rbac_profiles');
+    if (saved) {
+      try {
+        profiles = JSON.parse(saved);
+      } catch (e) {}
+    }
   }
 
   // Se não houver perfis cadastrados, usa os padrões iniciais
@@ -114,10 +116,11 @@ export function resolveUserPermissions(user: any): any {
         Nome: 'Operador Suporte',
         Ativo: true,
         Permissoes: {
+          dashboard_leitura: true,
           dispositivos_leitura: true,
           dispositivos_escrita: true,
-          usuarios_leitura: true,
-          usuarios_escrita: true,
+          colaboradores_leitura: true,
+          colaboradores_escrita: true,
           ativos_leitura: true,
           ativos_escrita: false,
           financeiro_leitura: true
@@ -140,10 +143,23 @@ export function resolveUserPermissions(user: any): any {
         Ativo: true,
         Permissoes: {
           rh_dashboard: true,
+          rh_dashboard_leitura: true,
+          rh_dashboard_escrita: true,
           rh_colaboradores: true,
+          rh_colaboradores_leitura: true,
+          rh_colaboradores_escrita: true,
           rh_comodatos: true,
+          rh_comodato_leitura: true,
+          rh_comodato_escrita: true,
           rh_atestados: true,
-          rh_configuracoes: true
+          rh_ocorrencias_leitura: true,
+          rh_ocorrencias_escrita: true,
+          rh_modelos_leitura: true,
+          rh_modelos_escrita: true,
+          rh_estoque_leitura: true,
+          rh_estoque_escrita: true,
+          rh_relatorios_leitura: true,
+          rh_relatorios_escrita: true
         }
       },
       {
@@ -159,15 +175,30 @@ export function resolveUserPermissions(user: any): any {
   }
 
   const userProfileId = user.ID_Perfil || user.idPerfil || (user.role && !isNaN(Number(user.role)) ? Number(user.role) : null);
-  const profile = profiles.find(p => p.ID_Perfil === Number(userProfileId));
+  const profile = userProfileId ? profiles.find(p => Number(p.ID_Perfil) === Number(userProfileId)) : null;
 
   if (profile) {
+    const finalPerms = (profile.Permissoes && Object.keys(profile.Permissoes).length > 0)
+      ? profile.Permissoes
+      : (user.Permissoes || user.permissoes || {});
     return {
       ...user,
       ID_Perfil: profile.ID_Perfil,
+      idPerfil: profile.ID_Perfil,
       Nome_Perfil: profile.Nome,
-      Permissoes: profile.Permissoes,
-      permissoes: profile.Permissoes
+      Permissoes: finalPerms,
+      permissoes: finalPerms
+    };
+  }
+
+  // Se o usuário possui um dicionário de permissões vindo diretamente do backend
+  const userDirectPerms = user.Permissoes || user.permissoes;
+  if (userDirectPerms && typeof userDirectPerms === 'object' && Object.keys(userDirectPerms).length > 0) {
+    return {
+      ...user,
+      Nome_Perfil: user.Nome_Perfil || (user.role === 'ADMIN' ? 'Administrador TI' : 'Operador'),
+      Permissoes: userDirectPerms,
+      permissoes: userDirectPerms
     };
   }
 
@@ -176,6 +207,7 @@ export function resolveUserPermissions(user: any): any {
     return {
       ...user,
       ID_Perfil: 1,
+      idPerfil: 1,
       Nome_Perfil: 'Administrador TI',
       Permissoes: { admin: true },
       permissoes: { admin: true }
@@ -185,21 +217,24 @@ export function resolveUserPermissions(user: any): any {
   return {
     ...user,
     ID_Perfil: 2,
+    idPerfil: 2,
     Nome_Perfil: 'Operador Suporte',
     Permissoes: {
+      dashboard_leitura: true,
       dispositivos_leitura: true,
       dispositivos_escrita: true,
-      usuarios_leitura: true,
-      usuarios_escrita: true,
+      colaboradores_leitura: true,
+      colaboradores_escrita: true,
       ativos_leitura: true,
       ativos_escrita: false,
       financeiro_leitura: true
     },
     permissoes: {
+      dashboard_leitura: true,
       dispositivos_leitura: true,
       dispositivos_escrita: true,
-      usuarios_leitura: true,
-      usuarios_escrita: true,
+      colaboradores_leitura: true,
+      colaboradores_escrita: true,
       ativos_leitura: true,
       ativos_escrita: false,
       financeiro_leitura: true
