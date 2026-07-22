@@ -143,17 +143,6 @@ export function resolveUserPermissions(user: any, customProfiles?: Perfil[]): an
       },
       {
         ID_Perfil: 3,
-        Nome: 'Financeiro e Compras',
-        Ativo: true,
-        Permissoes: {
-          financeiro_leitura: true,
-          financeiro_escrita: true,
-          faturamento_leitura: true,
-          faturamento_escrita: true
-        }
-      },
-      {
-        ID_Perfil: 4,
         Nome: 'Gestor de R.H.',
         Ativo: true,
         Permissoes: {
@@ -169,12 +158,26 @@ export function resolveUserPermissions(user: any, customProfiles?: Perfil[]): an
           rh_atestados: true,
           rh_ocorrencias_leitura: true,
           rh_ocorrencias_escrita: true,
+          rh_modelos: true,
           rh_modelos_leitura: true,
           rh_modelos_escrita: true,
+          rh_ativos: true,
           rh_estoque_leitura: true,
           rh_estoque_escrita: true,
+          rh_relatorios: true,
           rh_relatorios_leitura: true,
           rh_relatorios_escrita: true
+        }
+      },
+      {
+        ID_Perfil: 4,
+        Nome: 'Financeiro e Compras',
+        Ativo: true,
+        Permissoes: {
+          financeiro_leitura: true,
+          financeiro_escrita: true,
+          faturamento_leitura: true,
+          faturamento_escrita: true
         }
       },
       {

@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.4
+// Servidor express unificado com API e SPA React - v3.92.5
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -863,6 +863,25 @@ async function initializeDatabase() {
             console.error('AVISO: Falha na migração dos termos legados:', migErr.message);
         }
 
+        // Garante população inicial dos Perfis de Acesso (RBAC) caso a tabela esteja vazia
+        try {
+            const checkRbac = await pool.request().query("SELECT COUNT(*) as count FROM RbacProfiles");
+            if (checkRbac.recordset[0]?.count === 0) {
+                console.log('- Populando RbacProfiles com perfis padrão...');
+                await pool.request().query(`
+                    SET IDENTITY_INSERT RbacProfiles ON;
+                    INSERT INTO RbacProfiles (ID_Perfil, Nome, Ativo, Permissoes) VALUES 
+                    (1, 'Administrador TI', 1, '{"admin":true}'),
+                    (2, 'Operador Suporte', 1, '{"dashboard_leitura":true,"dispositivos_leitura":true,"dispositivos_escrita":true,"colaboradores_leitura":true,"colaboradores_escrita":true,"ativos_leitura":true,"ativos_escrita":false,"financeiro_leitura":true}'),
+                    (3, 'Gestor de R.H.', 1, '{"rh_dashboard":true,"rh_dashboard_leitura":true,"rh_dashboard_escrita":true,"rh_colaboradores":true,"rh_colaboradores_leitura":true,"rh_colaboradores_escrita":true,"rh_comodatos":true,"rh_comodato_leitura":true,"rh_comodato_escrita":true,"rh_atestados":true,"rh_ocorrencias_leitura":true,"rh_ocorrencias_escrita":true,"rh_modelos":true,"rh_modelos_leitura":true,"rh_modelos_escrita":true,"rh_ativos":true,"rh_estoque_leitura":true,"rh_estoque_escrita":true,"rh_relatorios":true,"rh_relatorios_leitura":true,"rh_relatorios_escrita":true}');
+                    SET IDENTITY_INSERT RbacProfiles OFF;
+                `);
+                console.log('  ... Perfis padrão RBAC inseridos com sucesso.');
+            }
+        } catch (rbacSeedErr) {
+            console.error('AVISO: Falha ao popular RbacProfiles:', rbacSeedErr.message);
+        }
+
         await createIndexes(pool);
 
         console.log('Banco de dados pronto.');
@@ -954,7 +973,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.4', 
+            version: '3.92.5', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1081,7 +1100,7 @@ app.get('/api/bootstrap', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
                 SELECT 
@@ -1104,7 +1123,8 @@ app.get('/api/sync', async (req, res) => {
             safeQuery(pool, "SELECT * FROM RhTermTemplates"),
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             safeQuery(pool, "SELECT * FROM RhAssetItems"),
-            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC")
+            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC"),
+            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -1144,7 +1164,13 @@ app.get('/api/sync', async (req, res) => {
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
-            rhAssetItems: format(rhAssetItemsRes)
+            rhAssetItems: format(rhAssetItemsRes),
+            profiles: (profilesRes?.recordset || []).map(r => ({
+                ID_Perfil: r.ID_Perfil,
+                Nome: r.Nome,
+                Ativo: r.Ativo === true || r.Ativo === 1,
+                Permissoes: r.Permissoes ? (typeof r.Permissoes === 'string' && r.Permissoes.startsWith('{') ? JSON.parse(r.Permissoes) : r.Permissoes) : {}
+            }))
         });
     } catch (err) {
         console.error('[SYNC ERROR]:', err);
@@ -2951,12 +2977,26 @@ async function updateUserPendingStatus(pool, userId) {
 
             const { Nome, Ativo, Permissoes, _adminUser } = req.body || {};
             const permStr = typeof Permissoes === 'object' ? JSON.stringify(Permissoes) : String(Permissoes || '{}');
-            await pool.request()
+            const updateResult = await pool.request()
                 .input('Id', sql.Int, targetId)
                 .input('Nome', sql.NVarChar, Nome || '')
                 .input('Ativo', sql.Bit, Ativo !== false ? 1 : 0)
                 .input('Permissoes', sql.NVarChar, permStr)
                 .query("UPDATE RbacProfiles SET Nome=@Nome, Ativo=@Ativo, Permissoes=@Permissoes WHERE ID_Perfil=@Id");
+
+            if (updateResult.rowsAffected[0] === 0) {
+                console.log(`[RBAC] Perfil ${targetId} não existia na tabela. Realizando UPSERT...`);
+                await pool.request()
+                    .input('Id', sql.Int, targetId)
+                    .input('Nome', sql.NVarChar, Nome || '')
+                    .input('Ativo', sql.Bit, Ativo !== false ? 1 : 0)
+                    .input('Permissoes', sql.NVarChar, permStr)
+                    .query(`
+                        SET IDENTITY_INSERT RbacProfiles ON;
+                        INSERT INTO RbacProfiles (ID_Perfil, Nome, Ativo, Permissoes) VALUES (@Id, @Nome, @Ativo, @Permissoes);
+                        SET IDENTITY_INSERT RbacProfiles OFF;
+                    `);
+            }
 
             await logAction(String(targetId), 'RbacProfile', 'Atualização', _adminUser || 'Admin', Nome || '', `Perfil de acesso atualizado: ${Nome || targetId}`);
             res.json({ success: true });

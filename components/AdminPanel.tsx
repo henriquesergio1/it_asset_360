@@ -279,6 +279,7 @@ ORDER BY f.nome;`;
       Nome: 'Operador Suporte',
       Ativo: true,
       Permissoes: {
+        dashboard_leitura: true,
         dispositivos_leitura: true,
         dispositivos_escrita: true,
         colaboradores_leitura: true,
@@ -293,16 +294,38 @@ ORDER BY f.nome;`;
       Nome: 'Gestor de R.H.',
       Ativo: true,
       Permissoes: {
+        rh_dashboard: true,
         rh_dashboard_leitura: true,
+        rh_dashboard_escrita: true,
+        rh_colaboradores: true,
         rh_colaboradores_leitura: true,
         rh_colaboradores_escrita: true,
+        rh_comodatos: true,
         rh_comodato_leitura: true,
         rh_comodato_escrita: true,
+        rh_atestados: true,
         rh_ocorrencias_leitura: true,
         rh_ocorrencias_escrita: true,
+        rh_modelos: true,
         rh_modelos_leitura: true,
+        rh_modelos_escrita: true,
+        rh_ativos: true,
         rh_estoque_leitura: true,
-        rh_relatorios_leitura: true
+        rh_estoque_escrita: true,
+        rh_relatorios: true,
+        rh_relatorios_leitura: true,
+        rh_relatorios_escrita: true
+      }
+    },
+    {
+      ID_Perfil: 4,
+      Nome: 'Financeiro e Compras',
+      Ativo: true,
+      Permissoes: {
+        financeiro_leitura: true,
+        financeiro_escrita: true,
+        faturamento_leitura: true,
+        faturamento_escrita: true
       }
     }
   ];
@@ -1734,64 +1757,53 @@ ORDER BY f.nome;`;
     <div className="space-y-1 pt-3 border-t border-slate-200 dark:border-slate-700/60">
       <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider block px-2 pb-1 border-b border-indigo-500/20">Módulo R.H. (Recursos Humanos)</span>
       {[
-        { label: '📈 Dashboard R.H.', readKey: 'rh_dashboard_leitura', writeKey: 'rh_dashboard_escrita' },
-        { label: '👨‍💼 Colaboradores R.H.', readKey: 'rh_colaboradores_leitura', writeKey: 'rh_colaboradores_escrita' },
-        { label: '📋 Termos / Comodato R.H.', readKey: 'rh_comodato_leitura', writeKey: 'rh_comodato_escrita' },
-        { label: '🏥 Ocorrências & Faltas R.H.', readKey: 'rh_ocorrencias_leitura', writeKey: 'rh_ocorrencias_escrita' },
-        { label: '✍️ Modelos de Termos R.H.', readKey: 'rh_modelos_leitura', writeKey: 'rh_modelos_escrita' },
-        { label: '🥾 Estoque de Itens / EPI R.H.', readKey: 'rh_estoque_leitura', writeKey: 'rh_estoque_escrita' },
-        { label: '📊 Relatórios R.H.', readKey: 'rh_relatorios_leitura', writeKey: 'rh_relatorios_escrita' }
-      ].map(m => (
-        <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
-          <div className="flex gap-8">
-            <div className="w-16 flex justify-center">
-              <input 
-                type="checkbox" 
-                disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', '')] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', 's')]} 
-                onChange={e => {
-                  const val = e.target.checked;
-                  const legacy1 = m.readKey.replace('_leitura', '');
-                  const legacy2 = m.readKey.replace('_leitura', 's');
-                  setProfileForm({
-                    ...profileForm,
-                    Permissoes: {
-                      ...profileForm.Permissoes,
-                      [m.readKey]: val,
-                      [legacy1]: val,
-                      [legacy2]: val
-                    }
-                  });
-                }}
-                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-              />
-            </div>
-            <div className="w-16 flex justify-center">
-              <input 
-                type="checkbox" 
-                disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', '')] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', 's')]} 
-                onChange={e => {
-                  const val = e.target.checked;
-                  const legacy1 = m.writeKey.replace('_escrita', '');
-                  const legacy2 = m.writeKey.replace('_escrita', 's');
-                  setProfileForm({
-                    ...profileForm,
-                    Permissoes: {
-                      ...profileForm.Permissoes,
-                      [m.writeKey]: val,
-                      [legacy1]: val,
-                      [legacy2]: val
-                    }
-                  });
-                }}
-                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-              />
+        { label: '📈 Dashboard R.H.', readKey: 'rh_dashboard_leitura', writeKey: 'rh_dashboard_escrita', aliases: ['rh_dashboard'] },
+        { label: '👨‍💼 Colaboradores R.H.', readKey: 'rh_colaboradores_leitura', writeKey: 'rh_colaboradores_escrita', aliases: ['rh_colaboradores'] },
+        { label: '📋 Termos / Comodato R.H.', readKey: 'rh_comodato_leitura', writeKey: 'rh_comodato_escrita', aliases: ['rh_comodato', 'rh_comodatos'] },
+        { label: '🏥 Ocorrências & Faltas R.H.', readKey: 'rh_ocorrencias_leitura', writeKey: 'rh_ocorrencias_escrita', aliases: ['rh_ocorrencias', 'rh_atestados'] },
+        { label: '✍️ Modelos de Termos R.H.', readKey: 'rh_modelos_leitura', writeKey: 'rh_modelos_escrita', aliases: ['rh_modelos'] },
+        { label: '🥾 Estoque de Itens / EPI R.H.', readKey: 'rh_estoque_leitura', writeKey: 'rh_estoque_escrita', aliases: ['rh_estoque', 'rh_ativos'] },
+        { label: '📊 Relatórios R.H.', readKey: 'rh_relatorios_leitura', writeKey: 'rh_relatorios_escrita', aliases: ['rh_relatorios'] }
+      ].map(m => {
+        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a]);
+        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a + '_escrita']);
+
+        return (
+          <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
+            <div className="flex gap-8">
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isReadChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.readKey]: val };
+                    m.aliases.forEach(a => { updatedPerms[a] = val; });
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+              </div>
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isWriteChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.writeKey]: val };
+                    m.aliases.forEach(a => { updatedPerms[a] = val; updatedPerms[a + '_escrita'] = val; });
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   </div>
   </div>
