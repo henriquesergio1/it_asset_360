@@ -1689,13 +1689,16 @@ ORDER BY f.nome;`;
               <input 
                 type="checkbox" 
                 disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey]} 
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', '')]} 
                 onChange={e => {
+                  const val = e.target.checked;
+                  const legacyKey = m.readKey.replace('_leitura', '');
                   setProfileForm({
                     ...profileForm,
                     Permissoes: {
                       ...profileForm.Permissoes,
-                      [m.readKey]: e.target.checked
+                      [m.readKey]: val,
+                      [legacyKey]: val
                     }
                   });
                 }}
@@ -1706,13 +1709,16 @@ ORDER BY f.nome;`;
               <input 
                 type="checkbox" 
                 disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', '')]} 
                 onChange={e => {
+                  const val = e.target.checked;
+                  const legacyKey = m.writeKey.replace('_escrita', '');
                   setProfileForm({
                     ...profileForm,
                     Permissoes: {
                       ...profileForm.Permissoes,
-                      [m.writeKey]: e.target.checked
+                      [m.writeKey]: val,
+                      [legacyKey]: val
                     }
                   });
                 }}
@@ -1745,11 +1751,16 @@ ORDER BY f.nome;`;
                 disabled={profileForm.Permissoes?.admin}
                 checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', '')] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', 's')]} 
                 onChange={e => {
+                  const val = e.target.checked;
+                  const legacy1 = m.readKey.replace('_leitura', '');
+                  const legacy2 = m.readKey.replace('_leitura', 's');
                   setProfileForm({
                     ...profileForm,
                     Permissoes: {
                       ...profileForm.Permissoes,
-                      [m.readKey]: e.target.checked
+                      [m.readKey]: val,
+                      [legacy1]: val,
+                      [legacy2]: val
                     }
                   });
                 }}
@@ -1760,13 +1771,18 @@ ORDER BY f.nome;`;
               <input 
                 type="checkbox" 
                 disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey]} 
+                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', '')] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', 's')]} 
                 onChange={e => {
+                  const val = e.target.checked;
+                  const legacy1 = m.writeKey.replace('_escrita', '');
+                  const legacy2 = m.writeKey.replace('_escrita', 's');
                   setProfileForm({
                     ...profileForm,
                     Permissoes: {
                       ...profileForm.Permissoes,
-                      [m.writeKey]: e.target.checked
+                      [m.writeKey]: val,
+                      [legacy1]: val,
+                      [legacy2]: val
                     }
                   });
                 }}

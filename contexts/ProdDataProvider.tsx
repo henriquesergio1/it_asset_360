@@ -208,7 +208,12 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
  const putData = async (endpoint: string, data: any) => {
   if (checkReadOnly()) throw new Error('MODO_CONSULTA');
-  const res = await fetch(`${API_URL}/api/${endpoint}/${data.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+  const targetId = data.id !== undefined ? data.id : (data.ID_Perfil !== undefined ? data.ID_Perfil : data.Id);
+  const cleanEndpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+  const url = (targetId !== undefined && (cleanEndpoint.endsWith(`/${targetId}`) || cleanEndpoint.includes(`/${targetId}/`)))
+    ? `${API_URL}/api/${cleanEndpoint}`
+    : (targetId !== undefined ? `${API_URL}/api/${cleanEndpoint}/${targetId}` : `${API_URL}/api/${cleanEndpoint}`);
+  const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
   return safeJson(res, endpoint);
  };
 
@@ -495,7 +500,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     updateRbacProfile: async (p, adm) => {
       try {
-        await putData(`rbac-profiles/${p.ID_Perfil}`, { ...p, _adminUser: adm });
+        await putData('rbac-profiles', { ...p, id: p.ID_Perfil, _adminUser: adm });
         fetchData(true);
       } catch (err) {
         showToast('Erro ao atualizar perfil de acesso', 'error');

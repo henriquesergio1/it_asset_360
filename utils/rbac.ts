@@ -76,6 +76,21 @@ export function hasPermission(user: any, key: string): boolean {
     // Painéis/Relatórios
     'paineis_leitura': 'paineis',
     'paineis_escrita': 'paineis',
+
+    // Mapeamentos R.H.
+    'rh_dashboard_leitura': 'rh_dashboard',
+    'rh_colaboradores_leitura': 'rh_colaboradores',
+    'rh_colaboradores_escrita': 'rh_colaboradores',
+    'rh_comodato_leitura': 'rh_comodatos',
+    'rh_comodato_escrita': 'rh_comodatos',
+    'rh_ocorrencias_leitura': 'rh_atestados',
+    'rh_ocorrencias_escrita': 'rh_atestados',
+    'rh_modelos_leitura': 'rh_modelos',
+    'rh_modelos_escrita': 'rh_modelos',
+    'rh_estoque_leitura': 'rh_ativos',
+    'rh_estoque_escrita': 'rh_ativos',
+    'rh_relatorios_leitura': 'rh_relatorios',
+    'rh_relatorios_escrita': 'rh_relatorios',
   };
 
   const legacyKey = legacyMapping[key];
