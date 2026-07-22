@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.11
+// Servidor express unificado com API e SPA React - v3.92.12
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -987,7 +987,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.11', 
+            version: '3.92.12', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -3576,7 +3576,17 @@ async function updateUserPendingStatus(pool, userId) {
         } catch (err) { res.status(500).send(err.message); }
     });
 
+    crud('Users', 'users', 'User');
+    crud('Users', 'system-users', 'User');
     crud('SimCards', 'sims', 'Sim');
+    crud('SoftwareAccounts', 'software-accounts', 'SoftwareAccount');
+    crud('Models', 'models', 'Model');
+    crud('Brands', 'brands', 'Brand');
+    crud('AssetTypes', 'asset-types', 'AssetType');
+    crud('Sectors', 'sectors', 'Sector');
+    crud('AccessoryTypes', 'accessory-types', 'AccessoryType');
+    crud('CustomFields', 'custom-fields', 'CustomField');
+    crud('MaintenanceRecords', 'maintenances', 'Maintenance');
     // crud('Devices', 'devices', 'Device'); // Replaced by custom handlers above
 
     // --- Admin Tools ---
