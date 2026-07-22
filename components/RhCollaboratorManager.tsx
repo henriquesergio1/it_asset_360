@@ -2775,13 +2775,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <select
                         value={form.companyCnpj || ''}
-                        onChange={e => {
-                          if (e.target.value === '__new__') {
-                            setShowCompanyModal(true);
-                          } else {
-                            setForm(p => ({ ...p, companyCnpj: e.target.value }));
-                          }
-                        }}
+                        onChange={e => setForm(p => ({ ...p, companyCnpj: e.target.value }))}
                         className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                       >
                         <option value="">-- Selecione a Empresa de Registro --</option>
@@ -2790,7 +2784,6 @@ export const RhCollaboratorManager: React.FC = () => {
                             {c.companyName} - CNPJ: {c.cnpj}
                           </option>
                         ))}
-                        <option value="__new__">+ Cadastrar Nova Empresa...</option>
                       </select>
                     </div>
 
