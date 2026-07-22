@@ -1091,7 +1091,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...u,
-                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw` : undefined,
+                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto
                 };
             }),
@@ -1109,7 +1109,7 @@ app.get('/api/bootstrap', async (req, res) => {
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...c,
-                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
                         id: d.id,
@@ -1185,7 +1185,7 @@ app.get('/api/sync', async (req, res) => {
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...u,
-                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw` : undefined,
+                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto
                 };
             }),
@@ -1201,7 +1201,7 @@ app.get('/api/sync', async (req, res) => {
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...c,
-                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
                         id: d.id,
@@ -1650,7 +1650,9 @@ const sendImageFromDbField = (res, rawData) => {
             else if (hex.startsWith('52494646')) mime = 'image/webp';
         }
         res.setHeader('Content-Type', mime);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         return res.send(rawData);
     }
 
@@ -1684,7 +1686,9 @@ const sendImageFromDbField = (res, rawData) => {
 
     const buffer = Buffer.from(cleanBase64, 'base64');
     res.setHeader('Content-Type', mime);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     return res.send(buffer);
 };
 
