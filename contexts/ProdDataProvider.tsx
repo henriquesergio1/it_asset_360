@@ -144,6 +144,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
    const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
    const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
+   const profiles = syncData?.profiles || bootstrapData?.profiles || [];
 
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
@@ -480,10 +481,39 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
  };
 
  const value: DataContextType = {
-   devices, sims, users, logs, loading, error, systemUsers, settings,
-   models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
-   accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
-   fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getTermEvidences, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
+    devices, sims, users, logs, loading, error, systemUsers, settings,
+    models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
+    accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
+    rhCollaborators, rhCompanies, rhDependents, rhOccurrences, rhTemplates, rhTerms, rhAssetItems, profiles,
+    addRbacProfile: async (p, adm) => {
+      try {
+        await postData('rbac-profiles', { ...p, _adminUser: adm });
+        fetchData(true);
+      } catch (err) {
+        showToast('Erro ao criar perfil de acesso', 'error');
+      }
+    },
+    updateRbacProfile: async (p, adm) => {
+      try {
+        await putData(`rbac-profiles/${p.ID_Perfil}`, { ...p, _adminUser: adm });
+        fetchData(true);
+      } catch (err) {
+        showToast('Erro ao atualizar perfil de acesso', 'error');
+      }
+    },
+    deleteRbacProfile: async (id, adm) => {
+      try {
+        await fetch(`${API_URL}/api/rbac-profiles/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _adminUser: adm })
+        });
+        fetchData(true);
+      } catch (err) {
+        showToast('Erro ao excluir perfil de acesso', 'error');
+      }
+    },
+    fetchData, refreshData: fetchData, fetchConsumableTransactions, getTermFile, getTermEvidences, getDeviceInvoice, getMaintenanceInvoice, getLogDetail,
    addAccount, updateAccount, deleteAccount, addDevice, updateDevice, deleteDevice, restoreDevice, addSim, updateSim, deleteSim, addUser, updateUser, toggleUserActive, 
    addAudit: async (audit: DeviceAudit, admin: string) => { 
      if (checkReadOnly()) return;
@@ -813,13 +843,6 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return res.token;
  },
  updateExternalDbConfig, testExternalDbConnection, fetchExpedienteAlerts, saveExpedienteOverride,
-  rhCollaborators,
-  rhCompanies,
-  rhDependents,
-  rhOccurrences,
-  rhTemplates,
-  rhTerms,
-  rhAssetItems,
   addRhCompany: async (company: any, adminName: string) => {
     if (checkReadOnly()) return;
     try {

@@ -171,6 +171,7 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields, accounts,
     externalDbConfig: null, expedienteAlerts: [], consumables, consumableTransactions, audits,
     isReadOnly,
+    profiles: [],
     rhCollaborators,
     rhCompanies: [
       { id: 'company-1', cnpj: '10.213.373/0001-02', companyName: 'Rainha Logística e Transportes LTDA' },

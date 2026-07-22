@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhCompany } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhCompany, Perfil } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -36,6 +36,12 @@ export interface DataContextType {
  rhTemplates: RhTermTemplate[];
  rhTerms: RhTerm[];
  rhAssetItems: RhAssetItem[];
+
+ // Perfis RBAC
+ profiles: Perfil[];
+ addRbacProfile?: (profile: Perfil, adminName: string) => Promise<void>;
+ updateRbacProfile?: (profile: Perfil, adminName: string) => Promise<void>;
+ deleteRbacProfile?: (id: number, adminName: string) => Promise<void>;
 
  loading?: boolean;
  error?: string | null;

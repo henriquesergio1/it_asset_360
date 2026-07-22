@@ -982,7 +982,7 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes
+            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes
         ] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
@@ -1015,7 +1015,8 @@ app.get('/api/bootstrap', async (req, res) => {
             safeQuery(pool, "SELECT * FROM RhTermTemplates"),
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             safeQuery(pool, "SELECT * FROM RhAssetItems"),
-            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC")
+            safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC"),
+            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -1056,7 +1057,13 @@ app.get('/api/bootstrap', async (req, res) => {
             rhOccurrences: format(rhOccurrencesRes).map(o => ({ ...o, hasFile: o.hasFile === 1, fileUrl: o.hasFile === 1 ? `/api/rh-occurrences/${o.id}/file/raw` : undefined })),
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
-            rhAssetItems: format(rhAssetItemsRes)
+            rhAssetItems: format(rhAssetItemsRes),
+            profiles: (profilesRes?.recordset || []).map(r => ({
+                ID_Perfil: r.ID_Perfil,
+                Nome: r.Nome,
+                Ativo: r.Ativo === true || r.Ativo === 1,
+                Permissoes: r.Permissoes ? (typeof r.Permissoes === 'string' && r.Permissoes.startsWith('{') ? JSON.parse(r.Permissoes) : r.Permissoes) : {}
+            }))
         });
     } catch (err) {
         console.error('[BOOTSTRAP ERROR]:', err);
@@ -2853,6 +2860,79 @@ async function updateUserPendingStatus(pool, userId) {
             res.json({ success: true, id: compId });
         } catch (err) {
             console.error('ERRO POST /api/rh-companies:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    // --- Rotas de RbacProfiles (Perfis de Acesso centralizados) ---
+    app.get('/api/rbac-profiles', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC");
+            const profiles = result.recordset.map(r => ({
+                ID_Perfil: r.ID_Perfil,
+                Nome: r.Nome,
+                Ativo: r.Ativo === true || r.Ativo === 1,
+                Permissoes: r.Permissoes ? (typeof r.Permissoes === 'string' && r.Permissoes.startsWith('{') ? JSON.parse(r.Permissoes) : r.Permissoes) : {}
+            }));
+            res.json(profiles);
+        } catch (err) {
+            console.error('ERRO GET /api/rbac-profiles:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/rbac-profiles', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { Nome, Ativo, Permissoes, _adminUser } = req.body;
+            const permStr = typeof Permissoes === 'object' ? JSON.stringify(Permissoes) : String(Permissoes || '{}');
+            const result = await pool.request()
+                .input('Nome', sql.NVarChar, Nome)
+                .input('Ativo', sql.Bit, Ativo !== false ? 1 : 0)
+                .input('Permissoes', sql.NVarChar, permStr)
+                .query("INSERT INTO RbacProfiles (Nome, Ativo, Permissoes) OUTPUT INSERTED.ID_Perfil VALUES (@Nome, @Ativo, @Permissoes)");
+            
+            const newId = result.recordset[0]?.ID_Perfil;
+            await logAction(String(newId), 'RbacProfile', 'Criação', _adminUser || 'Admin', Nome, `Novo perfil de acesso criado: ${Nome}`);
+            res.json({ success: true, id: newId });
+        } catch (err) {
+            console.error('ERRO POST /api/rbac-profiles:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.put('/api/rbac-profiles/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { Nome, Ativo, Permissoes, _adminUser } = req.body;
+            const permStr = typeof Permissoes === 'object' ? JSON.stringify(Permissoes) : String(Permissoes || '{}');
+            await pool.request()
+                .input('Id', sql.Int, parseInt(req.params.id))
+                .input('Nome', sql.NVarChar, Nome)
+                .input('Ativo', sql.Bit, Ativo !== false ? 1 : 0)
+                .input('Permissoes', sql.NVarChar, permStr)
+                .query("UPDATE RbacProfiles SET Nome=@Nome, Ativo=@Ativo, Permissoes=@Permissoes WHERE ID_Perfil=@Id");
+
+            await logAction(req.params.id, 'RbacProfile', 'Atualização', _adminUser || 'Admin', Nome, `Perfil de acesso atualizado: ${Nome}`);
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO PUT /api/rbac-profiles/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.delete('/api/rbac-profiles/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request()
+                .input('Id', sql.Int, parseInt(req.params.id))
+                .query("DELETE FROM RbacProfiles WHERE ID_Perfil=@Id");
+
+            await logAction(req.params.id, 'RbacProfile', 'Exclusão', req.body?._adminUser || 'Admin', '', 'Perfil de acesso removido');
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO DELETE /api/rbac-profiles/:id:', err);
             res.status(500).send(err.message);
         }
     });

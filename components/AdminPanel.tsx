@@ -265,51 +265,49 @@ ORDER BY f.nome;`;
  const [editingId, setEditingId] = useState<string | null>(null);
  const [userForm, setUserForm] = useState<Partial<SystemUser>>({ role: SystemRole.OPERATOR });
  
- const [profiles, setProfiles] = useState<Perfil[]>(() => {
-   const saved = localStorage.getItem('rbac_profiles');
-   if (saved) {
-     try {
-       return JSON.parse(saved);
-     } catch (e) {}
-   }
-   return [
-     {
-       ID_Perfil: 1,
-       Nome: 'Administrador TI',
-       Ativo: true,
-       Permissoes: { admin: true }
-     },
-     {
-       ID_Perfil: 2,
-       Nome: 'Operador Suporte',
-       Ativo: true,
-       Permissoes: {
-         dispositivos_leitura: true,
-         dispositivos_escrita: true,
-         colaboradores_leitura: true,
-         colaboradores_escrita: true,
-         ativos_leitura: true,
-         ativos_escrita: false,
-         financeiro_leitura: true
-       }
-     },
-     {
-       ID_Perfil: 3,
-       Nome: 'Financeiro e Compras',
-       Ativo: true,
-       Permissoes: {
-         financeiro_leitura: true,
-         financeiro_escrita: true,
-         faturamento_leitura: true,
-         faturamento_escrita: true
-       }
-     }
-   ];
- });
+  const { profiles: dataProfiles = [], addRbacProfile, updateRbacProfile, deleteRbacProfile } = useData();
 
- useEffect(() => {
-   localStorage.setItem('rbac_profiles', JSON.stringify(profiles));
- }, [profiles]);
+  const DEFAULT_PROFILES: Perfil[] = [
+    {
+      ID_Perfil: 1,
+      Nome: 'Administrador TI',
+      Ativo: true,
+      Permissoes: { admin: true }
+    },
+    {
+      ID_Perfil: 2,
+      Nome: 'Operador Suporte',
+      Ativo: true,
+      Permissoes: {
+        dispositivos_leitura: true,
+        dispositivos_escrita: true,
+        colaboradores_leitura: true,
+        colaboradores_escrita: true,
+        ativos_leitura: true,
+        ativos_escrita: false,
+        financeiro_leitura: true
+      }
+    },
+    {
+      ID_Perfil: 3,
+      Nome: 'Gestor de R.H.',
+      Ativo: true,
+      Permissoes: {
+        rh_dashboard_leitura: true,
+        rh_colaboradores_leitura: true,
+        rh_colaboradores_escrita: true,
+        rh_comodato_leitura: true,
+        rh_comodato_escrita: true,
+        rh_ocorrencias_leitura: true,
+        rh_ocorrencias_escrita: true,
+        rh_modelos_leitura: true,
+        rh_estoque_leitura: true,
+        rh_relatorios_leitura: true
+      }
+    }
+  ];
+
+  const profiles: Perfil[] = (dataProfiles && dataProfiles.length > 0) ? dataProfiles : DEFAULT_PROFILES;
 
  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
  const [editingProfile, setEditingProfile] = useState<Perfil | null>(null);
@@ -355,55 +353,70 @@ ORDER BY f.nome;`;
    setIsProfileModalOpen(true);
  };
 
- const handleProfileSubmit = (e: React.FormEvent) => {
-   e.preventDefault();
-   if (!profileForm.Nome.trim()) {
-     showToast("Insira o nome do perfil", "error");
-     return;
-   }
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileForm.Nome.trim()) {
+      showToast("Insira o nome do perfil", "error");
+      return;
+    }
 
-   try {
-     if (editingProfile) {
-       const updated = profiles.map(p => p.ID_Perfil === editingProfile.ID_Perfil ? { ...p, Nome: profileForm.Nome, Ativo: profileForm.Ativo, Permissoes: profileForm.Permissoes } : p);
-       setProfiles(updated);
-       showToast("Perfil atualizado com sucesso!", "success");
+    try {
+      if (editingProfile) {
+        if (updateRbacProfile) {
+          await updateRbacProfile(
+            {
+              ID_Perfil: editingProfile.ID_Perfil,
+              Nome: profileForm.Nome,
+              Ativo: profileForm.Ativo,
+              Permissoes: profileForm.Permissoes
+            },
+            currentUser?.name || 'Admin'
+          );
+        }
+        showToast("Perfil atualizado com sucesso!", "success");
 
-       if (currentUser && (currentUser.ID_Perfil === editingProfile.ID_Perfil || currentUser.idPerfil === editingProfile.ID_Perfil)) {
-         const updatedUser = {
-           ...currentUser,
-           Permissoes: profileForm.Permissoes,
-           permissoes: profileForm.Permissoes,
-           Nome_Perfil: profileForm.Nome
-         };
-         localStorage.setItem('it_asset_user', JSON.stringify(updatedUser));
-       }
-     } else {
-       const newId = profiles.length > 0 ? Math.max(...profiles.map(p => p.ID_Perfil || 0)) + 1 : 1;
-       const newProfile: Perfil = {
-         ID_Perfil: newId,
-         Nome: profileForm.Nome,
-         Ativo: profileForm.Ativo,
-         Permissoes: profileForm.Permissoes
-       };
-       setProfiles([...profiles, newProfile]);
-       showToast("Perfil criado com sucesso!", "success");
-     }
-     setIsProfileModalOpen(false);
-   } catch (err) {
-     showToast("Erro ao salvar perfil", "error");
-   }
- };
+        if (currentUser && (currentUser.ID_Perfil === editingProfile.ID_Perfil || currentUser.idPerfil === editingProfile.ID_Perfil)) {
+          const updatedUser = {
+            ...currentUser,
+            Permissoes: profileForm.Permissoes,
+            permissoes: profileForm.Permissoes,
+            Nome_Perfil: profileForm.Nome
+          };
+          localStorage.setItem('it_asset_user', JSON.stringify(updatedUser));
+        }
+      } else {
+        if (addRbacProfile) {
+          await addRbacProfile(
+            {
+              ID_Perfil: 0,
+              Nome: profileForm.Nome,
+              Ativo: profileForm.Ativo,
+              Permissoes: profileForm.Permissoes
+            },
+            currentUser?.name || 'Admin'
+          );
+        }
+        showToast("Perfil criado com sucesso!", "success");
+      }
+      setIsProfileModalOpen(false);
+    } catch (err) {
+      showToast("Erro ao salvar perfil", "error");
+    }
+  };
 
- const handleDeleteProfile = (profileId: number) => {
-   if (profileId === 1) {
-     showToast("O perfil de Administrador TI não pode ser excluído.", "error");
-     return;
-   }
-   if (window.confirm("Deseja realmente excluir este perfil de acesso?")) {
-     setProfiles(profiles.filter(p => p.ID_Perfil !== profileId));
-     showToast("Perfil excluído com sucesso!", "success");
-   }
- };
+  const handleDeleteProfile = async (profileId: number) => {
+    if (profileId === 1) {
+      showToast("O perfil de Administrador TI não pode ser excluído.", "error");
+      return;
+    }
+    if (window.confirm("Deseja realmente excluir este perfil de acesso?")) {
+      if (deleteRbacProfile) {
+        await deleteRbacProfile(profileId, currentUser?.name || 'Admin');
+        showToast("Perfil excluído com sucesso!", "success");
+      }
+    }
+  };
+
  const [logSearch, setLogSearch] = useState('');
  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
 	const [templateSubTab, setTemplateSubTab] = useState<'TI' | 'RH'>('TI');

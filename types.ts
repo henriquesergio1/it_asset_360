@@ -589,4 +589,11 @@ export interface RhCompany {
   createdAt?: string;
 }
 
+export interface Perfil {
+  ID_Perfil: number;
+  Nome: string;
+  Ativo: boolean;
+  Permissoes: Record<string, boolean>;
+}
+
 
