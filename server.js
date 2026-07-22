@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.9
+// Servidor express unificado com API e SPA React - v3.92.10
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -973,7 +973,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.9', 
+            version: '3.92.10', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });

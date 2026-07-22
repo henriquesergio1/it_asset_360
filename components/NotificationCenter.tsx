@@ -5,10 +5,11 @@ import { Bell, BellOff, AlertTriangle, AlertCircle, Package, Clock, X, Check, Sh
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { parseLocalDate } from './recurrenceUtils';
+import { hasPermission } from '../utils/rbac';
 
 export const NotificationCenter: React.FC = () => {
   const { tasks, consumables, expedienteAlerts, users, rhCollaborators, rhTerms } = useData();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   
@@ -260,32 +261,63 @@ export const NotificationCenter: React.FC = () => {
     });
   }, [rhTerms, rhCollaborators]);
 
-  // Juntar todas as notificações ativas (com independência de módulo e reatividade de rota)
+  const hasRhAccess = useMemo(() => {
+    if (!user) return false;
+    return isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
+      hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura') || 
+      hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura') || 
+      hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura') || 
+      hasPermission(user, 'rh_modelos') || hasPermission(user, 'rh_modelos_leitura') || 
+      hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura') || 
+      hasPermission(user, 'rh_relatorios') || hasPermission(user, 'rh_relatorios_leitura');
+  }, [user, isAdmin]);
+
+  const hasTiAccess = useMemo(() => {
+    if (!user) return false;
+    return isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura') || 
+      hasPermission(user, 'colaboradores_leitura') || hasPermission(user, 'chips_leitura') || 
+      hasPermission(user, 'licencas_leitura') || hasPermission(user, 'consumiveis_leitura') || 
+      hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
+      hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
+  }, [user, isAdmin]);
+
+  const isRhActive = useMemo(() => {
+    if (location.pathname.startsWith('/rh')) return true;
+    const stored = localStorage.getItem('current_module');
+    if (stored === 'RH' && hasRhAccess) return true;
+    if (stored === 'TI' && hasTiAccess) return false;
+    return !hasTiAccess && hasRhAccess;
+  }, [location.pathname, hasRhAccess, hasTiAccess]);
+
+  // Juntar todas as notificações ativas (com independência de módulo e estrita verificação de permissão)
   const allNotifications = useMemo(() => {
-    const currentModule = localStorage.getItem('current_module') || 'TI';
-    if (currentModule === 'RH') {
+    if (isRhActive) {
       return [
         ...activeRhBirthdayNotifications,
         ...activeRhHolidayNotifications,
         ...activeRhDocNotifications,
         ...activeRhTermsNotifications
       ];
-    } else {
+    } else if (hasTiAccess) {
       return [
         ...activeExpedienteNotifications,
         ...activeStockNotifications,
         ...activeTaskNotifications
       ];
     }
+    return [];
   }, [
+    isRhActive,
+    hasTiAccess,
     activeRhBirthdayNotifications,
     activeRhHolidayNotifications,
     activeRhDocNotifications,
     activeRhTermsNotifications,
     activeExpedienteNotifications,
     activeStockNotifications,
-    activeTaskNotifications,
-    location.pathname
+    activeTaskNotifications
   ]);
 
   // Algoritmo de envio de notificações novas (desktop + app popup Toast)
@@ -429,7 +461,7 @@ export const NotificationCenter: React.FC = () => {
                     <div>
                       <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sem alertas ativos</p>
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter mt-1">
-                        {localStorage.getItem('current_module') === 'RH' ? 'Sua equipe está sob controle!' : 'Sua infraestrutura está sob controle!'}
+                        {isRhActive ? 'Sua equipe está sob controle!' : 'Sua infraestrutura está sob controle!'}
                       </p>
                     </div>
                   </div>
