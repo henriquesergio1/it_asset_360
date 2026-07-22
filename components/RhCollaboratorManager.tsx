@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
+import { hasPermission } from '../utils/rbac';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
   formatCPF, formatPhone, formatCEP, cleanDocument 
@@ -78,6 +79,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const adminName = user?.name || 'Gestor R.H.';
+  const canWrite = hasPermission(user, 'rh_colaboradores_escrita');
 
   // Estados locais para modal de cadastro rápido de Empresa do Grupo
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -828,6 +830,11 @@ export const RhCollaboratorManager: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!canWrite) {
+      showToast('Perfil em Modo Somente Leitura.', 'error');
+      return;
+    }
+    
     // Validações básicas
     if (!form.fullName || !form.cpf || !form.sectorId) {
       alert('Nome Completo, CPF e Setor são obrigatórios.');
@@ -1182,23 +1189,25 @@ export const RhCollaboratorManager: React.FC = () => {
           <h1 id="rh-collaborators-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">CADASTRO DE COLABORADORES (R.H.)</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Gestão integral de dados pessoais, contratos e documentos regulamentares</p>
         </div>
-        <button
-          onClick={() => {
-            setForm({
-              fullName: '', birthDate: '', gender: 'Masculino', maritalStatus: 'Solteiro',
-              motherName: '', fatherName: '', personalPhone: '', corporatePhone: '',
-              emailPersonal: '', emailCorporate: '', cep: '', street: '', number: '',
-              complement: '', neighborhood: '', city: '', state: '', rg: '', cpf: '',
-              pis: '', electorTitle: '', ctps: '', cnhNumber: '', cnhCategory: '',
-              cnhExpiration: '', role: '', sectorId: '', contractType: 'CLT',
-              hireDate: '', salary: 0, weeklyHours: 44, documents: []
-            });
-            setIsCreating(true);
-          }}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-        >
-          <Plus size={16} /> Adicionar Colaborador
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => {
+              setForm({
+                fullName: '', birthDate: '', gender: 'Masculino', maritalStatus: 'Solteiro',
+                motherName: '', fatherName: '', personalPhone: '', corporatePhone: '',
+                emailPersonal: '', emailCorporate: '', cep: '', street: '', number: '',
+                complement: '', neighborhood: '', city: '', state: '', rg: '', cpf: '',
+                pis: '', electorTitle: '', ctps: '', cnhNumber: '', cnhCategory: '',
+                cnhExpiration: '', role: '', sectorId: '', contractType: 'CLT',
+                hireDate: '', salary: 0, weeklyHours: 44, documents: []
+              });
+              setIsCreating(true);
+            }}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+          >
+            <Plus size={16} /> Adicionar Colaborador
+          </button>
+        )}
       </div>
 
       {/* Filter Toolbar (Top Style similar to IT Module) */}
@@ -2343,26 +2352,28 @@ export const RhCollaboratorManager: React.FC = () => {
 
             {/* Modal Actions */}
             <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
-              {!checkIsColabDemitido(selectedColab) ? (
-                <button
-                  onClick={() => setIsDismissModalOpen(true)}
-                  className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider shadow-sm transition-all"
-                >
-                  <UserMinus size={14} /> Demitir Colaborador
-                </button>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-rose-500 font-bold text-xs uppercase tracking-wider bg-rose-50 dark:bg-rose-500/10 px-3 py-2 rounded-xl border border-rose-500/20">
-                    <AlertTriangle size={14} /> Colaborador Demitido
-                  </div>
+              <div>
+                {canWrite && (!checkIsColabDemitido(selectedColab) ? (
                   <button
-                    onClick={() => handleReactivateColab(selectedColab)}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all"
+                    onClick={() => setIsDismissModalOpen(true)}
+                    className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider shadow-sm transition-all"
                   >
-                    <UserCheck size={14} /> Reativar Colaborador
+                    <UserMinus size={14} /> Demitir Colaborador
                   </button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 text-rose-500 font-bold text-xs uppercase tracking-wider bg-rose-50 dark:bg-rose-500/10 px-3 py-2 rounded-xl border border-rose-500/20">
+                      <AlertTriangle size={14} /> Colaborador Demitido
+                    </div>
+                    <button
+                      onClick={() => handleReactivateColab(selectedColab)}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all"
+                    >
+                      <UserCheck size={14} /> Reativar Colaborador
+                    </button>
+                  </div>
+                ))}
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsDetailModalOpen(false)}
@@ -2370,15 +2381,17 @@ export const RhCollaboratorManager: React.FC = () => {
                 >
                   Fechar
                 </button>
-                <button
-                  onClick={() => {
-                    setForm(normalizeColabDates(selectedColab));
-                    setIsEditing(true);
-                  }}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wider shadow-md"
-                >
-                  <Edit2 size={14} /> Editar Dados
-                </button>
+                {canWrite && (
+                  <button
+                    onClick={() => {
+                      setForm(normalizeColabDates(selectedColab));
+                      setIsEditing(true);
+                    }}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wider shadow-md"
+                  >
+                    <Edit2 size={14} /> Editar Dados
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -9,6 +9,7 @@ import {
   Download, ChevronLeft, ChevronRight, Briefcase, Paperclip, Check, Eye, Upload
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
+import { hasPermission } from '../utils/rbac';
 
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
 
@@ -16,6 +17,7 @@ export const RhOccurrenceManager: React.FC = () => {
   const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence, fetchData } = useData();
   const { user } = useAuth();
   const adminName = user?.name || 'Gestor R.H.';
+  const canWrite = hasPermission(user, 'rh_ocorrencias_escrita');
 
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -275,12 +277,14 @@ export const RhOccurrenceManager: React.FC = () => {
           <h1 id="rh-occurrence-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">FALTAS, ATESTADOS E OCORRÊNCIAS</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Controle rigoroso de afastamentos, atestados médicos, licenças e férias</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-        >
-          <Plus size={16} /> Lançar Ocorrência
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+          >
+            <Plus size={16} /> Lançar Ocorrência
+          </button>
+        )}
       </div>
 
       {/* Filter Toolbar */}

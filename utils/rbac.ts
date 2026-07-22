@@ -107,6 +107,11 @@ export function hasPermission(user: any, key: string): boolean {
 export function resolveUserPermissions(user: any, customProfiles?: Perfil[]): any {
   if (!user) return null;
 
+  // Se o próprio usuário já possui Permissoes e Nome_Perfil definidos no login/storage, e não recebemos customProfiles dinâmicos do banco, preserva os dados originais do usuário
+  if ((!customProfiles || customProfiles.length === 0) && user.Permissoes && user.Nome_Perfil) {
+    return user;
+  }
+
   let profiles: Perfil[] = customProfiles && customProfiles.length > 0 ? customProfiles : [];
   if (profiles.length === 0) {
     const saved = localStorage.getItem('rbac_profiles');

@@ -12,6 +12,7 @@ import {
   FileSignature, Clock, AlertCircle, EyeOff, User as UserIcon
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
+import { hasPermission } from '../utils/rbac';
 
 export const RhComodatoManager: React.FC = () => {
   const { 
@@ -23,6 +24,7 @@ export const RhComodatoManager: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const adminName = user?.name || 'Gestor R.H.';
+  const canWrite = hasPermission(user, 'rh_comodato_escrita');
 
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -594,12 +596,14 @@ export const RhComodatoManager: React.FC = () => {
           <h1 id="rh-comodato-title" className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">TERMOS DE COMODATO DE R.H.</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Emissão de termos de responsabilidade e assinaturas eletrônicas com GPS</p>
         </div>
-        <button
-          onClick={() => setShowCreateTerm(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
-        >
-          <Plus size={16} /> Emitir Novo Termo
-        </button>
+        {canWrite && (
+          <button
+            onClick={() => setShowCreateTerm(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+          >
+            <Plus size={16} /> Emitir Novo Termo
+          </button>
+        )}
       </div>
 
       {/* Filter Toolbar */}

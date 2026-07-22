@@ -146,6 +146,14 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
    const profiles = syncData?.profiles || bootstrapData?.profiles || [];
 
+   useEffect(() => {
+     if (profiles && profiles.length > 0) {
+       try {
+         localStorage.setItem('rbac_profiles', JSON.stringify(profiles));
+       } catch (e) {}
+     }
+   }, [profiles]);
+
  const isReadOnly = !loading && (!settings.licenseExpires || new Date(settings.licenseExpires) <= new Date());
 
  const checkReadOnly = () => {
