@@ -14,7 +14,7 @@ import { hasPermission } from '../utils/rbac';
 const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
 
 export const RhOccurrenceManager: React.FC = () => {
-  const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence, fetchData } = useData();
+  const { rhCollaborators, rhOccurrences, addRhOccurrence, deleteRhOccurrence, fetchData, isReadOnly } = useData();
   const { user } = useAuth();
   const adminName = user?.name || 'Gestor R.H.';
   const canWrite = hasPermission(user, 'rh_ocorrencias_escrita');
@@ -286,6 +286,24 @@ export const RhOccurrenceManager: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Banner de Aviso: Modo Somente Leitura */}
+      {(!canWrite || isReadOnly) && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-600 dark:text-amber-400 animate-fade-in shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-xl shrink-0">
+              <Eye size={18} />
+            </div>
+            <div>
+              <span className="text-xs font-black uppercase tracking-wider block">Modo Somente Leitura</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Seu perfil de acesso permite apenas a visualização de dados nesta tela. Ações de criação, edição e exclusão estão desabilitadas.</span>
+            </div>
+          </div>
+          <span className="px-3 py-1 bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] uppercase tracking-widest rounded-full border border-amber-500/30 shrink-0">
+            Apenas Consulta
+          </span>
+        </div>
+      )}
 
       {/* Filter Toolbar */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row items-center gap-4">
