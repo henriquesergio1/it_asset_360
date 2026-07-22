@@ -508,11 +508,15 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     deleteRbacProfile: async (id, adm) => {
       try {
-        await fetch(`${API_URL}/api/rbac-profiles/${id}`, {
+        const res = await fetch(`${API_URL}/api/rbac-profiles/${id}`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ _adminUser: adm })
         });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text);
+        }
         fetchData(true);
       } catch (err) {
         showToast('Erro ao excluir perfil de acesso', 'error');

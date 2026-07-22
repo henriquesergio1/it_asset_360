@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.82.0
+// Servidor express unificado com API e SPA React - v3.92.4
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -284,6 +284,12 @@ const DB_SCHEMAS = {
         CurrentStock INT,
         MinStock INT,
         Notes NVARCHAR(MAX)
+    )`,
+    RbacProfiles: `(
+        ID_Perfil INT PRIMARY KEY IDENTITY(1,1),
+        Nome NVARCHAR(255) NOT NULL,
+        Ativo BIT DEFAULT 1,
+        Permissoes NVARCHAR(MAX) NULL
     )`
 };
 
@@ -948,7 +954,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.74.0', 
+            version: '3.92.4', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -2876,12 +2882,32 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
+    // --- Função Auxiliar Defensiva para RbacProfiles ---
+    async function ensureRbacProfilesTable(pool) {
+        try {
+            await pool.request().query(`
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RbacProfiles')
+                BEGIN
+                    CREATE TABLE RbacProfiles (
+                        ID_Perfil INT PRIMARY KEY IDENTITY(1,1),
+                        Nome NVARCHAR(255) NOT NULL,
+                        Ativo BIT DEFAULT 1,
+                        Permissoes NVARCHAR(MAX) NULL
+                    );
+                END
+            `);
+        } catch (e) {
+            console.error('Erro ao garantir tabela RbacProfiles:', e.message);
+        }
+    }
+
     // --- Rotas de RbacProfiles (Perfis de Acesso centralizados) ---
     app.get('/api/rbac-profiles', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            await ensureRbacProfilesTable(pool);
             const result = await pool.request().query("SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC");
-            const profiles = result.recordset.map(r => ({
+            const profiles = (result.recordset || []).map(r => ({
                 ID_Perfil: r.ID_Perfil,
                 Nome: r.Nome,
                 Ativo: r.Ativo === true || r.Ativo === 1,
@@ -2897,7 +2923,9 @@ async function updateUserPendingStatus(pool, userId) {
     app.post('/api/rbac-profiles', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { Nome, Ativo, Permissoes, _adminUser } = req.body;
+            await ensureRbacProfilesTable(pool);
+            const { Nome, Ativo, Permissoes, _adminUser } = req.body || {};
+            if (!Nome) return res.status(400).send('Nome do perfil é obrigatório');
             const permStr = typeof Permissoes === 'object' ? JSON.stringify(Permissoes) : String(Permissoes || '{}');
             const result = await pool.request()
                 .input('Nome', sql.NVarChar, Nome)
@@ -2917,16 +2945,20 @@ async function updateUserPendingStatus(pool, userId) {
     app.put('/api/rbac-profiles/:id', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            const { Nome, Ativo, Permissoes, _adminUser } = req.body;
+            await ensureRbacProfilesTable(pool);
+            const targetId = parseInt(req.params.id);
+            if (isNaN(targetId)) return res.status(400).send('ID de perfil inválido');
+
+            const { Nome, Ativo, Permissoes, _adminUser } = req.body || {};
             const permStr = typeof Permissoes === 'object' ? JSON.stringify(Permissoes) : String(Permissoes || '{}');
             await pool.request()
-                .input('Id', sql.Int, parseInt(req.params.id))
-                .input('Nome', sql.NVarChar, Nome)
+                .input('Id', sql.Int, targetId)
+                .input('Nome', sql.NVarChar, Nome || '')
                 .input('Ativo', sql.Bit, Ativo !== false ? 1 : 0)
                 .input('Permissoes', sql.NVarChar, permStr)
                 .query("UPDATE RbacProfiles SET Nome=@Nome, Ativo=@Ativo, Permissoes=@Permissoes WHERE ID_Perfil=@Id");
 
-            await logAction(req.params.id, 'RbacProfile', 'Atualização', _adminUser || 'Admin', Nome, `Perfil de acesso atualizado: ${Nome}`);
+            await logAction(String(targetId), 'RbacProfile', 'Atualização', _adminUser || 'Admin', Nome || '', `Perfil de acesso atualizado: ${Nome || targetId}`);
             res.json({ success: true });
         } catch (err) {
             console.error('ERRO PUT /api/rbac-profiles/:id:', err);
@@ -2937,11 +2969,17 @@ async function updateUserPendingStatus(pool, userId) {
     app.delete('/api/rbac-profiles/:id', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            await ensureRbacProfilesTable(pool);
+            const targetId = parseInt(req.params.id);
+            if (isNaN(targetId)) return res.status(400).send('ID de perfil inválido');
+
+            const adminUser = req.body?._adminUser || 'Admin';
+
             await pool.request()
-                .input('Id', sql.Int, parseInt(req.params.id))
+                .input('Id', sql.Int, targetId)
                 .query("DELETE FROM RbacProfiles WHERE ID_Perfil=@Id");
 
-            await logAction(req.params.id, 'RbacProfile', 'Exclusão', req.body?._adminUser || 'Admin', '', 'Perfil de acesso removido');
+            await logAction(String(targetId), 'RbacProfile', 'Exclusão', adminUser, '', 'Perfil de acesso removido');
             res.json({ success: true });
         } catch (err) {
             console.error('ERRO DELETE /api/rbac-profiles/:id:', err);
