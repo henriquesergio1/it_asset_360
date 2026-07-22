@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.10
+// Servidor express unificado com API e SPA React - v3.92.11
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -611,6 +611,20 @@ async function initializeDatabase() {
                             console.error(`Erro ao adicionar coluna ${col.name} em RhTerms:`, err.message);
                         }
                     }
+
+                    // v3.92.11: Auto-migração defensiva para colunas Photo com tamanho ilimitado
+                    try {
+                        const checkUserPhoto = await pool.request().query("SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='Photo'");
+                        if (checkUserPhoto.recordset.length > 0 && checkUserPhoto.recordset[0].CHARACTER_MAXIMUM_LENGTH !== -1) {
+                            await pool.request().query("ALTER TABLE Users ALTER COLUMN Photo NVARCHAR(MAX) NULL");
+                        }
+                        const checkRhPhoto = await pool.request().query("SELECT CHARACTER_MAXIMUM_LENGTH, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RhCollaborators' AND COLUMN_NAME='Photo'");
+                        if (checkRhPhoto.recordset.length > 0 && checkRhPhoto.recordset[0].CHARACTER_MAXIMUM_LENGTH !== -1 && checkRhPhoto.recordset[0].DATA_TYPE !== 'varbinary') {
+                            await pool.request().query("ALTER TABLE RhCollaborators ALTER COLUMN Photo NVARCHAR(MAX) NULL");
+                        }
+                    } catch (pErr) {
+                        console.error('Auto-migração de Photo ignorada:', pErr.message);
+                    }
                 }
                 if (table === 'AssetTypes') {
                     const checkAllow = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AssetTypes' AND COLUMN_NAME = 'AllowMultipleUsers'`);
@@ -973,7 +987,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.10', 
+            version: '3.92.11', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1588,15 +1602,63 @@ app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
         if (!row || !row.Photo) {
             return res.status(404).send('Not found');
         }
-        const match = row.Photo.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (Buffer.isBuffer(row.Photo)) {
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(row.Photo);
+        }
+        const photoStr = String(row.Photo).trim();
+        const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
         if (match) {
             const buffer = Buffer.from(match[2], 'base64');
             res.setHeader('Content-Type', match[1]);
             res.setHeader('Cache-Control', 'public, max-age=86400');
-            res.send(buffer);
-        } else {
-            res.status(400).send('Invalid image format');
+            return res.send(buffer);
+        } else if (photoStr.length > 0) {
+            const buffer = Buffer.from(photoStr, 'base64');
+            let mime = 'image/jpeg';
+            if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
+            else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
+            else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(buffer);
         }
+        res.status(400).send('Invalid image format');
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/users/:id/photo/raw', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM Users WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.Photo) {
+            return res.status(404).send('Not found');
+        }
+        if (Buffer.isBuffer(row.Photo)) {
+            res.setHeader('Content-Type', 'image/jpeg');
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(row.Photo);
+        }
+        const photoStr = String(row.Photo).trim();
+        const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (match) {
+            const buffer = Buffer.from(match[2], 'base64');
+            res.setHeader('Content-Type', match[1]);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(buffer);
+        } else if (photoStr.length > 0) {
+            const buffer = Buffer.from(photoStr, 'base64');
+            let mime = 'image/jpeg';
+            if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
+            else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
+            else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            return res.send(buffer);
+        }
+        res.status(400).send('Invalid image format');
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -1871,7 +1933,11 @@ async function updateUserPendingStatus(pool, userId) {
                 // Ignora chaves virtuais de fotos sob demanda se forem URLs de API
                 if (key === 'photo' && typeof req.body[key] === 'string' && req.body[key].startsWith('/api/')) continue;
 
-                let val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems'].includes(key)) ? JSON.stringify(req.body[key]) : req.body[key];
+                let val = (['customFieldIds', 'customData', 'userIds', 'deviceIds', 'documents', 'deliveredItems', 'permissoes', 'roles', 'customprofiles'].includes(key.toLowerCase())) ? JSON.stringify(req.body[key]) : req.body[key];
+
+                if (typeof val === 'object' && val !== null) {
+                    val = JSON.stringify(val);
+                }
 
                 // Preserva o Base64 original dos documentos no banco se o frontend enviou uma URL /api/.../raw
                 if (key === 'documents' && Array.isArray(req.body[key])) {
