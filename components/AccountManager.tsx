@@ -212,10 +212,19 @@ const AccountManager = () => {
     setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
   };
 
+  const getDeviceLabel = (d: any) => {
+    if (!d) return 'Dispositivo';
+    const model = models.find(m => m.id === d.modelId);
+    const modelName = model ? model.name : '';
+    const idStr = d.assetTag || d.serialNumber || d.internalCode || (d.imei ? `IMEI: ${d.imei}` : '');
+    if (idStr) return idStr;
+    return modelName || `Dispositivo #${d.id}`;
+  };
+
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredAccounts.map(acc => {
       const respUsers = (acc.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
-      const respDevices = (acc.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+      const respDevices = (acc.deviceIds || []).map(id => getDeviceLabel(devices.find(d => d.id === id))).filter(Boolean).join(', ');
       return {
         'Nome': acc.name,
         'Tipo': acc.type,
@@ -317,11 +326,11 @@ const AccountManager = () => {
         // Resolução de nomes para chaves de ID
         if (sortConfig.key === 'link') {
           const aUsers = (a.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
-          const aDevices = (a.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+          const aDevices = (a.deviceIds || []).map(id => getDeviceLabel(devices.find(d => d.id === id))).join(', ');
           aValue = `${aUsers} ${aDevices}`.trim();
 
           const bUsers = (b.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
-          const bDevices = (b.deviceIds || []).map(id => devices.find(d => d.id === id)?.assetTag || '').join(', ');
+          const bDevices = (b.deviceIds || []).map(id => getDeviceLabel(devices.find(d => d.id === id))).join(', ');
           bValue = `${bUsers} ${bDevices}`.trim();
         }
 
@@ -394,10 +403,11 @@ const AccountManager = () => {
   const userOptions = users.map(u => ({ value: u.id, label: u.fullName, subLabel: `CPF: ${u.cpf}`}));
   const deviceOptions = devices.map(d => {
     const model = models.find(m => m.id === d.modelId);
+    const identifier = getDeviceLabel(d);
     return { 
       value: d.id, 
-      label: `${model?.name || 'Ativo'} - ${d.assetTag || d.serialNumber}`,
-      subLabel: d.imei ? `IMEI: ${d.imei}` : d.assetTag
+      label: model?.name ? `${model.name} - ${identifier}` : identifier,
+      subLabel: d.imei ? `IMEI: ${d.imei}` : (d.assetTag || d.serialNumber || d.internalCode || '')
     };
   });
 
@@ -591,7 +601,7 @@ const AccountManager = () => {
                       const d = devices.find(dev => dev.id === did);
                       return d ? (
                         <span key={did} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold border border-emerald-800 animate-fade-in shadow-sm">
-                          <Smartphone size={UI_ICON_SIZE_SMALL} /> {d.assetTag}
+                          <Smartphone size={UI_ICON_SIZE_SMALL} /> {getDeviceLabel(d)}
                         </span>
                       ) : null;
                     })}
@@ -827,7 +837,7 @@ const AccountManager = () => {
                           const d = devices.find(dev => dev.id === did);
                           return d ? (
                             <div key={did} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-800 hover:border-red-500 transition-all animate-scale-up">
-                              <span className="text-[11px] font-bold text-emerald-300">{d.assetTag}</span>
+                              <span className="text-[11px] font-bold text-emerald-300">{getDeviceLabel(d)}</span>
                               <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-500 group-hover:text-red-500">
                                 <X size={12}/>
                               </button>
