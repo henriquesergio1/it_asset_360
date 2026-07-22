@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.15
+// Servidor express unificado com API e SPA React - v3.92.16
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -612,15 +612,29 @@ async function initializeDatabase() {
                         }
                     }
 
-                    // v3.92.11: Auto-migração defensiva para colunas Photo com tamanho ilimitado
+                    // v3.92.16: Auto-migração defensiva para colunas Photo como NVARCHAR(MAX) (Base64 puro)
                     try {
-                        const checkUserPhoto = await pool.request().query("SELECT CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='Photo'");
-                        if (checkUserPhoto.recordset.length > 0 && checkUserPhoto.recordset[0].CHARACTER_MAXIMUM_LENGTH !== -1) {
-                            await pool.request().query("ALTER TABLE Users ALTER COLUMN Photo NVARCHAR(MAX) NULL");
-                        }
-                        const checkRhPhoto = await pool.request().query("SELECT CHARACTER_MAXIMUM_LENGTH, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RhCollaborators' AND COLUMN_NAME='Photo'");
-                        if (checkRhPhoto.recordset.length > 0 && checkRhPhoto.recordset[0].CHARACTER_MAXIMUM_LENGTH !== -1 && checkRhPhoto.recordset[0].DATA_TYPE !== 'varbinary') {
-                            await pool.request().query("ALTER TABLE RhCollaborators ALTER COLUMN Photo NVARCHAR(MAX) NULL");
+                        // Garantia da coluna Photo em Users como NVARCHAR(MAX)
+                        await pool.request().query(`
+                            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='Photo')
+                            BEGIN
+                                ALTER TABLE Users ALTER COLUMN Photo NVARCHAR(MAX) NULL;
+                            END
+                        `);
+
+                        // Se RhCollaborators tiver Photo como VARBINARY, dropamos e recriamos como NVARCHAR(MAX)
+                        const checkRhType = await pool.request().query("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RhCollaborators' AND COLUMN_NAME='Photo'");
+                        if (checkRhType.recordset.length > 0) {
+                            const dataType = checkRhType.recordset[0].DATA_TYPE.toLowerCase();
+                            if (dataType === 'varbinary' || dataType === 'image') {
+                                console.log('- Convertendo coluna Photo de RhCollaborators de VARBINARY para NVARCHAR(MAX)...');
+                                await pool.request().query("ALTER TABLE RhCollaborators DROP COLUMN Photo");
+                                await pool.request().query("ALTER TABLE RhCollaborators ADD Photo NVARCHAR(MAX) NULL");
+                            } else {
+                                await pool.request().query("ALTER TABLE RhCollaborators ALTER COLUMN Photo NVARCHAR(MAX) NULL");
+                            }
+                        } else {
+                            await pool.request().query("ALTER TABLE RhCollaborators ADD Photo NVARCHAR(MAX) NULL");
                         }
                     } catch (pErr) {
                         console.error('Auto-migração de Photo ignorada:', pErr.message);
@@ -987,7 +1001,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.15', 
+            version: '3.92.16', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -3145,18 +3159,10 @@ async function updateUserPendingStatus(pool, userId) {
             // Tratamento explícito da foto no POST
             if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
                 if (!body.photo.startsWith('/api/')) {
-                    let photoBuffer = null;
-                    if (isBase64(body.photo)) {
-                        photoBuffer = getBufferFromBase64(body.photo);
-                    } else {
-                        photoBuffer = Buffer.from(body.photo.trim(), 'base64');
-                    }
-                    if (photoBuffer && photoBuffer.length > 0) {
-                        request.input('Photo', sql.VarBinary, photoBuffer);
-                        request.input('HasPhoto', sql.Int, 1);
-                        columns.push('Photo', 'HasPhoto');
-                        values.push('@Photo', '@HasPhoto');
-                    }
+                    request.input('Photo', sql.NVarChar, body.photo);
+                    request.input('HasPhoto', sql.Int, 1);
+                    columns.push('Photo', 'HasPhoto');
+                    values.push('@Photo', '@HasPhoto');
                 }
             }
 
@@ -3184,7 +3190,7 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
-                { name: 'Photo', type: 'VARBINARY(MAX) NULL' },
+                { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
                 { name: 'HasPhoto', type: 'INT DEFAULT 0' }
             ];
             for (const col of colsToAdd) {
@@ -3219,19 +3225,14 @@ async function updateUserPendingStatus(pool, userId) {
                 if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
                     if (body.photo.startsWith('/api/')) {
                         // Se for uma URL interna de API, a foto existente no banco NÃO MUDOU (preserva a foto)
-                    } else if (isBase64(body.photo)) {
-                        const photoBuffer = getBufferFromBase64(body.photo);
-                        request.input('Photo', sql.VarBinary, photoBuffer);
-                        request.input('HasPhoto', sql.Int, 1);
-                        sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                     } else {
-                        const photoBuffer = Buffer.from(body.photo.trim(), 'base64');
-                        request.input('Photo', sql.VarBinary, photoBuffer);
+                        // Grava a string Base64 diretamente
+                        request.input('Photo', sql.NVarChar, body.photo);
                         request.input('HasPhoto', sql.Int, 1);
                         sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                     }
                 } else {
-                    request.input('Photo', sql.VarBinary, null);
+                    request.input('Photo', sql.NVarChar, null);
                     request.input('HasPhoto', sql.Int, 0);
                     sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                 }
