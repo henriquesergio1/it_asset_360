@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.13
+// Servidor express unificado com API e SPA React - v3.92.14
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -987,7 +987,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.13', 
+            version: '3.92.14', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1594,37 +1594,58 @@ app.get('/api/rh-collaborators/:id/photo', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
+const sendImageFromDbField = (res, rawData) => {
+    if (!rawData) {
+        return res.status(404).send('Foto não encontrada');
+    }
+
+    // 1. Tratamento quando o banco de dados retorna um Buffer (VarBinary)
+    if (Buffer.isBuffer(rawData)) {
+        let mime = 'image/jpeg';
+        if (rawData.length > 4) {
+            const hex = rawData.toString('hex', 0, 4).toUpperCase();
+            if (hex === '89504E47') mime = 'image/png';
+            else if (hex.startsWith('FFD8FF')) mime = 'image/jpeg';
+            else if (hex === '47494638') mime = 'image/gif';
+            else if (hex.startsWith('52494646')) mime = 'image/webp';
+        }
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(rawData);
+    }
+
+    // 2. Tratamento quando o banco de dados retorna uma String (Base64 data-URL ou Base64 pura)
+    const photoStr = String(rawData).trim();
+    if (!photoStr) {
+        return res.status(404).send('Foto não encontrada');
+    }
+
+    const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+        const buffer = Buffer.from(match[2], 'base64');
+        res.setHeader('Content-Type', match[1]);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+    } else if (photoStr.length > 0) {
+        const buffer = Buffer.from(photoStr, 'base64');
+        let mime = 'image/jpeg';
+        if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
+        else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
+        else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        return res.send(buffer);
+    }
+
+    return res.status(400).send('Formato de imagem inválido');
+};
+
 app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
         const row = result.recordset[0];
-        if (!row || !row.Photo) {
-            return res.status(404).send('Not found');
-        }
-        if (Buffer.isBuffer(row.Photo)) {
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(row.Photo);
-        }
-        const photoStr = String(row.Photo).trim();
-        const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
-        if (match) {
-            const buffer = Buffer.from(match[2], 'base64');
-            res.setHeader('Content-Type', match[1]);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(buffer);
-        } else if (photoStr.length > 0) {
-            const buffer = Buffer.from(photoStr, 'base64');
-            let mime = 'image/jpeg';
-            if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
-            else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
-            else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
-            res.setHeader('Content-Type', mime);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(buffer);
-        }
-        res.status(400).send('Invalid image format');
+        sendImageFromDbField(res, row?.Photo);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -1633,32 +1654,7 @@ app.get('/api/users/:id/photo/raw', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM Users WHERE Id=@Id");
         const row = result.recordset[0];
-        if (!row || !row.Photo) {
-            return res.status(404).send('Not found');
-        }
-        if (Buffer.isBuffer(row.Photo)) {
-            res.setHeader('Content-Type', 'image/jpeg');
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(row.Photo);
-        }
-        const photoStr = String(row.Photo).trim();
-        const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
-        if (match) {
-            const buffer = Buffer.from(match[2], 'base64');
-            res.setHeader('Content-Type', match[1]);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(buffer);
-        } else if (photoStr.length > 0) {
-            const buffer = Buffer.from(photoStr, 'base64');
-            let mime = 'image/jpeg';
-            if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
-            else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
-            else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
-            res.setHeader('Content-Type', mime);
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-            return res.send(buffer);
-        }
-        res.status(400).send('Invalid image format');
+        sendImageFromDbField(res, row?.Photo);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -3099,24 +3095,7 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
-    // --- Rota Binária da Foto do Colaborador RH ---
-    app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
-        try {
-            const pool = await sql.connect(dbConfig);
-            const result = await pool.request()
-                .input('Id', sql.NVarChar, req.params.id)
-                .query("SELECT Photo FROM RhCollaborators WHERE Id=@Id");
-            const photoBinary = result.recordset[0]?.Photo;
-            if (!photoBinary) {
-                return res.status(404).send("Foto não encontrada");
-            }
-            res.contentType('image/jpeg');
-            res.send(photoBinary);
-        } catch (err) {
-            console.error('ERRO GET /api/rh-collaborators/:id/photo/raw:', err);
-            res.status(500).send(err.message);
-        }
-    });
+
 
     // --- Rotas Explícitas de RH Colaboradores ---
     app.post('/api/rh-collaborators', async (req, res) => {
