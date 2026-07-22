@@ -216,7 +216,7 @@ const AccountManager = () => {
     if (!d) return 'Dispositivo';
     const model = models.find(m => m.id === d.modelId);
     const modelName = model ? model.name : '';
-    const idStr = d.assetTag || d.serialNumber || d.internalCode || (d.imei ? `IMEI: ${d.imei}` : '');
+    const idStr = d.assetTag || d.imei || d.serialNumber || d.internalCode;
     if (idStr) return idStr;
     return modelName || `Dispositivo #${d.id}`;
   };
