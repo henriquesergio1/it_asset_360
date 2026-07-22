@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.92.12
+// Servidor express unificado com API e SPA React - v3.92.13
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -987,7 +987,7 @@ async function startServer() {
     app.get('/api/health', (req, res) => {
         res.json({ 
             status: 'ok', 
-            version: '3.92.12', 
+            version: '3.92.13', 
             timestamp: new Date().toISOString(),
             environment: process.env.NODE_ENV || 'development'
         });
@@ -1918,6 +1918,9 @@ async function updateUserPendingStatus(pool, userId) {
         try {
             const pool = await sql.connect(dbConfig);
             const request = pool.request();
+            const colSchemaRes = await pool.request().query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${table}'`);
+            const realCols = new Set(colSchemaRes.recordset.map(r => r.COLUMN_NAME.toLowerCase()));
+
             const oldRes = await pool.request().input('Id', sql.NVarChar, req.params.id).query(`SELECT * FROM ${table} WHERE Id=@Id`);
             const prev = oldRes.recordset[0];
             
@@ -1963,6 +1966,9 @@ async function updateUserPendingStatus(pool, userId) {
                 else if (key === 'imageUrl') dbKey = 'ImageBinary';
                 else if (key === 'invoiceUrl') dbKey = 'InvoiceBinary';
                 else if (key === 'fileUrl') dbKey = (table === 'RhOccurrences' || table === 'RhTerms') ? 'FileUrl' : 'FileBinary';
+
+                // v3.92.13: Descarta chaves que não correspondem a colunas reais na tabela do banco de dados
+                if (realCols.size > 0 && !realCols.has(dbKey.toLowerCase())) continue;
 
                 if (processedKeys.has(dbKey)) continue;
                 processedKeys.add(dbKey);
