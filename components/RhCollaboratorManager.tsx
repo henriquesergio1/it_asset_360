@@ -525,6 +525,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
   // Photo states & handlers
   const [isExpandedPhotoOpen, setIsExpandedPhotoOpen] = useState(false);
+  const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(new Set());
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1374,10 +1375,11 @@ export const RhCollaboratorManager: React.FC = () => {
                 {visibleColumns.includes('fullName') && (
                   <td className="px-6 py-4 font-black">
                     <div className="flex items-center gap-4">
-                      {c.photo ? (
+                      {c.photo && !failedPhotoIds.has(c.id) ? (
                         <img 
                           src={c.photo} 
                           alt={c.fullName} 
+                          onError={() => setFailedPhotoIds(prev => new Set(prev).add(c.id))}
                           className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-700 hover:scale-105 transition-all shadow-sm shrink-0"
                         />
                       ) : (
@@ -1488,10 +1490,11 @@ export const RhCollaboratorManager: React.FC = () => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
-                {selectedColab.photo ? (
+                {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
                   <img 
                     src={selectedColab.photo} 
                     alt={selectedColab.fullName} 
+                    onError={() => setFailedPhotoIds(prev => new Set(prev).add(selectedColab.id))}
                     className="w-10 h-10 rounded-full object-cover border border-slate-350 dark:border-slate-650 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
                     onClick={() => setIsExpandedPhotoOpen(true)}
                     title="Clique para expandir"

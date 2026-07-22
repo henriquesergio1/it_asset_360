@@ -85,7 +85,8 @@ const DB_SCHEMAS = {
         Street NVARCHAR(255) NULL,
         Number NVARCHAR(50) NULL,
         Complement NVARCHAR(255) NULL,
-        Neighborhood NVARCHAR(255) NULL
+        Neighborhood NVARCHAR(255) NULL,
+        Photo NVARCHAR(MAX) NULL
     )`,
     AuditLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -612,11 +613,15 @@ async function initializeDatabase() {
                         }
                     }
 
-                    // v3.92.16: Auto-migração defensiva para colunas Photo como NVARCHAR(MAX) (Base64 puro)
+                    // v3.92.17: Auto-migração defensiva para colunas Photo como NVARCHAR(MAX) (Base64 puro)
                     try {
                         // Garantia da coluna Photo em Users como NVARCHAR(MAX)
                         await pool.request().query(`
-                            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='Photo')
+                            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Users' AND COLUMN_NAME='Photo')
+                            BEGIN
+                                ALTER TABLE Users ADD Photo NVARCHAR(MAX) NULL;
+                            END
+                            ELSE
                             BEGIN
                                 ALTER TABLE Users ALTER COLUMN Photo NVARCHAR(MAX) NULL;
                             END
@@ -1080,7 +1085,17 @@ app.get('/api/bootstrap', async (req, res) => {
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes), systemUsers: format(sysUsersRes),
+            devices, sims: format(simsRes),
+            users: format(usersRes).map(u => {
+                const rawP = u.photo || u.Photo;
+                const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
+                return {
+                    ...u,
+                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw` : undefined,
+                    hasPhoto: hasRealPhoto
+                };
+            }),
+            systemUsers: format(sysUsersRes),
             settings: settingsRes?.recordset?.[0] || { appName: 'IT Asset', logoUrl: '' }, 
             models: format(modelsRes), 
             brands: format(brandsRes),
@@ -1164,7 +1179,16 @@ app.get('/api/sync', async (req, res) => {
         }));
 
         res.json({
-            devices, sims: format(simsRes), users: format(usersRes),
+            devices, sims: format(simsRes),
+            users: format(usersRes).map(u => {
+                const rawP = u.photo || u.Photo;
+                const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
+                return {
+                    ...u,
+                    photo: hasRealPhoto ? `/api/users/${u.id}/photo/raw` : undefined,
+                    hasPhoto: hasRealPhoto
+                };
+            }),
             maintenances: format(maintRes).map(m => ({ ...m, hasInvoice: m.hasInvoice === 1 })),
             terms: format(termsRes, ['accessories', 'linkedSim']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             accounts: format(accountsRes, ['UserIds', 'DeviceIds']),
@@ -1173,11 +1197,12 @@ app.get('/api/sync', async (req, res) => {
             consumables: format(consumablesRes),
             audits: format(auditsRes),
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
-                const hasPhoto = !!(c.photo && c.photo.length > 0) || c.hasPhoto === 1;
+                const rawP = c.photo || c.Photo;
+                const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
                 return {
                     ...c,
-                    photo: hasPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
-                    hasPhoto: hasPhoto,
+                    photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw` : undefined,
+                    hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
                         id: d.id,
                         category: d.category,
@@ -1630,29 +1655,37 @@ const sendImageFromDbField = (res, rawData) => {
     }
 
     // 2. Tratamento quando o banco de dados retorna uma String (Base64 data-URL ou Base64 pura)
-    const photoStr = String(rawData).trim();
+    let photoStr = String(rawData).trim();
     if (!photoStr) {
         return res.status(404).send('Foto não encontrada');
     }
 
-    const match = photoStr.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (match) {
-        const buffer = Buffer.from(match[2], 'base64');
-        res.setHeader('Content-Type', match[1]);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        return res.send(buffer);
-    } else if (photoStr.length > 0) {
-        const buffer = Buffer.from(photoStr, 'base64');
-        let mime = 'image/jpeg';
+    let mime = 'image/jpeg';
+    if (photoStr.startsWith('data:')) {
+        const commaIdx = photoStr.indexOf(',');
+        if (commaIdx !== -1) {
+            const header = photoStr.substring(0, commaIdx);
+            const mimeMatch = header.match(/^data:(image\/[a-zA-Z0-9\+\-\.]+);/);
+            if (mimeMatch) {
+                mime = mimeMatch[1];
+            }
+            photoStr = photoStr.substring(commaIdx + 1);
+        }
+    } else {
         if (photoStr.startsWith('iVBORw0KG')) mime = 'image/png';
         else if (photoStr.startsWith('R0lGOD')) mime = 'image/gif';
         else if (photoStr.startsWith('UklGR')) mime = 'image/webp';
-        res.setHeader('Content-Type', mime);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        return res.send(buffer);
     }
 
-    return res.status(400).send('Formato de imagem inválido');
+    const cleanBase64 = photoStr.replace(/[\r\n\s]/g, '');
+    if (!cleanBase64) {
+        return res.status(404).send('Foto não encontrada');
+    }
+
+    const buffer = Buffer.from(cleanBase64, 'base64');
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(buffer);
 };
 
 app.get('/api/rh-collaborators/:id/photo/raw', async (req, res) => {
@@ -3125,7 +3158,7 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehicleType', type: 'NVARCHAR(100) NULL' },
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
-                { name: 'Photo', type: 'VARBINARY(MAX) NULL' },
+                { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
                 { name: 'HasPhoto', type: 'INT DEFAULT 0' }
             ];
             for (const col of colsToAdd) {
@@ -3159,7 +3192,7 @@ async function updateUserPendingStatus(pool, userId) {
             // Tratamento explícito da foto no POST
             if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
                 if (!body.photo.startsWith('/api/')) {
-                    request.input('Photo', sql.NVarChar, body.photo);
+                    request.input('Photo', sql.NVarChar(sql.MAX), body.photo);
                     request.input('HasPhoto', sql.Int, 1);
                     columns.push('Photo', 'HasPhoto');
                     values.push('@Photo', '@HasPhoto');
@@ -3227,12 +3260,12 @@ async function updateUserPendingStatus(pool, userId) {
                         // Se for uma URL interna de API, a foto existente no banco NÃO MUDOU (preserva a foto)
                     } else {
                         // Grava a string Base64 diretamente
-                        request.input('Photo', sql.NVarChar, body.photo);
+                        request.input('Photo', sql.NVarChar(sql.MAX), body.photo);
                         request.input('HasPhoto', sql.Int, 1);
                         sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                     }
                 } else {
-                    request.input('Photo', sql.NVarChar, null);
+                    request.input('Photo', sql.NVarChar(sql.MAX), null);
                     request.input('HasPhoto', sql.Int, 0);
                     sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                 }
