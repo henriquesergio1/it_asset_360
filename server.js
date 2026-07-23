@@ -311,7 +311,7 @@ const DB_SCHEMAS = {
         Reason NVARCHAR(MAX),
         AdminUser NVARCHAR(255)
     )`,
-    RbacProfiles: `(`,StartLine:280,TargetContent:
+    RbacProfiles: `(
         ID_Perfil INT PRIMARY KEY IDENTITY(1,1),
         Nome NVARCHAR(255) NOT NULL,
         Ativo BIT DEFAULT 1,
