@@ -1547,7 +1547,7 @@ export const RhCollaboratorManager: React.FC = () => {
       {/* DETAIL MODAL (Sophisticated popup style same as IT module details) */}
       {isDetailModalOpen && selectedColab && !isEditing && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
                 {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
@@ -1598,8 +1598,15 @@ export const RhCollaboratorManager: React.FC = () => {
               </button>
             </div>
 
-            {/* Tabs Control */}
-            <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 px-8 shrink-0 overflow-x-auto overflow-y-hidden scrollbar-none">
+            {/* Tabs Control com Suporte a Rolagem via Mouse Wheel */}
+            <div 
+              onWheel={(e) => {
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}
+              className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 px-6 shrink-0 overflow-x-auto scroll-smooth py-1 scrollbar-thin scrollbar-thumb-indigo-400/40 dark:scrollbar-thumb-slate-600"
+            >
               <button
                 type="button"
                 onClick={() => setDetailTab('cadastro')}
