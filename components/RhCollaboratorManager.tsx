@@ -1598,14 +1598,20 @@ export const RhCollaboratorManager: React.FC = () => {
               </div>
 
               {/* Empresa de Registro (CNPJ) no lado direito do cabeçalho */}
-              <div className="flex items-center gap-4">
-                <div className="bg-indigo-50 dark:bg-indigo-950/50 px-4 py-2 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-2.5 max-w-sm">
-                  <div className="p-1.5 bg-indigo-600 text-white rounded-xl">
-                    <Building2 size={16} />
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-1.5 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-2.5 max-w-[260px] sm:max-w-[340px] shrink-0">
+                  <div className="p-1.5 bg-indigo-600 text-white rounded-xl shrink-0">
+                    <Building2 size={15} />
                   </div>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <span className="text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 block tracking-wider leading-none">Empresa de Registro</span>
-                    <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate block mt-0.5" title={selectedColab.companyCnpj || 'Não informada'}>
+                    <span 
+                      className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate block mt-0.5" 
+                      title={(() => {
+                        const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
+                        return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
+                      })()}
+                    >
                       {(() => {
                         const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
                         return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
@@ -1724,16 +1730,16 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {detailTab === 'cadastro' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Cartão 1: Dados Contratuais e Profissionais */}
-                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
-                      <Briefcase size={16} /> 1. Dados Contratuais e Profissionais
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-2.5">
+                      <Briefcase size={15} /> 1. Dados Contratuais e Profissionais
                     </h3>
                     
-                    <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Setor</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{sectors.find(s => s.id === selectedColab.sectorId)?.name || 'Sem Setor'}</span>
@@ -1757,7 +1763,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Salário Mensal</span>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                          <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
                             {revealSalaries[selectedColab.id] 
                               ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedColab.salary || 0)
                               : 'R$ •••••••'
@@ -1769,7 +1775,7 @@ export const RhCollaboratorManager: React.FC = () => {
                             className="p-1 bg-slate-200/60 dark:bg-slate-700/60 rounded-lg hover:bg-slate-300 transition-all"
                             title={revealSalaries[selectedColab.id] ? 'Ocultar salário' : 'Exibir salário'}
                           >
-                            {revealSalaries[selectedColab.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                            {revealSalaries[selectedColab.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         </div>
                       </div>
@@ -1786,59 +1792,13 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Cartão 2: Dados Pessoais e Contato */}
-                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
-                      <UserIcon size={16} /> 2. Dados Pessoais e Contato
+                  {/* Cartão 2: Documentação Regulamentar, Pessoal e Civil */}
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-2.5">
+                      <FileText size={15} /> 2. Documentação Regulamentar e Dados Civis
                     </h3>
                     
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Nascimento</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.birthDate ? new Date(selectedColab.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Gênero</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.gender || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Estado Civil</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.maritalStatus || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nome da Mãe</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.motherName || '---'}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nome do Pai</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.fatherName || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Corporativo</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailCorporate}>{selectedColab.emailCorporate || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Pessoal</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailPersonal}>{selectedColab.emailPersonal || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Corporativo</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.corporatePhone ? formatPhone(selectedColab.corporatePhone) : '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Pessoal</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.personalPhone ? formatPhone(selectedColab.personalPhone) : '---'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cartão 3: Documentação Regulamentar e Civil */}
-                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
-                      <FileText size={16} /> 3. Documentação Regulamentar e Civil
-                    </h3>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                    <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CPF</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{formatCPF(selectedColab.cpf)}</span>
@@ -1855,15 +1815,36 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
                       </div>
-                      <div className="col-span-2">
+                      <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
                       </div>
-                      <div className="col-span-2">
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH (Carteira de Habilitação)</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
-                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''}) - Vence em ${selectedColab.cnhExpiration ? new Date(selectedColab.cnhExpiration).toLocaleDateString('pt-BR') : ''}` : 'Não cadastrada'}
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}>
+                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}
                         </span>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Data de Nascimento</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? new Date(selectedColab.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Gênero</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.gender || '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Estado Civil</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.maritalStatus || '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Nome da Mãe</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.motherName}>{selectedColab.motherName || '---'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Nome do Pai</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.fatherName}>{selectedColab.fatherName || '---'}</span>
                       </div>
 
                       {/* Banco de Horas Highlight Card */}
@@ -1876,11 +1857,11 @@ export const RhCollaboratorManager: React.FC = () => {
                             const matchPonto = records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis);
                             if (matchPonto) {
                               return (
-                                <div className="col-span-2 p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
-                                  <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
-                                    <RefreshCw size={12} className="text-indigo-500" /> Saldo Banco de Horas (Relógio de Ponto)
+                                <div className="col-span-2 p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between font-sans">
+                                  <span className="text-[10px] font-black uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                    <RefreshCw size={12} className="text-indigo-500" /> Banco de Horas (Relógio de Ponto)
                                   </span>
-                                  <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black ${
+                                  <span className={`px-2 py-0.5 rounded-lg text-xs font-mono font-black ${
                                     matchPonto.total_banco.startsWith('-')
                                       ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300'
                                       : matchPonto.total_banco === '0:00'
@@ -1899,40 +1880,63 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Cartão 4: Endereço Residencial */}
-                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
-                      <MapPin size={16} /> 4. Endereço Residencial
+                  {/* Cartão 3: Endereço Residencial e Canais de Contato */}
+                  <div className="col-span-1 lg:col-span-2 bg-slate-50/70 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-2.5">
+                      <MapPin size={15} /> 3. Endereço Residencial e Canais de Contato
                     </h3>
                     
-                    <div className="text-xs space-y-3 flex items-start gap-3">
-                      <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 mt-0.5">
-                        <MapPin size={22} />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-slate-900 dark:text-white text-xs block">
-                            {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
-                            {selectedColab.complement && ` - ${selectedColab.complement}`}
-                          </span>
-                          {selectedColab.street && (
-                            <a 
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                `${selectedColab.street || ''}, ${selectedColab.number || ''}, ${selectedColab.neighborhood || ''}, ${selectedColab.city || ''} - ${selectedColab.state || ''}, ${selectedColab.cep || ''}`
-                              )}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] rounded-lg transition-colors flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/60 shrink-0"
-                              title="Abrir no Google Maps"
-                            >
-                              <Map size={12} /> Maps
-                            </a>
-                          )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Sub-bloco Endereço */}
+                      <div className="flex items-start gap-3 bg-white dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 mt-0.5">
+                          <MapPin size={18} />
                         </div>
-                        <span className="text-slate-500 dark:text-slate-400 block text-[11px] font-medium">
-                          Bairro {selectedColab.neighborhood || '---'} • {selectedColab.city || '---'} - {selectedColab.state || '---'}
-                        </span>
-                        <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep ? formatCEP(selectedColab.cep) : '---'}</span>
+                        <div className="flex-1 space-y-0.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-slate-900 dark:text-white text-xs block">
+                              {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
+                              {selectedColab.complement && ` - ${selectedColab.complement}`}
+                            </span>
+                            {selectedColab.street && (
+                              <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                  `${selectedColab.street || ''}, ${selectedColab.number || ''}, ${selectedColab.neighborhood || ''}, ${selectedColab.city || ''} - ${selectedColab.state || ''}, ${selectedColab.cep || ''}`
+                                )}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] rounded-lg transition-colors flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/60 shrink-0"
+                                title="Abrir no Google Maps"
+                              >
+                                <Map size={11} /> Maps
+                              </a>
+                            )}
+                          </div>
+                          <span className="text-slate-500 dark:text-slate-400 block text-[11px] font-medium">
+                            Bairro {selectedColab.neighborhood || '---'} • {selectedColab.city || '---'} - {selectedColab.state || '---'}
+                          </span>
+                          <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep ? formatCEP(selectedColab.cep) : '---'}</span>
+                        </div>
+                      </div>
+
+                      {/* Sub-bloco Contatos */}
+                      <div className="bg-white dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Corporativo</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailCorporate}>{selectedColab.emailCorporate || '---'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block">E-mail Pessoal</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={selectedColab.emailPersonal}>{selectedColab.emailPersonal || '---'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Corporativo</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.corporatePhone ? formatPhone(selectedColab.corporatePhone) : '---'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase text-slate-400 block">Tel. Pessoal</span>
+                          <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">{selectedColab.personalPhone ? formatPhone(selectedColab.personalPhone) : '---'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
