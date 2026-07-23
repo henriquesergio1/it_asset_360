@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhCompany, Perfil } from '../types';
+import { Device, SimCard, User, AuditLog, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, ConsumableTransaction, Consumable, DeviceAudit, RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhCompany, RhDocumentEntry, RhCareerHistoryRecord, Perfil } from '../types';
 
 export interface DataContextType {
  devices: Device[];
@@ -36,6 +36,8 @@ export interface DataContextType {
  rhTemplates: RhTermTemplate[];
  rhTerms: RhTerm[];
  rhAssetItems: RhAssetItem[];
+ rhDocuments: RhDocumentEntry[];
+ rhCareerHistory: RhCareerHistoryRecord[];
 
  // Perfis RBAC
  profiles: Perfil[];
@@ -188,6 +190,10 @@ export interface DataContextType {
  updateRhAssetItem: (item: RhAssetItem, adminName: string) => void;
  deleteRhAssetItem: (id: string, adminName: string) => void;
  addRhCompany: (company: RhCompany, adminName: string) => void;
+ addRhDocument: (doc: RhDocumentEntry, adminName: string) => Promise<void>;
+ deleteRhDocument: (id: string, adminName: string) => Promise<void>;
+ addRhCareerHistory: (record: RhCareerHistoryRecord, adminName: string) => Promise<void>;
+ deleteRhCareerHistory: (id: string, adminName: string) => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);

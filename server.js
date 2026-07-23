@@ -286,7 +286,32 @@ const DB_SCHEMAS = {
         MinStock INT,
         Notes NVARCHAR(MAX)
     )`,
-    RbacProfiles: `(
+    RhDocuments: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        CollaboratorId NVARCHAR(255),
+        DocumentType NVARCHAR(100),
+        Category NVARCHAR(100),
+        Title NVARCHAR(255),
+        FileName NVARCHAR(255),
+        FileBinary NVARCHAR(MAX),
+        UploadDate DATETIME DEFAULT GETDATE(),
+        ReferencePeriod NVARCHAR(50),
+        Institution NVARCHAR(255),
+        AcademicStatus NVARCHAR(50),
+        Notes NVARCHAR(MAX)
+    )`,
+    RhCareerHistory: `(
+        Id NVARCHAR(255) PRIMARY KEY,
+        CollaboratorId NVARCHAR(255),
+        PreviousRole NVARCHAR(255),
+        NewRole NVARCHAR(255),
+        PreviousSalary FLOAT,
+        NewSalary FLOAT,
+        ChangeDate DATETIME DEFAULT GETDATE(),
+        Reason NVARCHAR(MAX),
+        AdminUser NVARCHAR(255)
+    )`,
+    RbacProfiles: `(`,StartLine:280,TargetContent:
         ID_Perfil INT PRIMARY KEY IDENTITY(1,1),
         Nome NVARCHAR(255) NOT NULL,
         Ativo BIT DEFAULT 1,
@@ -1707,6 +1732,37 @@ app.get('/api/users/:id/photo/raw', async (req, res) => {
         const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT Photo FROM Users WHERE Id=@Id");
         const row = result.recordset[0];
         sendImageFromDbField(res, row?.Photo);
+    } catch (err) { res.status(500).send(err.message); }
+});
+
+app.get('/api/rh-documents/:id/raw', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileBinary, FileName FROM RhDocuments WHERE Id=@Id");
+        const row = result.recordset[0];
+        if (!row || !row.FileBinary) {
+            return res.status(404).send('Arquivo não encontrado');
+        }
+        let rawData = row.FileBinary;
+        let mime = 'application/pdf';
+        if (typeof rawData === 'string' && rawData.startsWith('data:')) {
+            const match = rawData.match(/^data:([^;]+);base64,/);
+            if (match) mime = match[1];
+            rawData = rawData.substring(rawData.indexOf(',') + 1);
+        } else {
+            const ext = (row.FileName || '').split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+                mime = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+            } else if (ext === 'pdf') {
+                mime = 'application/pdf';
+            }
+        }
+        const cleanBase64 = String(rawData).replace(/[\r\n\s]/g, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Content-Disposition', `inline; filename="${row.FileName || 'documento'}"`);
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.send(buffer);
     } catch (err) { res.status(500).send(err.message); }
 });
 
@@ -3286,6 +3342,145 @@ async function updateUserPendingStatus(pool, userId) {
             res.json({ success: true });
         } catch (err) {
             console.error('ERRO PUT /api/rh-collaborators/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    // --- Rotas Explícitas de RH Documentos Unificados (Holerites / Acadêmico / Pessoais) ---
+    app.get('/api/rh-documents', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query(`
+                SELECT Id, CollaboratorId, DocumentType, Category, Title, FileName, UploadDate, ReferencePeriod, Institution, AcademicStatus, Notes,
+                (CASE WHEN FileBinary IS NOT NULL AND FileBinary != '' THEN 1 ELSE 0 END) as hasFile
+                FROM RhDocuments
+            `);
+            const formatted = (result.recordset || []).map(r => ({
+                id: r.Id,
+                collaboratorId: r.CollaboratorId,
+                documentType: r.DocumentType,
+                category: r.Category,
+                title: r.Title,
+                fileName: r.FileName,
+                uploadDate: r.UploadDate,
+                referencePeriod: r.ReferencePeriod,
+                institution: r.Institution,
+                academicStatus: r.AcademicStatus,
+                notes: r.Notes,
+                hasFile: r.hasFile === 1,
+                fileUrl: r.hasFile === 1 ? `/api/rh-documents/${r.Id}/raw?t=${Date.now()}` : undefined
+            }));
+            res.json(formatted);
+        } catch (err) {
+            console.error('ERRO GET /api/rh-documents:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/rh-documents', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { id, collaboratorId, documentType, category, title, fileName, fileUrl, uploadDate, referencePeriod, institution, academicStatus, notes, _adminUser } = req.body;
+            const targetId = id || ('doc-' + Math.random().toString(36).substr(2, 9));
+            const reqQuery = pool.request()
+                .input('Id', sql.NVarChar, targetId)
+                .input('CollaboratorId', sql.NVarChar, collaboratorId)
+                .input('DocumentType', sql.NVarChar, documentType || 'DOCUMENTO_PESSOAL')
+                .input('Category', sql.NVarChar, category || 'Outros')
+                .input('Title', sql.NVarChar, title || fileName || 'Documento')
+                .input('FileName', sql.NVarChar, fileName || 'arquivo')
+                .input('FileBinary', sql.NVarChar(sql.MAX), fileUrl && !fileUrl.startsWith('/api/') ? fileUrl : null)
+                .input('UploadDate', sql.DateTime, uploadDate ? new Date(uploadDate) : new Date())
+                .input('ReferencePeriod', sql.NVarChar, referencePeriod || null)
+                .input('Institution', sql.NVarChar, institution || null)
+                .input('AcademicStatus', sql.NVarChar, academicStatus || null)
+                .input('Notes', sql.NVarChar, notes || null);
+
+            await reqQuery.query(`
+                IF EXISTS (SELECT * FROM RhDocuments WHERE Id=@Id)
+                BEGIN
+                    UPDATE RhDocuments SET
+                        CollaboratorId=@CollaboratorId, DocumentType=@DocumentType, Category=@Category,
+                        Title=@Title, FileName=@FileName,
+                        FileBinary=COALESCE(@FileBinary, FileBinary),
+                        UploadDate=@UploadDate, ReferencePeriod=@ReferencePeriod, Institution=@Institution,
+                        AcademicStatus=@AcademicStatus, Notes=@Notes
+                    WHERE Id=@Id
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO RhDocuments (Id, CollaboratorId, DocumentType, Category, Title, FileName, FileBinary, UploadDate, ReferencePeriod, Institution, AcademicStatus, Notes)
+                    VALUES (@Id, @CollaboratorId, @DocumentType, @Category, @Title, @FileName, @FileBinary, @UploadDate, @ReferencePeriod, @Institution, @AcademicStatus, @Notes)
+                END
+            `);
+
+            await logAction(collaboratorId, 'RhCollaborator', 'Documento Anexado', _adminUser || 'Gestor R.H.', title || fileName || 'Documento', `Novo documento registrado (${category})`);
+            res.json({ success: true, id: targetId });
+        } catch (err) {
+            console.error('ERRO POST /api/rh-documents:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.delete('/api/rh-documents/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request().input('Id', sql.NVarChar, req.params.id).query("DELETE FROM RhDocuments WHERE Id=@Id");
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO DELETE /api/rh-documents/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    // --- Rotas Explícitas de RH Histórico de Cargos e Salários ---
+    app.get('/api/rh-career-history', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query("SELECT * FROM RhCareerHistory ORDER BY ChangeDate DESC");
+            res.json(format(result));
+        } catch (err) {
+            console.error('ERRO GET /api/rh-career-history:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.post('/api/rh-career-history', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const { id, collaboratorId, previousRole, newRole, previousSalary, newSalary, changeDate, reason, _adminUser } = req.body;
+            const targetId = id || ('history-' + Math.random().toString(36).substr(2, 9));
+            const request = pool.request()
+                .input('Id', sql.NVarChar, targetId)
+                .input('CollaboratorId', sql.NVarChar, collaboratorId)
+                .input('PreviousRole', sql.NVarChar, previousRole || null)
+                .input('NewRole', sql.NVarChar, newRole || '')
+                .input('PreviousSalary', sql.Float, previousSalary !== undefined && previousSalary !== null ? parseFloat(previousSalary) : null)
+                .input('NewSalary', sql.Float, newSalary !== undefined && newSalary !== null ? parseFloat(newSalary) : 0)
+                .input('ChangeDate', sql.DateTime, changeDate ? new Date(changeDate) : new Date())
+                .input('Reason', sql.NVarChar, reason || null)
+                .input('AdminUser', sql.NVarChar, _adminUser || 'Gestor R.H.');
+
+            await request.query(`
+                INSERT INTO RhCareerHistory (Id, CollaboratorId, PreviousRole, NewRole, PreviousSalary, NewSalary, ChangeDate, Reason, AdminUser)
+                VALUES (@Id, @CollaboratorId, @PreviousRole, @NewRole, @PreviousSalary, @NewSalary, @ChangeDate, @Reason, @AdminUser)
+            `);
+
+            await logAction(collaboratorId, 'RhCollaborator', 'Alteração Cargo/Salário', _adminUser || 'Gestor R.H.', newRole, `Alteração de cargo/salário registrada. Novo Cargo: ${newRole}, Novo Salário: R$ ${newSalary}`);
+            res.json({ success: true, id: targetId });
+        } catch (err) {
+            console.error('ERRO POST /api/rh-career-history:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.delete('/api/rh-career-history/:id', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await pool.request().input('Id', sql.NVarChar, req.params.id).query("DELETE FROM RhCareerHistory WHERE Id=@Id");
+            res.json({ success: true });
+        } catch (err) {
+            console.error('ERRO DELETE /api/rh-career-history/:id:', err);
             res.status(500).send(err.message);
         }
     });

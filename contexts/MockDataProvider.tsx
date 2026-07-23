@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DataContext, DataContextType } from './DataContext';
 import { useToast } from './ToastContext';
-import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem } from '../types';
+import { Device, SimCard, User, AuditLog, DeviceStatus, ActionType, SystemUser, SystemSettings, DeviceModel, DeviceBrand, AssetType, MaintenanceRecord, UserSector, Term, AccessoryType, CustomField, DeviceAccessory, SoftwareAccount, ExternalDbConfig, ExpedienteAlert, Task, TaskLog, TaskStatus, TaskType, RecurrenceType, TaskRecurrenceConfig, Consumable, ConsumableTransaction, UserStatus, DeviceAudit, RhCollaborator, RhDocument, RhOccurrence, RhTermTemplate, RhTerm, RhAssetItem, RhDocumentEntry, RhCareerHistoryRecord } from '../types';
 import { mockDevices, mockSims, mockUsers, mockAuditLogs, mockSystemUsers, mockSystemSettings, mockModels, mockBrands, mockAssetTypes, mockMaintenanceRecords, mockSectors, mockAccessoryTypes, mockCustomFields } from '../services/mockService';
 
 export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -149,6 +149,8 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     { id: 'rh-item-2', name: 'Camiseta de Uniforme G', type: 'CONSUMIVEL', totalStock: 30, currentStock: 30, minStock: 10, notes: 'Uniforme padrão de malha fria' },
     { id: 'rh-item-3', name: 'Capacete de Proteção', type: 'ATIVO', totalStock: 5, currentStock: 5, minStock: 2, notes: 'Capacete com regulagem e carneira' }
   ]);
+  const [rhDocuments, setRhDocuments] = useState<RhDocumentEntry[]>([]);
+  const [rhCareerHistory, setRhCareerHistory] = useState<RhCareerHistoryRecord[]>([]);
 
   const isReadOnly = !settings.licenseExpires || new Date(settings.licenseExpires) <= new Date();
 
@@ -183,6 +185,24 @@ export const MockDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     rhTemplates,
     rhTerms,
     rhAssetItems,
+    rhDocuments,
+    rhCareerHistory,
+    addRhDocument: async (doc) => {
+      setRhDocuments(p => [...p, doc]);
+      showToast('Documento registrado no R.H. (Mock)', 'success');
+    },
+    deleteRhDocument: async (id) => {
+      setRhDocuments(p => p.filter(x => x.id !== id));
+      showToast('Documento removido (Mock)', 'success');
+    },
+    addRhCareerHistory: async (rec) => {
+      setRhCareerHistory(p => [rec, ...p]);
+      showToast('Histórico de cargo/salário salvo (Mock)', 'success');
+    },
+    deleteRhCareerHistory: async (id) => {
+      setRhCareerHistory(p => p.filter(x => x.id !== id));
+      showToast('Registro de histórico removido (Mock)', 'success');
+    },
     addRhCollaborator: (c) => {
       setRhCollaborators(p => [...p, c]);
       showToast('Colaborador cadastrado no R.H. (Mock)', 'success');

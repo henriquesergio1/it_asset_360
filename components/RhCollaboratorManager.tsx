@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTerm } from '../types';
+import { RhCollaborator, RhDependent, RhDocument, RhOccurrence, RhTerm, RhDocumentEntry, RhCareerHistoryRecord } from '../types';
 import { DataTable, Column } from './DataTable';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { 
@@ -10,7 +10,8 @@ import {
   Upload, Calendar, ArrowLeft, ArrowRight, UserPlus, UserMinus, UserCheck, Info, 
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
-  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2
+  FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2,
+  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
@@ -54,6 +55,12 @@ export const RhCollaboratorManager: React.FC = () => {
     rhDependents = [], 
     addRhDependent,
     deleteRhDependent,
+    rhDocuments = [],
+    addRhDocument,
+    deleteRhDocument,
+    rhCareerHistory = [],
+    addRhCareerHistory,
+    deleteRhCareerHistory,
     sectors, 
     users,
     updateUser: updateUserData,
@@ -133,7 +140,28 @@ export const RhCollaboratorManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'ocorrencias'>('cadastro');
 
   // Tabs for viewing collaborator detail modal
-  const [detailTab, setDetailTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'ocorrencias' | 'historico'>('cadastro');
+  const [detailTab, setDetailTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'holerites' | 'academico' | 'cargos-salarios' | 'ocorrencias' | 'historico'>('cadastro');
+
+  // Estados locais para Holerites
+  const [holeriteType, setHoleriteType] = useState<string>('Holerite Mensal');
+  const [holeritePeriod, setHoleritePeriod] = useState<string>('');
+  const [holeriteTitle, setHoleriteTitle] = useState<string>('');
+  const [holeriteFileName, setHoleriteFileName] = useState<string>('');
+  const [holeriteFileBase64, setHoleriteFileBase64] = useState<string>('');
+
+  // Estados locais para Formação Acadêmica & Cursos
+  const [academicCategory, setAcademicCategory] = useState<string>('Certificação / Treinamento');
+  const [academicTitle, setAcademicTitle] = useState<string>('');
+  const [academicInstitution, setAcademicInstitution] = useState<string>('');
+  const [academicStatus, setAcademicStatus] = useState<'Concluído' | 'Em Andamento' | 'Incompleto'>('Concluído');
+  const [academicFileName, setAcademicFileName] = useState<string>('');
+  const [academicFileBase64, setAcademicFileBase64] = useState<string>('');
+
+  // Estados locais para adição manual de Histórico de Cargos e Salários
+  const [historyNewRole, setHistoryNewRole] = useState<string>('');
+  const [historyNewSalary, setHistoryNewSalary] = useState<number | ''>('');
+  const [historyReason, setHistoryReason] = useState<string>('');
+  const [historyDate, setHistoryDate] = useState<string>('');
 
   // Estados locais para cadastro de dependentes
   const [depName, setDepName] = useState('');
@@ -166,6 +194,25 @@ export const RhCollaboratorManager: React.FC = () => {
     };
     
     updateRhCollaborator(finalData, adminName);
+
+    // Registro automático no Histórico de Cargos e Salários se mudou o cargo ou o salário
+    if (selectedColab && addRhCareerHistory) {
+      const roleChanged = (selectedColab.role || '').trim() !== (finalData.role || '').trim();
+      const salaryChanged = Number(selectedColab.salary || 0) !== Number(finalData.salary || 0);
+      if (roleChanged || salaryChanged) {
+        addRhCareerHistory({
+          id: 'history-' + Math.random().toString(36).substr(2, 9),
+          collaboratorId: finalData.id,
+          previousRole: selectedColab.role || 'Sem Cargo',
+          newRole: finalData.role || 'Sem Cargo',
+          previousSalary: selectedColab.salary || 0,
+          newSalary: finalData.salary || 0,
+          changeDate: new Date().toISOString(),
+          reason: editReasonText.trim() || 'Alteração contratual de cadastro',
+          adminUser: adminName
+        }, adminName);
+      }
+    }
     
     // Sincronização automática da foto para o colaborador de T.I. vinculado por CPF
     const cleanCpf = (finalData.cpf || '').replace(/\D/g, '');
@@ -622,7 +669,8 @@ export const RhCollaboratorManager: React.FC = () => {
     if (selectedColab) {
       const updatedDocs = (selectedColab.documents || []).filter(d => d.id !== docToDelete.id);
       const updatedColab = { ...selectedColab, documents: updatedDocs };
-      updateRhCollaborator(updatedColab, adminName, `Exclusão de documento regulamentar: ${docToDelete.fileName} (${docToDelete.category}). Motivo: ${deleteDocReason.trim()}`);
+      const noteMsg = `Exclusão de documento regulamentar: ${docToDelete.fileName} (${docToDelete.category}). Motivo: ${deleteDocReason.trim()}`;
+      updateRhCollaborator({ ...updatedColab, _notes: noteMsg }, adminName);
       setSelectedColab(updatedColab);
       setForm(normalizeColabDates(updatedColab));
     } else if (isEditing) {
@@ -652,7 +700,8 @@ export const RhCollaboratorManager: React.FC = () => {
 
     const updatedDocs = [...(selectedColab.documents || []), newDoc];
     const updatedColab = { ...selectedColab, documents: updatedDocs };
-    updateRhCollaborator(updatedColab, adminName, `Anexado documento regulamentar: ${newDoc.fileName} (${newDoc.category})`);
+    const noteMsg = `Anexado documento regulamentar: ${newDoc.fileName} (${newDoc.category})`;
+    updateRhCollaborator({ ...updatedColab, _notes: noteMsg }, adminName);
     setSelectedColab(updatedColab);
     setForm(normalizeColabDates(updatedColab));
 
@@ -760,6 +809,17 @@ export const RhCollaboratorManager: React.FC = () => {
       } catch (e) { console.error('Erro ao carregar documento:', e); }
     }
     showToast('Arquivo não disponível.', 'error');
+  };
+
+  const handlePreviewDocEntry = (doc: RhDocumentEntry) => {
+    if (doc.fileUrl && doc.fileUrl.startsWith('data:')) {
+      setPreviewData({ url: doc.fileUrl, name: doc.fileName || doc.title });
+      setIsPreviewOpen(true);
+      return;
+    }
+    const url = doc.fileUrl || `/api/rh-documents/${doc.id}/raw`;
+    setPreviewData({ url, name: doc.fileName || doc.title });
+    setIsPreviewOpen(true);
   };
 
   const handlePreviewOccurrenceAnexo = async (occ: RhOccurrence) => {
@@ -1575,6 +1635,42 @@ export const RhCollaboratorManager: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setDetailTab('holerites')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'holerites'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <FileSpreadsheet size={12} />
+                4. Holerites ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'HOLERITE').length : 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailTab('academico')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'academico'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <GraduationCap size={12} />
+                5. Formação & Cursos ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'ACADEMICO_CERTIFICADO').length : 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDetailTab('cargos-salarios')}
+                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
+                  detailTab === 'cargos-salarios'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                <DollarSign size={12} />
+                6. Cargos & Salários ({selectedColab ? rhCareerHistory.filter(h => h.collaboratorId === selectedColab.id).length : 0})
+              </button>
+              <button
+                type="button"
                 onClick={() => setDetailTab('ocorrencias')}
                 className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
                   detailTab === 'ocorrencias'
@@ -1582,7 +1678,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
-                4. Faltas / Férias / Atestados
+                7. Faltas / Férias / Atestados
               </button>
               <button
                 type="button"
@@ -1594,7 +1690,7 @@ export const RhCollaboratorManager: React.FC = () => {
                 }`}
               >
                 <History size={12} />
-                5. Histórico
+                8. Auditoria de Eventos
               </button>
             </div>
 
@@ -2127,6 +2223,496 @@ export const RhCollaboratorManager: React.FC = () => {
                               </div>
                             );
                           })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'holerites' && selectedColab && (
+                <div className="space-y-6">
+                  {/* Formulário de Adição de Holerite */}
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2">
+                      <FileSpreadsheet size={16} />
+                      Anexar Novo Holerite / Comprovante de Pagamento
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Tipo de Holerite</label>
+                        <select
+                          value={holeriteType}
+                          onChange={(e) => setHoleriteType(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        >
+                          <option value="Holerite Mensal">Holerite Mensal</option>
+                          <option value="Adiantamento">Adiantamento Salarial</option>
+                          <option value="Férias">Recibo de Férias</option>
+                          <option value="13º Salário">13º Salário</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Mês/Ano (Referência)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 05/2026 ou 13º/2026"
+                          value={holeritePeriod}
+                          onChange={(e) => setHoleritePeriod(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Título / Descrição</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Holerite assinado Maio"
+                          value={holeriteTitle}
+                          onChange={(e) => setHoleriteTitle(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                      <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
+                        <Upload size={14} className="text-indigo-500" />
+                        <span>{holeriteFileName ? holeriteFileName : 'Selecionar Holerite (PDF ou Imagem)'}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setHoleriteFileName(file.name);
+                              const reader = new FileReader();
+                              reader.onload = (ev) => setHoleriteFileBase64(ev.target?.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!holeriteFileBase64) {
+                            showToast('Selecione o arquivo do holerite', 'info');
+                            return;
+                          }
+                          await addRhDocument({
+                            id: 'doc-' + Math.random().toString(36).substr(2, 9),
+                            collaboratorId: selectedColab.id,
+                            documentType: 'HOLERITE',
+                            category: holeriteType,
+                            title: holeriteTitle || `${holeriteType} ${holeritePeriod}`,
+                            fileName: holeriteFileName || 'holerite.pdf',
+                            fileUrl: holeriteFileBase64,
+                            uploadDate: new Date().toISOString(),
+                            referencePeriod: holeritePeriod
+                          }, adminName);
+                          setHoleriteTitle('');
+                          setHoleritePeriod('');
+                          setHoleriteFileName('');
+                          setHoleriteFileBase64('');
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        <Plus size={14} />
+                        Anexar Holerite
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Holerites */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider">Holerites Registrados</h4>
+                    {(() => {
+                      const list = rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'HOLERITE');
+                      if (list.length === 0) {
+                        return (
+                          <div className="text-center py-10 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                            <FileSpreadsheet className="mx-auto text-slate-400 mb-2" size={36} />
+                            <p className="text-xs font-bold text-slate-500">Nenhum holerite anexado até o momento</p>
+                          </div>
+                        );
+                      }
+                      return list.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                              <FileSpreadsheet size={20} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-800 dark:text-white">{doc.title}</span>
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded">
+                                  {doc.category}
+                                </span>
+                                {doc.referencePeriod && (
+                                  <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded">
+                                    {doc.referencePeriod}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                Enviado em: {new Date(doc.uploadDate).toLocaleDateString('pt-BR')} • {doc.fileName}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handlePreviewDocEntry(doc)}
+                              className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-lg hover:bg-indigo-100 transition-all flex items-center gap-1 border border-indigo-200 dark:border-indigo-500/30"
+                            >
+                              <Eye size={12} /> Ver
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteRhDocument(doc.id, adminName)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'academico' && selectedColab && (
+                <div className="space-y-6">
+                  {/* Formulário de Formação Acadêmica & Cursos */}
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2">
+                      <GraduationCap size={16} />
+                      Adicionar Formação Acadêmica / Curso / Certificado
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nível / Categoria</label>
+                        <select
+                          value={academicCategory}
+                          onChange={(e) => setAcademicCategory(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        >
+                          <option value="Graduação / Faculdade">Graduação / Faculdade</option>
+                          <option value="Pós-Graduação / MBA">Pós-Graduação / MBA</option>
+                          <option value="Curso Técnico">Curso Técnico</option>
+                          <option value="Certificação / Treinamento">Certificação / Treinamento</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nome do Curso / Certificação</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Engenharia de Software"
+                          value={academicTitle}
+                          onChange={(e) => setAcademicTitle(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Instituição de Ensino</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: USP, SENAI, Coursera"
+                          value={academicInstitution}
+                          onChange={(e) => setAcademicInstitution(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Status</label>
+                        <select
+                          value={academicStatus}
+                          onChange={(e) => setAcademicStatus(e.target.value as any)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        >
+                          <option value="Concluído">Concluído</option>
+                          <option value="Em Andamento">Em Andamento</option>
+                          <option value="Incompleto">Incompleto</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                      <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-all">
+                        <Upload size={14} className="text-indigo-500" />
+                        <span>{academicFileName ? academicFileName : 'Anexar Certificado / Diploma (Opcional)'}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setAcademicFileName(file.name);
+                              const reader = new FileReader();
+                              reader.onload = (ev) => setAcademicFileBase64(ev.target?.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!academicTitle.trim()) {
+                            showToast('Informe o nome do curso/certificação', 'info');
+                            return;
+                          }
+                          await addRhDocument({
+                            id: 'doc-' + Math.random().toString(36).substr(2, 9),
+                            collaboratorId: selectedColab.id,
+                            documentType: 'ACADEMICO_CERTIFICADO',
+                            category: academicCategory,
+                            title: academicTitle.trim(),
+                            institution: academicInstitution.trim() || undefined,
+                            academicStatus: academicStatus,
+                            fileName: academicFileName || 'certificado.pdf',
+                            fileUrl: academicFileBase64 || undefined,
+                            uploadDate: new Date().toISOString()
+                          }, adminName);
+                          setAcademicTitle('');
+                          setAcademicInstitution('');
+                          setAcademicFileName('');
+                          setAcademicFileBase64('');
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        <Plus size={14} />
+                        Salvar Formação / Curso
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Formações e Cursos */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider">Cursos e Certificados Cadastrados</h4>
+                    {(() => {
+                      const list = rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'ACADEMICO_CERTIFICADO');
+                      if (list.length === 0) {
+                        return (
+                          <div className="text-center py-10 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                            <GraduationCap className="mx-auto text-slate-400 mb-2" size={36} />
+                            <p className="text-xs font-bold text-slate-500">Nenhum curso ou certificado cadastrado</p>
+                          </div>
+                        );
+                      }
+                      return list.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                              <Award size={20} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-800 dark:text-white">{doc.title}</span>
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded">
+                                  {doc.category}
+                                </span>
+                                {doc.academicStatus && (
+                                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                                    doc.academicStatus === 'Concluído' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' :
+                                    doc.academicStatus === 'Em Andamento' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400' :
+                                    'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                                  }`}>
+                                    {doc.academicStatus}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block mt-0.5">
+                                {doc.institution ? `Instituição: ${doc.institution} • ` : ''} Cadastrado em: {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {(doc.fileUrl || doc.hasFile) && (
+                              <button
+                                type="button"
+                                onClick={() => handlePreviewDocEntry(doc)}
+                                className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs rounded-lg hover:bg-emerald-100 transition-all flex items-center gap-1 border border-emerald-200 dark:border-emerald-500/30"
+                              >
+                                <Eye size={12} /> Ver Certificado
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => deleteRhDocument(doc.id, adminName)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {detailTab === 'cargos-salarios' && selectedColab && (
+                <div className="space-y-6">
+                  {/* Formulário para Inclusão Manual no Histórico */}
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                    <h4 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2">
+                      <DollarSign size={16} />
+                      Registrar Alteração no Histórico de Cargo / Salário
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Novo Cargo / Função</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Analista Pleno"
+                          value={historyNewRole}
+                          onChange={(e) => setHistoryNewRole(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Novo Salário (R$)</label>
+                        <input
+                          type="number"
+                          placeholder="Ex: 4500"
+                          value={historyNewSalary}
+                          onChange={(e) => setHistoryNewSalary(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Data da Alteração</label>
+                        <input
+                          type="date"
+                          value={historyDate}
+                          onChange={(e) => setHistoryDate(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Motivo / Justificativa</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Promoção por Mérito"
+                          value={historyReason}
+                          onChange={(e) => setHistoryReason(e.target.value)}
+                          className="w-full text-xs font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-800 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!historyNewRole.trim()) {
+                            showToast('Informe o novo cargo', 'info');
+                            return;
+                          }
+                          await addRhCareerHistory({
+                            id: 'history-' + Math.random().toString(36).substr(2, 9),
+                            collaboratorId: selectedColab.id,
+                            previousRole: selectedColab.role || 'Anterior',
+                            newRole: historyNewRole.trim(),
+                            previousSalary: selectedColab.salary || 0,
+                            newSalary: typeof historyNewSalary === 'number' ? historyNewSalary : (selectedColab.salary || 0),
+                            changeDate: historyDate ? new Date(historyDate).toISOString() : new Date().toISOString(),
+                            reason: historyReason.trim() || 'Ajuste contratual',
+                            adminUser: adminName
+                          }, adminName);
+                          setHistoryNewRole('');
+                          setHistoryNewSalary('');
+                          setHistoryReason('');
+                          setHistoryDate('');
+                        }}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                      >
+                        <Plus size={14} />
+                        Registrar Histórico
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Linha do Tempo de Cargos e Salários */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black uppercase text-slate-500 tracking-wider">Evolução de Cargos e Salários</h4>
+                    {(() => {
+                      const historyList = rhCareerHistory
+                        .filter(h => h.collaboratorId === selectedColab.id)
+                        .sort((a, b) => new Date(b.changeDate).getTime() - new Date(a.changeDate).getTime());
+
+                      if (historyList.length === 0) {
+                        return (
+                          <div className="text-center py-10 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                            <Briefcase className="mx-auto text-slate-400 mb-2" size={36} />
+                            <p className="text-xs font-bold text-slate-500">Nenhum histórico de cargo ou salário registrado</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="relative border-l-2 border-indigo-200 dark:border-indigo-900 ml-4 space-y-6 pl-6 py-2">
+                          {historyList.map((rec) => (
+                            <div key={rec.id} className="relative group">
+                              <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-indigo-600 ring-4 ring-indigo-100 dark:ring-indigo-950 flex items-center justify-center text-white">
+                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                              </div>
+
+                              <div className="bg-white dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                <div className="space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs font-black text-slate-800 dark:text-white">
+                                      {rec.previousRole ? `${rec.previousRole} ➔ ` : ''}{rec.newRole}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded">
+                                      {new Date(rec.changeDate).toLocaleDateString('pt-BR')}
+                                    </span>
+                                  </div>
+
+                                  <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                    {rec.previousSalary ? `Salário Anterior: R$ ${rec.previousSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ➔ ` : ''}
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                      Novo Salário: R$ {rec.newSalary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+
+                                  {rec.reason && (
+                                    <p className="text-[11px] text-slate-400 italic">Motivo: {rec.reason}</p>
+                                  )}
+                                  <span className="text-[9px] text-slate-400 block">Registrado por: {rec.adminUser || 'Gestor R.H.'}</span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => deleteRhCareerHistory(rec.id, adminName)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-lg transition-all self-end sm:self-center"
+                                  title="Remover este registro de histórico"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       );
                     })()}

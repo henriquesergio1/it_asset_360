@@ -453,15 +453,16 @@ export interface RhDocument {
 export interface RhOccurrence {
   id: string;
   collaboratorId: string;
-  type: 'Falta Justificada' | 'Falta Injustificada' | 'Atestado Médico' | 'Licença Maternidade' | 'Licença Paternidade' | 'Afastamento INSS' | 'Férias';
+  type: string;
   startDate: string;
   endDate: string;
-  daysCount: number;
+  daysCount?: number;
   cid?: string;
   crm?: string;
   notes?: string;
   fileUrl?: string;
   hasFile?: boolean;
+  createdAt?: string;
 }
 
 export interface RhTermTemplate {
@@ -484,11 +485,17 @@ export interface RhTerm {
   date: string;
   status: 'PENDENTE' | 'ASSINADO' | 'RECUSADO';
   fileUrl?: string;
+  hasFile?: boolean;
   signatureToken?: string;
   signatureIp?: string;
   signatureDate?: string;
   signatureLocation?: string;
   signatureHash?: string;
+  signatureStatus?: string;
+  isManual?: boolean;
+  resolutionReason?: string;
+  hasSignaturePhoto?: boolean;
+  hasSignatureSelfiePhoto?: boolean;
   notes?: string;
   type?: 'ENTREGA' | 'DEVOLUCAO';
   snapshotDeclaration?: string;
@@ -560,6 +567,9 @@ export interface RhCollaborator {
   // Relacionados
   documents: RhDocument[];
   photo?: string;
+  _notes?: string;
+  _adminUser?: string;
+  _reason?: string;
 }
 
 export interface RhDependent {
@@ -587,6 +597,34 @@ export interface RhCompany {
   cnpj: string;
   companyName: string;
   createdAt?: string;
+}
+
+export interface RhDocumentEntry {
+  id: string;
+  collaboratorId: string;
+  documentType: 'DOCUMENTO_PESSOAL' | 'HOLERITE' | 'ACADEMICO_CERTIFICADO';
+  category: string;
+  title: string;
+  fileName: string;
+  fileUrl?: string;
+  hasFile?: boolean;
+  uploadDate: string;
+  referencePeriod?: string;
+  institution?: string;
+  academicStatus?: 'Concluído' | 'Em Andamento' | 'Incompleto';
+  notes?: string;
+}
+
+export interface RhCareerHistoryRecord {
+  id: string;
+  collaboratorId: string;
+  previousRole?: string;
+  newRole: string;
+  previousSalary?: number;
+  newSalary: number;
+  changeDate: string;
+  reason?: string;
+  adminUser?: string;
 }
 
 export interface Perfil {

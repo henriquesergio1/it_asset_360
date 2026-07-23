@@ -144,6 +144,8 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    const rhTemplates = syncData?.rhTemplates || bootstrapData?.rhTemplates || [];
    const rhTerms = syncData?.rhTerms || bootstrapData?.rhTerms || [];
    const rhAssetItems = syncData?.rhAssetItems || bootstrapData?.rhAssetItems || [];
+   const rhDocuments = syncData?.rhDocuments || bootstrapData?.rhDocuments || [];
+   const rhCareerHistory = syncData?.rhCareerHistory || bootstrapData?.rhCareerHistory || [];
    const profiles = syncData?.profiles || bootstrapData?.profiles || [];
 
    useEffect(() => {
@@ -497,7 +499,7 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     devices, sims, users, logs, loading, error, systemUsers, settings,
     models, brands, assetTypes, maintenances, sectors, accessoryTypes, customFields,
     accounts, externalDbConfig, expedienteAlerts, consumables, consumableTransactions, audits,
-    rhCollaborators, rhCompanies, rhDependents, rhOccurrences, rhTemplates, rhTerms, rhAssetItems, profiles,
+    rhCollaborators, rhCompanies, rhDependents, rhOccurrences, rhTemplates, rhTerms, rhAssetItems, rhDocuments, rhCareerHistory, profiles,
     addRbacProfile: async (p, adm) => {
       try {
         await postData('rbac-profiles', { ...p, _adminUser: adm });
@@ -1032,6 +1034,46 @@ export const ProdDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       showToast('Item excluído do R.H.', 'success');
     } catch (err) {
       showToast('Erro ao excluir item', 'error');
+    }
+  },
+  addRhDocument: async (doc, adminName) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-documents', { ...doc, _adminUser: adminName });
+      fetchData(true);
+      showToast('Documento registrado no R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao anexar documento', 'error');
+    }
+  },
+  deleteRhDocument: async (id, adminName) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-documents/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Documento removido do R.H.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir documento', 'error');
+    }
+  },
+  addRhCareerHistory: async (record, adminName) => {
+    if (checkReadOnly()) return;
+    try {
+      await postData('rh-career-history', { ...record, _adminUser: adminName });
+      fetchData(true);
+      showToast('Histórico de cargo/salário salvo.', 'success');
+    } catch (err) {
+      showToast('Erro ao salvar histórico de cargo/salário', 'error');
+    }
+  },
+  deleteRhCareerHistory: async (id, adminName) => {
+    if (checkReadOnly()) return;
+    try {
+      await fetch(`${API_URL}/api/rh-career-history/${id}`, { method: 'DELETE' });
+      fetchData(true);
+      showToast('Registro de histórico excluído.', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir histórico', 'error');
     }
   }
  };
