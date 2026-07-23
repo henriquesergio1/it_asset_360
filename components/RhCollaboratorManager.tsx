@@ -1548,26 +1548,29 @@ export const RhCollaboratorManager: React.FC = () => {
       {isDetailModalOpen && selectedColab && !isEditing && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
-            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
               <div className="flex items-center gap-3">
                 {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
                   <img 
                     src={selectedColab.photo} 
                     alt={selectedColab.fullName} 
                     onError={() => setFailedPhotoIds(prev => new Set(prev).add(selectedColab.id))}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-350 dark:border-slate-650 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
                     onClick={() => setIsExpandedPhotoOpen(true)}
-                    title="Clique para expandir"
+                    title="Clique para expandir foto"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200 dark:border-slate-700">
+                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-200 dark:border-indigo-800">
                     {selectedColab.fullName.charAt(0)}
                   </div>
                 )}
-                <span className="px-2 py-1 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-[10px] font-black rounded uppercase tracking-wider">{selectedColab.contractType}</span>
                 <div className="flex flex-col">
-                  <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
+                    <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black rounded uppercase tracking-wider">{selectedColab.contractType}</span>
+                  </div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{selectedColab.role || 'Sem Cargo'}</span>
+                  
                   {/* Badge Banco de Horas vinculado por PIS */}
                   {(() => {
                     const cacheStr = localStorage.getItem('rh_banco_horas_cache');
@@ -1581,7 +1584,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     const isNegative = match.total_banco.startsWith('-');
                     const isZero = match.total_banco === '0:00';
                     return (
-                      <div className="flex items-center gap-1.5 mt-1.5">
+                      <div className="flex items-center gap-1.5 mt-1">
                         <RefreshCw size={10} className={isNegative ? 'text-rose-400' : isZero ? 'text-slate-400' : 'text-emerald-400'} />
                         <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Banco de Horas:</span>
                         <span className={`text-[10px] font-black font-mono ${
@@ -1593,9 +1596,28 @@ export const RhCollaboratorManager: React.FC = () => {
                   })()}
                 </div>
               </div>
-              <button onClick={() => setIsDetailModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all">
-                <X size={20} />
-              </button>
+
+              {/* Empresa de Registro (CNPJ) no lado direito do cabeçalho */}
+              <div className="flex items-center gap-4">
+                <div className="bg-indigo-50 dark:bg-indigo-950/50 px-4 py-2 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-2.5 max-w-sm">
+                  <div className="p-1.5 bg-indigo-600 text-white rounded-xl">
+                    <Building2 size={16} />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 block tracking-wider leading-none">Empresa de Registro</span>
+                    <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate block mt-0.5" title={selectedColab.companyCnpj || 'Não informada'}>
+                      {(() => {
+                        const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
+                        return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
+                      })()}
+                    </span>
+                  </div>
+                </div>
+
+                <button onClick={() => setIsDetailModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all shrink-0">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Tabs Control com Suporte a Rolagem via Mouse Wheel */}
@@ -1704,13 +1726,75 @@ export const RhCollaboratorManager: React.FC = () => {
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
               {detailTab === 'cadastro' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Bloco 1 */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">1. Dados Pessoais e Contato</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Cartão 1: Dados Contratuais e Profissionais */}
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                      <Briefcase size={16} /> 1. Dados Contratuais e Profissionais
+                    </h3>
+                    
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nascimento</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Setor</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{sectors.find(s => s.id === selectedColab.sectorId)?.name || 'Sem Setor'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Cargo / Função</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.role || 'Sem Cargo'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Tipo de Contrato</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.contractType || '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Jornada Semanal</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.weeklyHours || 44}h semanais</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Salário Mensal</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                            {revealSalaries[selectedColab.id] 
+                              ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedColab.salary || 0)
+                              : 'R$ •••••••'
+                            }
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleSalary(selectedColab.id)}
+                            className="p-1 bg-slate-200/60 dark:bg-slate-700/60 rounded-lg hover:bg-slate-300 transition-all"
+                            title={revealSalaries[selectedColab.id] ? 'Ocultar salário' : 'Exibir salário'}
+                          >
+                            {revealSalaries[selectedColab.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Benefício de Transporte</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.transportOption || 'Não Optante'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Possui Veículo?</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {selectedColab.hasVehicle === 'Sim' ? `Sim (${selectedColab.vehicleType || 'Veículo'}${selectedColab.vehiclePlate ? ` - ${selectedColab.vehiclePlate}` : ''})` : 'Não'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cartão 2: Dados Pessoais e Contato */}
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                      <UserIcon size={16} /> 2. Dados Pessoais e Contato
+                    </h3>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Nascimento</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.birthDate ? new Date(selectedColab.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
                       </div>
                       <div>
@@ -1722,11 +1806,11 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.maritalStatus || '---'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Mãe</span>
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nome da Mãe</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.motherName || '---'}</span>
                       </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Pai</span>
+                      <div className="col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Nome do Pai</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.fatherName || '---'}</span>
                       </div>
                       <div>
@@ -1748,9 +1832,12 @@ export const RhCollaboratorManager: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Bloco 2 */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">2. Documentação Regulamentar</h3>
+                  {/* Cartão 3: Documentação Regulamentar e Civil */}
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                      <FileText size={16} /> 3. Documentação Regulamentar e Civil
+                    </h3>
+                    
                     <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CPF</span>
@@ -1761,9 +1848,25 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.rg || '---'}</span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">PIS</span>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">PIS / PASEP</span>
                         <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.pis || '---'}</span>
                       </div>
+                      <div>
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH (Carteira de Habilitação)</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
+                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''}) - Vence em ${selectedColab.cnhExpiration ? new Date(selectedColab.cnhExpiration).toLocaleDateString('pt-BR') : ''}` : 'Não cadastrada'}
+                        </span>
+                      </div>
+
+                      {/* Banco de Horas Highlight Card */}
                       {(() => {
                         const cacheStr = localStorage.getItem('rh_banco_horas_cache');
                         if (cacheStr && selectedColab.pis) {
@@ -1773,9 +1876,9 @@ export const RhCollaboratorManager: React.FC = () => {
                             const matchPonto = records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis);
                             if (matchPonto) {
                               return (
-                                <div className="col-span-2 p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
+                                <div className="col-span-2 p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
                                   <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
-                                    <span>⏱️</span> Saldo Banco de Horas (Relógio de Ponto)
+                                    <RefreshCw size={12} className="text-indigo-500" /> Saldo Banco de Horas (Relógio de Ponto)
                                   </span>
                                   <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-black ${
                                     matchPonto.total_banco.startsWith('-')
@@ -1793,31 +1896,22 @@ export const RhCollaboratorManager: React.FC = () => {
                         }
                         return null;
                       })()}
-                      <div>
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">
-                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''}) - Vence em ${selectedColab.cnhExpiration ? new Date(selectedColab.cnhExpiration).toLocaleDateString('pt-BR') : ''}` : 'Não cadastrada'}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Bloco 3 */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">3. Endereço Residencial</h3>
-                    <div className="text-xs space-y-2 flex items-start gap-3">
-                      <MapPin size={20} className="text-slate-400 mt-1 shrink-0" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                  {/* Cartão 4: Endereço Residencial */}
+                  <div className="bg-slate-50/70 dark:bg-slate-900/40 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+                      <MapPin size={16} /> 4. Endereço Residencial
+                    </h3>
+                    
+                    <div className="text-xs space-y-3 flex items-start gap-3">
+                      <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 mt-0.5">
+                        <MapPin size={22} />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-slate-900 dark:text-white text-xs block">
                             {selectedColab.street || 'Endereço não cadastrado'}, nº {selectedColab.number || 'S/N'}
                             {selectedColab.complement && ` - ${selectedColab.complement}`}
                           </span>
@@ -1828,77 +1922,17 @@ export const RhCollaboratorManager: React.FC = () => {
                               )}`} 
                               target="_blank" 
                               rel="noopener noreferrer" 
-                              className="text-indigo-650 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors flex items-center gap-1 shrink-0"
+                              className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] rounded-lg transition-colors flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/60 shrink-0"
                               title="Abrir no Google Maps"
                             >
-                              <Map size={14} />
+                              <Map size={12} /> Maps
                             </a>
                           )}
                         </div>
-                        <span className="text-slate-400 block text-[10px] font-bold">
-                          {selectedColab.neighborhood || ''} • {selectedColab.city || ''} - {selectedColab.state || ''}
+                        <span className="text-slate-500 dark:text-slate-400 block text-[11px] font-medium">
+                          Bairro {selectedColab.neighborhood || '---'} • {selectedColab.city || '---'} - {selectedColab.state || '---'}
                         </span>
                         <span className="text-slate-400 block text-[10px] font-mono">CEP: {selectedColab.cep ? formatCEP(selectedColab.cep) : '---'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bloco 4 */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-500 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">4. Empresa, Cargo e Remuneração</h3>
-                    <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div className="col-span-2 bg-indigo-50/60 dark:bg-indigo-950/30 p-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
-                        <span className="text-[10px] font-black uppercase text-indigo-500 block tracking-wider">Empresa de Registro (CNPJ)</span>
-                        <span className="font-bold text-xs text-slate-800 dark:text-slate-100 block mt-0.5">
-                          {(() => {
-                            const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
-                            return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
-                          })()}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Jornada Semanal</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.weeklyHours || 44}h semanais</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Setor</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{sectors.find(s => s.id === selectedColab.sectorId)?.name || 'Sem Setor'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Tipo de Contrato</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.contractType || '---'}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Salário Mensal</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="font-mono font-bold text-md text-emerald-600 dark:text-emerald-400">
-                            {revealSalaries[selectedColab.id] 
-                              ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedColab.salary || 0)
-                              : 'R$ •••••••'
-                            }
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => toggleSalary(selectedColab.id)}
-                            className="p-1 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200"
-                          >
-                            {revealSalaries[selectedColab.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Possui Veículo?</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {selectedColab.hasVehicle === 'Sim' ? `${selectedColab.vehicleType || 'Veículo'} (${selectedColab.vehiclePlate || 'Sem placa'})` : 'Não'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">Opção de Transporte</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.transportOption || 'Não Optante'}</span>
                       </div>
                     </div>
                   </div>
