@@ -2999,6 +2999,7 @@ export const RhCollaboratorManager: React.FC = () => {
                   <button
                     onClick={() => {
                       setForm(normalizeColabDates(selectedColab));
+                      setActiveTab('cadastro');
                       setIsEditing(true);
                     }}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wider shadow-md"
@@ -3018,62 +3019,19 @@ export const RhCollaboratorManager: React.FC = () => {
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[95vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
             {/* Form Header */}
             <div className="px-8 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
-              <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider">
-                {isCreating ? 'Novo Colaborador R.H.' : `Editando ${selectedColab?.fullName}`}
-              </h2>
+              <div>
+                <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider">
+                  {isCreating ? 'Novo Colaborador R.H.' : `Editando ${selectedColab?.fullName}`}
+                </h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
+                  Edição de dados cadastrais, pessoais e contratuais
+                </p>
+              </div>
               <button 
                 onClick={() => { setIsCreating(false); setIsEditing(false); }} 
                 className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all"
               >
                 <X size={20} />
-              </button>
-            </div>
-
-            {/* Tabs Control */}
-            <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 px-8 shrink-0 overflow-x-auto overflow-y-hidden scrollbar-none">
-              <button
-                type="button"
-                onClick={() => setActiveTab('cadastro')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  activeTab === 'cadastro'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                1. Dados de Cadastro
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('dependentes')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  activeTab === 'dependentes'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                2. Dependentes
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('documentos')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  activeTab === 'documentos'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                3. Anexos & Termos
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('ocorrencias')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  activeTab === 'ocorrencias'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                4. Faltas / Férias / Ocorrências
               </button>
             </div>
 
