@@ -549,12 +549,12 @@ const SystemBranding: React.FC = () => {
 const SystemControl: React.FC = () => {
     const isMock = getCurrentMode() === 'MOCK';
     return (
-        <div className="bg-white p-8 rounded-2xl shadow-md border border-slate-200">
-            <div className="flex items-center justify-between bg-slate-50 p-6 rounded-xl border border-slate-200">
-                <div><p className="text-sm text-slate-500">Modo Atual</p><p className={`text-2xl font-bold ${isMock ? 'text-yellow-600' : 'text-emerald-600'}`}>{isMock ? 'MOCK (Simulado)' : 'PRODUÇÃO (API Real)'}</p></div>
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 transition-colors">
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div><p className="text-sm text-slate-500 dark:text-slate-400">Modo Atual</p><p className={`text-2xl font-bold ${isMock ? 'text-yellow-600 dark:text-yellow-400' : 'text-emerald-600 dark:text-emerald-400'}`}>{isMock ? 'MOCK (Simulado)' : 'PRODUÇÃO (API Real)'}</p></div>
                 <div className="flex gap-3">
-                    <button onClick={() => toggleMode('API')} disabled={!isMock} className={`px-5 py-2.5 rounded-xl font-bold text-sm transition ${!isMock ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}>API Real</button>
-                    <button onClick={() => toggleMode('MOCK')} disabled={isMock} className={`px-5 py-2.5 rounded-xl font-bold text-sm transition ${isMock ? 'bg-yellow-50 text-yellow-600 border border-yellow-200' : 'bg-yellow-600 text-white hover:bg-yellow-500'}`}>Mock</button>
+                    <button onClick={() => toggleMode('API')} disabled={!isMock} className={`px-5 py-2.5 rounded-xl font-bold text-sm transition ${!isMock ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-emerald-600 text-white hover:bg-emerald-500'}`}>API Real</button>
+                    <button onClick={() => toggleMode('MOCK')} disabled={isMock} className={`px-5 py-2.5 rounded-xl font-bold text-sm transition ${isMock ? 'bg-yellow-50 dark:bg-yellow-950/40 text-yellow-600 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' : 'bg-yellow-600 text-white hover:bg-yellow-500'}`}>Mock</button>
                 </div>
             </div>
         </div>
@@ -582,20 +582,20 @@ const SystemLogs: React.FC = () => {
     useEffect(() => { fetchLogs(); }, []);
 
     return (
-        <div className="bg-white p-8 rounded-2xl shadow-md border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center"><ClipboardListIcon className="w-6 h-6 mr-2 text-blue-600"/> Logs de Auditoria</h3>
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 transition-colors">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center"><ClipboardListIcon className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400"/> Logs de Auditoria</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 items-end">
-                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Início</label><input type="date" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
-                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fim</label><input type="date" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
-                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Usuário</label><input type="text" value={filters.user} onChange={e => setFilters({...filters, user: e.target.value})} placeholder="Todos..." className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
-                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Detalhes / Ação</label><input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Buscar..." className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                <div><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Início</label><input type="date" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                <div><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Fim</label><input type="date" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                <div><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Usuário</label><input type="text" value={filters.user} onChange={e => setFilters({...filters, user: e.target.value})} placeholder="Todos..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                <div><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Detalhes / Ação</label><input type="text" value={filters.search} onChange={e => setFilters({...filters, search: e.target.value})} placeholder="Buscar..." className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div>
                 <button onClick={fetchLogs} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-sm flex items-center justify-center transition shadow-md">{loading ? <SpinnerIcon className="w-5 h-5"/> : <><SearchIcon className="w-4 h-4 mr-2"/> Filtrar</>}</button>
             </div>
 
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs border-b border-slate-200">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-300 font-bold uppercase text-xs border-b border-slate-200 dark:border-slate-800">
                         <tr>
                             <th className="p-4 w-40">Data/Hora</th>
                             <th className="p-4 w-48">Usuário</th>
@@ -603,16 +603,16 @@ const SystemLogs: React.FC = () => {
                             <th className="p-4">Detalhes</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {logs.length === 0 ? (
-                            <tr><td colSpan={4} className="p-8 text-center text-slate-400 italic">Nenhum log encontrado para os filtros.</td></tr>
+                            <tr><td colSpan={4} className="p-8 text-center text-slate-400 dark:text-slate-500 italic">Nenhum log encontrado para os filtros.</td></tr>
                         ) : (
                             logs.map(log => (
-                                <tr key={log.ID_Log} className="hover:bg-blue-50/50 transition-colors">
+                                <tr key={log.ID_Log} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="p-4 font-mono text-xs">{new Date(log.DataHora).toLocaleString('pt-BR')}</td>
-                                    <td className="p-4 font-bold text-slate-800">{log.Usuario}</td>
-                                    <td className="p-4"><span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold border border-slate-200">{log.Acao}</span></td>
-                                    <td className="p-4 text-slate-600">{log.Detalhes}</td>
+                                    <td className="p-4 font-bold text-slate-800 dark:text-white">{log.Usuario}</td>
+                                    <td className="p-4"><span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-bold border border-slate-200 dark:border-slate-700">{log.Acao}</span></td>
+                                    <td className="p-4 text-slate-600 dark:text-slate-300">{log.Detalhes}</td>
                                 </tr>
                             ))
                         )}
@@ -627,8 +627,8 @@ export const AdminPanel: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'integration' | 'route_params' | 'system' | 'license' | 'logs'>('users');
     return (
         <div className="space-y-8">
-            <div><h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Administração</h2><p className="text-slate-500">Controle total do sistema.</p></div>
-            <div className="flex space-x-2 border-b border-slate-200 pb-1 overflow-x-auto">
+            <div><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Administração</h2><p className="text-slate-500 dark:text-slate-400">Controle total do sistema.</p></div>
+            <div className="flex space-x-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto">
                 {[
                     { id: 'users', label: 'Usuários', icon: UserGroupIcon },
                     { id: 'integration', label: 'Integração DB', icon: UploadIcon },
@@ -638,7 +638,7 @@ export const AdminPanel: React.FC = () => {
                     { id: 'branding', label: 'Empresa', icon: PhotographIcon },
                     { id: 'system', label: 'Sistema', icon: CogIcon }
                 ].map(tab => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center border whitespace-nowrap ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-transparent text-slate-500 hover:text-slate-700 border-transparent hover:bg-slate-100'}`}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center border whitespace-nowrap ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white border-transparent hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                         <tab.icon className={`w-4 h-4 mr-2 ${activeTab === tab.id ? 'text-white' : 'text-slate-400'}`}/> {tab.label}
                     </button>
                 ))}

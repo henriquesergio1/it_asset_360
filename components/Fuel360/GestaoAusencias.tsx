@@ -26,26 +26,26 @@ const DeleteAusenciaModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 w-full max-w-sm text-center">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <TrashIcon className="w-8 h-8 text-red-500"/>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 w-full max-w-sm text-center">
+                <div className="w-16 h-16 bg-red-50 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <TrashIcon className="w-8 h-8 text-red-500 dark:text-red-400"/>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Excluir Ausência</h3>
-                <p className="text-slate-500 text-sm mb-4">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Excluir Ausência</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
                     Para fins de auditoria, informe o motivo da exclusão deste registro.
                 </p>
 
                 <textarea 
                     value={motivo}
                     onChange={e => setMotivo(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none mb-6 resize-none"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none mb-6 resize-none"
                     placeholder="Motivo (Obrigatório)..."
                     rows={2}
                     autoFocus
                 />
 
                 <div className="flex space-x-3 justify-center">
-                    <button onClick={onClose} disabled={isLoading} className="bg-white hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-xl font-bold text-sm border border-slate-200 shadow-sm">Cancelar</button>
+                    <button onClick={onClose} disabled={isLoading} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-6 py-3 rounded-xl font-bold text-sm border border-slate-200 dark:border-slate-700 shadow-sm">Cancelar</button>
                     <button 
                         onClick={() => onConfirm(motivo)} 
                         disabled={isLoading || !motivo.trim()} 
@@ -134,8 +134,8 @@ export const GestaoAusencias: React.FC = () => {
 
             <div className="flex items-end justify-between">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">Gestão de Ausências</h2>
-                    <p className="text-slate-500 font-medium">Controle de Férias, Atestados e Faltas para bloqueio de pagamento.</p>
+                    <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-2 tracking-tight">Gestão de Ausências</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Controle de Férias, Atestados e Faltas para bloqueio de pagamento.</p>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
@@ -146,9 +146,9 @@ export const GestaoAusencias: React.FC = () => {
             </div>
 
             {/* Listagem */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table className="w-full text-sm text-left text-slate-600">
-                    <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 border-b border-slate-100 font-semibold">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                    <thead className="text-xs text-slate-400 dark:text-slate-300 uppercase bg-slate-50/50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 font-semibold">
                         <tr>
                             <th className="p-5 tracking-wider">Colaborador</th>
                             <th className="p-5 tracking-wider">Período</th>
@@ -156,33 +156,33 @@ export const GestaoAusencias: React.FC = () => {
                             <th className="p-5 tracking-wider text-right">Ações</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                         {ausencias.length === 0 ? (
-                            <tr><td colSpan={4} className="p-12 text-center text-slate-400">Nenhum registro de ausência cadastrado.</td></tr>
+                            <tr><td colSpan={4} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhum registro de ausência cadastrado.</td></tr>
                         ) : (
                             ausencias.map(aus => (
-                                <tr key={aus.ID_Ausencia} className="hover:bg-slate-50 transition-colors">
+                                <tr key={aus.ID_Ausencia} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="p-5">
-                                        <div className="font-bold text-slate-800">{aus.NomeColaborador}</div>
-                                        <div className="text-xs text-slate-400">ID: {aus.ID_Pulsus}</div>
+                                        <div className="font-bold text-slate-800 dark:text-white">{aus.NomeColaborador}</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-400">ID: {aus.ID_Pulsus}</div>
                                     </td>
-                                    <td className="p-5 font-mono text-slate-600">
+                                    <td className="p-5 font-mono text-slate-600 dark:text-slate-300">
                                         <div className="flex items-center">
-                                            <CalendarIcon className="w-4 h-4 mr-2 text-slate-400"/>
-                                            {formatUtcDate(aus.DataInicio)} <span className="mx-2 text-slate-300">➜</span> {formatUtcDate(aus.DataFim)}
+                                            <CalendarIcon className="w-4 h-4 mr-2 text-slate-400 dark:text-slate-400"/>
+                                            {formatUtcDate(aus.DataInicio)} <span className="mx-2 text-slate-300 dark:text-slate-600">➜</span> {formatUtcDate(aus.DataFim)}
                                         </div>
                                     </td>
                                     <td className="p-5">
                                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${
-                                            aus.Motivo.toLowerCase().includes('féria') ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                            aus.Motivo.toLowerCase().includes('atestado') ? 'bg-red-50 text-red-600 border-red-100' :
-                                            'bg-slate-100 text-slate-600 border-slate-200'
+                                            aus.Motivo.toLowerCase().includes('féria') ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' :
+                                            aus.Motivo.toLowerCase().includes('atestado') ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 border-red-100 dark:border-red-800' :
+                                            'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                         }`}>
                                             {aus.Motivo}
                                         </span>
                                     </td>
                                     <td className="p-5 text-right">
-                                        <button onClick={() => setDeleteId(aus.ID_Ausencia)} className="text-slate-400 hover:text-red-500 p-2 rounded hover:bg-red-50 transition"><TrashIcon className="w-5 h-5"/></button>
+                                        <button onClick={() => setDeleteId(aus.ID_Ausencia)} className="text-slate-400 hover:text-red-500 p-2 rounded hover:bg-red-50 dark:hover:bg-red-950/40 transition" title="Excluir"><TrashIcon className="w-5 h-5"/></button>
                                     </td>
                                 </tr>
                             ))
@@ -193,22 +193,22 @@ export const GestaoAusencias: React.FC = () => {
 
             {/* Modal de Cadastro */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 w-full max-w-md">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 w-full max-w-md">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-800">Registrar Ausência</h3>
-                            <button onClick={() => setIsModalOpen(false)}><XCircleIcon className="w-6 h-6 text-slate-400 hover:text-slate-600"/></button>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Registrar Ausência</h3>
+                            <button onClick={() => setIsModalOpen(false)}><XCircleIcon className="w-6 h-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"/></button>
                         </div>
 
-                        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center"><ExclamationIcon className="w-5 h-5 mr-2"/>{error}</div>}
+                        {error && <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-300 flex items-center"><ExclamationIcon className="w-5 h-5 mr-2"/>{error}</div>}
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Colaborador</label>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Colaborador</label>
                                 <select 
                                     value={colabId} 
                                     onChange={e => setColabId(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"
                                 >
                                     <option value="">Selecione...</option>
                                     {colaboradores.sort((a,b) => a.Nome.localeCompare(b.Nome)).map(c => (
@@ -219,21 +219,21 @@ export const GestaoAusencias: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Início</label>
-                                    <input type="date" value={dtInicio} onChange={e => setDtInicio(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"/>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Início</label>
+                                    <input type="date" value={dtInicio} onChange={e => setDtInicio(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"/>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fim</label>
-                                    <input type="date" value={dtFim} onChange={e => setDtFim(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"/>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Fim</label>
+                                    <input type="date" value={dtFim} onChange={e => setDtFim(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"/>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo</label>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Motivo</label>
                                 <select 
                                     value={motivo} 
                                     onChange={e => setMotivo(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-600"
                                 >
                                     <option value="">Selecione...</option>
                                     <option value="Férias">Férias</option>
@@ -246,7 +246,7 @@ export const GestaoAusencias: React.FC = () => {
                             </div>
 
                             <div className="flex justify-end pt-4 space-x-3">
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-white hover:bg-slate-50 text-slate-600 font-bold py-3 px-6 rounded-xl border border-slate-200">Cancelar</button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 font-bold py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-700">Cancelar</button>
                                 <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl flex items-center shadow-lg shadow-blue-600/20">
                                     {loading ? <SpinnerIcon className="w-5 h-5 mr-2"/> : <CheckCircleIcon className="w-5 h-5 mr-2"/>} 
                                     Salvar

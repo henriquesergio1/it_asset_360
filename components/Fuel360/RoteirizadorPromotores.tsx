@@ -1127,9 +1127,9 @@ export const RoteirizadorPromotores: React.FC = () => {
                 </button>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
                 <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
                         <tr>
                             <th className="p-6 w-16 text-center"></th>
                             <th className="p-6">Vendedor (Cód - Nome)</th>
@@ -1143,14 +1143,14 @@ export const RoteirizadorPromotores: React.FC = () => {
                                     type="checkbox" 
                                     onChange={(e) => toggleSelectAll(e.target.checked)} 
                                     checked={isAllVisibleSelected}
-                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                 />
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {groupedData.length === 0 ? (
-                            <tr><td colSpan={8} className="p-20 text-center text-slate-300 font-bold uppercase text-xs tracking-widest">{loading ? "Processando roteiros..." : "Nenhum resultado encontrado."}</td></tr>
+                            <tr><td colSpan={8} className="p-20 text-center text-slate-300 dark:text-slate-600 font-bold uppercase text-xs tracking-widest">{loading ? "Processando roteiros..." : "Nenhum resultado encontrado."}</td></tr>
                         ) : (
                             groupedData.map(seller => {
                                 const isExp = expandedSellers.has(seller.id);
@@ -1160,76 +1160,76 @@ export const RoteirizadorPromotores: React.FC = () => {
 
                                 return (
                                     <React.Fragment key={seller.id}>
-                                        <tr onClick={() => { const s = new Set(expandedSellers); isExp ? s.delete(seller.id) : s.add(seller.id); setExpandedSellers(s); }} className={`cursor-pointer transition-all ${isExp ? 'bg-blue-50/20' : 'hover:bg-slate-50'} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
-                                            <td className="p-6 text-center">{isExp ? <ChevronDownIcon className="w-5 h-5 text-blue-600"/> : <ChevronRightIcon className="w-5 h-5 text-slate-200"/>}</td>
-                                            <td className="p-6 font-black text-slate-800 text-base flex items-center">
+                                        <tr onClick={() => { const s = new Set(expandedSellers); isExp ? s.delete(seller.id) : s.add(seller.id); setExpandedSellers(s); }} className={`cursor-pointer transition-all ${isExp ? 'bg-blue-50/20 dark:bg-slate-800/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
+                                            <td className="p-6 text-center">{isExp ? <ChevronDownIcon className="w-5 h-5 text-blue-600 dark:text-sky-400"/> : <ChevronRightIcon className="w-5 h-5 text-slate-200 dark:text-slate-700"/>}</td>
+                                            <td className="p-6 font-black text-slate-800 dark:text-white text-base flex items-center">
                                                 {seller.id} - {seller.name}
-                                                <span className={`ml-2 text-[10px] px-2 py-0.5 rounded border uppercase ${isUnregistered ? 'bg-red-50 text-red-500 border-red-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                <span className={`ml-2 text-[10px] px-2 py-0.5 rounded border uppercase ${isUnregistered ? 'bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-300 border-red-200 dark:border-red-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                                                     {seller.colabRef.Grupo}
                                                 </span>
                                                 {hasAddress && <img src="https://cdn-icons-png.flaticon.com/512/619/619153.png" className="w-5 h-5 ml-2" title="Endereço de partida cadastrado" alt="Casa" />}
                                                 {seller.isInactive && (
-                                                    <span className="ml-2 bg-red-100 text-red-600 text-[9px] font-bold px-2 py-0.5 rounded border border-red-200 uppercase">
+                                                    <span className="ml-2 bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-bold px-2 py-0.5 rounded border border-red-200 dark:border-red-800 uppercase">
                                                         INATIVO
                                                     </span>
                                                 )}
                                                 {seller.hasAlert && (
-                                                    <span className="ml-2 bg-amber-100 text-amber-700 text-[9px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase flex items-center">
+                                                    <span className="ml-2 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 uppercase flex items-center">
                                                         <ExclamationIcon className="w-3 h-3 mr-1"/> ALERTA DE ROTA
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="p-6 text-slate-400 font-semibold text-xs uppercase">{seller.supervisor}</td>
-                                            <td className="p-6 text-center font-mono font-bold text-slate-300">{seller.days.length}</td>
-                                            <td className="p-6 text-right font-bold text-slate-400">{seller.totalKm.toFixed(1)} km</td>
-                                            <td className="p-6 text-right font-black text-emerald-600 text-lg">{seller.totalKmReal > 0 ? seller.totalKmReal.toFixed(1) + ' km' : '-'}</td>
+                                            <td className="p-6 text-slate-400 dark:text-slate-400 font-semibold text-xs uppercase">{seller.supervisor}</td>
+                                            <td className="p-6 text-center font-mono font-bold text-slate-300 dark:text-slate-400">{seller.days.length}</td>
+                                            <td className="p-6 text-right font-bold text-slate-400 dark:text-slate-400">{seller.totalKm.toFixed(1)} km</td>
+                                            <td className="p-6 text-right font-black text-emerald-600 dark:text-emerald-400 text-lg">{seller.totalKmReal > 0 ? seller.totalKmReal.toFixed(1) + ' km' : '-'}</td>
                                             <td className="p-6 text-center">
-                                                <button onClick={(e) => { e.stopPropagation(); handleCalculateSellerReal(seller); }} disabled={calculatingReal} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl border border-emerald-100 transition-all shadow-sm" title="Calcular Real Individual"><GlobeIcon className="w-5 h-5"/></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleCalculateSellerReal(seller); }} disabled={calculatingReal} className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-emerald-100 dark:border-emerald-800 transition-all shadow-sm" title="Calcular Real Individual"><GlobeIcon className="w-5 h-5"/></button>
                                             </td>
                                             <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <input 
                                                     type="checkbox" 
                                                     checked={isSelected} 
                                                     onChange={() => toggleSelectOne(seller.id)} 
-                                                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                    className="w-5 h-5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                 />
                                             </td>
                                         </tr>
                                         {isExp && (
                                             <tr>
-                                                <td colSpan={8} className="p-6 bg-slate-50/40">
+                                                <td colSpan={8} className="p-6 bg-slate-50/40 dark:bg-slate-800/20">
                                                     {isUnregistered && (
-                                                        <div className="mx-8 mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center text-amber-800 text-xs font-bold">
+                                                        <div className="mx-8 mb-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-3 rounded-lg flex items-center text-amber-800 dark:text-amber-300 text-xs font-bold">
                                                             <ExclamationIcon className="w-4 h-4 mr-2"/>
                                                             Atenção: Este colaborador não possui endereço base cadastrado. O roteiro iniciará em um ponto central calculado (Centroide).
                                                         </div>
                                                     )}
-                                                    <div className="mx-8 bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+                                                    <div className="mx-8 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
                                                         <table className="w-full text-xs">
-                                                            <thead className="bg-slate-50 text-slate-400 font-black uppercase border-b border-slate-100">
+                                                            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-300 font-black uppercase border-b border-slate-100 dark:border-slate-800">
                                                                 <tr><th className="p-4 text-left">Data Programada</th><th className="p-4 text-center">Qtd Visitas (Ativas)</th><th className="p-4 text-right">KM Est.</th><th className="p-4 text-right">KM Real (OSRM)</th><th className="p-4 text-center">Ações</th></tr>
                                                             </thead>
-                                                            <tbody className="divide-y divide-slate-100">
+                                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                                                 {seller.days.map((d: any, idx: number) => (
-                                                                    <tr key={idx} className="hover:bg-blue-50/20 transition-colors">
-                                                                        <td className="p-4 font-mono font-black text-slate-600">
+                                                                    <tr key={idx} className="hover:bg-blue-50/20 dark:hover:bg-slate-800/40 transition-colors">
+                                                                        <td className="p-4 font-mono font-black text-slate-600 dark:text-slate-300">
                                                                             {formatDate(d.date)} 
-                                                                            <span className="ml-2 text-[9px] text-slate-400 uppercase font-black tracking-widest">{d.dayName}</span>
+                                                                            <span className="ml-2 text-[9px] text-slate-400 dark:text-slate-400 uppercase font-black tracking-widest">{d.dayName}</span>
                                                                             {d.periodicity && (
-                                                                                <span className="ml-2 text-[9px] text-indigo-500 uppercase font-bold tracking-widest">{d.periodicity}</span>
+                                                                                <span className="ml-2 text-[9px] text-indigo-500 dark:text-indigo-400 uppercase font-bold tracking-widest">{d.periodicity}</span>
                                                                             )}
                                                                             {d.alert && (
-                                                                                <div className="mt-1 flex items-center text-amber-600 bg-amber-50 px-2 py-1 rounded w-fit border border-amber-100" title={d.alert}>
+                                                                                <div className="mt-1 flex items-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded w-fit border border-amber-100 dark:border-amber-800" title={d.alert}>
                                                                                     <ExclamationIcon className="w-3 h-3 mr-1.5"/>
                                                                                     <span className="text-[9px] uppercase font-bold">{d.alert}</span>
                                                                                 </div>
                                                                             )}
                                                                         </td>
-                                                                        <td className="p-4 text-center font-black text-blue-600 bg-blue-50/30">{d.visitCount}</td>
-                                                                        <td className={`p-4 text-right font-bold ${d.km > MAX_DAILY_KM ? 'text-red-500' : 'text-slate-400'}`}>{d.km.toFixed(1)}</td>
-                                                                        <td className="p-4 text-right font-black text-emerald-600 text-sm">{d.kmReal > 0 ? d.kmReal.toFixed(1) : '-'}</td>
+                                                                        <td className="p-4 text-center font-black text-blue-600 dark:text-sky-400 bg-blue-50/30 dark:bg-blue-950/30">{d.visitCount}</td>
+                                                                        <td className={`p-4 text-right font-bold ${d.km > MAX_DAILY_KM ? 'text-red-500 dark:text-red-400' : 'text-slate-400 dark:text-slate-400'}`}>{d.km.toFixed(1)}</td>
+                                                                        <td className="p-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm">{d.kmReal > 0 ? d.kmReal.toFixed(1) : '-'}</td>
                                                                         <td className="p-4 text-center">
-                                                                            <button onClick={() => setViewingRoute(d)} className="text-blue-600 hover:text-blue-800 font-black text-[10px] uppercase flex items-center justify-center mx-auto bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-all shadow-sm">
+                                                                            <button onClick={() => setViewingRoute(d)} className="text-blue-600 dark:text-sky-400 hover:text-blue-800 dark:hover:text-sky-200 font-black text-[10px] uppercase flex items-center justify-center mx-auto bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 px-4 py-2 rounded-xl transition-all shadow-sm">
                                                                                 <LocationMarkerIcon className="w-3.5 h-3.5 mr-2"/> VER MAPA
                                                                             </button>
                                                                         </td>
