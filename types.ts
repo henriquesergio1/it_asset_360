@@ -634,4 +634,100 @@ export interface Perfil {
   Permissoes: Record<string, boolean>;
 }
 
+// ==========================================
+// TIPOS E INTERFACES DO MÓDULO FUEL360
+// ==========================================
 
+export type TipoVeiculoReembolso = 'Carro' | 'Moto' | 'Sem Veículo / VT';
+
+export interface FuelGrupo {
+    ID_Grupo: number;
+    Nome: string;
+}
+
+export interface FuelColaborador {
+    ID_Colaborador: number;
+    ID_Pulsus: number;
+    CodigoSetor: number;
+    Nome: string;
+    Grupo: string;
+    TipoVeiculo: TipoVeiculoReembolso;
+    Ativo: boolean;
+    UsuarioAlteracao?: string;
+    MotivoAlteracao?: string;
+    LatitudeBase?: number;
+    LongitudeBase?: number;
+    EnderecoBase?: string;
+    EnderecoPendente?: boolean;
+}
+
+export interface FuelNovoColaborador {
+    id_pulsus: number;
+    nome: string;
+    matchType: 'NEW' | 'SECTOR_CONFLICT' | 'INVALID_GROUP' | 'PHONE_CHANGE';
+    newData: {
+        codigo_setor: number;
+        grupo: string;
+    };
+    existingColab?: FuelColaborador;
+}
+
+export interface FuelColaboradorAlterado {
+    id_pulsus: number;
+    nome: string;
+    matchType: 'ID_MATCH' | 'PHONE_CHANGE';
+    existingColab: FuelColaborador;
+    id_colaborador?: number;
+    needsPulsusTransfer?: boolean;
+    isDeviceTransfer?: boolean;
+    newData: {
+        nome: string;
+        codigo_setor: number;
+        grupo: string;
+    };
+    changes: { field: string, oldValue: any, newValue: any }[];
+}
+
+export interface FuelAusencia {
+    ID_Ausencia: number;
+    ID_Colaborador: number;
+    NomeColaborador: string;
+    ID_Pulsus: number;
+    DataInicio: string;
+    DataFim: string;
+    Motivo: string;
+}
+
+export interface FuelLogSistema {
+    ID_Log: number;
+    DataHora: string;
+    Usuario: string;
+    Acao: string;
+    Detalhes: string;
+}
+
+export interface FuelItemRelatorio {
+    ID_Detalhe: number;
+    DataGeracao: string;
+    PeriodoReferencia: string;
+    UsuarioGerador: string;
+    ID_Pulsus: number;
+    CodigoSetor?: number;
+    NomeColaborador: string;
+    Grupo: string;
+    TipoVeiculo: string;
+    TotalKM: number;
+    ValorReembolso: number;
+    Ajuste?: number;
+    ParametroPreco: number;
+    ParametroKmL: number;
+    OrigemDados?: 'CSV' | 'ROTEIRIZADOR' | 'CICLO';
+    MotivoEdicao?: string;
+}
+
+export interface FuelConfigReembolso {
+    PrecoCombustivel: number;
+    KmL_Carro: number;
+    KmL_Moto: number;
+    MotivoAlteracao?: string;
+}

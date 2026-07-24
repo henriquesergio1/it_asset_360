@@ -316,6 +316,92 @@ const DB_SCHEMAS = {
         Nome NVARCHAR(255) NOT NULL,
         Ativo BIT DEFAULT 1,
         Permissoes NVARCHAR(MAX) NULL
+    )`,
+    FuelGrupos: `(
+        ID_Grupo INT IDENTITY(1,1) PRIMARY KEY,
+        Nome NVARCHAR(100) UNIQUE NOT NULL,
+        DataCriacao DATETIME DEFAULT GETDATE()
+    )`,
+    FuelColaboradores: `(
+        ID_Colaborador INT IDENTITY(1,1) PRIMARY KEY,
+        ID_Pulsus INT UNIQUE NOT NULL, 
+        CodigoSetor INT NOT NULL,
+        Nome NVARCHAR(200) NOT NULL,
+        Grupo NVARCHAR(100) NOT NULL, 
+        TipoVeiculo NVARCHAR(50),
+        Ativo BIT DEFAULT 1,
+        EnderecoBase NVARCHAR(MAX),
+        LatitudeBase DECIMAL(12, 9),
+        LongitudeBase DECIMAL(12, 9),
+        EnderecoPendente BIT DEFAULT 0,
+        DataCriacao DATETIME DEFAULT GETDATE()
+    )`,
+    FuelUsuarios: `(
+        ID_Usuario INT IDENTITY(1,1) PRIMARY KEY,
+        Nome NVARCHAR(200) NOT NULL,
+        Usuario NVARCHAR(100) UNIQUE NOT NULL,
+        SenhaHash NVARCHAR(MAX) NOT NULL,
+        Perfil NVARCHAR(50) DEFAULT 'Admin',
+        Ativo BIT DEFAULT 1
+    )`,
+    FuelSystemSettings: `(
+        ID INT PRIMARY KEY CHECK (ID = 1),
+        CompanyName NVARCHAR(200) DEFAULT 'Fuel360 Enterprise',
+        LogoUrl NVARCHAR(MAX),
+        FuelPrice DECIMAL(10, 4) DEFAULT 5.89,
+        KmL_Car INT DEFAULT 10,
+        KmL_Moto INT DEFAULT 35,
+        Alert_MaxDailyKM INT DEFAULT 400,
+        Alert_MaxClientDist INT DEFAULT 100,
+        LicenseKey NVARCHAR(MAX),
+        LicenseClient NVARCHAR(200),
+        LicenseExpires DATETIME
+    )`,
+    FuelReembolsoHistorico: `(
+        ID_Historico INT IDENTITY(1,1) PRIMARY KEY,
+        Periodo NVARCHAR(100) NOT NULL,
+        DataFechamento DATETIME DEFAULT GETDATE(),
+        TotalGeral DECIMAL(18, 2) NOT NULL,
+        UsuarioFechamento NVARCHAR(100),
+        OrigemDados NVARCHAR(50) DEFAULT 'CSV',
+        MotivoEdicao NVARCHAR(MAX),
+        ID_RotaHist INT
+    )`,
+    FuelReembolsoDetalhe: `(
+        ID_Detalhe INT IDENTITY(1,1) PRIMARY KEY,
+        ID_Historico INT NOT NULL,
+        ID_Pulsus INT NOT NULL,
+        NomeColaborador NVARCHAR(200),
+        Grupo NVARCHAR(100),
+        TipoVeiculo NVARCHAR(50),
+        TotalKM DECIMAL(18, 4),
+        ValorReembolso DECIMAL(18, 2),
+        ParametroPreco DECIMAL(10, 4),
+        ParametroKmL INT,
+        Efetividade DECIMAL(5, 4),
+        Ajuste DECIMAL(18, 2) DEFAULT 0
+    )`,
+    FuelReembolsoDiario: `(
+        ID_Diario INT IDENTITY(1,1) PRIMARY KEY,
+        ID_Detalhe INT NOT NULL,
+        DataOcorrencia DATE NOT NULL,
+        KM_Dia DECIMAL(18, 4),
+        Valor_Dia DECIMAL(18, 2),
+        Observacao NVARCHAR(MAX)
+    )`,
+    FuelAusencias: `(
+        ID_Ausencia INT IDENTITY(1,1) PRIMARY KEY,
+        ID_Colaborador INT NOT NULL,
+        DataInicio DATE NOT NULL,
+        DataFim DATE NOT NULL,
+        Motivo NVARCHAR(200) NOT NULL
+    )`,
+    FuelLogsSistema: `(
+        ID_Log INT IDENTITY(1,1) PRIMARY KEY,
+        DataHora DATETIME DEFAULT GETDATE(),
+        Usuario NVARCHAR(100),
+        Acao NVARCHAR(100),
+        Detalhes NVARCHAR(MAX)
     )`
 };
 
