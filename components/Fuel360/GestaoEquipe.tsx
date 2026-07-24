@@ -520,10 +520,10 @@ export const GestaoEquipe: React.FC = () => {
             <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} />
 
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div><h2 className="text-3xl font-extrabold text-slate-800 mb-1 tracking-tight">Equipe & Setores</h2><p className="text-slate-500 font-medium text-sm">Gestão operacional com sincronização inteligente.</p></div>
+                <div><h2 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1 tracking-tight">Equipe & Setores</h2><p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Gestão operacional com sincronização inteligente.</p></div>
                 <div className="flex space-x-3">
                      <button onClick={() => setIsSyncModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-lg shadow-indigo-600/20"><RefreshIcon className="w-5 h-5 mr-2" /> Sincronizar</button>
-                     <button onClick={() => setIsImportModalOpen(true)} className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-sm"><UploadIcon className="w-5 h-5 mr-2 text-slate-500" /> Endereços</button>
+                     <button onClick={() => setIsImportModalOpen(true)} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-sm"><UploadIcon className="w-5 h-5 mr-2 text-slate-500 dark:text-slate-400" /> Endereços</button>
                      <button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center shadow-lg transition"><PlusCircleIcon className="w-5 h-5 mr-2" /> Novo Cadastro</button>
                 </div>
             </div>
@@ -588,39 +588,39 @@ export const GestaoEquipe: React.FC = () => {
                     <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
                         <tr><th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></th><th className="p-4">Colaborador</th><th className="p-4">Grupo</th><th className="p-4 text-center">Veículo</th><th className="p-4 text-center">Status</th><th className="p-4 text-right">Ações</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredData.map(c => {
                             const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
                             return (
-                                <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50' : ''}`}>
-                                    <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"/></td>
+                                <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
+                                    <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></td>
                                     <td className="p-4">
-                                        <div className="font-bold text-slate-800 flex items-center flex-wrap gap-2">
+                                        <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
                                             {c.Nome}
                                             {isPendingAddr && c.Ativo && (
-                                                <span className="bg-red-100 text-red-600 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
+                                                <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
                                                     <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
                                                 </span>
                                             )}
                                             {c.EnderecoBase && !isPendingAddr && <span className="ml-2" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
                                         </div>
-                                        <div className="text-[11px] text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
+                                        <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
                                     </td>
-                                    <td className="p-4 font-bold text-xs uppercase text-slate-500">{c.Grupo}</td>
+                                    <td className="p-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-300">{c.Grupo}</td>
                                     <td className="p-4 text-center">
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
                                             c.TipoVeiculo === 'Carro' 
-                                                ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-800' 
                                                 : c.TipoVeiculo === 'Moto' 
-                                                ? 'bg-amber-50 text-amber-600 border-amber-100' 
-                                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                                                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' 
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                         }`}>
                                             {c.TipoVeiculo}
                                         </span>
                                     </td>
-                                    <td className="p-4 text-center font-bold text-xs">{c.Ativo ? <span className="text-emerald-600">Ativo</span> : <span className="text-red-400">Inativo</span>}</td>
+                                    <td className="p-4 text-center font-bold text-xs">{c.Ativo ? <span className="text-emerald-600 dark:text-emerald-400">Ativo</span> : <span className="text-red-400 dark:text-red-400">Inativo</span>}</td>
                                     <td className="p-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${isPendingAddr && c.Ativo ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'text-blue-600 hover:bg-blue-50'}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${isPendingAddr && c.Ativo ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-sm'}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
                                         {/* Botões de Status Removidos: Automação via Sincronização */}
                                     </td>
                                 </tr>
