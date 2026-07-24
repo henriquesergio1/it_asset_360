@@ -1345,15 +1345,15 @@ export const Importacao: React.FC = () => {
                         <div className="h-4 w-px bg-slate-300 hidden md:block"></div>
 
                         {/* ORDENAÇÃO */}
-                        <div className="flex items-center space-x-3 bg-white px-2 py-1 rounded border border-slate-200">
+                        <div className="flex items-center space-x-3 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 transition-colors">
                             <span className="text-xs font-bold text-slate-400 uppercase">Ordenar:</span>
                             <label className="flex items-center cursor-pointer">
                                 <input type="radio" name="sort" checked={sortBy === 'NOME'} onChange={() => setSortBy('NOME')} className="mr-1 accent-blue-600"/>
-                                <span className="text-xs font-bold text-slate-600">Nome</span>
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-200">Nome</span>
                             </label>
                             <label className="flex items-center cursor-pointer">
                                 <input type="radio" name="sort" checked={sortBy === 'SETOR'} onChange={() => setSortBy('SETOR')} className="mr-1 accent-blue-600"/>
-                                <span className="text-xs font-bold text-slate-600">Setor</span>
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-200">Setor</span>
                             </label>
                         </div>
 
@@ -1546,28 +1546,28 @@ export const Importacao: React.FC = () => {
                                                                             <th className="p-2 text-left">Data</th>
                                                                             <th className="p-2 text-right">KM Original</th>
                                                                             <th className="p-2 text-right">KM Considerado</th>
-                                                                            <th className="p-2 text-right bg-indigo-50 dark:bg-indigo-950/40">KM Final ({ (efetividade*100).toFixed(0) }%)</th>
+                                                                            <th className="p-2 text-right bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-sky-300 font-black">KM Final ({ (efetividade*100).toFixed(0) }%)</th>
                                                                             <th className="p-2 text-left">Observação/Status</th>
                                                                             <th className="p-2 text-center">Ação</th>
                                                                         </tr>
                                                                     </thead>
-                                                                    <tbody className="divide-y divide-slate-50">
+                                                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                                                         {records.sort((a,b) => a.dataISO.localeCompare(b.dataISO)).map(day => (
-                                                                            <tr key={day.id} className="hover:bg-blue-50/30">
-                                                                                <td className="p-2 font-mono">{day.dataOriginal}</td>
-                                                                                <td className="p-2 text-right text-slate-400">{day.kmOriginal.toFixed(1)}</td>
-                                                                                <td className="p-2 text-right text-slate-500">{day.kmConsiderado.toFixed(1)}</td>
-                                                                                <td className="p-2 text-right font-bold text-indigo-700 bg-indigo-50/30">{(day.kmConsiderado * day.efetividade).toFixed(1)}</td>
+                                                                            <tr key={day.id} className="hover:bg-blue-50/30 dark:hover:bg-slate-800/50 transition-colors">
+                                                                                <td className="p-2 font-mono text-slate-700 dark:text-slate-300">{day.dataOriginal}</td>
+                                                                                <td className="p-2 text-right text-slate-400 dark:text-slate-400">{day.kmOriginal.toFixed(1)}</td>
+                                                                                <td className="p-2 text-right text-slate-500 dark:text-slate-300">{day.kmConsiderado.toFixed(1)}</td>
+                                                                                <td className="p-2 text-right font-bold text-indigo-700 dark:text-sky-300 bg-indigo-50/30 dark:bg-sky-950/40 font-mono">{(day.kmConsiderado * day.efetividade).toFixed(1)}</td>
                                                                                 <td className="p-2">
-                                                                                    {day.isBlocked && <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold mr-2">Bloqueado: {day.blockReason}</span>}
-                                                                                    {day.isLowKm && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold mr-2">&lt; 1 KM</span>}
-                                                                                    {day.isEdited && <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold mr-2">Editado</span>}
+                                                                                    {day.isBlocked && <span className="bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-bold mr-2 border border-red-200 dark:border-red-800">Bloqueado: {day.blockReason}</span>}
+                                                                                    {day.isLowKm && <span className="bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold mr-2 border border-amber-200 dark:border-amber-800">&lt; 1 KM</span>}
+                                                                                    {day.isEdited && <span className="bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 px-1.5 py-0.5 rounded font-bold mr-2 border border-blue-200 dark:border-blue-800">Editado</span>}
                                                                                 </td>
                                                                                 <td className="p-2 text-center flex justify-end space-x-2">
                                                                                     {!day.isBlocked && (
                                                                                          <button 
                                                                                             onClick={(e) => { e.stopPropagation(); openQuickAbsence(day); }} 
-                                                                                            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                                                                                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition"
                                                                                             title="Lançar Ausência"
                                                                                          >
                                                                                              <div className="relative">
@@ -1576,7 +1576,7 @@ export const Importacao: React.FC = () => {
                                                                                              </div>
                                                                                          </button>
                                                                                     )}
-                                                                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(day); }} className="text-blue-600 hover:text-blue-800 font-bold hover:underline">
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(day); }} className="text-blue-600 dark:text-sky-400 hover:text-blue-800 font-bold hover:underline">
                                                                                         Editar
                                                                                     </button>
                                                                                 </td>
