@@ -1251,6 +1251,58 @@ app.get('/api/bootstrap', async (req, res) => {
     }
 });
 
+// Endpoint NATIVO do IT Asset 360 para Sincronização de Colaboradores no Fuel360
+app.get('/api/fuel360/sync-collaborators-native', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const queryStr = `
+            SELECT devices.PulsusId as id_pulsus,
+                   Users.FullName  AS nome,
+                   Devices.InternalCode AS codigo_setor,
+                   Sectors.Name AS grupo
+            FROM Devices devices
+            LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
+            LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
+            LEFT JOIN Models Models ON devices.ModelId = Models.id
+            LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
+            WHERE devices.Status = 'Em Uso'
+              AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
+              AND Users.FullName IS NOT NULL AND Users.FullName <> ''
+              AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
+              AND AssetTypes.Name = 'Celular'
+            ORDER BY 3
+        `;
+        const result = await pool.request().query(queryStr);
+        res.json({ success: true, count: result.recordset.length, recordset: result.recordset });
+    } catch (err) {
+        console.error('Erro na consulta nativa de colaboradores do Asset:', err);
+        res.status(500).json({ success: false, message: err.message, recordset: [] });
+    }
+});
+
+// Endpoint para teste de conexão ERP do Fuel360
+app.post('/api/fuel360/system/test-connection', async (req, res) => {
+    const { config } = req.body;
+    if (!config || !config.host) {
+        return res.status(400).json({ success: false, message: 'Configuração de conexão inválida.' });
+    }
+    try {
+        const testPool = new sql.ConnectionPool({
+            server: config.host,
+            port: parseInt(config.port || 1433),
+            user: config.user,
+            password: config.pass,
+            database: config.database,
+            options: { encrypt: false, trustServerCertificate: true, requestTimeout: 10000 }
+        });
+        await testPool.connect();
+        await testPool.close();
+        res.json({ success: true, message: 'Conexão com o banco ERP Fuel360 estabelecida com sucesso!' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: `Falha de conexão com o ERP Fuel360: ${err.message}` });
+    }
+});
+
 // --- SYNC ENDPOINT (v2.12.51 - Blindado) ---
 app.get('/api/sync', async (req, res) => {
     try {

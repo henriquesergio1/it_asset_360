@@ -211,7 +211,7 @@ WHERE f.demissao IS NULL
 ORDER BY f.nome;`;
 
   const [acessoSubTab, setAcessoSubTab] = useState<'OPERADORES' | 'PERFIS'>('OPERADORES');
-  const [erpSubTab, setErpSubTab] = useState<'TI' | 'RH'>('TI');
+  const [erpSubTab, setErpSubTab] = useState<'TI' | 'RH' | 'FUEL'>('TI');
   const [rhPontoServer, setRhPontoServer] = useState(() => localStorage.getItem('rh_ponto_server') || '');
   const [rhPontoDb, setRhPontoDb] = useState(() => localStorage.getItem('rh_ponto_db') || 'PontoSecullum4');
   const [rhPontoUser, setRhPontoUser] = useState(() => localStorage.getItem('rh_ponto_user') || '');
@@ -223,6 +223,101 @@ ORDER BY f.nome;`;
     const saved = localStorage.getItem('rh_banco_horas_cache');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Estados Fuel360 ERP
+  const DEFAULT_FUEL_ROTEIRO_QUERY = `WITH DatasMes AS (
+    SELECT CAST(@pStartDate AS DATE) AS DataVisita
+    UNION ALL
+    SELECT DATEADD(DAY, 1, DataVisita)
+    FROM DatasMes
+    WHERE DATEADD(DAY, 1, DataVisita) <= CAST(@pEndDate AS DATE)
+),
+DiasComInfo AS (
+    SELECT
+        d.DataVisita,
+        CASE
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 1 THEN '7'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 2 THEN '1'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 3 THEN '2'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 4 THEN '3'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 5 THEN '4'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 6 THEN '5'
+            WHEN DATEPART(WEEKDAY, d.DataVisita) = 7 THEN '6'
+        END AS DiaSemana
+    FROM DatasMes d
+)
+SELECT DISTINCT
+    e.CODMTCEPGVDD AS Cod_Vend,
+    epg.NOMEPG AS Nome_Vendedor,
+    sbn.CODMTCEPGRPS AS Cod_Supervisor,
+    sup.NOMEPG AS Nome_Supervisor,
+    a.CODCET AS Cod_Cliente,
+    d.NOMRAZSCLCET AS Razao_Social,
+    CASE
+        WHEN a.CODDIASMN = '1' THEN 'Segunda'
+        WHEN a.CODDIASMN = '2' THEN 'Terca'
+        WHEN a.CODDIASMN = '3' THEN 'Quarta'
+        WHEN a.CODDIASMN = '4' THEN 'Quinta'
+        WHEN a.CODDIASMN = '5' THEN 'Sexta'
+        WHEN a.CODDIASMN = '6' THEN 'Sabado'
+        WHEN a.CODDIASMN = '7' THEN 'Domingo'
+        ELSE 'SEM DIA CADASTRADO'
+    END AS Dia_Semana,
+    a.DESCCOVSTCET AS Periodicidade,
+    x.DataVisita AS Data_da_Visita,
+    g.deslgrcet AS Endereco,
+    i.desbro AS Bairro,
+    TRIM(h.descdd) AS Cidade,
+    g.codcepcet AS CEP,
+    d.LATCET AS Lat,
+    d.LONCET AS Long
+FROM dbo.IBETVSTCET a
+INNER JOIN DiasComInfo x ON a.CODDIASMN = x.DiaSemana
+INNER JOIN dbo.IBETDATREFCCOVSTCET f
+    ON f.DATINICCOVSTCET <= x.DataVisita AND f.DATFIMCCOVSTCET >= x.DataVisita
+    AND a.DESCCOVSTCET LIKE '%' + CAST(f.CODCCOVSTCET AS VARCHAR) + '%'
+INNER JOIN dbo.IBETCET d
+    ON a.CODCET = d.CODCET AND a.CODEMP = d.CODEMP
+INNER JOIN dbo.IBETPDRGPOCMZMRCCET e
+    ON a.CODEMP = e.CODEMP AND a.CODCET = e.CODCET AND a.CODGPOCMZMRC = e.CODGPOCMZMRC
+INNER JOIN FLEXX10071188.dbo.IBETCPLEPG epg
+    ON epg.CODMTCEPG = e.CODMTCEPGVDD
+LEFT JOIN FLEXX10071188.dbo.IBETSBN sbn
+    ON sbn.CODMTCEPGSBN = epg.CODMTCEPG
+LEFT JOIN FLEXX10071188.dbo.IBETCPLEPG sup
+    ON sup.CODMTCEPG = sbn.CODMTCEPGRPS
+LEFT JOIN ibetedrcet g ON a.codcet = g.codcet AND codtpoedr = 1
+LEFT JOIN ibetcdd h ON g.codcdd = h.codcdd AND g.coduf_ = h.coduf_
+LEFT JOIN ibetbro i ON g.codbro = i.codbro AND h.coduf_ = i.coduf_ AND h.codcdd = i.codcdd
+WHERE d.TPOSTUCET = 'A'
+AND e.CODMTCEPGVDD NOT IN (881,333,444,555,666,888,998,999)
+ORDER BY Cod_Vend, Data_da_Visita
+OPTION (MAXRECURSION 1000);`;
+
+  const DEFAULT_FUEL_PROMOTER_QUERY = `SELECT DISTINCT
+    a.CODCET AS Cod_Cliente,
+    d.NOMRAZSCLCET AS Razao_Social,
+    d.LATCET AS Lat,
+    d.LONCET AS Long
+FROM dbo.IBETVSTCET a
+INNER JOIN dbo.IBETCET d 
+    ON a.CODCET = d.CODCET 
+    AND a.CODEMP = d.CODEMP
+INNER JOIN dbo.IBETPDRGPOCMZMRCCET e 
+    ON a.CODEMP = e.CODEMP 
+    AND a.CODCET = e.CODCET 
+    AND a.CODGPOCMZMRC = e.CODGPOCMZMRC
+WHERE d.TPOSTUCET = 'A'
+ORDER BY a.CODCET;`;
+
+  const [fuelServer, setFuelServer] = useState(() => localStorage.getItem('fuel_erp_server') || 'consulta.flagcloud.com.br');
+  const [fuelDb, setFuelDb] = useState(() => localStorage.getItem('fuel_erp_db') || 'FLEXX10071188');
+  const [fuelUser, setFuelUser] = useState(() => localStorage.getItem('fuel_erp_user') || 'SQL10071188');
+  const [fuelPassword, setFuelPassword] = useState(() => localStorage.getItem('fuel_erp_password') || '');
+  const [fuelPort, setFuelPort] = useState(() => localStorage.getItem('fuel_erp_port') || '1433');
+  const [fuelRoteiroQuery, setFuelRoteiroQuery] = useState(() => localStorage.getItem('fuel_roteiro_query') || DEFAULT_FUEL_ROTEIRO_QUERY);
+  const [fuelPromoterQuery, setFuelPromoterQuery] = useState(() => localStorage.getItem('fuel_promoter_query') || DEFAULT_FUEL_PROMOTER_QUERY);
+  const [fuelTesting, setFuelTesting] = useState(false);
 
   const handleSyncRhPonto = async () => {
     setRhPontoLoading(true);
@@ -1184,6 +1279,17 @@ ORDER BY f.nome;`;
         >
           <RotateCcw size={16} /> Módulo R.H. (Relógio de Ponto & Banco de Horas)
         </button>
+        <button
+          type="button"
+          onClick={() => setErpSubTab('FUEL')}
+          className={`pb-3 px-5 text-xs font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${
+            erpSubTab === 'FUEL'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <Zap size={16} /> Módulo Fuel360 (Reembolso & Roteiro)
+        </button>
       </div>
 
       {erpSubTab === 'TI' ? (
@@ -1269,7 +1375,7 @@ ORDER BY f.nome;`;
             </div>
           </div>
         </form>
-      ) : (
+      ) : erpSubTab === 'RH' ? (
         <form onSubmit={(e) => { e.preventDefault(); handleSyncRhPonto(); }} className="space-y-8">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1412,6 +1518,138 @@ ORDER BY f.nome;`;
                 </table>
               </div>
             )}
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          localStorage.setItem('fuel_erp_server', fuelServer);
+          localStorage.setItem('fuel_erp_db', fuelDb);
+          localStorage.setItem('fuel_erp_user', fuelUser);
+          localStorage.setItem('fuel_erp_password', fuelPassword);
+          localStorage.setItem('fuel_erp_port', fuelPort);
+          localStorage.setItem('fuel_roteiro_query', fuelRoteiroQuery);
+          localStorage.setItem('fuel_promoter_query', fuelPromoterQuery);
+          showToast('Configurações do Fuel360 salvas com sucesso!', 'success');
+        }} className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Zap size={20} className="text-emerald-500" /> Configuração ERP - Fuel360 (Reembolso & Roteiros)
+            </h3>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  setFuelTesting(true);
+                  try {
+                    const res = await fetch('/api/fuel360/system/test-connection', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        config: { host: fuelServer, port: parseInt(fuelPort), user: fuelUser, pass: fuelPassword, database: fuelDb }
+                      })
+                    });
+                    const data = await res.json();
+                    showToast(data.message || (data.success ? 'Conexão efetuada com sucesso!' : 'Falha ao conectar.'), data.success ? 'success' : 'error');
+                  } catch (e) {
+                    showToast('Erro ao testar conexão ERP Fuel360.', 'error');
+                  } finally {
+                    setFuelTesting(false);
+                  }
+                }}
+                disabled={fuelTesting}
+                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all disabled:opacity-50"
+              >
+                {fuelTesting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                Testar Conexão ERP
+              </button>
+              <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+                <Save size={14} /> Salvar Configuração
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Tecnologia</label>
+              <select className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold">
+                <option value="SQL Server">SQL Server</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Host / Servidor ERP</label>
+              <input
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={fuelServer}
+                onChange={e => setFuelServer(e.target.value)}
+                placeholder="consulta.flagcloud.com.br"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Porta</label>
+              <input
+                required
+                type="number"
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={fuelPort}
+                onChange={e => setFuelPort(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Usuário ERP</label>
+              <input
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={fuelUser}
+                onChange={e => setFuelUser(e.target.value)}
+                placeholder="SQL10071188"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase mb-1 ml-1">Senha</label>
+              <input
+                type="password"
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={fuelPassword}
+                onChange={e => setFuelPassword(e.target.value)}
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome do Banco de Dados ERP</label>
+              <input
+                required
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"
+                value={fuelDb}
+                onChange={e => setFuelDb(e.target.value)}
+                placeholder="FLEXX10071188"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL Roteirizador Vendedores (@pStartDate, @pEndDate)</label>
+              <div className="relative">
+                <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300" size={18} />
+                <textarea
+                  rows={8}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white"
+                  value={fuelRoteiroQuery}
+                  onChange={e => setFuelRoteiroQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1">Query SQL Clientes Promotores</label>
+              <div className="relative">
+                <FileCode className="absolute left-3 top-3 text-slate-700 dark:text-slate-300" size={18} />
+                <textarea
+                  rows={6}
+                  className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-xs font-mono focus:border-emerald-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white"
+                  value={fuelPromoterQuery}
+                  onChange={e => setFuelPromoterQuery(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
         </form>
       )}
