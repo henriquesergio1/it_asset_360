@@ -1575,12 +1575,10 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
 });
 
 // Endpoints NATIVOS de Listagem e CRUD do Fuel360
-app.get('/api/fuel360/colaboradores', async (req, res) => {
-    try {
 app.get('/api/fuel360/system/config', async (req, res) => {
     res.json({
         appName: 'Fuel360 - Gestão de Reembolso & Roteiros',
-        version: '3.96.2',
+        version: '3.96.3',
         syncMode: 'NATIVE'
     });
 });
