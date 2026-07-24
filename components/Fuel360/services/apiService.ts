@@ -220,6 +220,9 @@ const RealService = {
     }
 };
 
+let mockFuelConfig: ConfigReembolso = { PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 };
+let mockFuelHistory: LogSistema[] = [];
+
 const MockService = {
     login: async (usuario: string, senha: string): Promise<AuthResponse> => {
         await new Promise(r => setTimeout(r, 600));
@@ -255,9 +258,19 @@ const MockService = {
     deleteColaborador: async () => {},
     getImportPreview: async (): Promise<ImportPreviewResult> => ({ novos: [], alterados: [], conflitos: [], invalidos: [], iguais: [], iguaisCount: 0, totalExternal: 0, inativar: [] }),
     syncColaboradores: async (): Promise<SyncResponse> => ({ success: true, count: 0, errors: [] }),
-    getFuelConfig: async (): Promise<ConfigReembolso> => ({ PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 }),
-    updateFuelConfig: async () => {},
-    getFuelConfigHistory: async () => [],
+    getFuelConfig: async (): Promise<ConfigReembolso> => mockFuelConfig,
+    updateFuelConfig: async (config: ConfigReembolso) => {
+        mockFuelConfig = { ...mockFuelConfig, ...config };
+        const detalhes = `Ajuste Parâmetros: Preço R$ ${config.PrecoCombustivel}, Carro ${config.KmL_Carro} KM/L, Moto ${config.KmL_Moto} KM/L.${config.MotivoAlteracao ? ' Motivo: ' + config.MotivoAlteracao : ''}`;
+        mockFuelHistory.unshift({
+            ID_Log: Math.floor(Math.random() * 100000),
+            DataHora: new Date().toISOString(),
+            Usuario: 'Administrador (MOCK)',
+            Acao: 'ALTERAR_CONFIG_COMBUSTIVEL',
+            Detalhes: detalhes
+        });
+    },
+    getFuelConfigHistory: async () => mockFuelHistory,
     getAusencias: async (): Promise<Ausencia[]> => [],
     createAusencia: async (a: any) => ({ ...a, ID_Ausencia: Math.random(), NomeColaborador: 'Mocked', ID_Pulsus: 123, DataInicio: a.DataInicio || '', DataFim: a.DataFim || '', Motivo: a.Motivo || '' }),
     deleteAusencia: async () => {},

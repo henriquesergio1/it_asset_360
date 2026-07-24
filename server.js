@@ -1892,7 +1892,7 @@ app.get('/api/fuel360/config/fuel', async (req, res) => {
 });
 
 app.put('/api/fuel360/config/fuel', async (req, res) => {
-    const { PrecoCombustivel, KmL_Carro, KmL_Moto } = req.body;
+    const { PrecoCombustivel, KmL_Carro, KmL_Moto, MotivoAlteracao } = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
@@ -1906,6 +1906,17 @@ app.put('/api/fuel360/config/fuel', async (req, res) => {
                 ELSE
                     INSERT INTO FuelSystemSettings (ID, FuelPrice, KmL_Car, KmL_Moto) VALUES (1, @FuelPrice, @KmL_Car, @KmL_Moto)
             `);
+
+        // Registrar Log de Alteração
+        const usuario = req.user?.Nome || req.user?.Usuario || 'Administrador';
+        const detalhes = `Ajuste Parâmetros: Preço R$ ${PrecoCombustivel}, Carro ${KmL_Carro} KM/L, Moto ${KmL_Moto} KM/L.${MotivoAlteracao ? ' Motivo: ' + MotivoAlteracao : ''}`;
+
+        await pool.request()
+            .input('Usuario', sql.NVarChar, usuario)
+            .input('Acao', sql.NVarChar, 'ALTERAR_CONFIG_COMBUSTIVEL')
+            .input('Detalhes', sql.NVarChar, detalhes)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -1916,7 +1927,7 @@ app.get('/api/fuel360/config/fuel/history', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query("SELECT * FROM FuelLogsSistema WHERE Acao LIKE '%Combustivel%' OR Acao LIKE '%Config%' ORDER BY DataHora DESC");
+        const result = await pool.request().query("SELECT TOP 10 * FROM FuelLogsSistema WHERE Acao LIKE '%Combustivel%' OR Acao LIKE '%Config%' OR Acao LIKE '%COMBUSTIVEL%' ORDER BY DataHora DESC");
         res.json(result.recordset || []);
     } catch (err) {
         res.json([]);
