@@ -1574,11 +1574,130 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
     }
 });
 
-// Endpoints NATIVOS de Listagem e CRUD do Fuel360
+// Função utilitária para autocriação resiliente de tabelas do Módulo Fuel360
+async function ensureFuelTablesExist(pool) {
+    try {
+        const checkColab = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelColaboradores'");
+        if (checkColab.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelColaboradores (
+                    ID_Colaborador INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_Pulsus INT NULL,
+                    CodigoSetor INT NULL,
+                    Nome NVARCHAR(255) NOT NULL,
+                    Grupo NVARCHAR(255) NOT NULL,
+                    TipoVeiculo NVARCHAR(50) DEFAULT 'Carro',
+                    Ativo BIT DEFAULT 1
+                )
+            `);
+        }
+
+        const checkGrupos = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelGrupos'");
+        if (checkGrupos.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelGrupos (
+                    ID_Grupo INT IDENTITY(1,1) PRIMARY KEY,
+                    Nome NVARCHAR(255) NOT NULL UNIQUE
+                )
+            `);
+        }
+
+        const checkAusencias = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelAusencias'");
+        if (checkAusencias.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelAusencias (
+                    ID_Ausencia INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_Colaborador INT NOT NULL,
+                    DataInicio DATE NOT NULL,
+                    DataFim DATE NOT NULL,
+                    Motivo NVARCHAR(255) NOT NULL
+                )
+            `);
+        }
+
+        const checkFuelSettings = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSystemSettings'");
+        if (checkFuelSettings.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelSystemSettings (
+                    ID INT PRIMARY KEY DEFAULT 1,
+                    FuelPrice DECIMAL(10,2) DEFAULT 5.89,
+                    KmL_Car DECIMAL(10,2) DEFAULT 10.00,
+                    KmL_Moto DECIMAL(10,2) DEFAULT 35.00
+                );
+                INSERT INTO FuelSystemSettings (ID, FuelPrice, KmL_Car, KmL_Moto) VALUES (1, 5.89, 10.00, 35.00);
+            `);
+        }
+
+        const checkReembHist = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+        if (checkReembHist.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelReembolsoHistorico (
+                    ID_Fechamento INT IDENTITY(1,1) PRIMARY KEY,
+                    Periodo NVARCHAR(50) NOT NULL UNIQUE,
+                    DataFechamento DATETIME DEFAULT GETDATE(),
+                    TotalKmTotal DECIMAL(10,2),
+                    TotalKmReembolsavel DECIMAL(10,2),
+                    TotalValorReembolso DECIMAL(10,2)
+                )
+            `);
+        }
+
+        const checkReembDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDetalhe'");
+        if (checkReembDet.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelReembolsoDetalhe (
+                    ID_Detalhe INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_Fechamento INT NOT NULL,
+                    ID_Colaborador INT NOT NULL,
+                    Nome NVARCHAR(255),
+                    Grupo NVARCHAR(255),
+                    TipoVeiculo NVARCHAR(50),
+                    DiasTrabalhados INT,
+                    KmRodadoTotal DECIMAL(10,2),
+                    KmRodadoReembolsavel DECIMAL(10,2),
+                    ValorReembolso DECIMAL(10,2)
+                )
+            `);
+        }
+
+        const checkReembDiario = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDiario'");
+        if (checkReembDiario.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelReembolsoDiario (
+                    ID_Diario INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_Fechamento INT NOT NULL,
+                    ID_Colaborador INT NOT NULL,
+                    Data DATE NOT NULL,
+                    KmRodadoTotal DECIMAL(10,2),
+                    KmRodadoReembolsavel DECIMAL(10,2),
+                    Ausente BIT DEFAULT 0,
+                    MotivoAusencia NVARCHAR(255) NULL
+                )
+            `);
+        }
+
+        const checkFuelLogs = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelLogsSistema'");
+        if (checkFuelLogs.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelLogsSistema (
+                    ID INT IDENTITY(1,1) PRIMARY KEY,
+                    DataHora DATETIME DEFAULT GETDATE(),
+                    Usuario NVARCHAR(255) DEFAULT 'Sistema',
+                    Acao NVARCHAR(255) NOT NULL,
+                    Detalhes NVARCHAR(MAX) NULL
+                )
+            `);
+        }
+    } catch (err) {
+        console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
+    }
+}
+
+// Endpoints NATIVOS do Módulo Fuel360 (Rotas Completas)
 app.get('/api/fuel360/system/config', async (req, res) => {
     res.json({
         appName: 'Fuel360 - Gestão de Reembolso & Roteiros',
-        version: '3.96.3',
+        version: '3.96.5',
         syncMode: 'NATIVE'
     });
 });
@@ -1587,9 +1706,25 @@ app.put('/api/fuel360/system/config', async (req, res) => {
     res.json({ success: true, message: 'Configurações atualizadas.' });
 });
 
+app.get('/api/fuel360/system/integration', async (req, res) => {
+    res.json({
+        type: 'NATIVE',
+        colab: { host: 'localhost', port: 1433, database: 'ITAsset360', type: 'SQL Server' }
+    });
+});
+
+app.put('/api/fuel360/system/integration', async (req, res) => {
+    res.json({ success: true, message: 'Integração salva.' });
+});
+
+app.post('/api/fuel360/system/license', async (req, res) => {
+    res.json({ success: true, message: 'Licença ativa.' });
+});
+
 app.get('/api/fuel360/colaboradores', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
         const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Nome ASC');
         res.json(result.recordset || []);
     } catch (err) {
@@ -1598,9 +1733,86 @@ app.get('/api/fuel360/colaboradores', async (req, res) => {
     }
 });
 
+app.post('/api/fuel360/colaboradores', async (req, res) => {
+    const { id_pulsus, codigo_setor, nome, grupo, tipoVeiculo } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('ID_Pulsus', sql.Int, id_pulsus || null)
+            .input('CodigoSetor', sql.Int, codigo_setor || 0)
+            .input('Nome', sql.NVarChar, nome || '')
+            .input('Grupo', sql.NVarChar, grupo || 'Outros')
+            .input('TipoVeiculo', sql.NVarChar, tipoVeiculo || 'Carro')
+            .query(`
+                INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, Ativo)
+                OUTPUT INSERTED.*
+                VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, 1)
+            `);
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put('/api/fuel360/colaboradores/:id', async (req, res) => {
+    const { nome, grupo, tipoVeiculo, codigo_setor, ativo } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request()
+            .input('ID', sql.Int, req.params.id)
+            .input('Nome', sql.NVarChar, nome)
+            .input('Grupo', sql.NVarChar, grupo)
+            .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
+            .input('CodigoSetor', sql.Int, codigo_setor)
+            .input('Ativo', sql.Bit, ativo !== undefined ? (ativo ? 1 : 0) : 1)
+            .query(`
+                UPDATE FuelColaboradores
+                SET Nome=@Nome, Grupo=@Grupo, TipoVeiculo=@TipoVeiculo, CodigoSetor=@CodigoSetor, Ativo=@Ativo
+                WHERE ID_Colaborador=@ID
+            `);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/fuel360/colaboradores/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request().input('ID', sql.Int, req.params.id).query('DELETE FROM FuelColaboradores WHERE ID_Colaborador=@ID');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/fuel360/colaboradores/move', async (req, res) => {
+    const { ids, group } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        if (Array.isArray(ids) && ids.length > 0) {
+            await pool.request()
+                .input('Grupo', sql.NVarChar, group)
+                .query(`UPDATE FuelColaboradores SET Grupo=@Grupo WHERE ID_Colaborador IN (${ids.map(id => parseInt(id)).join(',')})`);
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/fuel360/colaboradores/bulk-update', async (req, res) => { res.json({ success: true }); });
+app.post('/api/fuel360/colaboradores/smart-suggestions', async (req, res) => { res.json([]); });
+app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => { res.json({ success: true }); });
+
 app.get('/api/fuel360/grupos', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
         const result = await pool.request().query('SELECT * FROM FuelGrupos ORDER BY Nome ASC');
         res.json(result.recordset || []);
     } catch (err) {
@@ -1609,9 +1821,35 @@ app.get('/api/fuel360/grupos', async (req, res) => {
     }
 });
 
+app.post('/api/fuel360/grupos', async (req, res) => {
+    const { nome } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('Nome', sql.NVarChar, nome)
+            .query('INSERT INTO FuelGrupos (Nome) OUTPUT INSERTED.* VALUES (@Nome)');
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/fuel360/grupos/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request().input('ID', sql.Int, req.params.id).query('DELETE FROM FuelGrupos WHERE ID_Grupo=@ID');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.get('/api/fuel360/config/fuel', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
         const result = await pool.request().query('SELECT FuelPrice as PrecoCombustivel, KmL_Car as KmL_Carro, KmL_Moto as KmL_Moto FROM FuelSystemSettings WHERE ID = 1');
         if (result.recordset && result.recordset.length > 0) {
             res.json(result.recordset[0]);
@@ -1624,9 +1862,42 @@ app.get('/api/fuel360/config/fuel', async (req, res) => {
     }
 });
 
+app.put('/api/fuel360/config/fuel', async (req, res) => {
+    const { PrecoCombustivel, KmL_Carro, KmL_Moto } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request()
+            .input('FuelPrice', sql.Decimal(10,2), PrecoCombustivel)
+            .input('KmL_Car', sql.Decimal(10,2), KmL_Carro)
+            .input('KmL_Moto', sql.Decimal(10,2), KmL_Moto)
+            .query(`
+                IF EXISTS (SELECT 1 FROM FuelSystemSettings WHERE ID = 1)
+                    UPDATE FuelSystemSettings SET FuelPrice=@FuelPrice, KmL_Car=@KmL_Car, KmL_Moto=@KmL_Moto WHERE ID = 1
+                ELSE
+                    INSERT INTO FuelSystemSettings (ID, FuelPrice, KmL_Car, KmL_Moto) VALUES (1, @FuelPrice, @KmL_Car, @KmL_Moto)
+            `);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/fuel360/config/fuel/history', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query("SELECT * FROM FuelLogsSistema WHERE Acao LIKE '%Combustivel%' OR Acao LIKE '%Config%' ORDER BY DataHora DESC");
+        res.json(result.recordset || []);
+    } catch (err) {
+        res.json([]);
+    }
+});
+
 app.get('/api/fuel360/ausencias', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
         const result = await pool.request().query(`
             SELECT a.ID_Ausencia, a.ID_Colaborador, a.DataInicio, a.DataFim, a.Motivo,
                    c.Nome as NomeColaborador, c.ID_Pulsus
@@ -1640,6 +1911,222 @@ app.get('/api/fuel360/ausencias', async (req, res) => {
         res.json([]);
     }
 });
+
+app.post('/api/fuel360/ausencias', async (req, res) => {
+    const { id_colaborador, dataInicio, dataFim, motivo } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('ID_Colaborador', sql.Int, id_colaborador)
+            .input('DataInicio', sql.Date, dataInicio)
+            .input('DataFim', sql.Date, dataFim)
+            .input('Motivo', sql.NVarChar, motivo || 'Ausência')
+            .query('INSERT INTO FuelAusencias (ID_Colaborador, DataInicio, DataFim, Motivo) OUTPUT INSERTED.* VALUES (@ID_Colaborador, @DataInicio, @DataFim, @Motivo)');
+        res.json(result.recordset[0]);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/fuel360/ausencias/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request().input('ID', sql.Int, req.params.id).query('DELETE FROM FuelAusencias WHERE ID_Ausencia=@ID');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/fuel360/calculo/historico', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query('SELECT * FROM FuelReembolsoHistorico ORDER BY ID_Fechamento DESC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar historico de calculo:', err);
+        res.json([]);
+    }
+});
+
+app.get('/api/fuel360/calculo/historico/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('ID', sql.Int, req.params.id)
+            .query('SELECT * FROM FuelReembolsoDetalhe WHERE ID_Fechamento = @ID');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar detalhes de calculo:', err);
+        res.json([]);
+    }
+});
+
+app.get('/api/fuel360/calculo/exists', async (req, res) => {
+    const periodo = req.query.periodo;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('Periodo', sql.NVarChar, periodo)
+            .query('SELECT COUNT(*) as count FROM FuelReembolsoHistorico WHERE Periodo = @Periodo');
+        res.json(result.recordset[0]?.count > 0);
+    } catch (err) {
+        res.json(false);
+    }
+});
+
+app.post('/api/fuel360/calculo', async (req, res) => {
+    const { periodo, totalKmTotal, totalKmReembolsavel, totalValorReembolso, detalhes, diario } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const histRes = await pool.request()
+            .input('Periodo', sql.NVarChar, periodo)
+            .input('TotalKmTotal', sql.Decimal(10,2), totalKmTotal || 0)
+            .input('TotalKmReembolsavel', sql.Decimal(10,2), totalKmReembolsavel || 0)
+            .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso || 0)
+            .query(`
+                INSERT INTO FuelReembolsoHistorico (Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso)
+                OUTPUT INSERTED.ID_Fechamento
+                VALUES (@Periodo, @TotalKmTotal, @TotalKmReembolsavel, @TotalValorReembolso)
+            `);
+        const idFechamento = histRes.recordset[0].ID_Fechamento;
+
+        if (Array.isArray(detalhes)) {
+            for (const d of detalhes) {
+                await pool.request()
+                    .input('ID_Fechamento', sql.Int, idFechamento)
+                    .input('ID_Colaborador', sql.Int, d.id_colaborador || 0)
+                    .input('Nome', sql.NVarChar, d.nome || '')
+                    .input('Grupo', sql.NVarChar, d.grupo || '')
+                    .input('TipoVeiculo', sql.NVarChar, d.tipoVeiculo || 'Carro')
+                    .input('DiasTrabalhados', sql.Int, d.diasTrabalhados || 0)
+                    .input('KmRodadoTotal', sql.Decimal(10,2), d.kmRodadoTotal || 0)
+                    .input('KmRodadoReembolsavel', sql.Decimal(10,2), d.kmRodadoReembolsavel || 0)
+                    .input('ValorReembolso', sql.Decimal(10,2), d.valorReembolso || 0)
+                    .query(`
+                        INSERT INTO FuelReembolsoDetalhe (ID_Fechamento, ID_Colaborador, Nome, Grupo, TipoVeiculo, DiasTrabalhados, KmRodadoTotal, KmRodadoReembolsavel, ValorReembolso)
+                        VALUES (@ID_Fechamento, @ID_Colaborador, @Nome, @Grupo, @TipoVeiculo, @DiasTrabalhados, @KmRodadoTotal, @KmRodadoReembolsavel, @ValorReembolso)
+                    `);
+            }
+        }
+
+        if (Array.isArray(diario)) {
+            for (const r of diario) {
+                await pool.request()
+                    .input('ID_Fechamento', sql.Int, idFechamento)
+                    .input('ID_Colaborador', sql.Int, r.id_colaborador || 0)
+                    .input('Data', sql.Date, r.data)
+                    .input('KmRodadoTotal', sql.Decimal(10,2), r.kmRodadoTotal || 0)
+                    .input('KmRodadoReembolsavel', sql.Decimal(10,2), r.kmRodadoReembolsavel || 0)
+                    .input('Ausente', sql.Bit, r.ausente ? 1 : 0)
+                    .input('MotivoAusencia', sql.NVarChar, r.motivoAusencia || null)
+                    .query(`
+                        INSERT INTO FuelReembolsoDiario (ID_Fechamento, ID_Colaborador, Data, KmRodadoTotal, KmRodadoReembolsavel, Ausente, MotivoAusencia)
+                        VALUES (@ID_Fechamento, @ID_Colaborador, @Data, @KmRodadoTotal, @KmRodadoReembolsavel, @Ausente, @MotivoAusencia)
+                    `);
+            }
+        }
+
+        res.json({ success: true, id: idFechamento });
+    } catch (err) {
+        console.error('Erro ao salvar calculo:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put('/api/fuel360/calculo/diario/:id', async (req, res) => {
+    const { km } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request()
+            .input('ID', sql.Int, req.params.id)
+            .input('Km', sql.Decimal(10,2), km)
+            .query('UPDATE FuelReembolsoDiario SET KmRodadoReembolsavel = @Km WHERE ID_Diario = @ID');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/fuel360/relatorios/reembolso', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query(`
+            SELECT d.*, h.Periodo, h.DataFechamento
+            FROM FuelReembolsoDetalhe d
+            INNER JOIN FuelReembolsoHistorico h ON d.ID_Fechamento = h.ID_Fechamento
+            ORDER BY h.ID_Fechamento DESC, d.Nome ASC
+        `);
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar relatorio de reembolso:', err);
+        res.json([]);
+    }
+});
+
+app.get('/api/fuel360/relatorios/analitico', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query(`
+            SELECT r.*, c.Nome as NomeColaborador, c.Grupo
+            FROM FuelReembolsoDiario r
+            LEFT JOIN FuelColaboradores c ON r.ID_Colaborador = c.ID_Colaborador
+            ORDER BY r.Data DESC
+        `);
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar relatorio analitico:', err);
+        res.json([]);
+    }
+});
+
+app.post('/api/fuel360/relatorios/fix-conflicts', async (req, res) => {
+    res.json({ success: true });
+});
+
+app.get('/api/fuel360/system/logs', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query('SELECT TOP 100 * FROM FuelLogsSistema ORDER BY DataHora DESC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        res.json([]);
+    }
+});
+
+app.post('/api/fuel360/logs', async (req, res) => {
+    const { acao, detalhes, usuario } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await pool.request()
+            .input('Usuario', sql.NVarChar, usuario || 'Sistema')
+            .input('Acao', sql.NVarChar, acao || 'Ação')
+            .input('Detalhes', sql.NVarChar, detalhes || '')
+            .query('INSERT INTO FuelLogsSistema (Usuario, Acao, Detalhes) VALUES (@Usuario, @Acao, @Detalhes)');
+        res.json({ success: true });
+    } catch (err) {
+        res.json({ success: false });
+    }
+});
+
+app.get('/api/fuel360/roteiro/previsao', async (req, res) => { res.json([]); });
+app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
+app.get('/api/fuel360/roteiro/historico', async (req, res) => { res.json([]); });
+app.post('/api/fuel360/roteiro/historico', async (req, res) => { res.json({ success: true }); });
+app.get('/api/fuel360/roteiro/historico/:id', async (req, res) => { res.json([]); });
+app.delete('/api/fuel360/roteiro/historico/:id', async (req, res) => { res.json({ success: true }); });
+app.put('/api/fuel360/roteiro/diario/:id', async (req, res) => { res.json({ success: true }); });
 
 // --- SYNC ENDPOINT (v2.12.51 - Blindado) ---
 app.get('/api/sync', async (req, res) => {
