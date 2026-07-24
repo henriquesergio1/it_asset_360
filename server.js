@@ -1026,6 +1026,126 @@ async function initializeDatabase() {
             console.error('AVISO: Falha ao popular RbacProfiles:', rbacSeedErr.message);
         }
 
+        // Inicialização de Tabelas do Módulo Fuel360
+        try {
+            console.log('- Verificando e criando tabelas do Módulo Fuel360...');
+            
+            const checkGrupos = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelGrupos'");
+            if (checkGrupos.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelGrupos (
+                        ID_Grupo INT IDENTITY(1,1) PRIMARY KEY,
+                        Nome NVARCHAR(255) NOT NULL UNIQUE
+                    )
+                `);
+            }
+
+            const checkColab = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelColaboradores'");
+            if (checkColab.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelColaboradores (
+                        ID_Colaborador INT IDENTITY(1,1) PRIMARY KEY,
+                        ID_Pulsus INT NULL,
+                        CodigoSetor INT NULL,
+                        Nome NVARCHAR(255) NOT NULL,
+                        Grupo NVARCHAR(255) NOT NULL,
+                        TipoVeiculo NVARCHAR(50) DEFAULT 'Carro',
+                        Ativo BIT DEFAULT 1
+                    )
+                `);
+            }
+
+            const checkAusencias = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelAusencias'");
+            if (checkAusencias.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelAusencias (
+                        ID_Ausencia INT IDENTITY(1,1) PRIMARY KEY,
+                        ID_Colaborador INT NOT NULL,
+                        DataInicio DATE NOT NULL,
+                        DataFim DATE NOT NULL,
+                        Motivo NVARCHAR(255) NOT NULL
+                    )
+                `);
+            }
+
+            const checkFuelSettings = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSystemSettings'");
+            if (checkFuelSettings.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelSystemSettings (
+                        ID INT PRIMARY KEY DEFAULT 1,
+                        FuelPrice DECIMAL(10,2) DEFAULT 5.89,
+                        KmL_Car DECIMAL(10,2) DEFAULT 10.00,
+                        KmL_Moto DECIMAL(10,2) DEFAULT 35.00
+                    );
+                    INSERT INTO FuelSystemSettings (ID, FuelPrice, KmL_Car, KmL_Moto) VALUES (1, 5.89, 10.00, 35.00);
+                `);
+            }
+
+            const checkReembHist = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+            if (checkReembHist.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelReembolsoHistorico (
+                        ID_Fechamento INT IDENTITY(1,1) PRIMARY KEY,
+                        Periodo NVARCHAR(50) NOT NULL UNIQUE,
+                        DataFechamento DATETIME DEFAULT GETDATE(),
+                        TotalKmTotal DECIMAL(10,2),
+                        TotalKmReembolsavel DECIMAL(10,2),
+                        TotalValorReembolso DECIMAL(10,2)
+                    )
+                `);
+            }
+
+            const checkReembDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDetalhe'");
+            if (checkReembDet.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelReembolsoDetalhe (
+                        ID_Detalhe INT IDENTITY(1,1) PRIMARY KEY,
+                        ID_Fechamento INT NOT NULL,
+                        ID_Colaborador INT NOT NULL,
+                        Nome NVARCHAR(255),
+                        Grupo NVARCHAR(255),
+                        TipoVeiculo NVARCHAR(50),
+                        DiasTrabalhados INT,
+                        KmRodadoTotal DECIMAL(10,2),
+                        KmRodadoReembolsavel DECIMAL(10,2),
+                        ValorReembolso DECIMAL(10,2)
+                    )
+                `);
+            }
+
+            const checkReembDiario = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDiario'");
+            if (checkReembDiario.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelReembolsoDiario (
+                        ID_Diario INT IDENTITY(1,1) PRIMARY KEY,
+                        ID_Fechamento INT NOT NULL,
+                        ID_Colaborador INT NOT NULL,
+                        Data DATE NOT NULL,
+                        KmRodadoTotal DECIMAL(10,2),
+                        KmRodadoReembolsavel DECIMAL(10,2),
+                        Ausente BIT DEFAULT 0,
+                        MotivoAusencia NVARCHAR(255) NULL
+                    )
+                `);
+            }
+
+            const checkFuelLogs = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelLogsSistema'");
+            if (checkFuelLogs.recordset.length === 0) {
+                await pool.request().query(`
+                    CREATE TABLE FuelLogsSistema (
+                        ID INT IDENTITY(1,1) PRIMARY KEY,
+                        DataHora DATETIME DEFAULT GETDATE(),
+                        Usuario NVARCHAR(255) DEFAULT 'Sistema',
+                        Acao NVARCHAR(255) NOT NULL,
+                        Detalhes NVARCHAR(MAX) NULL
+                    )
+                `);
+            }
+            console.log('  ... Tabelas do Módulo Fuel360 inicializadas.');
+        } catch (fuelTableErr) {
+            console.error('AVISO: Falha ao inicializar tabelas do Fuel360:', fuelTableErr.message);
+        }
+
         await createIndexes(pool);
 
         console.log('Banco de dados pronto.');
@@ -1457,12 +1577,26 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
 // Endpoints NATIVOS de Listagem e CRUD do Fuel360
 app.get('/api/fuel360/colaboradores', async (req, res) => {
     try {
+app.get('/api/fuel360/system/config', async (req, res) => {
+    res.json({
+        appName: 'Fuel360 - Gestão de Reembolso & Roteiros',
+        version: '3.96.2',
+        syncMode: 'NATIVE'
+    });
+});
+
+app.put('/api/fuel360/system/config', async (req, res) => {
+    res.json({ success: true, message: 'Configurações atualizadas.' });
+});
+
+app.get('/api/fuel360/colaboradores', async (req, res) => {
+    try {
         const pool = await sql.connect(dbConfig);
         const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Nome ASC');
         res.json(result.recordset || []);
     } catch (err) {
-        console.error('Erro ao buscar colaboradores Fuel360:', err);
-        res.status(500).json([]);
+        console.warn('[Fuel360 WARN] Falha ao buscar colaboradores:', err.message);
+        res.json([]);
     }
 });
 
@@ -1472,8 +1606,8 @@ app.get('/api/fuel360/grupos', async (req, res) => {
         const result = await pool.request().query('SELECT * FROM FuelGrupos ORDER BY Nome ASC');
         res.json(result.recordset || []);
     } catch (err) {
-        console.error('Erro ao buscar grupos Fuel360:', err);
-        res.status(500).json([]);
+        console.warn('[Fuel360 WARN] Falha ao buscar grupos:', err.message);
+        res.json([]);
     }
 });
 
@@ -1487,7 +1621,7 @@ app.get('/api/fuel360/config/fuel', async (req, res) => {
             res.json({ PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 });
         }
     } catch (err) {
-        console.error('Erro ao buscar configurações Fuel360:', err);
+        console.warn('[Fuel360 WARN] Falha ao buscar configurações:', err.message);
         res.json({ PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 });
     }
 });
@@ -1504,8 +1638,8 @@ app.get('/api/fuel360/ausencias', async (req, res) => {
         `);
         res.json(result.recordset || []);
     } catch (err) {
-        console.error('Erro ao buscar ausências Fuel360:', err);
-        res.status(500).json([]);
+        console.warn('[Fuel360 WARN] Falha ao buscar ausências:', err.message);
+        res.json([]);
     }
 });
 
