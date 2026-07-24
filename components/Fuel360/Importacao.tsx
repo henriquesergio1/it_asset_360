@@ -1692,18 +1692,18 @@ export const Importacao: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            {/* Stepper Header */}
+            {/* Stepper Header Adaptativo */}
             <div className="flex justify-center mb-8">
-                <div className="flex items-center space-x-4 bg-white p-2 rounded-full shadow-sm border border-slate-200">
-                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step >= 1 ? 'bg-blue-50 text-blue-700' : 'text-slate-400'}`}>
+                <div className="flex items-center space-x-4 bg-white dark:bg-slate-900 p-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step >= 1 ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
                         <span className="font-bold">1</span> <span className="text-sm font-medium">Origem</span>
                     </div>
-                    <div className="w-8 h-px bg-slate-300"></div>
-                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step >= 2 ? 'bg-blue-50 text-blue-700' : 'text-slate-400'}`}>
+                    <div className="w-8 h-px bg-slate-300 dark:bg-slate-700"></div>
+                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step >= 2 ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
                         <span className="font-bold">2</span> <span className="text-sm font-medium">Conferência & Ajustes</span>
                     </div>
-                    <div className="w-8 h-px bg-slate-300"></div>
-                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step === 3 ? 'bg-blue-50 text-blue-700' : 'text-slate-400'}`}>
+                    <div className="w-8 h-px bg-slate-300 dark:bg-slate-700"></div>
+                    <div className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${step >= 3 ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-sky-300 font-bold' : 'text-slate-400 dark:text-slate-500'}`}>
                         <span className="font-bold">3</span> <span className="text-sm font-medium">Fechamento</span>
                     </div>
                 </div>

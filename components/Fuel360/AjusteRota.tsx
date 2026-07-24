@@ -804,32 +804,32 @@ export const AjusteRota: React.FC = () => {
             {/* ABAIXO: MAPA E SIDEBAR DE AJUSTES */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
                 {/* COLUNA ESQUERDA: PARÂMETROS E LISTA DE AJUSTES */}
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col space-y-4 overflow-y-auto custom-scrollbar shadow-sm">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col space-y-4 overflow-y-auto custom-scrollbar shadow-sm transition-colors">
                     {/* PARÂMETROS DO ROTEIRIZADOR */}
-                    <div className="space-y-3 pb-4 border-b border-slate-100">
-                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center">
+                    <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
                             <CogIcon className="w-4 h-4 mr-1 text-slate-500"/> Parâmetros do Otimizador
                         </h4>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Clientes Máximo / Dia</label>
+                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Clientes Máximo / Dia</label>
                             <input 
                                 type="number" 
                                 value={optMaxClients} 
                                 onChange={(e) => setOptMaxClients(Number(e.target.value))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800"
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">KM Máximo Rota / Dia</label>
+                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">KM Máximo Rota / Dia</label>
                             <input 
                                 type="number" 
                                 value={optMaxKm} 
                                 onChange={(e) => setOptMaxKm(Number(e.target.value))}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800"
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white"
                             />
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase">Sábado Meio-Período</span>
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Sábado Meio-Período</span>
                             <input 
                                 type="checkbox" 
                                 checked={optSatHalfPeriod} 
@@ -838,7 +838,7 @@ export const AjusteRota: React.FC = () => {
                             />
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase">Equilibrar Equipe</span>
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Equilibrar Equipe</span>
                             <input 
                                 type="checkbox" 
                                 checked={optBalanceWorkload} 
@@ -847,10 +847,10 @@ export const AjusteRota: React.FC = () => {
                             />
                         </div>
                         <div className="pt-1">
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Dias Ativos</label>
+                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Dias Ativos</label>
                             <div className="grid grid-cols-2 gap-1.5">
                                 {WEEKDAYS.map(day => (
-                                    <label key={day} className="flex items-center space-x-1.5 text-[10px] font-semibold text-slate-700 cursor-pointer">
+                                    <label key={day} className="flex items-center space-x-1.5 text-[10px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
                                         <input 
                                             type="checkbox" 
                                             checked={optDays.includes(day)}
@@ -878,12 +878,12 @@ export const AjusteRota: React.FC = () => {
                     {/* LISTA DE COLABORADORES PARA SELEÇÃO NO MAPA */}
                     {adjustedRoutes.length > 0 && (
                         <div className="flex-1 flex flex-col min-h-0">
-                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2 flex items-center">
+                            <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2 flex items-center">
                                 <UserGroupIcon className="w-4 h-4 mr-1 text-slate-500"/> Rotas por Colaborador
                             </h4>
                             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                                 <div 
-                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 hover:border-indigo-200'}`}
+                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
                                     onClick={() => setSelectedPromoter('ALL')}
                                 >
                                     Todos os Colaboradores ({Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).length})
@@ -896,14 +896,14 @@ export const AjusteRota: React.FC = () => {
                                     return (
                                         <div 
                                             key={sellerId}
-                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 hover:border-indigo-200'}`}
+                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
                                             onClick={() => setSelectedPromoter(String(sellerId))}
                                         >
                                             <div className="flex items-center space-x-2 truncate">
                                                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
                                                 <span className="truncate">{colab?.Nome || `Colaborador ${sellerId}`}</span>
                                             </div>
-                                            <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] shrink-0">{count} PDVs</span>
+                                            <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] shrink-0">{count} PDVs</span>
                                         </div>
                                     );
                                 })}
@@ -915,12 +915,12 @@ export const AjusteRota: React.FC = () => {
                 {/* COLUNA DIREITA: MAPA E TABELA DE CLIENTES */}
                 <div className="lg:col-span-3 flex flex-col space-y-4 min-h-0">
                     {/* MAP CONTAINER */}
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm h-96 relative flex flex-col">
-                        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-md z-[1000] text-xs font-bold text-slate-800 flex items-center">
-                            <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 animate-pulse"/> Visão Espacial do Ajuste
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm h-96 relative flex flex-col transition-colors">
+                        <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md z-[1000] text-xs font-bold text-slate-800 dark:text-white flex items-center">
+                            <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400 animate-pulse"/> Visão Espacial do Ajuste
                         </div>
                         {adjustedRoutes.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 text-slate-400">
+                            <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
                                 <p className="text-sm font-semibold">Carregue ou importe um roteiro para visualizar o mapa</p>
                             </div>

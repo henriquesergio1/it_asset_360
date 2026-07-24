@@ -1043,7 +1043,7 @@ export const RoteirizadorPromotores: React.FC = () => {
             )}
             
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div><h2 className="text-3xl font-black text-slate-800 tracking-tight">Roteirizador Promotores</h2><p className="text-slate-500 font-medium">Controle e validação terrestre para a equipe de <b>Merchandising</b> via Excel.</p></div>
+                <div><h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Roteirizador Promotores</h2><p className="text-slate-500 dark:text-slate-400 font-medium">Controle e validação terrestre para a equipe de <b>Merchandising</b> via Excel.</p></div>
                 <div className="flex gap-3">
                     {rawData.length > 0 && (
                         <button onClick={handleSaveForecast} disabled={saving || calculatingReal} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl flex items-center transition-all disabled:opacity-50">
@@ -1054,30 +1054,30 @@ export const RoteirizadorPromotores: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white p-7 rounded-3xl shadow-sm border border-slate-200 flex flex-wrap gap-5 items-end">
+            <div className="bg-white dark:bg-slate-900 p-7 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-wrap gap-5 items-end transition-colors">
                 <div className="w-64">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Arquivo Excel (.xlsx)</label>
-                    <input type="file" accept=".xlsx, .xls, .csv" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-2.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase mb-2 ml-1">Arquivo Excel (.xlsx)</label>
+                    <input type="file" accept=".xlsx, .xls, .csv" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-2.5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
                 </div>
 
                 <div className="w-44">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Data Início</label>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase mb-2 ml-1">Data Início</label>
                     <div className="relative">
                         <CalendarIcon className="absolute left-3 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-slate-700"/>
+                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"/>
                     </div>
                 </div>
 
                 <div className="w-44">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Data Fim</label>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase mb-2 ml-1">Data Fim</label>
                     <div className="relative">
                         <CalendarIcon className="absolute left-3 top-3.5 w-4 h-4 text-slate-400"/>
-                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-slate-700"/>
+                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"/>
                     </div>
                 </div>
                 
-                <div className="w-24"><label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Fator Tort.</label><input type="number" step="0.1" value={tortuosity} onChange={e => setTortuosity(parseFloat(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-center font-black text-blue-600"/></div>
-                <div className="w-24"><label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Adic. KM %</label><input type="number" step="1" value={realKmAdjustment} onChange={e => setRealKmAdjustment(parseFloat(e.target.value))} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-center font-black text-emerald-600"/></div>
+                <div className="w-24"><label className="block text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase mb-2 ml-1">Fator Tort.</label><input type="number" step="0.1" value={tortuosity} onChange={e => setTortuosity(parseFloat(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-sm text-center font-black text-blue-600 dark:text-sky-400"/></div>
+                <div className="w-24"><label className="block text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase mb-2 ml-1">Adic. KM %</label><input type="number" step="1" value={realKmAdjustment} onChange={e => setRealKmAdjustment(parseFloat(e.target.value))} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-sm text-center font-black text-emerald-600 dark:text-emerald-400"/></div>
                 
                 {/* FILTRO DE SUPERVISOR */}
                 {supervisors.length > 0 && (
@@ -1088,7 +1088,7 @@ export const RoteirizadorPromotores: React.FC = () => {
                             <select 
                                 value={selectedSupervisor} 
                                 onChange={e => setSelectedSupervisor(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 appearance-none"
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 pl-9 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-slate-700 dark:text-white appearance-none"
                             >
                                 <option value="">Todos os Supervisores</option>
                                 {supervisors.map(sup => (
@@ -1100,7 +1100,7 @@ export const RoteirizadorPromotores: React.FC = () => {
                     </div>
                 )}
 
-                <button onClick={() => setIsRoundTrip(!isRoundTrip)} className={`h-[54px] px-6 rounded-2xl border-2 font-black text-[10px] uppercase transition-all flex items-center ${isRoundTrip ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-white text-slate-300 border-slate-200'}`}><RefreshIcon className="w-4 h-4 mr-2"/> {isRoundTrip ? 'Calcular Ida e Volta' : 'Apenas Ida'}</button>
+                <button onClick={() => setIsRoundTrip(!isRoundTrip)} className={`h-[54px] px-6 rounded-2xl border-2 font-black text-[10px] uppercase transition-all flex items-center ${isRoundTrip ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-sky-300 border-blue-200 dark:border-blue-800 shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}><RefreshIcon className="w-4 h-4 mr-2"/> {isRoundTrip ? 'Calcular Ida e Volta' : 'Apenas Ida'}</button>
                 <button 
                     onClick={handleCalculate} 
                     disabled={loading || calculatingReal || !file} 

@@ -298,34 +298,34 @@ export const GestaoSimulacoes: React.FC = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-slate-900 mb-2 tracking-tight">Gestão de Simulações e Cálculos</h2>
-                    <p className="text-slate-500 font-medium">Auditoria, ajuste e exclusão de históricos.</p>
+                    <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Gestão de Simulações e Cálculos</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Auditoria, ajuste e exclusão de históricos.</p>
                 </div>
-                <div className="bg-white border border-slate-200 rounded-lg p-1 flex space-x-1 shadow-sm mt-4 md:mt-0">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 flex space-x-1 shadow-sm mt-4 md:mt-0 transition-colors">
                     <button 
                         onClick={() => setActiveTab('CALCULO')} 
-                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'CALCULO' ? 'bg-emerald-50 text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'CALCULO' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <CalculatorIcon className="w-4 h-4 mr-2"/> Cálculos Fechados
                     </button>
                     <button 
                         onClick={() => setActiveTab('SIMULACAO')} 
-                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'SIMULACAO' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                        className={`px-4 py-2 text-sm font-bold rounded-md flex items-center transition-all ${activeTab === 'SIMULACAO' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                         <LocationMarkerIcon className="w-4 h-4 mr-2"/> Simulações de Rota
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden min-h-[400px]">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden min-h-[400px] transition-colors">
                 {loading ? (
-                    <div className="p-20 text-center text-slate-400"><SpinnerIcon className="w-10 h-10 mx-auto mb-4 text-blue-500"/> Carregando dados...</div>
+                    <div className="p-20 text-center text-slate-400 dark:text-slate-500"><SpinnerIcon className="w-10 h-10 mx-auto mb-4 text-blue-500"/> Carregando dados...</div>
                 ) : (
                     <>
                         {/* --- TABELA DE CÁLCULOS FECHADOS --- */}
                         {activeTab === 'CALCULO' && (
-                            <table className="w-full text-sm text-left text-slate-600">
-                                <thead className="bg-emerald-50 text-emerald-800 uppercase font-bold text-xs border-b border-emerald-100">
+                            <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                                <thead className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 uppercase font-bold text-xs border-b border-emerald-100 dark:border-emerald-900">
                                     <tr>
                                         <th className="p-5 w-10"></th>
                                         <th className="p-5">Período de Referência</th>
