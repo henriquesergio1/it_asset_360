@@ -1417,12 +1417,12 @@ export const Importacao: React.FC = () => {
 
                 {/* Ignored List Alert (Collapsible) */}
                 {ignoredList.length > 0 && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden transition-all shadow-sm">
+                    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all shadow-sm">
                         <div 
                             onClick={() => setIgnoredExpanded(!ignoredExpanded)}
-                            className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                            className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none"
                         >
-                            <h4 className="text-sm font-bold text-slate-600 flex items-center">
+                            <h4 className="text-sm font-bold text-slate-600 dark:text-slate-200 flex items-center">
                                 <ExclamationIcon className="w-5 h-5 mr-2 text-amber-500"/> 
                                 {ignoredList.length} Registros Ignorados (Sem Cadastro)
                             </h4>
@@ -1432,15 +1432,15 @@ export const Importacao: React.FC = () => {
                         </div>
                         
                         {ignoredExpanded && (
-                            <div className="p-4 pt-0 border-t border-slate-100 bg-white animate-fade-in">
+                            <div className="p-4 pt-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 animate-fade-in">
                                 <p className="text-xs text-slate-400 mb-3 mt-3">Estes registros existem no arquivo CSV mas não foram encontrados no cadastro do sistema. Eles serão ignorados no cálculo, a menos que você os vincule.</p>
                                 <div className="space-y-2">
                                     {ignoredList.map((ig, idx) => (
-                                        <div key={idx} className="flex justify-between items-center text-xs bg-slate-50 px-3 py-2 rounded border border-slate-200 text-slate-500 font-mono">
+                                        <div key={idx} className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 font-mono">
                                             <span>{ig.id} - {ig.nome}</span>
                                             <button 
                                                 onClick={() => openMergeModal(ig.id, ig.nome)}
-                                                className="flex items-center text-blue-600 hover:text-blue-800 font-bold bg-white px-2 py-1 rounded border border-blue-100 shadow-sm"
+                                                className="flex items-center text-blue-600 dark:text-sky-400 hover:text-blue-800 font-bold bg-white dark:bg-slate-900 px-2 py-1 rounded border border-blue-100 dark:border-slate-800 shadow-sm"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                                                 Vincular / Unificar
@@ -1454,10 +1454,10 @@ export const Importacao: React.FC = () => {
                 )}
 
                 {/* Main Table */}
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-slate-600">
-                            <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-xs border-b border-slate-200">
+                        <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                            <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-300 uppercase font-semibold text-xs border-b border-slate-200 dark:border-slate-800">
                                 <tr>
                                     <th className="p-4 w-10"></th>
                                     <th className="p-4">Colaborador</th>
@@ -1476,9 +1476,9 @@ export const Importacao: React.FC = () => {
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {sortedStagedGroups.length === 0 ? (
-                                     <tr><td colSpan={7} className="p-12 text-center text-slate-400">Nenhum colaborador encontrado para este filtro.</td></tr>
+                                     <tr><td colSpan={7} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhum colaborador encontrado para este filtro.</td></tr>
                                 ) : (
                                     sortedStagedGroups.map(([idPulsus, records]) => {
                                         const colab = records[0].colaboradorRef!;
@@ -1494,26 +1494,26 @@ export const Importacao: React.FC = () => {
 
                                         return (
                                             <React.Fragment key={idPulsus}>
-                                                <tr onClick={() => toggleExpand(idPulsus)} className={`cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-slate-50' : ''} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
+                                                <tr onClick={() => toggleExpand(idPulsus)} className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${isExpanded ? 'bg-slate-50 dark:bg-slate-800/60' : ''} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
                                                     <td className="p-4 text-center">
                                                         {isExpanded ? <ChevronDownIcon className="w-4 h-4 text-blue-500"/> : <ChevronRightIcon className="w-4 h-4 text-slate-400"/>}
                                                     </td>
                                                     <td className="p-4">
-                                                        <div className="font-bold text-slate-800 flex items-center">
+                                                        <div className="font-bold text-slate-800 dark:text-white flex items-center">
                                                             {colab.Nome}
-                                                            {!colab.Ativo && <span className="ml-2 bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded font-black uppercase">INATIVO</span>}
+                                                            {!colab.Ativo && <span className="ml-2 bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 text-[10px] px-2 py-0.5 rounded font-black uppercase border border-red-200 dark:border-red-800">INATIVO</span>}
                                                         </div>
                                                         <div className="text-xs text-slate-400">Setor: {colab.CodigoSetor} - ID: {idPulsus}</div>
                                                         {records[0].supervisor && <div className="text-[10px] text-indigo-400 font-bold mt-0.5">Sup: {records[0].supervisor}</div>}
                                                     </td>
                                                     <td className="p-4 text-center">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${efetividade === 1 ? 'bg-slate-50 text-slate-400 border-slate-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${efetividade === 1 ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-400 border-slate-200 dark:border-slate-700' : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'}`}>
                                                             {(efetividade * 100).toFixed(0)}%
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-center font-mono">{records.length}</td>
                                                     <td className="p-4 text-right">
-                                                        <div className={`font-mono font-bold ${efetividade < 1 ? 'text-indigo-600' : 'text-slate-800'}`}>
+                                                        <div className={`font-mono font-bold ${efetividade < 1 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-100'}`}>
                                                             {totalKmEfetivo.toFixed(1)} km
                                                         </div>
                                                         {efetividade < 1 && (
@@ -1537,16 +1537,16 @@ export const Importacao: React.FC = () => {
                                                     </td>
                                                 </tr>
                                                 {isExpanded && (
-                                                    <tr className="bg-slate-50/50">
+                                                    <tr className="bg-slate-50/50 dark:bg-slate-800/30">
                                                         <td colSpan={7} className="p-4 pl-12">
-                                                            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                                                            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
                                                                 <table className="w-full text-xs">
-                                                                    <thead className="bg-slate-100 text-slate-500">
+                                                                    <thead className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
                                                                         <tr>
                                                                             <th className="p-2 text-left">Data</th>
                                                                             <th className="p-2 text-right">KM Original</th>
                                                                             <th className="p-2 text-right">KM Considerado</th>
-                                                                            <th className="p-2 text-right bg-indigo-50">KM Final ({ (efetividade*100).toFixed(0) }%)</th>
+                                                                            <th className="p-2 text-right bg-indigo-50 dark:bg-indigo-950/40">KM Final ({ (efetividade*100).toFixed(0) }%)</th>
                                                                             <th className="p-2 text-left">Observação/Status</th>
                                                                             <th className="p-2 text-center">Ação</th>
                                                                         </tr>

@@ -1233,39 +1233,39 @@ export const PrevistoVsRealizado: React.FC = () => {
                 </div>
             )}
             
-            {/* TABS SELECTOR */}
-            <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl w-fit">
+            {/* SUB-NAVEGAÇÃO INTERNA DO MÓDULO */}
+            <div className="flex space-x-2 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl w-fit border border-slate-200 dark:border-slate-700">
                 <button 
                     onClick={() => setActiveTab('auditoria')}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'auditoria' ? 'bg-white text-indigo-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'auditoria' ? 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-sky-300 shadow-sm border border-slate-200 dark:border-slate-800' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}
                 >
                     Auditoria de Supervisão
                 </button>
                 <button 
                     onClick={() => setActiveTab('roteirizador')}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'roteirizador' ? 'bg-white text-emerald-700 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'roteirizador' ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-slate-800' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white'}`}
                 >
                     Roteirizador Promotores
                 </button>
             </div>
 
             {/* TOP BAR */}
-            <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center">
+                    <h2 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight flex items-center">
                         {activeTab === 'auditoria' ? (
                             <>
-                                <EyeIcon className="w-6 h-6 mr-2 text-indigo-600"/>
+                                <EyeIcon className="w-6 h-6 mr-2 text-indigo-600 dark:text-indigo-400"/>
                                 Auditoria de Supervisão
                             </>
                         ) : (
                             <>
-                                <TruckIcon className="w-6 h-6 mr-2 text-emerald-600"/>
+                                <TruckIcon className="w-6 h-6 mr-2 text-emerald-600 dark:text-emerald-400"/>
                                 Roteirizador Promotores
                             </>
                         )}
                     </h2>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase ml-8 tracking-wider opacity-70">
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase ml-8 tracking-wider opacity-70">
                         Versão {SYSTEM_VERSION} • {activeTab === 'auditoria' ? 'Auditoria de Equipe' : 'Configuração de Rotas'}
                     </p>
                 </div>
@@ -1277,22 +1277,22 @@ export const PrevistoVsRealizado: React.FC = () => {
                             {/* CONTROLES AUDITORIA */}
                             <div className="w-24 px-2">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex justify-between">Raio: {auditRadius}m</label>
-                                <input type="range" min="30" max="500" step="10" value={auditRadius} onChange={(e) => setAuditRadius(Number(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"/>
+                                <input type="range" min="30" max="500" step="10" value={auditRadius} onChange={(e) => setAuditRadius(Number(e.target.value))} className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"/>
                             </div>
-                            <div className="w-24 px-2 border-l border-slate-100">
+                            <div className="w-24 px-2 border-l border-slate-100 dark:border-slate-800">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 flex justify-between">Tempo: {minStayTime}m</label>
-                                <input type="range" min="1" max="60" step="1" value={minStayTime} onChange={(e) => setMinStayTime(Number(e.target.value))} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"/>
+                                <input type="range" min="1" max="60" step="1" value={minStayTime} onChange={(e) => setMinStayTime(Number(e.target.value))} className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-600"/>
                             </div>
-                            <div className="flex items-center px-2 bg-slate-50 rounded-lg border border-slate-200 h-[34px]">
+                            <div className="flex items-center px-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 h-[34px]">
                                 <input type="checkbox" id="useRealRoute" checked={useRealRoute} onChange={e => setUseRealRoute(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded border-gray-300"/>
-                                <label htmlFor="useRealRoute" className="ml-2 text-[10px] font-bold text-slate-500 uppercase cursor-pointer">Vias</label>
+                                <label htmlFor="useRealRoute" className="ml-2 text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase cursor-pointer">Vias</label>
                             </div>
-                            <button onClick={() => setShowNonVisited(!showNonVisited)} className={`h-[34px] px-3 rounded-lg border flex items-center transition-all ${showNonVisited ? 'bg-white border-slate-200 text-slate-600 shadow-sm' : 'bg-slate-100 border-slate-300 text-slate-400'}`}>
+                            <button onClick={() => setShowNonVisited(!showNonVisited)} className={`h-[34px] px-3 rounded-lg border flex items-center transition-all ${showNonVisited ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-200 shadow-sm' : 'bg-slate-100 dark:bg-slate-800/50 border-slate-300 dark:border-slate-700 text-slate-400'}`}>
                                 <EyeIcon className="w-4 h-4"/>
                             </button>
-                            <div className="w-32 border-l border-slate-100 pl-3">
+                            <div className="w-32 border-l border-slate-100 dark:border-slate-800 pl-3">
                                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data</label>
-                                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-[10px] font-bold outline-none"/>
+                                <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg p-2 text-[10px] font-bold outline-none"/>
                             </div>
                             <button onClick={loadAllPlanned} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 rounded-lg text-xs flex items-center shadow-md transition disabled:opacity-50 h-[34px]">
                                 {loading ? <SpinnerIcon className="w-4 h-4 animate-spin"/> : <RefreshIcon className="w-4 h-4 mr-1"/>} Equipe
@@ -1339,7 +1339,7 @@ export const PrevistoVsRealizado: React.FC = () => {
                                 className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 rounded-lg text-xs flex items-center shadow-md transition disabled:opacity-50 h-[34px]"
                                 title="Exportar Roteiro Otimizado"
                             >
-                                <UploadIcon className="w-4 h-4 mr-1 rotate-180"/> Exportar
+                                <UploadIcon className="w-4 h-4 mr-1"/> Exportar
                             </button>
                             <label className={`cursor-pointer bg-slate-800 hover:bg-black text-white font-bold px-3 rounded-lg text-xs flex items-center transition shadow-md h-[34px] ${loading ? 'opacity-50' : ''}`}>
                                 <UploadIcon className="w-4 h-4 mr-2"/> Roteiro (.xlsx)
@@ -1354,42 +1354,42 @@ export const PrevistoVsRealizado: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {activeTab === 'auditoria' ? (
                     <>
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                            <div className="p-2 bg-indigo-50 rounded-lg mr-3 text-indigo-600"><UserGroupIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Equipe</p><p className="text-lg font-black text-slate-800">{teamVisits.length}</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg mr-3 text-indigo-600 dark:text-indigo-400"><UserGroupIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Equipe</p><p className="text-lg font-black text-slate-800 dark:text-white">{teamVisits.length}</p></div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                            <div className="p-2 bg-emerald-50 rounded-lg mr-3 text-emerald-600"><CheckCircleIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Auditados</p><p className="text-lg font-black text-emerald-600">{clientsAudited}</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 rounded-lg mr-3 text-emerald-600 dark:text-emerald-400"><CheckCircleIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Auditados</p><p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{clientsAudited}</p></div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                            <div className="p-2 bg-indigo-50 rounded-lg mr-3 text-indigo-600"><LocationMarkerIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">KM Supervisor</p><p className="text-lg font-black text-indigo-600">{kmAudited.toFixed(1)}</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg mr-3 text-indigo-600 dark:text-indigo-400"><LocationMarkerIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">KM Supervisor</p><p className="text-lg font-black text-indigo-600 dark:text-indigo-400">{kmAudited.toFixed(1)}</p></div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                            <div className="p-2 bg-amber-50 rounded-lg mr-3 text-amber-600"><EyeIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Cobertura</p><p className="text-lg font-black text-amber-600">{teamVisits.length > 0 ? ((clientsAudited/teamVisits.length)*100).toFixed(0) : 0}%</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                            <div className="p-2 bg-amber-50 dark:bg-amber-950/50 rounded-lg mr-3 text-amber-600 dark:text-amber-400"><EyeIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Cobertura</p><p className="text-lg font-black text-amber-600 dark:text-amber-400">{teamVisits.length > 0 ? ((clientsAudited/teamVisits.length)*100).toFixed(0) : 0}%</p></div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm flex items-center bg-emerald-50/20">
-                            <div className="p-2 bg-emerald-100 rounded-lg mr-3 text-emerald-600"><UserGroupIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Clientes</p><p className="text-lg font-black text-emerald-800">{roteiroManualData.length}</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900 shadow-sm flex items-center bg-emerald-50/20 dark:bg-emerald-950/20">
+                            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg mr-3 text-emerald-600 dark:text-emerald-400"><UserGroupIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Clientes</p><p className="text-lg font-black text-emerald-800 dark:text-emerald-300">{roteiroManualData.length}</p></div>
                         </div>
-                        <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-sm flex items-center bg-emerald-50/20">
-                            <div className="p-2 bg-emerald-100 rounded-lg mr-3 text-emerald-600"><TruckIcon className="w-5 h-5"/></div>
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Rotas</p><p className="text-lg font-black text-emerald-800">{bulkRoutes.length}</p></div>
+                        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900 shadow-sm flex items-center bg-emerald-50/20 dark:bg-emerald-950/20">
+                            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/50 rounded-lg mr-3 text-emerald-600 dark:text-emerald-400"><TruckIcon className="w-5 h-5"/></div>
+                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Rotas</p><p className="text-lg font-black text-emerald-800 dark:text-emerald-300">{bulkRoutes.length}</p></div>
                         </div>
                         {promoterMetrics && (
                             <>
-                                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                                    <div className="p-2 bg-indigo-50 rounded-lg mr-3 text-indigo-600"><UserGroupIcon className="w-5 h-5"/></div>
-                                    <div><p className="text-[10px] text-slate-400 font-bold uppercase">Clientes Selecionado</p><p className="text-lg font-black text-indigo-600">{promoterMetrics.clientes}</p></div>
+                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                                    <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg mr-3 text-indigo-600 dark:text-indigo-400"><UserGroupIcon className="w-5 h-5"/></div>
+                                    <div><p className="text-[10px] text-slate-400 font-bold uppercase">Clientes Selecionado</p><p className="text-lg font-black text-indigo-600 dark:text-indigo-400">{promoterMetrics.clientes}</p></div>
                                 </div>
-                                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center">
-                                    <div className="p-2 bg-amber-50 rounded-lg mr-3 text-amber-600"><LocationMarkerIcon className="w-5 h-5"/></div>
-                                    <div><p className="text-[10px] text-slate-400 font-bold uppercase">KM Selecionado</p><p className="text-lg font-black text-amber-600">{promoterMetrics.km} km</p></div>
+                                <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center transition-colors">
+                                    <div className="p-2 bg-amber-50 dark:bg-amber-950/50 rounded-lg mr-3 text-amber-600 dark:text-amber-400"><LocationMarkerIcon className="w-5 h-5"/></div>
+                                    <div><p className="text-[10px] text-slate-400 font-bold uppercase">KM Selecionado</p><p className="text-lg font-black text-amber-600 dark:text-amber-400">{promoterMetrics.km} km</p></div>
                                 </div>
                             </>
                         )}
@@ -1399,7 +1399,7 @@ export const PrevistoVsRealizado: React.FC = () => {
 
             <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
                 {/* MAPA */}
-                <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative z-0">
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 transition-colors">
                     <MapContainer center={[-23.5505, -46.6333]} zoom={10} style={{ height: '100%', width: '100%' }}>
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         {mapBounds && <MapAutoFit bounds={mapBounds} />}
@@ -1515,27 +1515,27 @@ export const PrevistoVsRealizado: React.FC = () => {
                 </div>
 
                 {/* SIDEBAR */}
-                <div className="w-80 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden shrink-0">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                        <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest leading-none">
+                <div className="w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden shrink-0 transition-colors">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex justify-between items-center">
+                        <h3 className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest leading-none">
                             {activeTab === 'auditoria' ? 'Timeline Auditoria' : 'Relação de Promotores'}
                         </h3>
                         {activeTab === 'auditoria' && insights.length > 0 && (
-                            <button onClick={handleExportTimeline} className="text-indigo-600 hover:bg-white p-1 rounded transition border border-transparent hover:border-slate-200 shadow-sm"><ClipboardListIcon className="w-4 h-4"/></button>
+                            <button onClick={handleExportTimeline} className="text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 p-1 rounded transition border border-transparent hover:border-slate-200 dark:hover:border-slate-700 shadow-sm"><ClipboardListIcon className="w-4 h-4"/></button>
                         )}
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                         {activeTab === 'auditoria' ? (
                             insights.length === 0 ? (
-                                <div className="text-center text-slate-400 mt-10 text-[10px] italic">Aguardando dados...</div>
+                                <div className="text-center text-slate-400 dark:text-slate-500 mt-10 text-[10px] italic">Aguardando dados...</div>
                             ) : (
-                                <div className="relative border-l-2 border-slate-100 ml-2 space-y-4">
+                                <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-2 space-y-4">
                                     {insights.map((ev, idx) => (
-                                        <div key={idx} className="relative pl-5 cursor-pointer hover:bg-slate-50 transition p-1 rounded" onClick={() => ev.coord && setFocusedCoord(ev.coord)} onMouseEnter={() => setHoveredEventId(ev.id)} onMouseLeave={() => setHoveredEventId(null)}>
-                                            <div className={`absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm ${ev.type === 'AUDIT' ? 'bg-emerald-500' : 'bg-indigo-500'}`}></div>
-                                            <div className="text-[10px] font-bold text-slate-400">{ev.time}</div>
-                                            <div className="text-xs font-black text-slate-700 leading-tight">{ev.description}</div>
-                                            <div className="text-[9px] text-slate-500 line-clamp-1">{ev.details}</div>
+                                        <div key={idx} className="relative pl-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 transition p-1 rounded" onClick={() => ev.coord && setFocusedCoord(ev.coord)} onMouseEnter={() => setHoveredEventId(ev.id)} onMouseLeave={() => setHoveredEventId(null)}>
+                                            <div className={`absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm ${ev.type === 'AUDIT' ? 'bg-emerald-500' : 'bg-indigo-500'}`}></div>
+                                            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{ev.time}</div>
+                                            <div className="text-xs font-black text-slate-700 dark:text-slate-200 leading-tight">{ev.description}</div>
+                                            <div className="text-[9px] text-slate-500 dark:text-slate-400 line-clamp-1">{ev.details}</div>
                                         </div>
                                     ))}
                                 </div>

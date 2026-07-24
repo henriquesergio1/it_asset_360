@@ -8,13 +8,13 @@ export const Roteirizador: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex bg-white rounded-2xl p-1.5 shadow-sm border border-slate-200 w-fit">
+            <div className="flex bg-white dark:bg-slate-900 rounded-2xl p-1.5 shadow-sm border border-slate-200 dark:border-slate-800 w-fit transition-colors">
                 <button
                     onClick={() => setActiveTab('vendedores')}
                     className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         activeTab === 'vendedores' 
                             ? 'bg-blue-600 text-white shadow-md' 
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-white'
                     }`}
                 >
                     <LocationMarkerIcon className="w-4 h-4 mr-2" />
@@ -25,7 +25,7 @@ export const Roteirizador: React.FC = () => {
                     className={`flex items-center px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         activeTab === 'promotores' 
                             ? 'bg-blue-600 text-white shadow-md' 
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-white'
                     }`}
                 >
                     <UsersIcon className="w-4 h-4 mr-2" />

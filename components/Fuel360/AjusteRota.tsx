@@ -663,27 +663,27 @@ export const AjusteRota: React.FC = () => {
                 </div>
             )}
             {/* TOPO: SELEÇÃO DE EQUIPE */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
                 <div className="flex flex-col space-y-2">
-                    <h2 className="text-lg font-black text-slate-800 flex items-center">
-                        <CogIcon className="w-5 h-5 mr-2 text-indigo-600 animate-spin-slow"/> Ajuste e Otimização Avançada de Rotas
+                    <h2 className="text-lg font-black text-slate-800 dark:text-white flex items-center">
+                        <CogIcon className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400 animate-spin-slow"/> Ajuste e Otimização Avançada de Rotas
                     </h2>
-                    <p className="text-[11px] text-slate-500 font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                         Simule ajustes, reatribua colaboradores, equilibre cargas de trabalho e salve as rotas otimizadas na base oficial.
                     </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 items-center">
-                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
                         <button
                             onClick={() => setTeamType('vendedores')}
-                            className={`flex items-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${teamType === 'vendedores' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}`}
+                            className={`flex items-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${teamType === 'vendedores' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                         >
                             <LocationMarkerIcon className="w-4 h-4 mr-1.5"/> Vendas
                         </button>
                         <button
                             onClick={() => setTeamType('promotores')}
-                            className={`flex items-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${teamType === 'promotores' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'}`}
+                            className={`flex items-center px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${teamType === 'promotores' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                         >
                             <UsersIcon className="w-4 h-4 mr-1.5"/> Promotores
                         </button>
@@ -694,7 +694,7 @@ export const AjusteRota: React.FC = () => {
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 outline-none"
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-white outline-none"
                         />
                         {teamType === 'vendedores' && (
                             <>
@@ -703,7 +703,7 @@ export const AjusteRota: React.FC = () => {
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
-                                    className="bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 outline-none"
+                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-white outline-none"
                                 />
                             </>
                         )}
