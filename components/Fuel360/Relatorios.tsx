@@ -361,11 +361,11 @@ export const Relatorios: React.FC = () => {
         <div className="space-y-8 print:w-full print:absolute print:top-0 print:left-0 print:bg-white print:z-[200]">
             <div className="flex items-center justify-between print:hidden">
                 <div>
-                    <h2 className="text-3xl font-extrabold text-slate-800 mb-2 tracking-tight">Relatórios de Reembolso</h2>
-                    <p className="text-slate-500 font-medium">Consulte o histórico financeiro e operacional.</p>
+                    <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-2 tracking-tight">Relatórios de Reembolso</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Consulte o histórico financeiro e operacional.</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-full">
-                    <ChartBarIcon className="w-8 h-8 text-blue-600"/>
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-full">
+                    <ChartBarIcon className="w-8 h-8 text-blue-600 dark:text-sky-400"/>
                 </div>
             </div>
 
@@ -376,32 +376,32 @@ export const Relatorios: React.FC = () => {
             </div>
 
             {/* Filter Card (Hidden on Print) */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 print:hidden overflow-visible z-20 relative">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 print:hidden overflow-visible z-20 relative transition-colors">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data Inicial</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Data Inicial</label>
                         <input 
                             type="date" 
                             value={startDate} 
                             onChange={e => setStartDate(e.target.value)} 
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none" 
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none" 
                         />
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data Final</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Data Final</label>
                         <input 
                             type="date" 
                             value={endDate} 
                             onChange={e => setEndDate(e.target.value)} 
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none" 
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none" 
                         />
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grupo</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Grupo</label>
                         <select 
                             value={selectedGroup} 
                             onChange={e => setSelectedGroup(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none"
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none"
                         >
                             <option value="">Todos</option>
                             {availableGroups.map(g => (
@@ -410,12 +410,12 @@ export const Relatorios: React.FC = () => {
                         </select>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Origem</label>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Origem</label>
                         <select 
                             value={selectedSource} 
                             onChange={e => setSelectedSource(e.target.value)}
                             disabled={viewMode === 'CICLO'}
-                            className={`w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:ring-2 focus:ring-blue-600 outline-none ${viewMode === 'CICLO' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 outline-none ${viewMode === 'CICLO' ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <option value="">Todas</option>
                             <option value="CSV">Pulsus (CSV)</option>

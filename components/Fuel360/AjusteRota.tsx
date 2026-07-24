@@ -614,10 +614,10 @@ export const AjusteRota: React.FC = () => {
         <div className="flex flex-col space-y-4 pb-10">
             {showMappingModal && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/60">
                             <div>
-                                <h3 className="text-xl font-black text-slate-800">Vincular Colaboradores</h3>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white">Vincular Colaboradores</h3>
                                 <p className="text-sm text-slate-500 mt-1">Alguns nomes do Excel não foram encontrados no sistema.</p>
                             </div>
                             <button onClick={() => setShowMappingModal(false)} className="text-slate-400 hover:text-slate-600">

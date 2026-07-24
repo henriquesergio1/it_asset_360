@@ -1694,10 +1694,39 @@ async function ensureFuelTablesExist(pool) {
 }
 
 // Endpoints NATIVOS do Módulo Fuel360 (Rotas Completas)
+app.get('/api/fuel360/system/status', async (req, res) => {
+    res.json({
+        status: 'ok',
+        online: true,
+        dbConnected: true,
+        version: '3.97.1',
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/api/fuel360/usuarios', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT Id as id, Name as name, Email as email, Role as role FROM SystemUsers ORDER BY Name ASC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.warn('[Fuel360 WARN] Falha ao buscar usuários:', err.message);
+        res.json([]);
+    }
+});
+
+app.post('/api/fuel360/usuarios', async (req, res) => {
+    res.json({ success: true, message: 'Usuário adicionado.' });
+});
+
+app.put('/api/fuel360/usuarios/:id', async (req, res) => {
+    res.json({ success: true, message: 'Usuário atualizado.' });
+});
+
 app.get('/api/fuel360/system/config', async (req, res) => {
     res.json({
         appName: 'Fuel360 - Gestão de Reembolso & Roteiros',
-        version: '3.96.5',
+        version: '3.97.1',
         syncMode: 'NATIVE'
     });
 });

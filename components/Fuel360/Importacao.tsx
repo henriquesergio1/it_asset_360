@@ -1179,28 +1179,28 @@ export const Importacao: React.FC = () => {
 
     // Etapa 1: Upload (Mantido visual similar mas simplificado)
     const renderStep1 = () => (
-        <div className="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center animate-fade-in">
+        <div className="bg-white dark:bg-slate-900 p-10 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-center animate-fade-in transition-colors">
             <RouteSelectionModal isOpen={routeModalOpen} onClose={() => setRouteModalOpen(false)} onSelect={handleRouteSelect} />
             
             {/* Modal Reunião Ciclo */}
             {meetingModalOpen && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70]">
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-left">
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Reunião de Ciclo</h3>
-                        <p className="text-sm text-slate-500 mb-6">Selecione a data da reunião para calcular o deslocamento ida/volta da casa de cada colaborador até a sede.</p>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-left">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Reunião de Ciclo</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione a data da reunião para calcular o deslocamento ida/volta da casa de cada colaborador até a sede.</p>
                         
                         <div className="mb-6">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Data da Reunião</label>
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Data da Reunião</label>
                             <input 
                                 type="date" 
                                 value={meetingDate} 
                                 onChange={e => setMeetingDate(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 outline-none"
+                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl p-3 focus:ring-2 focus:ring-blue-600 outline-none"
                             />
                         </div>
 
                         <div className="flex gap-3">
-                            <button onClick={() => setMeetingModalOpen(false)} className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition">Cancelar</button>
+                            <button onClick={() => setMeetingModalOpen(false)} className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition">Cancelar</button>
                             <button 
                                 onClick={handleMeetingStart}
                                 disabled={!meetingDate}
@@ -1213,15 +1213,15 @@ export const Importacao: React.FC = () => {
                 </div>
             )}
 
-            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CalculatorIcon className="w-10 h-10 text-blue-600"/>
+            <div className="w-20 h-20 bg-blue-50 dark:bg-blue-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CalculatorIcon className="w-10 h-10 text-blue-600 dark:text-sky-400"/>
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Iniciar Novo Cálculo</h2>
-            <p className="text-slate-500 mb-8 max-w-md mx-auto">Escolha a origem dos dados para iniciar o processamento de reembolso.</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Iniciar Novo Cálculo</h2>
+            <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Escolha a origem dos dados para iniciar o processamento de reembolso.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                 {/* Opção 1: CSV */}
-                <label className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'CSV' ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-200' : 'bg-slate-50 border-slate-200 hover:border-blue-400 hover:bg-blue-50 hover:shadow-md'}`}>
+                <label className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'CSV' ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-400 ring-2 ring-blue-200' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-800 hover:shadow-md'}`}>
                     {isProcessing && dataSourceType === 'CSV' ? (
                         <div className="flex flex-col items-center justify-center h-full">
                             <SpinnerIcon className="w-8 h-8 text-blue-600 mb-2"/>
@@ -1230,7 +1230,7 @@ export const Importacao: React.FC = () => {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full">
                             <UploadIcon className="w-10 h-10 text-blue-500 mb-4"/>
-                            <span className="text-slate-800 font-bold text-base">Importar CSV</span>
+                            <span className="text-slate-800 dark:text-white font-bold text-base">Importar CSV</span>
                             <span className="text-[10px] text-slate-400 mt-2">Dados Reais (Pulsus)</span>
                         </div>
                     )}
@@ -1241,7 +1241,7 @@ export const Importacao: React.FC = () => {
                 <button 
                     onClick={() => setRouteModalOpen(true)}
                     disabled={isProcessing}
-                    className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'ROTEIRIZADOR' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-md'}`}
+                    className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'ROTEIRIZADOR' ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 ring-2 ring-indigo-200' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:shadow-md'}`}
                 >
                     {isProcessing && dataSourceType === 'ROTEIRIZADOR' ? (
                         <div className="flex flex-col items-center justify-center h-full">
@@ -1251,8 +1251,8 @@ export const Importacao: React.FC = () => {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full">
                             <LocationMarkerIcon className="w-10 h-10 text-indigo-500 mb-4"/>
-                            <span className="text-slate-800 font-bold text-base">Usar Rota Prevista</span>
-                            <span className="text-[10px] text-slate-400 mt-2">Simulação (Roteirizador)</span>
+                            <span className="text-slate-800 dark:text-white font-bold text-base">Roteirizador</span>
+                            <span className="text-[10px] text-slate-400 mt-2">Dados Previstos (Smart)</span>
                         </div>
                     )}
                 </button>
@@ -1261,7 +1261,7 @@ export const Importacao: React.FC = () => {
                 <button 
                     onClick={() => setMeetingModalOpen(true)}
                     disabled={isProcessing}
-                    className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'CICLO' ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-200' : 'bg-slate-50 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:shadow-md'}`}
+                    className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all h-full ${isProcessing && dataSourceType === 'CICLO' ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 ring-2 ring-emerald-200' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:shadow-md'}`}
                 >
                     {isProcessing && dataSourceType === 'CICLO' ? (
                         <div className="flex flex-col items-center justify-center h-full">
@@ -1271,7 +1271,7 @@ export const Importacao: React.FC = () => {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full">
                             <UserGroupIcon className="w-10 h-10 text-emerald-500 mb-4"/>
-                            <span className="text-slate-800 font-bold text-base">Reunião Ciclo</span>
+                            <span className="text-slate-800 dark:text-white font-bold text-base">Reunião Ciclo</span>
                             <span className="text-[10px] text-slate-400 mt-2">Ida/Volta Casa-Sede</span>
                         </div>
                     )}
@@ -1292,21 +1292,21 @@ export const Importacao: React.FC = () => {
                 <EffectivenessModal isOpen={effModalOpen} onClose={() => setEffModalOpen(false)} onApply={handleApplyEffectiveness} />
 
                 {/* Info Bar */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 transition-colors">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                         <div>
-                            <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center">
                                 Conferência de Dados
-                                <span className={`ml-3 text-[10px] px-2 py-0.5 rounded border uppercase font-bold ${dataSourceType === 'CSV' ? 'bg-blue-50 text-blue-700 border-blue-200' : dataSourceType === 'ROTEIRIZADOR' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                                <span className={`ml-3 text-[10px] px-2 py-0.5 rounded border uppercase font-bold ${dataSourceType === 'CSV' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-sky-300 border-blue-200 dark:border-blue-800' : dataSourceType === 'ROTEIRIZADOR' ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'}`}>
                                     Fonte: {dataSourceType === 'CSV' ? 'KM REALIZADO (CSV)' : dataSourceType === 'ROTEIRIZADOR' ? 'KM PREVISTO (ROTEIRIZADOR)' : 'REUNIÃO DE CICLO'}
                                 </span>
                             </h3>
-                            <p className="text-sm text-slate-500">Período: <b>{periodo}</b></p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Período: <b>{periodo}</b></p>
                         </div>
                         <div className="mt-4 md:mt-0 flex items-center space-x-3">
                              <button 
                                 onClick={() => setEffModalOpen(true)}
-                                className="bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm flex items-center transition shadow-sm"
+                                className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg font-bold text-sm flex items-center transition shadow-sm"
                             >
                                 <ChartBarIcon className="w-4 h-4 mr-2"/>
                                 Efetividade em Massa
@@ -1314,7 +1314,7 @@ export const Importacao: React.FC = () => {
                              <button 
                                 onClick={revalidateAbsences} 
                                 disabled={isRefreshingAbsences}
-                                className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-bold text-sm flex items-center transition"
+                                className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg font-bold text-sm flex items-center transition"
                             >
                                 {isRefreshingAbsences ? <SpinnerIcon className="w-4 h-4 mr-2"/> : <CalendarIcon className="w-4 h-4 mr-2"/>}
                                 Verificar Ausências
@@ -1325,15 +1325,15 @@ export const Importacao: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div className="flex flex-col md:flex-row gap-4 items-center bg-slate-50 dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                         {/* FILTRO GRUPO */}
                         <div className="flex items-center">
                             <UsersIcon className="w-5 h-5 text-slate-400 mr-2"/>
-                            <span className="text-sm font-bold text-slate-600 mr-2">Grupo:</span>
+                            <span className="text-sm font-bold text-slate-600 dark:text-slate-300 mr-2">Grupo:</span>
                             <select 
                                 value={selectedGroup} 
                                 onChange={(e) => setSelectedGroup(e.target.value)}
-                                className="bg-white border border-slate-300 rounded-md text-sm py-1 pl-2 pr-8 outline-none focus:ring-2 focus:ring-blue-500"
+                                className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-md text-sm py-1 pl-2 pr-8 outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="">Todos</option>
                                 {availableGroups.map(grp => (
