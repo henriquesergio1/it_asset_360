@@ -2,7 +2,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { APP_VERSION } from './constants';
 import { HashRouter, Routes, Route, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Users, Repeat, LogOut, Menu, X, Cpu, ShieldCheck, Info, Globe, ChevronLeft, ChevronRight, FileText, CheckSquare, Package, Calendar, Loader2, Calculator, MapPin, Navigation, TrendingUp, ClipboardList, BarChart3, Sliders, ShieldAlert } from 'lucide-react';
 
 // Contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -241,7 +241,16 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             </>
           ) : (
             <>
-              <SidebarLink to="/fuel360" icon={FileText} label="Fuel360 / Reembolso" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações / Histórico" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/admin" icon={ShieldAlert} label="Administração Fuel" collapsed={isSidebarCollapsed} />
             </>
           )}
           
@@ -434,8 +443,9 @@ const AppRoutes = () => {
             <Route path="/rh/occurrences" element={<ProtectedRoute module="RH"><RhOccurrenceManager /></ProtectedRoute>} />
             <Route path="/rh/assets" element={<ProtectedRoute module="RH"><RhAssetManager /></ProtectedRoute>} />
 
-            {/* Módulo Fuel360 Route */}
-            <Route path="/fuel360" element={<ProtectedRoute module="FUEL"><FuelManager /></ProtectedRoute>} />
+            {/* Módulo Fuel360 Routes */}
+            <Route path="/fuel360" element={<Navigate to="/fuel360/calculo" replace />} />
+            <Route path="/fuel360/:subView" element={<ProtectedRoute module="FUEL"><FuelManager /></ProtectedRoute>} />
 
             <Route path="/sign-term/:token" element={<DigitalSignature />} />
             <Route path="*" element={<Navigate to={!hasTiAccess && hasRhAccess ? "/rh/dashboard" : "/"} replace />} />

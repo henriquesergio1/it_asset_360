@@ -528,45 +528,45 @@ export const GestaoEquipe: React.FC = () => {
                 </div>
             </div>
 
-            <div className="border-b border-slate-200 overflow-x-auto flex items-center scrollbar-hide bg-white rounded-t-xl">
-                <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Todos</button>
+            <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto flex items-center scrollbar-hide bg-white dark:bg-slate-900 rounded-t-xl transition-colors">
+                <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Todos</button>
                 {grupos.map(group => (
-                    <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>{group.Nome}</button>
+                    <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{group.Nome}</button>
                 ))}
             </div>
 
-            <div className="bg-white p-4 rounded-b-xl shadow-sm border border-slate-200 border-t-0 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-b-xl shadow-sm border border-slate-200 dark:border-slate-800 border-t-0 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative w-full md:w-80"><input type="text" placeholder="Buscar por nome ou ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm outline-none shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"/><div className="absolute left-3 top-2.5 text-slate-400"><SearchIcon className="w-4 h-4" /></div></div>
-                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
-                        <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'Nome' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Nome</button>
-                        <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'CodigoSetor' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Setor</button>
+                    <div className="relative w-full md:w-80"><input type="text" placeholder="Buscar por nome ou ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-sm outline-none shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"/><div className="absolute left-3 top-2.5 text-slate-400"><SearchIcon className="w-4 h-4" /></div></div>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                        <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'Nome' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nome</button>
+                        <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'CodigoSetor' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Setor</button>
                     </div>
                 </div>
 
                 <div className="flex items-center space-x-4 flex-wrap gap-2">
                     <button 
                         onClick={() => setShowOnlyPendingAddress(!showOnlyPendingAddress)}
-                        className={`flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${showOnlyPendingAddress ? 'bg-red-50 border-red-200 text-red-600 shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+                        className={`flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${showOnlyPendingAddress ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
                     >
                         <LocationMarkerIcon className="w-4 h-4 mr-2"/>
                         Pendentes de Endereço
                     </button>
 
-                    <div className="flex items-center bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
                         <input type="checkbox" id="showInactives" checked={showInactives} onChange={e => setShowInactives(e.target.checked)} className="h-4 w-4 text-blue-600 rounded" />
-                        <label htmlFor="showInactives" className="ml-2 text-xs font-bold text-slate-600 cursor-pointer">Exibir Inativos</label>
+                        <label htmlFor="showInactives" className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Exibir Inativos</label>
                     </div>
 
                     {selectedIds.size > 0 && (
-                        <div className="flex items-center bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 animate-fade-in shadow-sm">
-                            <span className="text-xs font-bold text-blue-700 mr-4">{selectedIds.size} selecionados</span>
+                        <div className="flex items-center bg-blue-50 dark:bg-blue-950/40 px-4 py-2 rounded-lg border border-blue-100 dark:border-blue-800 animate-fade-in shadow-sm">
+                            <span className="text-xs font-bold text-blue-700 dark:text-blue-300 mr-4">{selectedIds.size} selecionados</span>
                             <div className="flex space-x-2">
-                                 {bulkAction === 'NONE' ? (<><button onClick={() => setBulkAction('MOVE')} className="px-3 py-1 bg-white border border-blue-200 text-blue-700 text-xs font-bold rounded hover:bg-blue-100">Mover</button><button onClick={() => { setBulkAction('VEHICLE'); setBulkValue(''); }} className="px-3 py-1 bg-white border border-blue-200 text-blue-700 text-xs font-bold rounded hover:bg-blue-100">Veículo</button></>) : (
+                                 {bulkAction === 'NONE' ? (<><button onClick={() => setBulkAction('MOVE')} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded hover:bg-blue-100">Mover</button><button onClick={() => { setBulkAction('VEHICLE'); setBulkValue(''); }} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded hover:bg-blue-100">Veículo</button></>) : (
                                      <div className="flex items-center space-x-2">
-                                         {bulkAction === 'MOVE' && <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded">{grupos.map(g => <option key={g.ID_Grupo} value={g.Nome}>{g.Nome}</option>)}</select>}
+                                         {bulkAction === 'MOVE' && <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">{grupos.map(g => <option key={g.ID_Grupo} value={g.Nome}>{g.Nome}</option>)}</select>}
                                          {bulkAction === 'VEHICLE' && (
-                                             <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded">
+                                             <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">
                                                  <option value="">Selecione...</option>
                                                  <option value="Carro">Carro</option>
                                                  <option value="Moto">Moto</option>
@@ -574,7 +574,7 @@ export const GestaoEquipe: React.FC = () => {
                                              </select>
                                          )}
                                          <button onClick={handleBulkSubmit} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm">{processingBulk ? <SpinnerIcon className="w-3 h-3"/> : "Aplicar"}</button>
-                                         <button onClick={() => { setBulkAction('NONE'); setBulkValue(''); }} className="px-3 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded">X</button>
+                                         <button onClick={() => { setBulkAction('NONE'); setBulkValue(''); }} className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded">X</button>
                                      </div>
                                  )}
                             </div>
@@ -583,10 +583,10 @@ export const GestaoEquipe: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <table className="w-full text-sm text-left text-slate-600">
-                    <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200">
-                        <tr><th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"/></th><th className="p-4">Colaborador</th><th className="p-4">Grupo</th><th className="p-4 text-center">Veículo</th><th className="p-4 text-center">Status</th><th className="p-4 text-right">Ações</th></tr>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
+                        <tr><th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></th><th className="p-4">Colaborador</th><th className="p-4">Grupo</th><th className="p-4 text-center">Veículo</th><th className="p-4 text-center">Status</th><th className="p-4 text-right">Ações</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {filteredData.map(c => {
