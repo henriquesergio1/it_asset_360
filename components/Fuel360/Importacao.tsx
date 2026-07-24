@@ -97,17 +97,17 @@ const RouteSelectionModal: React.FC<{
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70]">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-3xl">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-slate-800">Selecione uma Simulação Salva</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><XCircleIcon className="w-6 h-6 text-slate-400"/></button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-3xl transition-colors">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white">Selecione uma Simulação Salva</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><XCircleIcon className="w-6 h-6 text-slate-400 dark:text-slate-300"/></button>
                 </div>
                 
-                {loading ? <div className="p-10 text-center"><SpinnerIcon className="w-10 h-10 mx-auto text-blue-600"/></div> : (
+                {loading ? <div className="p-10 text-center"><SpinnerIcon className="w-10 h-10 mx-auto text-blue-600 dark:text-blue-400 animate-spin"/></div> : (
                     <div className="max-h-[400px] overflow-y-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-100 text-slate-600 uppercase text-xs sticky top-0">
+                            <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase text-xs sticky top-0">
                                 <tr>
                                     <th className="p-3">Status</th>
                                     <th className="p-3">Período</th>
@@ -116,24 +116,24 @@ const RouteSelectionModal: React.FC<{
                                     <th className="p-3 text-center">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                 {history.map(item => (
-                                    <tr key={item.ID_RotaHist} className={`hover:bg-blue-50 transition-colors ${item.JaCalculado ? 'bg-slate-50 opacity-90' : ''}`}>
+                                    <tr key={item.ID_RotaHist} className={`hover:bg-blue-50 dark:hover:bg-slate-800/60 transition-colors ${item.JaCalculado ? 'bg-slate-50 dark:bg-slate-800/30 opacity-90' : ''}`}>
                                         <td className="p-3">
                                             {item.JaCalculado ? 
-                                                <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded border border-emerald-200 uppercase">Calculado</span> : 
-                                                <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded border border-slate-300 uppercase">Pendente</span>
+                                                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800 uppercase">Calculado</span> : 
+                                                <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 uppercase">Pendente</span>
                                             }
                                         </td>
-                                        <td className="p-3 font-bold text-slate-700">{item.Periodo}</td>
-                                        <td className="p-3 font-mono text-xs">{new Date(item.DataSimulacao).toLocaleString('pt-BR')}</td>
-                                        <td className="p-3 text-right font-mono">{item.TotalKM.toFixed(1)} km</td>
+                                        <td className="p-3 font-bold text-slate-700 dark:text-white">{item.Periodo}</td>
+                                        <td className="p-3 font-mono text-xs text-slate-600 dark:text-slate-300">{new Date(item.DataSimulacao).toLocaleString('pt-BR')}</td>
+                                        <td className="p-3 text-right font-mono text-slate-800 dark:text-slate-200">{item.TotalKM.toFixed(1)} km</td>
                                         <td className="p-3 text-center">
-                                            <button onClick={() => onSelect(item.ID_RotaHist, item.Periodo)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 shadow-sm active:scale-95 transition-all">Carregar</button>
+                                            <button onClick={() => onSelect(item.ID_RotaHist, item.Periodo)} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-bold shadow-sm active:scale-95 transition-all">Carregar</button>
                                         </td>
                                     </tr>
                                 ))}
-                                {history.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-slate-400">Nenhuma simulação salva encontrada.</td></tr>}
+                                {history.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-slate-400 dark:text-slate-500 italic">Nenhuma simulação salva encontrada.</td></tr>}
                             </tbody>
                         </table>
                     </div>
