@@ -1609,76 +1609,76 @@ export const Importacao: React.FC = () => {
             <div className="space-y-6 animate-fade-in">
                 {showReport && <ReportPrint dados={calculoFinal} periodo={periodo} source={dataSourceType} onClose={() => setShowReport(false)} />}
                 
-                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/60 dark:to-teal-950/40 border border-emerald-100 dark:border-emerald-800/80 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center transition-colors">
                     <div>
-                        <h3 className="text-emerald-900 font-bold text-lg">Cálculo Finalizado</h3>
-                        <p className="text-emerald-700/70 text-sm">Pronto para salvar no histórico.</p>
-                        <div className="mt-2 text-xs font-bold bg-white/50 text-emerald-800 inline-block px-2 py-1 rounded border border-emerald-200">
+                        <h3 className="text-emerald-900 dark:text-emerald-200 font-bold text-lg">Cálculo Finalizado</h3>
+                        <p className="text-emerald-700/70 dark:text-emerald-400 text-sm">Pronto para salvar no histórico.</p>
+                        <div className="mt-2 text-xs font-bold bg-white/50 dark:bg-slate-900/80 text-emerald-800 dark:text-emerald-300 inline-block px-2 py-1 rounded border border-emerald-200 dark:border-emerald-800">
                             Origem: {dataSourceType} {dataSourceType === 'ROTEIRIZADOR' && selectedRotaId && `(Simulação #${selectedRotaId})`}
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-sm text-emerald-600 uppercase font-bold">Valor Total Final</p>
-                        <p className="text-3xl font-extrabold text-emerald-700">{totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                        <p className="text-sm text-emerald-600 dark:text-emerald-400 uppercase font-bold">Valor Total Final</p>
+                        <p className="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300">{totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     </div>
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                    <button onClick={() => setStep(2)} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 font-bold text-sm">Voltar e Ajustar</button>
-                    <button onClick={() => setShowReport(true)} className="px-4 py-2 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-slate-700 flex items-center"><PrinterIcon className="w-4 h-4 mr-2"/> Visualizar Relatório</button>
-                    <button onClick={() => handleSaveHistory(false)} disabled={isSaving || savedSuccess} className={`px-6 py-2 rounded-lg font-bold text-sm text-white flex items-center shadow-lg ${savedSuccess ? 'bg-emerald-500' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                    <button onClick={() => setStep(2)} className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-200 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition">Voltar e Ajustar</button>
+                    <button onClick={() => setShowReport(true)} className="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg font-bold text-sm hover:bg-slate-700 dark:hover:bg-slate-600 flex items-center transition"><PrinterIcon className="w-4 h-4 mr-2"/> Visualizar Relatório</button>
+                    <button onClick={() => handleSaveHistory(false)} disabled={isSaving || savedSuccess} className={`px-6 py-2 rounded-lg font-bold text-sm text-white flex items-center shadow-lg transition ${savedSuccess ? 'bg-emerald-500' : 'bg-blue-600 hover:bg-blue-700'}`}>
                          {isSaving ? <SpinnerIcon className="w-4 h-4 mr-2"/> : <CheckCircleIcon className="w-4 h-4 mr-2"/>}
                          {savedSuccess ? 'Salvo!' : 'Salvar Histórico'}
                     </button>
                 </div>
 
                 {/* Tabela Resumo Final */}
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                     <table className="w-full text-sm text-left text-slate-600">
-                        <thead className="bg-slate-50 text-slate-500 uppercase font-semibold text-xs border-b border-slate-200">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
+                     <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                        <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-300 uppercase font-semibold text-xs border-b border-slate-200 dark:border-slate-800">
                             <tr>
                                 <th className="p-4">Colaborador</th>
                                 <th className="p-4 text-center">Veículo</th>
                                 <th className="p-4 text-center">Fator</th>
                                 <th className="p-4 text-right">KM Total</th>
                                 <th className="p-4 text-right">Valor Calc.</th>
-                                <th className="p-4 text-right bg-amber-50">Ajuste (R$)</th>
-                                <th className="p-4 text-right">Valor Final</th>
+                                <th className="p-4 text-right bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300">Ajuste (R$)</th>
+                                <th className="p-4 text-right dark:text-emerald-300">Valor Final</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                             {calculoFinal.map(c => (
-                                <tr key={c.Colaborador.ID_Pulsus}>
+                                <tr key={c.Colaborador.ID_Pulsus} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="p-4">
-                                        <div className="font-bold text-slate-800">{c.Colaborador.Nome}</div>
-                                        <div className="text-xs text-slate-400">Setor: {c.Colaborador.CodigoSetor} - ID: {c.Colaborador.ID_Pulsus}</div>
+                                        <div className="font-bold text-slate-800 dark:text-white">{c.Colaborador.Nome}</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-400">Setor: {c.Colaborador.CodigoSetor} - ID: {c.Colaborador.ID_Pulsus}</div>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${c.Colaborador.TipoVeiculo === 'Carro' ? 'bg-blue-50 text-blue-600 border-blue-100' : c.Colaborador.TipoVeiculo === 'Moto' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${c.Colaborador.TipoVeiculo === 'Carro' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-800' : c.Colaborador.TipoVeiculo === 'Moto' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
                                             {c.Colaborador.TipoVeiculo}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${c.Efetividade < 1 ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${c.Efetividade < 1 ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-400'}`}>
                                             {(c.Efetividade * 100).toFixed(0)}%
                                         </span>
                                     </td>
-                                    <td className="p-4 text-right font-mono font-bold text-slate-700">{c.TotalKM.toFixed(2)}</td>
-                                    <td className="p-4 text-right font-bold text-slate-500">{c.ValorPagar.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
+                                    <td className="p-4 text-right font-mono font-bold text-slate-700 dark:text-slate-200">{c.TotalKM.toFixed(2)}</td>
+                                    <td className="p-4 text-right font-bold text-slate-500 dark:text-slate-400">{c.ValorPagar.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
                                     
                                     {/* COLUNA DE AJUSTE EDITÁVEL */}
-                                    <td className="p-4 text-right bg-amber-50/50">
+                                    <td className="p-4 text-right bg-amber-50/50 dark:bg-amber-950/30">
                                         <input 
                                             type="number" 
                                             step="0.01" 
                                             value={c.Ajuste} 
                                             onChange={(e) => handleUpdateAdjustment(c.Colaborador.ID_Pulsus, parseFloat(e.target.value) || 0)}
-                                            className={`w-24 text-right bg-transparent border-b border-dashed border-amber-300 focus:border-amber-600 outline-none font-bold text-sm ${c.Ajuste < 0 ? 'text-red-600' : c.Ajuste > 0 ? 'text-emerald-600' : 'text-slate-400'}`}
+                                            className={`w-24 text-right bg-transparent border-b border-dashed border-amber-300 dark:border-amber-700 focus:border-amber-600 outline-none font-bold text-sm ${c.Ajuste < 0 ? 'text-red-600 dark:text-red-400' : c.Ajuste > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-400'}`}
                                             placeholder="0.00"
                                         />
                                     </td>
 
-                                    <td className="p-4 text-right font-black text-emerald-600 bg-emerald-50/30">
+                                    <td className="p-4 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/30">
                                         {(c.ValorPagar + (c.Ajuste || 0)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                                     </td>
                                 </tr>
