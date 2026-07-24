@@ -1303,6 +1303,212 @@ app.post('/api/fuel360/system/test-connection', async (req, res) => {
     }
 });
 
+// Endpoint NATIVO de Import Preview para Colaboradores do Fuel360
+app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const nativeRes = await pool.request().query(`
+            SELECT devices.PulsusId as id_pulsus,
+                   Users.FullName  AS nome,
+                   Devices.InternalCode AS codigo_setor,
+                   Sectors.Name AS grupo
+            FROM Devices devices
+            LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
+            LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
+            LEFT JOIN Models Models ON devices.ModelId = Models.id
+            LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
+            WHERE devices.Status = 'Em Uso'
+              AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
+              AND Users.FullName IS NOT NULL AND Users.FullName <> ''
+              AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
+              AND AssetTypes.Name = 'Celular'
+            ORDER BY 3
+        `);
+        const nativeItems = nativeRes.recordset || [];
+
+        const fuelColabRes = await pool.request().query(`SELECT * FROM FuelColaboradores`);
+        const fuelItems = fuelColabRes.recordset || [];
+        const fuelMap = new Map();
+        fuelItems.forEach(item => fuelMap.set(Number(item.ID_Pulsus), item));
+
+        const novos = [];
+        const alterados = [];
+        const iguais = [];
+        const activePulsusIds = new Set();
+
+        nativeItems.forEach(nItem => {
+            const idPulsus = Number(nItem.id_pulsus);
+            if (!idPulsus) return;
+            activePulsusIds.add(idPulsus);
+            const existing = fuelMap.get(idPulsus);
+            const codigoSetorNum = Number(nItem.codigo_setor) || 0;
+            if (!existing) {
+                novos.push({
+                    id_pulsus: idPulsus,
+                    nome: nItem.nome,
+                    matchType: 'NEW',
+                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Outros' }
+                });
+            } else {
+                const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
+                const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
+                const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
+
+                if (nameDiff || sectorDiff || groupDiff) {
+                    const changes = [];
+                    if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
+                    if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
+                    if (groupDiff) changes.push({ field: 'Grupo', oldValue: existing.Grupo, newValue: nItem.grupo });
+
+                    alterados.push({
+                        id_pulsus: idPulsus,
+                        nome: nItem.nome,
+                        matchType: 'ID_MATCH',
+                        id_colaborador: existing.ID_Colaborador,
+                        existingColab: existing,
+                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Outros' },
+                        changes
+                    });
+                } else {
+                    iguais.push({ id_pulsus: idPulsus, nome: nItem.nome });
+                }
+            }
+        });
+
+        const inativar = fuelItems
+            .filter(f => f.Ativo && !activePulsusIds.has(Number(f.ID_Pulsus)))
+            .map(f => ({
+                id_pulsus: Number(f.ID_Pulsus),
+                nome: f.Nome,
+                id_colaborador: f.ID_Colaborador,
+                codigo_setor: f.CodigoSetor,
+                grupo: f.Grupo
+            }));
+
+        res.json({
+            novos,
+            alterados,
+            conflitos: [],
+            invalidos: [],
+            iguais,
+            iguaisCount: iguais.length,
+            totalExternal: nativeItems.length,
+            inativar
+        });
+    } catch (err) {
+        console.error('Erro ao gerar preview de importação nativa Fuel360:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Endpoint NATIVO de Sincronização de Colaboradores do Fuel360
+app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ success: false, message: 'Itens inválidos.' });
+    }
+    try {
+        const pool = await sql.connect(dbConfig);
+        let processedCount = 0;
+
+        for (const item of items) {
+            if (item.syncAction === 'INSERT') {
+                const tipoVeiculo = item.newData?.tipoVeiculo || 'Carro';
+                await pool.request()
+                    .input('ID_Pulsus', sql.Int, item.id_pulsus)
+                    .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
+                    .input('Nome', sql.NVarChar, item.nome || '')
+                    .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
+                    .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
+                    .query(`
+                        IF NOT EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
+                        BEGIN
+                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, Ativo)
+                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, 1)
+                        END
+                    `);
+                processedCount++;
+            } else if (item.syncAction === 'UPDATE_DATA') {
+                await pool.request()
+                    .input('ID_Pulsus', sql.Int, item.id_pulsus)
+                    .input('Nome', sql.NVarChar, item.nome || item.newData?.nome || '')
+                    .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
+                    .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
+                    .query(`
+                        UPDATE FuelColaboradores 
+                        SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo 
+                        WHERE ID_Pulsus = @ID_Pulsus
+                    `);
+                processedCount++;
+            } else if (item.syncAction === 'DEACTIVATE') {
+                await pool.request()
+                    .input('ID_Pulsus', sql.Int, item.id_pulsus)
+                    .query(`UPDATE FuelColaboradores SET Ativo = 0 WHERE ID_Pulsus = @ID_Pulsus`);
+                processedCount++;
+            }
+        }
+        res.json({ success: true, count: processedCount, errors: [] });
+    } catch (err) {
+        console.error('Erro na sincronização de colaboradores Fuel360:', err);
+        res.status(500).json({ success: false, message: err.message, errors: [err.message] });
+    }
+});
+
+// Endpoints NATIVOS de Listagem e CRUD do Fuel360
+app.get('/api/fuel360/colaboradores', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Nome ASC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar colaboradores Fuel360:', err);
+        res.status(500).json([]);
+    }
+});
+
+app.get('/api/fuel360/grupos', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT * FROM FuelGrupos ORDER BY Nome ASC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar grupos Fuel360:', err);
+        res.status(500).json([]);
+    }
+});
+
+app.get('/api/fuel360/config/fuel', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query('SELECT FuelPrice as PrecoCombustivel, KmL_Car as KmL_Carro, KmL_Moto as KmL_Moto FROM FuelSystemSettings WHERE ID = 1');
+        if (result.recordset && result.recordset.length > 0) {
+            res.json(result.recordset[0]);
+        } else {
+            res.json({ PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 });
+        }
+    } catch (err) {
+        console.error('Erro ao buscar configurações Fuel360:', err);
+        res.json({ PrecoCombustivel: 5.89, KmL_Carro: 10, KmL_Moto: 35 });
+    }
+});
+
+app.get('/api/fuel360/ausencias', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        const result = await pool.request().query(`
+            SELECT a.ID_Ausencia, a.ID_Colaborador, a.DataInicio, a.DataFim, a.Motivo,
+                   c.Nome as NomeColaborador, c.ID_Pulsus
+            FROM FuelAusencias a
+            LEFT JOIN FuelColaboradores c ON a.ID_Colaborador = c.ID_Colaborador
+            ORDER BY a.DataInicio DESC
+        `);
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar ausências Fuel360:', err);
+        res.status(500).json([]);
+    }
+});
+
 // --- SYNC ENDPOINT (v2.12.51 - Blindado) ---
 app.get('/api/sync', async (req, res) => {
     try {

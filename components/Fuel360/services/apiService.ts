@@ -33,10 +33,7 @@ import {
 import * as mockApiData from '../api/mockData';
 
 const getBaseUrl = () => {
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port !== '8081') {
-        return 'http://localhost:3031';
-    }
-    return '/api';
+    return '/api/fuel360';
 };
 
 const API_BASE_URL = getBaseUrl();

@@ -258,8 +258,8 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
             <div className="bg-white rounded-2xl shadow-2xl p-0 w-full max-w-3xl max-h-[90vh] flex flex-col relative overflow-hidden">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0 bg-slate-50/50">
                     <div>
-                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">Sincronização MariaDB</h3>
-                        <p className="text-slate-500 text-sm font-medium">Revise as divergências antes de aplicar.</p>
+                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">Sincronização de Colaboradores (IT Asset 360)</h3>
+                        <p className="text-slate-500 text-sm font-medium">Revise as divergências entre os ativos e o cadastro do Fuel360 antes de aplicar.</p>
                     </div>
                     <button onClick={onClose} className="p-2 text-slate-400 hover:bg-white hover:text-slate-600 rounded-full transition shadow-sm border border-transparent hover:border-slate-100"><XCircleIcon className="w-6 h-6"/></button>
                 </div>
@@ -268,7 +268,7 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                     {loading ? (
                         <div className="py-20 flex flex-col items-center justify-center space-y-4">
                             <div className="relative"><SpinnerIcon className="w-12 h-12 text-blue-600"/><div className="absolute inset-0 animate-ping rounded-full bg-blue-400 opacity-20"></div></div>
-                            <p className="text-slate-500 font-bold animate-pulse">Comparando bases externas...</p>
+                            <p className="text-slate-500 font-bold animate-pulse">Comparando cadastros nativos do IT Asset 360...</p>
                         </div>
                     ) : (
                         <>
