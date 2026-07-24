@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { DataContext } from './context/DataContext';
 import { getFuelConfigHistory } from './services/apiService';
 import { LogSistema } from './types';
-import { CogIcon, DropIcon, CarIcon, MotoIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon } from './icons';
+import { CogIcon, DropIcon, CarIcon, MotoIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, ChartBarIcon } from './icons';
 
 const ConfirmSaveModal: React.FC<{
     isOpen: boolean;
@@ -39,6 +39,89 @@ const ConfirmSaveModal: React.FC<{
                         {isLoading ? <SpinnerIcon className="w-4 h-4 mr-2"/> : null} Confirmar
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+const RouteParamsCard: React.FC = () => {
+    const { systemConfig, updateSystemConfig } = useContext(DataContext);
+    const [alertMaxDailyKM, setAlertMaxDailyKM] = useState(systemConfig.alertMaxDailyKM || 400);
+    const [alertMaxClientDist, setAlertMaxClientDist] = useState(systemConfig.alertMaxClientDist || 100);
+    const [isSavingRouteParams, setIsSavingRouteParams] = useState(false);
+    const [routeParamMsg, setRouteParamMsg] = useState('');
+
+    useEffect(() => {
+        setAlertMaxDailyKM(systemConfig.alertMaxDailyKM || 400);
+        setAlertMaxClientDist(systemConfig.alertMaxClientDist || 100);
+    }, [systemConfig]);
+
+    const handleSaveRouteParams = async () => {
+        setIsSavingRouteParams(true);
+        setRouteParamMsg('');
+        try {
+            await updateSystemConfig({
+                ...systemConfig,
+                alertMaxDailyKM,
+                alertMaxClientDist
+            });
+            setRouteParamMsg('Parâmetros de rota atualizados com sucesso!');
+        } catch (e: any) {
+            alert('Erro ao salvar: ' + e.message);
+        } finally {
+            setIsSavingRouteParams(false);
+            setTimeout(() => setRouteParamMsg(''), 3000);
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 relative overflow-hidden transition-colors">
+            <div className="flex items-center mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl mr-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <ChartBarIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                    <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Parâmetros de Alerta de Rota</h2>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Defina os limites para exibição de alertas no Roteirizador.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="p-6 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/60 rounded-xl">
+                    <label className="block text-xs font-bold text-red-700 dark:text-red-400 uppercase mb-2">Limite de KM Diário (Alerta)</label>
+                    <div className="flex items-center">
+                        <input 
+                            type="number" 
+                            value={alertMaxDailyKM} 
+                            onChange={(e) => setAlertMaxDailyKM(Number(e.target.value))}
+                            className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-red-200 dark:border-red-800 rounded-xl p-3 focus:ring-2 focus:ring-red-500 font-bold text-lg outline-none"
+                        />
+                        <span className="ml-3 font-bold text-red-400 dark:text-red-400">km</span>
+                    </div>
+                    <p className="text-[10px] text-red-600 dark:text-red-300 mt-2">Dias com quilometragem acima deste valor serão marcados como suspeitos.</p>
+                </div>
+
+                <div className="p-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/60 rounded-xl">
+                    <label className="block text-xs font-bold text-amber-700 dark:text-amber-400 uppercase mb-2">Raio Máximo do Cliente (Alerta)</label>
+                    <div className="flex items-center">
+                        <input 
+                            type="number" 
+                            value={alertMaxClientDist} 
+                            onChange={(e) => setAlertMaxClientDist(Number(e.target.value))}
+                            className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-amber-200 dark:border-amber-800 rounded-xl p-3 focus:ring-2 focus:ring-amber-500 font-bold text-lg outline-none"
+                        />
+                        <span className="ml-3 font-bold text-amber-400 dark:text-amber-400">km</span>
+                    </div>
+                    <p className="text-[10px] text-amber-600 dark:text-amber-300 mt-2">Clientes distantes do ponto de partida acima deste valor gerarão alerta.</p>
+                </div>
+            </div>
+
+            <div className="flex items-center">
+                <button onClick={handleSaveRouteParams} disabled={isSavingRouteParams} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl flex items-center shadow-lg shadow-blue-600/20 transition disabled:opacity-50">
+                    {isSavingRouteParams ? <SpinnerIcon className="w-5 h-5 mr-2 animate-spin"/> : <CheckCircleIcon className="w-5 h-5 mr-2"/>} 
+                    Salvar Parâmetros de Rota
+                </button>
+                {routeParamMsg && <span className="ml-4 text-emerald-600 dark:text-emerald-400 font-bold text-sm animate-pulse">{routeParamMsg}</span>}
             </div>
         </div>
     );
@@ -153,6 +236,9 @@ export const Configuracao: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Parâmetros de Alerta de Rota */}
+            <RouteParamsCard />
 
             {/* History Table */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">

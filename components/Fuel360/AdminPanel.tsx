@@ -295,80 +295,7 @@ const IntegrationSettings: React.FC = () => {
     );
 };
 
-const RouteParamsSettings: React.FC = () => {
-    const { systemConfig, updateSystemConfig } = useContext(DataContext);
-    const [alertMaxDailyKM, setAlertMaxDailyKM] = useState(systemConfig.alertMaxDailyKM || 400);
-    const [alertMaxClientDist, setAlertMaxClientDist] = useState(systemConfig.alertMaxClientDist || 100);
-    const [isSaving, setIsSaving] = useState(false);
-    const [message, setMessage] = useState('');
 
-    useEffect(() => {
-        setAlertMaxDailyKM(systemConfig.alertMaxDailyKM || 400);
-        setAlertMaxClientDist(systemConfig.alertMaxClientDist || 100);
-    }, [systemConfig]);
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        setMessage('');
-        try {
-            await updateSystemConfig({ 
-                ...systemConfig, 
-                alertMaxDailyKM, 
-                alertMaxClientDist 
-            });
-            setMessage('Parâmetros atualizados com sucesso!');
-        } catch (e: any) {
-            alert('Erro ao salvar: ' + e.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    return (
-        <div className="bg-white p-8 rounded-2xl shadow-md border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center"><ChartBarIcon className="w-6 h-6 mr-2 text-blue-600"/> Parâmetros de Alerta de Rota</h3>
-            <p className="text-sm text-slate-500 mb-6">Defina os limites para exibição de alertas no Roteirizador.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="p-6 bg-red-50 border border-red-100 rounded-xl">
-                    <label className="block text-xs font-bold text-red-700 uppercase mb-2">Limite de KM Diário (Alerta)</label>
-                    <div className="flex items-center">
-                        <input 
-                            type="number" 
-                            value={alertMaxDailyKM} 
-                            onChange={(e) => setAlertMaxDailyKM(Number(e.target.value))}
-                            className="w-full bg-white text-slate-900 border border-red-200 rounded-xl p-3 focus:ring-2 focus:ring-red-500 font-bold text-lg outline-none"
-                        />
-                        <span className="ml-3 font-bold text-red-400">km</span>
-                    </div>
-                    <p className="text-[10px] text-red-600 mt-2">Dias com quilometragem acima deste valor serão marcados como suspeitos.</p>
-                </div>
-
-                <div className="p-6 bg-amber-50 border border-amber-100 rounded-xl">
-                    <label className="block text-xs font-bold text-amber-700 uppercase mb-2">Raio Máximo do Cliente (Alerta)</label>
-                    <div className="flex items-center">
-                        <input 
-                            type="number" 
-                            value={alertMaxClientDist} 
-                            onChange={(e) => setAlertMaxClientDist(Number(e.target.value))}
-                            className="w-full bg-white text-slate-900 border border-amber-200 rounded-xl p-3 focus:ring-2 focus:ring-amber-500 font-bold text-lg outline-none"
-                        />
-                        <span className="ml-3 font-bold text-amber-400">km</span>
-                    </div>
-                    <p className="text-[10px] text-amber-600 mt-2">Clientes distantes do ponto de partida acima deste valor gerarão alerta.</p>
-                </div>
-            </div>
-
-            <div className="flex items-center">
-                <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl flex items-center shadow-lg shadow-blue-600/20 transition disabled:opacity-50">
-                    {isSaving ? <SpinnerIcon className="w-5 h-5 mr-2 animate-spin"/> : <CheckCircleIcon className="w-5 h-5 mr-2"/>} 
-                    Salvar Parâmetros
-                </button>
-                {message && <span className="ml-4 text-emerald-600 font-bold text-sm animate-pulse">{message}</span>}
-            </div>
-        </div>
-    );
-};
 
 const SystemBranding: React.FC = () => {
     const { systemConfig, updateSystemConfig } = useContext(DataContext);
@@ -624,7 +551,7 @@ const SystemLogs: React.FC = () => {
 };
 
 export const AdminPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'integration' | 'route_params' | 'system' | 'license' | 'logs'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'branding' | 'integration' | 'system' | 'license' | 'logs'>('users');
     return (
         <div className="space-y-8">
             <div><h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">Administração</h2><p className="text-slate-500 dark:text-slate-400">Controle total do sistema.</p></div>
@@ -632,7 +559,6 @@ export const AdminPanel: React.FC = () => {
                 {[
                     { id: 'users', label: 'Usuários', icon: UserGroupIcon },
                     { id: 'integration', label: 'Integração DB', icon: UploadIcon },
-                    { id: 'route_params', label: 'Parâmetros de Rota', icon: ChartBarIcon }, 
                     { id: 'logs', label: 'Logs de Auditoria', icon: ClipboardListIcon }, 
                     { id: 'license', label: 'Licença', icon: DocumentReportIcon },
                     { id: 'branding', label: 'Empresa', icon: PhotographIcon },
@@ -646,7 +572,6 @@ export const AdminPanel: React.FC = () => {
             <div>
                 {activeTab === 'users' && <GestaoUsuarios embedded={true} />}
                 {activeTab === 'integration' && <IntegrationSettings />}
-                {activeTab === 'route_params' && <RouteParamsSettings />}
                 {activeTab === 'logs' && <SystemLogs />}
                 {activeTab === 'license' && <LicenseControl />}
                 {activeTab === 'branding' && <SystemBranding />}
