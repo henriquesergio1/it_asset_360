@@ -7,15 +7,17 @@ import { VisitaPrevista, Colaborador } from './types';
 import { LocationMarkerIcon, SpinnerIcon, CalculatorIcon, ChevronRightIcon, ChevronDownIcon, ArrowLeftIcon, GlobeIcon, RefreshIcon, UsersIcon, ExclamationIcon, CheckCircleIcon, TrashIcon, CalendarIcon, PlusCircleIcon, XCircleIcon, UserGroupIcon } from './icons';
 import L from 'leaflet';
 
-// --- CONFIGURAÇÃO DE ÍCONES ---
-const houseIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/619/619153.png',
-    iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38]
+// --- CONFIGURAÇÃO DE ÍCONES NATIVOS EM SVG (ISENTO DE MIXED CONTENT E ERROS DE REDE) ---
+const houseIcon = L.divIcon({
+    className: 'house-marker-wrapper',
+    html: `<div style="background-color:#16a34a; color:white; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`,
+    iconSize: [34, 34], iconAnchor: [17, 17]
 });
 
-const centroidIcon = new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149060.png', // Ícone de Pin/Target para centroide
-    iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -15]
+const centroidIcon = L.divIcon({
+    className: 'centroid-marker-wrapper',
+    html: `<div style="background-color:#ea580c; color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>`,
+    iconSize: [30, 30], iconAnchor: [15, 15]
 });
 
 const createNumberedIcon = (number: number) => {
@@ -130,14 +132,24 @@ const optimizeRoute = (points: VisitaPrevista[], colab?: Colaborador): VisitaPre
 const MapAutoFit: React.FC<{ points: any[] }> = ({ points }) => {
     const map = useMap();
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const validCoords = (points || [])
+            .map(p => [p[0] !== undefined ? p[0] : p.Lat, p[1] !== undefined ? p[1] : p.Long])
+            .filter(c => typeof c[0] === 'number' && typeof c[1] === 'number' && !isNaN(c[0]) && !isNaN(c[1]) && (c[0] !== 0 || c[1] !== 0));
+
+        const fit = () => {
             map.invalidateSize();
-            if (points?.length > 0) {
-                const bounds = L.latLngBounds(points.map(p => [p[0] || p.Lat, p[1] || p.Long]));
-                map.fitBounds(bounds, { padding: [50, 50] });
+            if (validCoords.length > 0) {
+                try {
+                    const bounds = L.latLngBounds(validCoords as [number, number][]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                } catch(e) {}
             }
-        }, 150);
-        return () => clearTimeout(timer);
+        };
+
+        fit();
+        const t1 = setTimeout(fit, 100);
+        const t2 = setTimeout(fit, 400);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
     }, [map, points]);
     return null;
 };
@@ -250,7 +262,14 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                             <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Calculando rota terrestre segura...</p>
                         </div>
                     )}
-                    <MapContainer center={[route.validPoints[0]?.Lat || 0, route.validPoints[0]?.Long || 0]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                    <MapContainer 
+                        center={[
+                            (route.validPoints[0]?.Lat && !isNaN(route.validPoints[0]?.Lat)) ? route.validPoints[0].Lat : -23.55052, 
+                            (route.validPoints[0]?.Long && !isNaN(route.validPoints[0]?.Long)) ? route.validPoints[0].Long : -46.633308
+                        ]} 
+                        zoom={13} 
+                        style={{ height: '100%', width: '100%', zIndex: 0 }}
+                    >
                         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                         <MapAutoFit points={route.allPoints} />
                         
@@ -262,9 +281,11 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                             </>
                         )}
                         
-                        {/* Marcadores (Para todos os pontos, inclusive excluídos) */}
-                        {route.allPoints.map((p: any, idx: number) => (
-                            <Marker key={idx} position={[p.Lat, p.Long]} icon={getIcon(p)} opacity={p.isExcluded ? 0.6 : 1}>
+                        {/* Marcadores defensivos (Apenas coordenadas numericas validas) */}
+                        {route.allPoints
+                            .filter((p: any) => p && typeof p.Lat === 'number' && typeof p.Long === 'number' && !isNaN(p.Lat) && !isNaN(p.Long) && (p.Lat !== 0 || p.Long !== 0))
+                            .map((p: any, idx: number) => (
+                            <Marker key={p.Cod_Cliente || idx} position={[p.Lat, p.Long]} icon={getIcon(p)} opacity={p.isExcluded ? 0.6 : 1}>
                                 <Popup>
                                     <div className="p-1 min-w-[260px]">
                                         <div className="mb-3 border-b border-slate-100 pb-2">
