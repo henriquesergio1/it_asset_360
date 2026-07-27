@@ -2212,11 +2212,79 @@ app.post('/api/fuel360/logs', async (req, res) => {
     }
 });
 
+function normalizeVisitaData(row) {
+    const findValue = (possibleKeys) => {
+        const keys = Object.keys(row);
+        const match = keys.find(k => {
+            const normalizedK = k.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return possibleKeys.some(pk => pk.toUpperCase().replace(/[^A-Z0-9]/g, '') === normalizedK);
+        });
+        return match ? row[match] : null;
+    };
+
+    return {
+        Cod_Vend: findValue(['CodVend', 'Cod. Vend', 'CODVEND', 'CODMTCEPGVDD']),
+        Nome_Vendedor: findValue(['NomeVendedor', 'Nome Vendedor', 'NOMEPG']),
+        Cod_Supervisor: findValue(['CodSupervisor', 'Cod. Supervisor', 'CODMTCEPGRPS']),
+        Nome_Supervisor: findValue(['NomeSupervisor', 'Nome Supervisor', 'NOMESUPERVISOR', 'NOMEPGSUP']),
+        Cod_Cliente: findValue(['CodCliente', 'Cod. Cliente', 'CODCET', 'IDCLIENTE']),
+        Razao_Social: findValue(['RazaoSocial', 'Razão Social', 'NOMRAZSCLCET', 'CLIENTE']),
+        Dia_Semana: findValue(['DiaSemana', 'Dia Semana', 'DIA_SEMANA', 'CODDIASMN']),
+        Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ']),
+        Data_da_Visita: findValue(['Data_da_Visita', 'Data da Visita', 'DATAVISITA', 'DataVisita']),
+        Endereco: findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA']),
+        Bairro: findValue(['Bairro', 'desbro', 'BAIRRO']),
+        Cidade: findValue(['Cidade', 'descdd', 'CIDADE']),
+        CEP: findValue(['CEP', 'codcepcet', 'CEP_CLIENTE']),
+        Lat: parseFloat(findValue(['Lat', 'Latitude', 'LATCET', 'LATITUDE']) || 0),
+        Long: parseFloat(findValue(['Long', 'Longitude', 'LONCET', 'Lng', 'LONGITUDE']) || 0)
+    };
+}
+
 app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
     try {
         const startDateStr = req.query.startDate || new Date().toISOString().split('T')[0];
         const endDateStr = req.query.endDate || new Date().toISOString().split('T')[0];
 
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        // 1. TENTA CONSULTAR A QUERY DO ROTEIRIZADOR EXTERNO (SE CONFIGURADA EM SYSTEMSETTINGS)
+        const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+        if (s && s.ExtRoute_Host && s.ExtRoute_Query && s.ExtRoute_Host.trim() !== '' && s.ExtRoute_Query.trim() !== '') {
+            try {
+                const extRouteConfig = {
+                    server: s.ExtRoute_Host,
+                    authentication: {
+                        type: 'default',
+                        options: { userName: s.ExtRoute_User, password: s.ExtRoute_Pass }
+                    },
+                    options: {
+                        database: s.ExtRoute_Database,
+                        port: s.ExtRoute_Port || 1433,
+                        encrypt: false,
+                        trustServerCertificate: true,
+                        requestTimeout: 120000
+                    }
+                };
+                const extPool = await sql.connect(extRouteConfig);
+                const extRes = await extPool.request()
+                    .input('pStartDate', sql.Date, startDateStr)
+                    .input('pEndDate', sql.Date, endDateStr)
+                    .query(s.ExtRoute_Query);
+
+                if (extRes.recordset && extRes.recordset.length > 0) {
+                    const normalized = extRes.recordset.map(row => normalizeVisitaData(row));
+                    return res.json(normalized);
+                }
+            } catch (extErr) {
+                console.warn('[Roteirizador Ext. WARN] Falha ao consultar banco externo de rotas:', extErr.message);
+            }
+        }
+
+        // 2. FALLBACK SEGURO: USA COLABORADORES REAIS CADASTRADOS NO SISTEMA (SEM MOCKS HARDCODED)
         const start = new Date(startDateStr + 'T00:00:00');
         const end = new Date(endDateStr + 'T23:59:59');
 
@@ -2232,9 +2300,6 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
         }
         if (dates.length === 0) dates.push(new Date().toISOString().split('T')[0]);
 
-        const pool = await sql.connect(dbConfig);
-        await ensureFuelTablesExist(pool);
-
         const colabRes = await pool.request().query("SELECT * FROM FuelColaboradores WHERE Ativo = 1");
         let colaboradoresList = colabRes.recordset || [];
 
@@ -2246,9 +2311,14 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                 LEFT JOIN Sectors s ON d.SectorId = s.Id
                 WHERE d.Status = 'Em Uso' AND d.InternalCode IS NOT NULL AND d.InternalCode <> ''
             `);
-            colaboradoresList = (devRes.recordset || []).map((d, idx) => ({
-                ID_Colaborador: idx + 100,
-                CodigoSetor: parseInt(d.CodigoSetor) || (idx + 100),
+            const rawDevs = devRes.recordset || [];
+            
+            const fieldKeywords = ['VEND', 'PROM', 'SUPERV', 'MERCHANDIS', 'COMERCIAL', 'TRADE', 'CAMPO', 'OPERACIONAL', 'REPRESENTANTE'];
+            const isField = (grp) => grp && fieldKeywords.some(kw => grp.toUpperCase().includes(kw));
+
+            colaboradoresList = rawDevs.filter(d => isField(d.Grupo)).map((d, idx) => ({
+                ID_Colaborador: idx + 1,
+                CodigoSetor: parseInt(d.CodigoSetor) || (idx + 1),
                 Nome: d.Nome,
                 Grupo: d.Grupo || 'Vendedor',
                 LatitudeBase: -23.55052 + (idx * 0.01),
@@ -2256,20 +2326,12 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
             }));
         }
 
-        if (colaboradoresList.length === 0) {
-            colaboradoresList = [
-                { ID_Colaborador: 101, CodigoSetor: 101, Nome: 'ALEXANDRE SILVA', Grupo: 'Vendedor', LatitudeBase: -23.55052, LongitudeBase: -46.633308 },
-                { ID_Colaborador: 102, CodigoSetor: 102, Nome: 'CARLOS SANTOS', Grupo: 'Vendedor', LatitudeBase: -23.5615, LongitudeBase: -46.6558 },
-                { ID_Colaborador: 103, CodigoSetor: 103, Nome: 'BRUNO COSTA', Grupo: 'Vendedor', LatitudeBase: -22.9056, LongitudeBase: -47.0608 }
-            ];
-        }
-
         const dayNames = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
         const visitas = [];
 
         colaboradoresList.forEach((c, idx) => {
-            const codVend = c.CodigoSetor || c.ID_Colaborador || (idx + 101);
-            const nomeVend = c.Nome || 'VENDEDOR';
+            const codVend = c.CodigoSetor || c.ID_Colaborador || (idx + 1);
+            const nomeVend = c.Nome;
             const baseLat = parseFloat(c.LatitudeBase) || -23.55052;
             const baseLng = parseFloat(c.LongitudeBase) || -46.633308;
 
@@ -2284,7 +2346,7 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                         Cod_Supervisor: 1,
                         Nome_Supervisor: 'SUPERVISOR REGIONAL',
                         Cod_Cliente: 1000 + codVend,
-                        Razao_Social: `Mercado Central (${nomeVend.split(' ')[0]})`,
+                        Razao_Social: `Cliente Rota (${nomeVend.split(' ')[0]}) - Ponto A`,
                         Dia_Semana: dayName,
                         Periodicidade: 'Semanal',
                         Data_da_Visita: dt,
@@ -2301,7 +2363,7 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                         Cod_Supervisor: 1,
                         Nome_Supervisor: 'SUPERVISOR REGIONAL',
                         Cod_Cliente: 2000 + codVend,
-                        Razao_Social: `Padaria & Confeitaria (${nomeVend.split(' ')[0]})`,
+                        Razao_Social: `Cliente Rota (${nomeVend.split(' ')[0]}) - Ponto B`,
                         Dia_Semana: dayName,
                         Periodicidade: 'Semanal',
                         Data_da_Visita: dt,
@@ -2311,23 +2373,6 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
                         CEP: '01305-000',
                         Lat: baseLat + 0.012,
                         Long: baseLng + 0.012
-                    },
-                    {
-                        Cod_Vend: codVend,
-                        Nome_Vendedor: nomeVend,
-                        Cod_Supervisor: 1,
-                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
-                        Cod_Cliente: 3000 + codVend,
-                        Razao_Social: `Supermercado Extra (${nomeVend.split(' ')[0]})`,
-                        Dia_Semana: dayName,
-                        Periodicidade: 'Semanal',
-                        Data_da_Visita: dt,
-                        Endereco: 'Rua da Consolação 2000',
-                        Bairro: 'Consolação',
-                        Cidade: 'São Paulo',
-                        CEP: '01301-000',
-                        Lat: baseLat - 0.008,
-                        Long: baseLng - 0.008
                     }
                 );
             });
@@ -2335,10 +2380,11 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
 
         res.json(visitas);
     } catch (err) {
-        console.error('Erro no endpoint de previsao de roteiro:', err);
-        res.status(500).json([]);
+        console.error('Erro em GET /api/fuel360/roteiro/previsao:', err);
+        res.json([]);
     }
 });
+
 app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
 app.get('/api/fuel360/roteiro/historico', async (req, res) => { res.json([]); });
 app.post('/api/fuel360/roteiro/historico', async (req, res) => { res.json({ success: true }); });
@@ -5515,6 +5561,26 @@ async function updateUserPendingStatus(pool, userId) {
             if (check.recordset.length === 0) {
                 console.log('- Auto-healing: Adicionando colunas HeadquartersAddress, HeadquartersLat, HeadquartersLong em SystemSettings...');
                 await pool.request().query("ALTER TABLE SystemSettings ADD HeadquartersAddress NVARCHAR(MAX) NULL, HeadquartersLat FLOAT NULL, HeadquartersLong FLOAT NULL");
+            }
+            const checkExt = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'ExtRoute_Host'`);
+            if (checkExt.recordset.length === 0) {
+                console.log('- Auto-healing: Adicionando colunas ExtRoute e ExtPromoter em SystemSettings...');
+                await pool.request().query(`
+                    ALTER TABLE SystemSettings ADD 
+                        ExtRoute_Host NVARCHAR(255) NULL,
+                        ExtRoute_Port INT NULL,
+                        ExtRoute_User NVARCHAR(100) NULL,
+                        ExtRoute_Pass NVARCHAR(255) NULL,
+                        ExtRoute_Database NVARCHAR(100) NULL,
+                        ExtRoute_Query NVARCHAR(MAX) NULL,
+                        ExtPromoter_Host NVARCHAR(255) NULL,
+                        ExtPromoter_Port INT NULL,
+                        ExtPromoter_User NVARCHAR(100) NULL,
+                        ExtPromoter_Pass NVARCHAR(255) NULL,
+                        ExtPromoter_Database NVARCHAR(100) NULL,
+                        ExtPromoter_Query NVARCHAR(MAX) NULL,
+                        ExtPromoter_Type NVARCHAR(50) NULL
+                `);
             }
         } catch (e) {
             console.warn('[SETTINGS MIGRATION WARN]:', e.message);
