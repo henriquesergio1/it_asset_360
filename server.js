@@ -1788,14 +1788,86 @@ app.put('/api/fuel360/system/config', async (req, res) => {
 });
 
 app.get('/api/fuel360/system/integration', async (req, res) => {
-    res.json({
-        type: 'NATIVE',
-        colab: { host: 'localhost', port: 1433, database: 'ITAsset360', type: 'SQL Server' }
-    });
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await ensureSettingsColumns(pool);
+        const result = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = result.recordset ? result.recordset[0] : {};
+        res.json({
+            route: {
+                host: s.ExtRoute_Host || '',
+                port: s.ExtRoute_Port || 1433,
+                user: s.ExtRoute_User || '',
+                pass: s.ExtRoute_Pass || '',
+                database: s.ExtRoute_Database || '',
+                query: s.ExtRoute_Query || '',
+                type: 'MSSQL'
+            },
+            promoter: {
+                host: s.ExtPromoter_Host || '',
+                port: s.ExtPromoter_Port || 1433,
+                user: s.ExtPromoter_User || '',
+                pass: s.ExtPromoter_Pass || '',
+                database: s.ExtPromoter_Database || '',
+                query: s.ExtPromoter_Query || '',
+                type: s.ExtPromoter_Type || 'MSSQL'
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.put('/api/fuel360/system/integration', async (req, res) => {
-    res.json({ success: true, message: 'Integração salva.' });
+    try {
+        const { route, promoter } = req.body;
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await ensureSettingsColumns(pool);
+
+        const check = await pool.request().query("SELECT COUNT(*) as count FROM SystemSettings");
+        if (check.recordset[0].count === 0) {
+            await pool.request().query("INSERT INTO SystemSettings (AppName) VALUES ('IT Asset 360')");
+        }
+
+        await pool.request()
+            .input('rh', sql.NVarChar, route?.host || '')
+            .input('rp', sql.Int, route?.port ? parseInt(route.port) : 1433)
+            .input('ru', sql.NVarChar, route?.user || '')
+            .input('rpass', sql.NVarChar, route?.pass || '')
+            .input('rdb', sql.NVarChar, route?.database || '')
+            .input('rq', sql.NVarChar, route?.query || '')
+            .input('ph', sql.NVarChar, promoter?.host || '')
+            .input('pp', sql.Int, promoter?.port ? parseInt(promoter.port) : 1433)
+            .input('pu', sql.NVarChar, promoter?.user || '')
+            .input('ppass', sql.NVarChar, promoter?.pass || '')
+            .input('pdb', sql.NVarChar, promoter?.database || '')
+            .input('pq', sql.NVarChar, promoter?.query || '')
+            .input('pt', sql.NVarChar, promoter?.type || 'MSSQL')
+            .query(`
+                UPDATE SystemSettings SET
+                    ExtRoute_Host = @rh,
+                    ExtRoute_Port = @rp,
+                    ExtRoute_User = @ru,
+                    ExtRoute_Pass = @rpass,
+                    ExtRoute_Database = @rdb,
+                    ExtRoute_Query = @rq,
+                    ExtPromoter_Host = @ph,
+                    ExtPromoter_Port = @pp,
+                    ExtPromoter_User = @pu,
+                    ExtPromoter_Pass = @ppass,
+                    ExtPromoter_Database = @pdb,
+                    ExtPromoter_Query = @pq,
+                    ExtPromoter_Type = @pt
+                WHERE ID = 1 OR ID = (SELECT TOP 1 ID FROM SystemSettings)
+            `);
+
+        res.json({ success: true, message: 'Integração salva com sucesso.' });
+    } catch (err) {
+        console.error('Erro ao salvar integracao ERP:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 app.post('/api/fuel360/system/license', async (req, res) => {

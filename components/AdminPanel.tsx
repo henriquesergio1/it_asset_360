@@ -319,6 +319,25 @@ ORDER BY a.CODCET;`;
   const [fuelPromoterQuery, setFuelPromoterQuery] = useState(() => localStorage.getItem('fuel_promoter_query') || DEFAULT_FUEL_PROMOTER_QUERY);
   const [fuelTesting, setFuelTesting] = useState(false);
 
+  useEffect(() => {
+    fetch('/api/fuel360/system/integration')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.route && data.route.host) {
+          setFuelServer(data.route.host);
+          setFuelPort(String(data.route.port || 1433));
+          setFuelUser(data.route.user || '');
+          setFuelPassword(data.route.pass || '');
+          setFuelDb(data.route.database || '');
+          if (data.route.query) setFuelRoteiroQuery(data.route.query);
+        }
+        if (data && data.promoter && data.promoter.query) {
+          setFuelPromoterQuery(data.promoter.query);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSyncRhPonto = async () => {
     setRhPontoLoading(true);
     try {
@@ -1666,7 +1685,7 @@ ORDER BY a.CODCET;`;
           </div>
         </form>
       ) : (
-        <form onSubmit={(e) => {
+        <form onSubmit={async (e) => {
           e.preventDefault();
           localStorage.setItem('fuel_erp_server', fuelServer);
           localStorage.setItem('fuel_erp_db', fuelDb);
@@ -1675,7 +1694,41 @@ ORDER BY a.CODCET;`;
           localStorage.setItem('fuel_erp_port', fuelPort);
           localStorage.setItem('fuel_roteiro_query', fuelRoteiroQuery);
           localStorage.setItem('fuel_promoter_query', fuelPromoterQuery);
-          showToast('Configurações do Fuel360 salvas com sucesso!', 'success');
+
+          try {
+            const res = await fetch('/api/fuel360/system/integration', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                route: {
+                  host: fuelServer,
+                  port: parseInt(fuelPort) || 1433,
+                  user: fuelUser,
+                  pass: fuelPassword,
+                  database: fuelDb,
+                  query: fuelRoteiroQuery,
+                  type: 'MSSQL'
+                },
+                promoter: {
+                  host: fuelServer,
+                  port: parseInt(fuelPort) || 1433,
+                  user: fuelUser,
+                  pass: fuelPassword,
+                  database: fuelDb,
+                  query: fuelPromoterQuery,
+                  type: 'MSSQL'
+                }
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              showToast('Configuração ERP do Fuel360 gravada no banco de dados com sucesso!', 'success');
+            } else {
+              showToast('Erro ao gravar no banco: ' + data.message, 'error');
+            }
+          } catch (err: any) {
+            showToast('Configurações salvas localmente com aviso de API: ' + err.message, 'info');
+          }
         }} className="space-y-8">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">

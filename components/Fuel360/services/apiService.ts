@@ -320,8 +320,7 @@ const MockService = {
         { ID_Log: 3, DataHora: new Date(Date.now() - 86400000).toISOString(), Usuario: 'Administrador (MOCK)', Acao: 'EDIT_COLAB', Detalhes: 'Editou colaborador ID 100 (Alexandre). Motivo: Mudança de endereço' },
     ],
     getVisitasPrevistas: async (startDate?: string, endDate?: string): Promise<VisitaPrevista[]> => {
-        await new Promise(r => setTimeout(r, 800));
-        return mockApiData.getMockVisitasPrevistas(startDate, endDate);
+        return RealService.getVisitasPrevistas(startDate, endDate);
     },
     getPromoterClients: async (): Promise<any[]> => {
         await new Promise(r => setTimeout(r, 800));
