@@ -114,6 +114,7 @@ const ColaboradorModal: React.FC<{
             Grupo: formData.Grupo || 'Vendedor',
             TipoVeiculo: formData.TipoVeiculo as TipoVeiculoReembolso,
             Ativo: formData.Ativo !== undefined ? formData.Ativo : true,
+            CPF: formData.CPF || undefined,
             MotivoAlteracao: colaborador ? motivo : undefined,
             LatitudeBase: formData.LatitudeBase || 0,
             LongitudeBase: formData.LongitudeBase || 0,
@@ -149,7 +150,10 @@ const ColaboradorModal: React.FC<{
                         <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Setor (Cód)</label><input type="number" value={formData.CodigoSetor ?? ''} onChange={e => setFormData({...formData, CodigoSetor: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 font-mono text-lg shadow-sm outline-none" required /></div>
                         <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">ID (Pulsus)</label><input type="number" value={formData.ID_Pulsus ?? ''} onChange={e => setFormData({...formData, ID_Pulsus: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 font-mono text-lg shadow-sm outline-none" required /></div>
                     </div>
-                    <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={formData.Nome} onChange={e => setFormData({...formData, Nome: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" required /></div>
+                    <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={formData.Nome || ''} onChange={e => setFormData({...formData, Nome: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" required /></div>
+                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">CPF</label><input type="text" value={formData.CPF || ''} onChange={e => { const raw = e.target.value.replace(/\D/g, '').substring(0, 11); const masked = raw.length > 9 ? raw.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4') : raw.length > 6 ? raw.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3') : raw.length > 3 ? raw.replace(/(\d{3})(\d{1,3})/, '$1.$2') : raw; setFormData({...formData, CPF: masked}); }} placeholder="000.000.000-00" className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 font-mono text-sm focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" /></div>
+                    </div>
                     <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Grupo / Cargo</label><select value={formData.Grupo || ''} onChange={e => setFormData({...formData, Grupo: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" required><option value="">Selecione...</option>{grupos.map(g => (<option key={g.ID_Grupo} value={g.Nome}>{g.Nome}</option>))}</select></div>
                     <div className={`p-5 rounded-xl border transition-all duration-300 ${addressChanged ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 ring-2 ring-amber-400/20' : 'bg-blue-50/50 dark:bg-slate-800/60 border-blue-100 dark:border-slate-700'}`}>
                         <div className="flex justify-between items-center mb-4"><h4 className={`text-xs font-bold uppercase flex items-center ${addressChanged ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-sky-300'}`}><LocationMarkerIcon className="w-4 h-4 mr-2"/> Coordenadas de Partida (Casa)</h4>{addressChanged && <span className="text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-bold animate-pulse">ATUALIZAÇÃO NECESSÁRIA</span>}</div>
@@ -483,6 +487,9 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                     else tipoVeiculo = str;
                 }
 
+                const rawCpf = row['CPF'] || row['cpf'] || row['Cpf'];
+                const cpf = rawCpf ? String(rawCpf).trim() : undefined;
+
                 if ((idPulsus || codigoSetor) && endereco) { 
                     const colab = colaboradores.find(c => 
                         (idPulsus && c.ID_Pulsus === idPulsus) || 
@@ -497,6 +504,7 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                             latitude: (latitude !== null && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
                             longitude: (longitude !== null && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
                             tipoVeiculo,
+                            cpf: cpf || colab.CPF,
                             hasExisting
                         }); 
                     }

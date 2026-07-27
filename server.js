@@ -1070,12 +1070,16 @@ async function initializeDatabase() {
                         Ativo BIT DEFAULT 1,
                         EnderecoBase NVARCHAR(MAX) NULL,
                         LatitudeBase FLOAT NULL,
-                        LongitudeBase FLOAT NULL
+                        LongitudeBase FLOAT NULL,
+                        CPF NVARCHAR(20) NULL
                     )
                 `);
             } else {
                 const checkCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelColaboradores'");
                 const cols = checkCols.recordset.map(c => c.COLUMN_NAME.toLowerCase());
+                if (!cols.includes('cpf')) {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD CPF NVARCHAR(20) NULL");
+                }
                 if (!cols.includes('enderecobase')) {
                     await pool.request().query("ALTER TABLE FuelColaboradores ADD EnderecoBase NVARCHAR(MAX) NULL");
                 }
@@ -1906,7 +1910,7 @@ app.get('/api/fuel360/colaboradores', async (req, res) => {
 });
 
 app.post('/api/fuel360/colaboradores', async (req, res) => {
-    const { id_pulsus, codigo_setor, nome, grupo, tipoVeiculo } = req.body;
+    const { id_pulsus, codigo_setor, nome, grupo, tipoVeiculo, cpf } = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
@@ -1916,10 +1920,11 @@ app.post('/api/fuel360/colaboradores', async (req, res) => {
             .input('Nome', sql.NVarChar, nome || '')
             .input('Grupo', sql.NVarChar, grupo || 'Outros')
             .input('TipoVeiculo', sql.NVarChar, tipoVeiculo || 'Carro')
+            .input('CPF', sql.NVarChar, cpf || null)
             .query(`
-                INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, Ativo)
+                INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, Ativo)
                 OUTPUT INSERTED.*
-                VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, 1)
+                VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, 1)
             `);
         res.json(result.recordset[0]);
     } catch (err) {
@@ -1928,7 +1933,7 @@ app.post('/api/fuel360/colaboradores', async (req, res) => {
 });
 
 app.put('/api/fuel360/colaboradores/:id', async (req, res) => {
-    const { nome, grupo, tipoVeiculo, codigo_setor, ativo } = req.body;
+    const { nome, grupo, tipoVeiculo, codigo_setor, ativo, cpf } = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
@@ -1938,10 +1943,11 @@ app.put('/api/fuel360/colaboradores/:id', async (req, res) => {
             .input('Grupo', sql.NVarChar, grupo)
             .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
             .input('CodigoSetor', sql.Int, codigo_setor)
+            .input('CPF', sql.NVarChar, cpf !== undefined ? cpf : null)
             .input('Ativo', sql.Bit, ativo !== undefined ? (ativo ? 1 : 0) : 1)
             .query(`
                 UPDATE FuelColaboradores
-                SET Nome=@Nome, Grupo=@Grupo, TipoVeiculo=@TipoVeiculo, CodigoSetor=@CodigoSetor, Ativo=@Ativo
+                SET Nome=@Nome, Grupo=@Grupo, TipoVeiculo=@TipoVeiculo, CodigoSetor=@CodigoSetor, CPF=@CPF, Ativo=@Ativo
                 WHERE ID_Colaborador=@ID
             `);
         res.json({ success: true });
@@ -2043,42 +2049,35 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
 
             const hasCoords = parsedLat !== null && parsedLng !== null;
             const hasTipoVeiculo = item.tipoVeiculo !== undefined && item.tipoVeiculo !== null && String(item.tipoVeiculo).trim().length > 0;
-            
+            const hasCpf = item.cpf !== undefined && item.cpf !== null && String(item.cpf).trim().length > 0;
+
             const reqQuery = pool.request()
                 .input('ID', sql.Int, item.id)
                 .input('Endereco', sql.NVarChar, item.endereco || '');
 
-            if (hasCoords && hasTipoVeiculo) {
-                reqQuery.input('Lat', sql.Float, parsedLat);
-                reqQuery.input('Lng', sql.Float, parsedLng);
-                reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
-                await reqQuery.query(`
-                    UPDATE FuelColaboradores 
-                    SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng, TipoVeiculo = @TipoVeiculo
-                    WHERE ID_Colaborador = @ID
-                `);
-            } else if (hasCoords) {
-                reqQuery.input('Lat', sql.Float, parsedLat);
-                reqQuery.input('Lng', sql.Float, parsedLng);
-                await reqQuery.query(`
-                    UPDATE FuelColaboradores 
-                    SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng 
-                    WHERE ID_Colaborador = @ID
-                `);
-            } else if (hasTipoVeiculo) {
-                reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
-                await reqQuery.query(`
-                    UPDATE FuelColaboradores 
-                    SET EnderecoBase = @Endereco, TipoVeiculo = @TipoVeiculo
-                    WHERE ID_Colaborador = @ID
-                `);
-            } else {
-                await reqQuery.query(`
-                    UPDATE FuelColaboradores 
-                    SET EnderecoBase = @Endereco 
-                    WHERE ID_Colaborador = @ID
-                `);
+            if (hasCpf) {
+                reqQuery.input('CPF', sql.NVarChar, String(item.cpf).trim());
             }
+
+            let setSql = 'EnderecoBase = @Endereco';
+            if (hasCoords) {
+                reqQuery.input('Lat', sql.Float, parsedLat);
+                reqQuery.input('Lng', sql.Float, parsedLng);
+                setSql += ', LatitudeBase = @Lat, LongitudeBase = @Lng';
+            }
+            if (hasTipoVeiculo) {
+                reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
+                setSql += ', TipoVeiculo = @TipoVeiculo';
+            }
+            if (hasCpf) {
+                setSql += ', CPF = @CPF';
+            }
+
+            await reqQuery.query(`
+                UPDATE FuelColaboradores 
+                SET ${setSql}
+                WHERE ID_Colaborador = @ID
+            `);
         }
         res.json({ success: true });
     } catch (err) {
