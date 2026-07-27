@@ -53,3 +53,21 @@
     scrollbar-width: none !important;  /* Firefox */
   }
 }
+
+/* LEAFLET & TAILWIND CSS COMPATIBILITY FIXES */
+.leaflet-pane img, 
+.leaflet-tile, 
+.leaflet-marker-icon, 
+.leaflet-marker-shadow {
+  max-width: none !important;
+  max-height: none !important;
+  width: auto;
+  padding: 0;
+}
+
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 450px;
+  z-index: 0;
+}

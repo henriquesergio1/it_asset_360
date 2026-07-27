@@ -141,8 +141,17 @@ const normalizeDate = (dateStr: string): string => {
 const MapAutoFit: React.FC<{ bounds: L.LatLngBoundsExpression }> = ({ bounds }) => {
     const map = useMap();
     useEffect(() => {
-        if (bounds) map.fitBounds(bounds, { padding: [50, 50] });
-    }, [bounds]);
+        const fit = () => {
+            map.invalidateSize();
+            if (bounds) {
+                try { map.fitBounds(bounds, { padding: [50, 50] }); } catch(e) {}
+            }
+        };
+        fit();
+        const t1 = setTimeout(fit, 100);
+        const t2 = setTimeout(fit, 400);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+    }, [map, bounds]);
     return null;
 };
 
@@ -1396,11 +1405,11 @@ export const PrevistoVsRealizado: React.FC = () => {
                 )}
             </div>
 
-            <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
+            <div className="flex-1 flex gap-4 overflow-hidden min-h-[500px]">
                 {/* MAPA */}
-                <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative z-0 transition-colors">
-                    <MapContainer center={[-23.5505, -46.6333]} zoom={10} style={{ height: '100%', width: '100%' }}>
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative min-h-[500px] z-0 transition-colors">
+                    <MapContainer center={[-23.5505, -46.6333]} zoom={10} style={{ height: '100%', width: '100%', minHeight: '500px', zIndex: 0 }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
                         {mapBounds && <MapAutoFit bounds={mapBounds} />}
                         <MapController focusCoord={focusedCoord} />
 
