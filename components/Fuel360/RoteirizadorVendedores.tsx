@@ -130,10 +130,14 @@ const optimizeRoute = (points: VisitaPrevista[], colab?: Colaborador): VisitaPre
 const MapAutoFit: React.FC<{ points: any[] }> = ({ points }) => {
     const map = useMap();
     useEffect(() => {
-        if (points?.length > 0) {
-            const bounds = L.latLngBounds(points.map(p => [p[0] || p.Lat, p[1] || p.Long]));
-            map.fitBounds(bounds, { padding: [50, 50] });
-        }
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+            if (points?.length > 0) {
+                const bounds = L.latLngBounds(points.map(p => [p[0] || p.Lat, p[1] || p.Long]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }, 150);
+        return () => clearTimeout(timer);
     }, [map, points]);
     return null;
 };

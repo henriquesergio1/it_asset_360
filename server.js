@@ -2374,6 +2374,22 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
     }
 });
 
+// Proxy HTTPS seguro para o motor de rotas OSRM local (Evita Mixed Content HTTP vs HTTPS no navegador)
+app.get('/api/fuel360/osrm', async (req, res) => {
+    const { coords } = req.query;
+    if (!coords) return res.status(400).json({ error: 'Coordenadas inválidas' });
+    try {
+        const SERVER_IP = "10.10.10.10";
+        const url = `http://${SERVER_IP}:5000/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) return res.status(502).json({ error: 'Erro no servidor OSRM local' });
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
 app.get('/api/fuel360/roteiro/historico', async (req, res) => { res.json([]); });
 app.post('/api/fuel360/roteiro/historico', async (req, res) => { res.json({ success: true }); });

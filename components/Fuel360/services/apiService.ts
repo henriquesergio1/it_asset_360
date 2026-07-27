@@ -205,9 +205,7 @@ const RealService = {
         if (points.length < 2) return null;
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
         
-        // URL Base (Conforme solicitado, mantendo a lógica local do servidor OSRM)
-        const SERVER_IP = "10.10.10.10";
-        const coords = points.map(p => {
+        const coordsStr = points.map(p => {
             const lat = p.Lat || p.LatitudeBase || p.latitude;
             const lon = p.Long || p.LongitudeBase || p.longitude;
             return `${lon},${lat}`;
@@ -216,8 +214,10 @@ const RealService = {
         const firstPoint = points[0];
         const firstLat = firstPoint.Lat || firstPoint.LatitudeBase || firstPoint.latitude;
         const firstLon = firstPoint.Long || firstPoint.LongitudeBase || firstPoint.longitude;
-        
-        const url = `http://${SERVER_IP}:5000/route/v1/driving/${coords}${isRoundTrip ? ';' + firstLon + ',' + firstLat : ''}?overview=full&geometries=geojson`;
+        const finalCoordsStr = coordsStr + (isRoundTrip ? ';' + firstLon + ',' + firstLat : '');
+
+        // Utiliza o proxy HTTPS seguro em /api/fuel360/osrm para evitar Mixed Content (HTTP x HTTPS)
+        const url = `${API_BASE_URL}/osrm?coords=${encodeURIComponent(finalCoordsStr)}`;
 
         try {
             const controller = new AbortController();

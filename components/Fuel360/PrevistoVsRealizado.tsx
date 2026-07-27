@@ -155,9 +155,8 @@ const fetchRouteGeometry = async (points: ActualPoint[]): Promise<[number, numbe
     const step = Math.ceil(points.length / 100); // AUMENTADO PARA 100 POIS O SERVIDOR É LOCAL
     const sampledPoints = points.filter((_, i) => i === 0 || i === points.length - 1 || i % step === 0);
 
-    const SERVER_IP = "10.10.10.10";
     const coordsString = sampledPoints.map(p => `${p.lng},${p.lat}`).join(';');
-    const url = `http://${SERVER_IP}:5000/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+    const url = `/api/fuel360/osrm?coords=${encodeURIComponent(coordsString)}`;
 
     try {
         const response = await fetch(url);
