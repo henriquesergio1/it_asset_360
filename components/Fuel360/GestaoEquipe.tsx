@@ -427,6 +427,7 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const { colaboradores, refreshData } = useContext(DataContext);
     const [isProcessing, setIsProcessing] = useState(false);
     const [preview, setPreview] = useState<any[]>([]);
+    const [overwriteExisting, setOverwriteExisting] = useState(true);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -461,12 +462,15 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                             (codigoSetor && c.CodigoSetor === codigoSetor)
                         ); 
                         if (colab) {
+                            const hasExisting = Boolean(colab.EnderecoBase && colab.EnderecoBase.trim().length > 0);
                             updates.push({ 
                                 id: colab.ID_Colaborador, 
+                                nome: colab.Nome,
                                 endereco,
                                 latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
                                 longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
-                                tipoVeiculo
+                                tipoVeiculo,
+                                hasExisting
                             }); 
                         }
                     }
@@ -478,7 +482,6 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
         const reader = new FileReader();
         reader.onload = (event) => {
             const text = event.target?.result as string;
-            // Se a leitura inicial em UTF-8 gerou caracteres corrompidos (\uFFFD), relemos como ISO-8859-1 (Windows ANSI)
             if (text && text.includes('\uFFFD')) {
                 const readerIso = new FileReader();
                 readerIso.onload = (eIso) => {
@@ -493,9 +496,15 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     };
 
     const handleSave = async () => {
-        if (preview.length === 0) return; setIsProcessing(true);
+        if (preview.length === 0) return;
+        const itemsToSave = overwriteExisting ? preview : preview.filter(p => !p.hasExisting);
+        if (itemsToSave.length === 0) {
+            alert("Nenhum novo endereço para importar (todos os itens já possuem cadastro e a opção de sobrescrever está desmarcada).");
+            return;
+        }
+        setIsProcessing(true);
         try { 
-            await batchUpdateColaboradoresAddress(preview, "Importação via CSV"); 
+            await batchUpdateColaboradoresAddress(itemsToSave, "Importação via CSV"); 
             refreshData(); 
             onClose(); 
         } catch (e: any) { 
@@ -509,6 +518,7 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
 
     const countWithCoords = preview.filter(p => p.latitude && p.longitude).length;
     const countWithVehicle = preview.filter(p => p.tipoVeiculo).length;
+    const countExisting = preview.filter(p => p.hasExisting).length;
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4">
@@ -516,14 +526,36 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços, Coordenadas e Veículos</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV/TSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b>, <b>'LatitudeBase'</b>, <b>'LongitudeBase'</b> e <b>'TipoVeiculo'</b>.</p>
                 <input type="file" accept=".csv,.txt,.tsv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
+                
                 {preview.length > 0 && (
-                    <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-100 dark:border-blue-800 mb-6">
-                        <p className="text-blue-700 dark:text-sky-300 text-sm font-bold flex items-center">
-                            <CheckCircleIcon className="w-5 h-5 mr-2"/>
-                            {preview.length} correspondências encontradas ({countWithCoords} com Lat/Long e {countWithVehicle} com Veículo).
-                        </p>
+                    <div className="space-y-4 mb-6">
+                        <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
+                            <p className="text-blue-700 dark:text-sky-300 text-sm font-bold flex items-center">
+                                <CheckCircleIcon className="w-5 h-5 mr-2 shrink-0"/>
+                                {preview.length} correspondências encontradas ({countWithCoords} com Lat/Long e {countWithVehicle} com Veículo).
+                            </p>
+                        </div>
+
+                        {countExisting > 0 && (
+                            <div className="bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border border-amber-200 dark:border-amber-800/60">
+                                <p className="text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center mb-2">
+                                    <ExclamationIcon className="w-4 h-4 mr-2 shrink-0 text-amber-600 dark:text-amber-400"/>
+                                    {countExisting} colaborador(es) já possuem endereço/coordenadas cadastrados previamente.
+                                </p>
+                                <label className="flex items-center space-x-2 text-xs font-medium text-amber-900 dark:text-amber-200 cursor-pointer select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={overwriteExisting} 
+                                        onChange={e => setOverwriteExisting(e.target.checked)} 
+                                        className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                                    />
+                                    <span>Sobrescrever endereços/coordenadas existentes</span>
+                                </label>
+                            </div>
+                        )}
                     </div>
                 )}
+                
                 <div className="flex justify-end space-x-3">
                     <button onClick={onClose} disabled={isProcessing} className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
                     <button onClick={handleSave} disabled={isProcessing || preview.length === 0} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition disabled:opacity-50">Importar Agora</button>
