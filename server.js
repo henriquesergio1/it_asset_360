@@ -1612,6 +1612,14 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+
+        try {
+            await pool.request().query(`
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelColaboradores' AND COLUMN_NAME = 'CPF')
+                    ALTER TABLE FuelColaboradores ADD CPF NVARCHAR(20) NULL;
+            `);
+        } catch (eCpf) {}
+
         let processedCount = 0;
 
         for (const item of items) {
@@ -1681,9 +1689,32 @@ async function ensureFuelTablesExist(pool) {
                     Nome NVARCHAR(255) NOT NULL,
                     Grupo NVARCHAR(255) NOT NULL,
                     TipoVeiculo NVARCHAR(50) DEFAULT 'Carro',
-                    Ativo BIT DEFAULT 1
+                    Ativo BIT DEFAULT 1,
+                    EnderecoBase NVARCHAR(MAX) NULL,
+                    LatitudeBase FLOAT NULL,
+                    LongitudeBase FLOAT NULL,
+                    CPF NVARCHAR(20) NULL
                 )
             `);
+        } else {
+            const checkCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelColaboradores'");
+            const cols = checkCols.recordset.map(c => c.COLUMN_NAME.toLowerCase());
+            if (!cols.includes('cpf')) {
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD CPF NVARCHAR(20) NULL");
+            }
+            if (!cols.includes('enderecobase')) {
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD EnderecoBase NVARCHAR(MAX) NULL");
+            }
+            if (!cols.includes('latitudebase')) {
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase FLOAT NULL");
+            } else {
+                await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LatitudeBase FLOAT NULL");
+            }
+            if (!cols.includes('longitudebase')) {
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase FLOAT NULL");
+            } else {
+                await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LongitudeBase FLOAT NULL");
+            }
         }
 
         const checkGrupos = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelGrupos'");
