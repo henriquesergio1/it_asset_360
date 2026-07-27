@@ -1960,7 +1960,45 @@ app.post('/api/fuel360/colaboradores/move', async (req, res) => {
 
 app.post('/api/fuel360/colaboradores/bulk-update', async (req, res) => { res.json({ success: true }); });
 app.post('/api/fuel360/colaboradores/smart-suggestions', async (req, res) => { res.json([]); });
-app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => { res.json({ success: true }); });
+app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.json({ success: true });
+    }
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        
+        for (const item of items) {
+            const hasCoords = item.latitude !== undefined && item.latitude !== null && !isNaN(item.latitude) &&
+                              item.longitude !== undefined && item.longitude !== null && !isNaN(item.longitude);
+            
+            const reqQuery = pool.request()
+                .input('ID', sql.Int, item.id)
+                .input('Endereco', sql.NVarChar, item.endereco || '');
+
+            if (hasCoords) {
+                reqQuery.input('Lat', sql.Decimal(12, 9), parseFloat(item.latitude));
+                reqQuery.input('Lng', sql.Decimal(12, 9), parseFloat(item.longitude));
+                await reqQuery.query(`
+                    UPDATE FuelColaboradores 
+                    SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng 
+                    WHERE ID_Colaborador = @ID
+                `);
+            } else {
+                await reqQuery.query(`
+                    UPDATE FuelColaboradores 
+                    SET EnderecoBase = @Endereco 
+                    WHERE ID_Colaborador = @ID
+                `);
+            }
+        }
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Erro em batch-address:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 app.get('/api/fuel360/grupos', async (req, res) => {
     try {

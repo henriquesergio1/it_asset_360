@@ -427,31 +427,76 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const { colaboradores, refreshData } = useContext(DataContext);
     const [isProcessing, setIsProcessing] = useState(false);
     const [preview, setPreview] = useState<any[]>([]);
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
-        Papa.parse(file, { header: true, delimiter: ";", skipEmptyLines: true, complete: async (results: Papa.ParseResult<any>) => {
+        Papa.parse(file, { header: true, skipEmptyLines: true, complete: async (results: Papa.ParseResult<any>) => {
             const updates: any[] = [];
             results.data.forEach((row: any) => {
-                const idPulsus = parseInt(row['ID Pulsus'] || row['id_pulsus']);
-                const endereco = row['Endereco'] || row['endereco'];
-                if (idPulsus && endereco) { const colab = colaboradores.find(c => c.ID_Pulsus === idPulsus); if (colab) updates.push({ id: colab.ID_Colaborador, endereco }); }
+                const idPulsus = parseInt(row['ID_Pulsus'] || row['ID Pulsus'] || row['id_pulsus']);
+                const codigoSetor = parseInt(row['CodigoSetor'] || row['Setor'] || row['codigo_setor']);
+                const endereco = row['EnderecoBase'] || row['Endereco'] || row['endereco'];
+                
+                const rawLat = row['LatitudeBase'] || row['Latitude'] || row['lat'];
+                const rawLng = row['LongitudeBase'] || row['Longitude'] || row['lng'] || row['long'];
+                
+                const latitude = rawLat ? parseFloat(String(rawLat).replace(',', '.')) : null;
+                const longitude = rawLng ? parseFloat(String(rawLng).replace(',', '.')) : null;
+
+                if ((idPulsus || codigoSetor) && endereco) { 
+                    const colab = colaboradores.find(c => 
+                        (idPulsus && c.ID_Pulsus === idPulsus) || 
+                        (codigoSetor && c.CodigoSetor === codigoSetor)
+                    ); 
+                    if (colab) {
+                        updates.push({ 
+                            id: colab.ID_Colaborador, 
+                            endereco,
+                            latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
+                            longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase
+                        }); 
+                    }
+                }
             });
             setPreview(updates);
         } });
     };
+
     const handleSave = async () => {
         if (preview.length === 0) return; setIsProcessing(true);
-        try { await batchUpdateColaboradoresAddress(preview, "Importação via CSV"); refreshData(); onClose(); } catch (e: any) { alert("Erro ao importar: " + e.message); } finally { setIsProcessing(false); }
+        try { 
+            await batchUpdateColaboradoresAddress(preview, "Importação via CSV"); 
+            refreshData(); 
+            onClose(); 
+        } catch (e: any) { 
+            alert("Erro ao importar: " + e.message); 
+        } finally { 
+            setIsProcessing(false); 
+        }
     };
+
     if (!isOpen) return null;
+
+    const countWithCoords = preview.filter(p => p.latitude && p.longitude).length;
+
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 w-full max-w-lg transition-colors">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV com as colunas <b>'ID Pulsus'</b> e <b>'Endereco'</b>.</p>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços e Coordenadas</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b> e opcionalmente <b>'LatitudeBase'</b> / <b>'LongitudeBase'</b>.</p>
                 <input type="file" accept=".csv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
-                {preview.length > 0 && (<div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-100 dark:border-blue-800 mb-6"><p className="text-blue-700 dark:text-sky-300 text-sm font-bold flex items-center"><CheckCircleIcon className="w-5 h-5 mr-2"/>{preview.length} endereços correspondentes encontrados.</p></div>)}
-                <div className="flex justify-end space-x-3"><button onClick={onClose} disabled={isProcessing} className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button><button onClick={handleSave} disabled={isProcessing || preview.length === 0} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition disabled:opacity-50">Importar Agora</button></div>
+                {preview.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-100 dark:border-blue-800 mb-6">
+                        <p className="text-blue-700 dark:text-sky-300 text-sm font-bold flex items-center">
+                            <CheckCircleIcon className="w-5 h-5 mr-2"/>
+                            {preview.length} correspondências encontradas ({countWithCoords} com Lat/Long validadas).
+                        </p>
+                    </div>
+                )}
+                <div className="flex justify-end space-x-3">
+                    <button onClick={onClose} disabled={isProcessing} className="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition">Cancelar</button>
+                    <button onClick={handleSave} disabled={isProcessing || preview.length === 0} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition disabled:opacity-50">Importar Agora</button>
+                </div>
             </div>
         </div>
     );
