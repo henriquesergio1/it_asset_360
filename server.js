@@ -1972,17 +1972,34 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
         for (const item of items) {
             const hasCoords = item.latitude !== undefined && item.latitude !== null && !isNaN(item.latitude) &&
                               item.longitude !== undefined && item.longitude !== null && !isNaN(item.longitude);
+            const hasTipoVeiculo = item.tipoVeiculo !== undefined && item.tipoVeiculo !== null && String(item.tipoVeiculo).trim().length > 0;
             
             const reqQuery = pool.request()
                 .input('ID', sql.Int, item.id)
                 .input('Endereco', sql.NVarChar, item.endereco || '');
 
-            if (hasCoords) {
+            if (hasCoords && hasTipoVeiculo) {
+                reqQuery.input('Lat', sql.Decimal(12, 9), parseFloat(item.latitude));
+                reqQuery.input('Lng', sql.Decimal(12, 9), parseFloat(item.longitude));
+                reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
+                await reqQuery.query(`
+                    UPDATE FuelColaboradores 
+                    SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng, TipoVeiculo = @TipoVeiculo
+                    WHERE ID_Colaborador = @ID
+                `);
+            } else if (hasCoords) {
                 reqQuery.input('Lat', sql.Decimal(12, 9), parseFloat(item.latitude));
                 reqQuery.input('Lng', sql.Decimal(12, 9), parseFloat(item.longitude));
                 await reqQuery.query(`
                     UPDATE FuelColaboradores 
                     SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng 
+                    WHERE ID_Colaborador = @ID
+                `);
+            } else if (hasTipoVeiculo) {
+                reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
+                await reqQuery.query(`
+                    UPDATE FuelColaboradores 
+                    SET EnderecoBase = @Endereco, TipoVeiculo = @TipoVeiculo
                     WHERE ID_Colaborador = @ID
                 `);
             } else {

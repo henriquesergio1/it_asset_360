@@ -443,6 +443,16 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 const latitude = rawLat ? parseFloat(String(rawLat).replace(',', '.')) : null;
                 const longitude = rawLng ? parseFloat(String(rawLng).replace(',', '.')) : null;
 
+                const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
+                let tipoVeiculo = undefined;
+                if (rawTipoVeiculo) {
+                    const str = String(rawTipoVeiculo).trim();
+                    if (str.toLowerCase().includes('carro')) tipoVeiculo = 'Carro';
+                    else if (str.toLowerCase().includes('moto')) tipoVeiculo = 'Moto';
+                    else if (str.toLowerCase().includes('sem') || str.toLowerCase().includes('vt')) tipoVeiculo = 'Sem Veículo / VT';
+                    else tipoVeiculo = str;
+                }
+
                 if ((idPulsus || codigoSetor) && endereco) { 
                     const colab = colaboradores.find(c => 
                         (idPulsus && c.ID_Pulsus === idPulsus) || 
@@ -453,7 +463,8 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                             id: colab.ID_Colaborador, 
                             endereco,
                             latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
-                            longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase
+                            longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
+                            tipoVeiculo
                         }); 
                     }
                 }
@@ -478,18 +489,19 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     if (!isOpen) return null;
 
     const countWithCoords = preview.filter(p => p.latitude && p.longitude).length;
+    const countWithVehicle = preview.filter(p => p.tipoVeiculo).length;
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 w-full max-w-lg transition-colors">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços e Coordenadas</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b> e opcionalmente <b>'LatitudeBase'</b> / <b>'LongitudeBase'</b>.</p>
-                <input type="file" accept=".csv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços, Coordenadas e Veículos</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV/TSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b>, <b>'LatitudeBase'</b>, <b>'LongitudeBase'</b> e <b>'TipoVeiculo'</b>.</p>
+                <input type="file" accept=".csv,.txt,.tsv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
                 {preview.length > 0 && (
                     <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-100 dark:border-blue-800 mb-6">
                         <p className="text-blue-700 dark:text-sky-300 text-sm font-bold flex items-center">
                             <CheckCircleIcon className="w-5 h-5 mr-2"/>
-                            {preview.length} correspondências encontradas ({countWithCoords} com Lat/Long validadas).
+                            {preview.length} correspondências encontradas ({countWithCoords} com Lat/Long e {countWithVehicle} com Veículo).
                         </p>
                     </div>
                 )}
