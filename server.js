@@ -1813,6 +1813,50 @@ async function ensureFuelTablesExist(pool) {
             `);
         }
 
+        const checkSimHist = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacoesHistorico'");
+        if (checkSimHist.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelSimulacoesHistorico (
+                    ID_RotaHist INT IDENTITY(1,1) PRIMARY KEY,
+                    Periodo NVARCHAR(255) NOT NULL,
+                    DataSimulacao DATETIME DEFAULT GETDATE(),
+                    TotalKM FLOAT DEFAULT 0,
+                    UsuarioSimulacao NVARCHAR(255) DEFAULT 'Administrador TI',
+                    JaCalculado BIT DEFAULT 0
+                )
+            `);
+        }
+
+        const checkSimDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacoesDetalhe'");
+        if (checkSimDet.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelSimulacoesDetalhe (
+                    ID_RotaDet INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_RotaHist INT NOT NULL,
+                    ID_Pulsus INT NULL,
+                    Nome NVARCHAR(255) NULL,
+                    Grupo NVARCHAR(255) NULL,
+                    TotalKM FLOAT DEFAULT 0
+                )
+            `);
+        }
+
+        const checkSimDia = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacoesDiario'");
+        if (checkSimDia.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelSimulacoesDiario (
+                    ID_RotaDia INT IDENTITY(1,1) PRIMARY KEY,
+                    ID_RotaDet INT NOT NULL,
+                    ID_RotaHist INT NOT NULL,
+                    ID_Pulsus INT NULL,
+                    Nome NVARCHAR(255) NULL,
+                    DataVisita DATE NOT NULL,
+                    KM FLOAT DEFAULT 0,
+                    KMEstimado FLOAT DEFAULT 0
+                )
+            `);
+        }
+
         const checkFuelLogs = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelLogsSistema'");
         if (checkFuelLogs.recordset.length === 0) {
             await pool.request().query(`
@@ -2611,11 +2655,132 @@ app.get('/api/fuel360/osrm', async (req, res) => {
 });
 
 app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
-app.get('/api/fuel360/roteiro/historico', async (req, res) => { res.json([]); });
-app.post('/api/fuel360/roteiro/historico', async (req, res) => { res.json({ success: true }); });
-app.get('/api/fuel360/roteiro/historico/:id', async (req, res) => { res.json([]); });
-app.delete('/api/fuel360/roteiro/historico/:id', async (req, res) => { res.json({ success: true }); });
-app.put('/api/fuel360/roteiro/diario/:id', async (req, res) => { res.json({ success: true }); });
+
+// Endpoints NATIVOS de Histórico e Simulação do Roteiro Previsto no Fuel360
+app.get('/api/fuel360/roteiro/historico', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query('SELECT * FROM FuelSimulacoesHistorico ORDER BY ID_RotaHist DESC');
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar histórico de simulações:', err);
+        res.json([]);
+    }
+});
+
+app.post('/api/fuel360/roteiro/historico', async (req, res) => {
+    const { Periodo, TotalKM, Itens } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const histRes = await pool.request()
+            .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
+            .input('TotalKM', sql.Float, TotalKM || 0)
+            .input('UsuarioSimulacao', sql.NVarChar, 'Administrador TI')
+            .query(`
+                INSERT INTO FuelSimulacoesHistorico (Periodo, TotalKM, UsuarioSimulacao)
+                OUTPUT INSERTED.ID_RotaHist
+                VALUES (@Periodo, @TotalKM, @UsuarioSimulacao)
+            `);
+
+        const idRotaHist = histRes.recordset[0].ID_RotaHist;
+
+        if (Array.isArray(Itens)) {
+            for (const item of Itens) {
+                const detRes = await pool.request()
+                    .input('ID_RotaHist', sql.Int, idRotaHist)
+                    .input('ID_Pulsus', sql.Int, item.ID_Pulsus || 0)
+                    .input('Nome', sql.NVarChar, item.Nome || '')
+                    .input('Grupo', sql.NVarChar, item.Grupo || 'Vendedor')
+                    .input('TotalKM', sql.Float, item.TotalKM || 0)
+                    .query(`
+                        INSERT INTO FuelSimulacoesDetalhe (ID_RotaHist, ID_Pulsus, Nome, Grupo, TotalKM)
+                        OUTPUT INSERTED.ID_RotaDet
+                        VALUES (@ID_RotaHist, @ID_Pulsus, @Nome, @Grupo, @TotalKM)
+                    `);
+
+                const idRotaDet = detRes.recordset[0].ID_RotaDet;
+
+                if (Array.isArray(item.Dias)) {
+                    for (const d of item.Dias) {
+                        await pool.request()
+                            .input('ID_RotaDet', sql.Int, idRotaDet)
+                            .input('ID_RotaHist', sql.Int, idRotaHist)
+                            .input('ID_Pulsus', sql.Int, item.ID_Pulsus || 0)
+                            .input('Nome', sql.NVarChar, item.Nome || '')
+                            .input('DataVisita', sql.Date, d.Data)
+                            .input('KM', sql.Float, d.KM || 0)
+                            .input('KMEstimado', sql.Float, d.KMEstimado || 0)
+                            .query(`
+                                INSERT INTO FuelSimulacoesDiario (ID_RotaDet, ID_RotaHist, ID_Pulsus, Nome, DataVisita, KM, KMEstimado)
+                                VALUES (@ID_RotaDet, @ID_RotaHist, @ID_Pulsus, @Nome, @DataVisita, @KM, @KMEstimado)
+                            `);
+                    }
+                }
+            }
+        }
+
+        res.json({ success: true, id: idRotaHist });
+    } catch (err) {
+        console.error('Erro ao salvar simulação de roteiro:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/fuel360/roteiro/historico/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('ID', sql.Int, req.params.id)
+            .query(`
+                SELECT r.ID_RotaDia, r.ID_RotaDet, r.ID_RotaHist, r.ID_Pulsus, r.Nome, r.DataVisita, r.KM, r.KMEstimado, d.Grupo
+                FROM FuelSimulacoesDiario r
+                INNER JOIN FuelSimulacoesDetalhe d ON r.ID_RotaDet = d.ID_RotaDet
+                WHERE r.ID_RotaHist = @ID
+                ORDER BY d.Nome ASC, r.DataVisita ASC
+            `);
+        res.json(result.recordset || []);
+    } catch (err) {
+        console.error('Erro ao buscar detalhe de simulação:', err);
+        res.json([]);
+    }
+});
+
+app.delete('/api/fuel360/roteiro/historico/:id', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const id = req.params.id;
+        await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @ID');
+        await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @ID');
+        await pool.request().input('ID', sql.Int, id).query('DELETE FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @ID');
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro ao excluir simulação:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put('/api/fuel360/roteiro/diario/:id', async (req, res) => {
+    const { km } = req.body;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const idDia = req.params.id;
+        await pool.request()
+            .input('ID', sql.Int, idDia)
+            .input('KM', sql.Float, km || 0)
+            .query('UPDATE FuelSimulacoesDiario SET KM = @KM WHERE ID_RotaDia = @ID');
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro ao editar km diário da simulação:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 // --- SYNC ENDPOINT (v2.12.51 - Blindado) ---
 app.get('/api/sync', async (req, res) => {
