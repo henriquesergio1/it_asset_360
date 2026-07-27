@@ -5334,6 +5334,108 @@ async function updateUserPendingStatus(pool, userId) {
     });
 
     
+    // --- SYSTEM SETTINGS API ENDPOINTS ---
+    app.get('/api/settings', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().query(`
+                SELECT TOP 1 
+                    AppName as appName, 
+                    LogoUrl as logoUrl, 
+                    Cnpj as cnpj, 
+                    HeadquartersAddress as headquartersAddress, 
+                    HeadquartersLat as headquartersLat, 
+                    HeadquartersLong as headquartersLong, 
+                    TermTemplate as termTemplate, 
+                    AccentColor as accentColor, 
+                    LicenseKey as licenseKey, 
+                    LicenseClient as licenseClient, 
+                    LicenseExpires as licenseExpires, 
+                    ZabbixUrl as zabbixUrl, 
+                    ZabbixToken as zabbixToken 
+                FROM SystemSettings
+            `);
+            res.json(result.recordset[0] || { appName: 'IT Asset 360', logoUrl: '' });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/settings', async (req, res) => {
+        try {
+            const { 
+                appName, 
+                logoUrl, 
+                cnpj, 
+                headquartersAddress, 
+                headquartersLat, 
+                headquartersLong, 
+                termTemplate, 
+                accentColor, 
+                _adminUser 
+            } = req.body;
+            
+            const pool = await sql.connect(dbConfig);
+            const check = await pool.request().query("SELECT COUNT(*) as count FROM SystemSettings");
+            
+            const parsedLat = (headquartersLat !== undefined && headquartersLat !== null && !isNaN(Number(headquartersLat))) ? parseFloat(headquartersLat) : null;
+            const parsedLong = (headquartersLong !== undefined && headquartersLong !== null && !isNaN(Number(headquartersLong))) ? parseFloat(headquartersLong) : null;
+
+            if (check.recordset[0].count === 0) {
+                await pool.request()
+                    .input('appName', sql.NVarChar, appName || 'IT Asset 360')
+                    .input('logoUrl', sql.NVarChar, logoUrl || '')
+                    .input('cnpj', sql.NVarChar, cnpj || '')
+                    .input('headquartersAddress', sql.NVarChar, headquartersAddress || '')
+                    .input('headquartersLat', sql.Float, parsedLat)
+                    .input('headquartersLong', sql.Float, parsedLong)
+                    .input('termTemplate', sql.NVarChar, termTemplate || null)
+                    .input('accentColor', sql.NVarChar, accentColor || '#2563eb')
+                    .query(`
+                        INSERT INTO SystemSettings 
+                        (AppName, LogoUrl, Cnpj, HeadquartersAddress, HeadquartersLat, HeadquartersLong, TermTemplate, AccentColor) 
+                        VALUES (@appName, @logoUrl, @cnpj, @headquartersAddress, @headquartersLat, @headquartersLong, @termTemplate, @accentColor)
+                    `);
+            } else {
+                await pool.request()
+                    .input('appName', sql.NVarChar, appName || 'IT Asset 360')
+                    .input('logoUrl', sql.NVarChar, logoUrl || '')
+                    .input('cnpj', sql.NVarChar, cnpj || '')
+                    .input('headquartersAddress', sql.NVarChar, headquartersAddress || '')
+                    .input('headquartersLat', sql.Float, parsedLat)
+                    .input('headquartersLong', sql.Float, parsedLong)
+                    .input('termTemplate', sql.NVarChar, termTemplate !== undefined ? termTemplate : null)
+                    .input('accentColor', sql.NVarChar, accentColor || '#2563eb')
+                    .query(`
+                        UPDATE SystemSettings 
+                        SET AppName=@appName, 
+                            LogoUrl=@logoUrl, 
+                            Cnpj=@cnpj, 
+                            HeadquartersAddress=@headquartersAddress, 
+                            HeadquartersLat=@headquartersLat, 
+                            HeadquartersLong=@headquartersLong,
+                            TermTemplate=COALESCE(@termTemplate, TermTemplate),
+                            AccentColor=COALESCE(@accentColor, AccentColor)
+                    `);
+            }
+
+            if (_adminUser) {
+                try {
+                    await pool.request()
+                        .input('admin', sql.NVarChar, _adminUser)
+                        .input('action', sql.NVarChar, 'UPDATE_SETTINGS')
+                        .input('target', sql.NVarChar, 'SystemSettings')
+                        .query("INSERT INTO AuditLogs (AdminUser, Action, TargetName, Timestamp) VALUES (@admin, @action, @target, GETDATE())");
+                } catch (e) {}
+            }
+
+            res.json({ success: true, message: 'Configurações do sistema salvas com sucesso.' });
+        } catch (err) {
+            console.error('[SETTINGS PUT ERROR]:', err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // --- ZABBIX INTEGRATION ---
     app.get('/api/zabbix/config', async (req, res) => {
         try {
