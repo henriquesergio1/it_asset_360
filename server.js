@@ -2009,10 +2009,39 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
             console.warn('[Fuel360 WARN] Falha ao verificar/alterar colunas de FuelColaboradores:', eCols.message);
         }
 
+        const normalizeGpsCoordinateServer = (val, isLatitude) => {
+            if (val === undefined || val === null || val === '') return null;
+            let str = String(val).trim().replace(',', '.');
+            let num = parseFloat(str);
+            if (isNaN(num)) return null;
+
+            const maxBound = isLatitude ? 90 : 180;
+
+            if (Math.abs(num) > maxBound) {
+                const isNegative = str.startsWith('-');
+                const digits = str.replace(/[^0-9]/g, '');
+                if (digits.length >= 3) {
+                    const testVal2 = parseFloat((isNegative ? '-' : '') + digits.substring(0, 2) + '.' + digits.substring(2));
+                    if (Math.abs(testVal2) <= maxBound) {
+                        num = testVal2;
+                    } else {
+                        const testVal1 = parseFloat((isNegative ? '-' : '') + digits.substring(0, 1) + '.' + digits.substring(1));
+                        if (Math.abs(testVal1) <= maxBound) {
+                            num = testVal1;
+                        }
+                    }
+                }
+            }
+
+            return (Math.abs(num) <= maxBound) ? num : null;
+        };
+
         console.log(`[Fuel360 LOG] Iniciando batch-address para ${items.length} colaboradores...`);
         for (const item of items) {
-            const hasCoords = item.latitude !== undefined && item.latitude !== null && !isNaN(item.latitude) &&
-                              item.longitude !== undefined && item.longitude !== null && !isNaN(item.longitude);
+            const parsedLat = normalizeGpsCoordinateServer(item.latitude, true);
+            const parsedLng = normalizeGpsCoordinateServer(item.longitude, false);
+
+            const hasCoords = parsedLat !== null && parsedLng !== null;
             const hasTipoVeiculo = item.tipoVeiculo !== undefined && item.tipoVeiculo !== null && String(item.tipoVeiculo).trim().length > 0;
             
             const reqQuery = pool.request()
@@ -2020,8 +2049,8 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
                 .input('Endereco', sql.NVarChar, item.endereco || '');
 
             if (hasCoords && hasTipoVeiculo) {
-                reqQuery.input('Lat', sql.Float, parseFloat(item.latitude));
-                reqQuery.input('Lng', sql.Float, parseFloat(item.longitude));
+                reqQuery.input('Lat', sql.Float, parsedLat);
+                reqQuery.input('Lng', sql.Float, parsedLng);
                 reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
                 await reqQuery.query(`
                     UPDATE FuelColaboradores 
@@ -2029,8 +2058,8 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
                     WHERE ID_Colaborador = @ID
                 `);
             } else if (hasCoords) {
-                reqQuery.input('Lat', sql.Float, parseFloat(item.latitude));
-                reqQuery.input('Lng', sql.Float, parseFloat(item.longitude));
+                reqQuery.input('Lat', sql.Float, parsedLat);
+                reqQuery.input('Lng', sql.Float, parsedLng);
                 await reqQuery.query(`
                     UPDATE FuelColaboradores 
                     SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng 

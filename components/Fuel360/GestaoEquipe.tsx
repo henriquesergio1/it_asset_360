@@ -423,6 +423,33 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
     );
 };
 
+const normalizeGpsCoordinate = (val: any, isLatitude: boolean): number | null => {
+    if (val === undefined || val === null || val === '') return null;
+    let str = String(val).trim().replace(',', '.');
+    let num = parseFloat(str);
+    if (isNaN(num)) return null;
+
+    const maxBound = isLatitude ? 90 : 180;
+
+    if (Math.abs(num) > maxBound) {
+        const isNegative = str.startsWith('-');
+        const digits = str.replace(/[^0-9]/g, '');
+        if (digits.length >= 3) {
+            const testVal2 = parseFloat((isNegative ? '-' : '') + digits.substring(0, 2) + '.' + digits.substring(2));
+            if (Math.abs(testVal2) <= maxBound) {
+                num = testVal2;
+            } else {
+                const testVal1 = parseFloat((isNegative ? '-' : '') + digits.substring(0, 1) + '.' + digits.substring(1));
+                if (Math.abs(testVal1) <= maxBound) {
+                    num = testVal1;
+                }
+            }
+        }
+    }
+
+    return (Math.abs(num) <= maxBound) ? num : null;
+};
+
 // --- MODAL DE ENDEREÇOS ---
 const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { colaboradores, refreshData } = useContext(DataContext);
@@ -443,21 +470,8 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
                 const rawLat = row['LatitudeBase'] !== undefined && row['LatitudeBase'] !== '' ? row['LatitudeBase'] : (row['Latitude'] || row['lat']);
                 const rawLng = row['LongitudeBase'] !== undefined && row['LongitudeBase'] !== '' ? row['LongitudeBase'] : (row['Longitude'] || row['lng'] || row['long']);
                 
-                let latitude: number | null = null;
-                if (typeof rawLat === 'number') {
-                    latitude = rawLat;
-                } else if (rawLat) {
-                    const parsed = parseFloat(String(rawLat).replace(',', '.'));
-                    latitude = isNaN(parsed) ? null : parsed;
-                }
-
-                let longitude: number | null = null;
-                if (typeof rawLng === 'number') {
-                    longitude = rawLng;
-                } else if (rawLng) {
-                    const parsed = parseFloat(String(rawLng).replace(',', '.'));
-                    longitude = isNaN(parsed) ? null : parsed;
-                }
+                const latitude = normalizeGpsCoordinate(rawLat, true);
+                const longitude = normalizeGpsCoordinate(rawLng, false);
 
                 const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
                 let tipoVeiculo = undefined;
