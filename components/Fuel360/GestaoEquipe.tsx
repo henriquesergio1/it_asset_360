@@ -4,6 +4,7 @@ import { DataContext } from './context/DataContext';
 import { Colaborador, TipoVeiculoReembolso, ImportPreviewResult, DiffItem, Grupo } from './types';
 import { batchUpdateColaboradoresAddress, getImportPreview, syncColaboradores, geocodeAddress } from './services/apiService';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { 
     UsersIcon, PlusCircleIcon, PencilIcon, TrashIcon, XCircleIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, LocationMarkerIcon, UserGroupIcon, CarIcon, MotoIcon, UserIcon, ChevronDownIcon, ChevronUpIcon, UploadIcon, ArrowRightIcon, RefreshIcon, BriefcaseIcon, SearchIcon, GlobeIcon
 } from './icons';
@@ -432,67 +433,102 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
 
-        const processFileContent = (content: string) => {
-            Papa.parse(content, { header: true, skipEmptyLines: true, complete: async (results: Papa.ParseResult<any>) => {
-                const updates: any[] = [];
-                results.data.forEach((row: any) => {
-                    const idPulsus = parseInt(row['ID_Pulsus'] || row['ID Pulsus'] || row['id_pulsus']);
-                    const codigoSetor = parseInt(row['CodigoSetor'] || row['Setor'] || row['codigo_setor']);
-                    const endereco = row['EnderecoBase'] || row['Endereco'] || row['endereco'];
-                    
-                    const rawLat = row['LatitudeBase'] || row['Latitude'] || row['lat'];
-                    const rawLng = row['LongitudeBase'] || row['Longitude'] || row['lng'] || row['long'];
-                    
-                    const latitude = rawLat ? parseFloat(String(rawLat).replace(',', '.')) : null;
-                    const longitude = rawLng ? parseFloat(String(rawLng).replace(',', '.')) : null;
+        const processRows = (rows: any[]) => {
+            const updates: any[] = [];
+            rows.forEach((row: any) => {
+                const idPulsus = parseInt(row['ID_Pulsus'] || row['ID Pulsus'] || row['id_pulsus']);
+                const codigoSetor = parseInt(row['CodigoSetor'] || row['Setor'] || row['codigo_setor']);
+                const endereco = String(row['EnderecoBase'] || row['Endereco'] || row['endereco'] || '').trim();
+                
+                const rawLat = row['LatitudeBase'] !== undefined && row['LatitudeBase'] !== '' ? row['LatitudeBase'] : (row['Latitude'] || row['lat']);
+                const rawLng = row['LongitudeBase'] !== undefined && row['LongitudeBase'] !== '' ? row['LongitudeBase'] : (row['Longitude'] || row['lng'] || row['long']);
+                
+                let latitude: number | null = null;
+                if (typeof rawLat === 'number') {
+                    latitude = rawLat;
+                } else if (rawLat) {
+                    const parsed = parseFloat(String(rawLat).replace(',', '.'));
+                    latitude = isNaN(parsed) ? null : parsed;
+                }
 
-                    const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
-                    let tipoVeiculo = undefined;
-                    if (rawTipoVeiculo) {
-                        const str = String(rawTipoVeiculo).trim();
-                        if (str.toLowerCase().includes('carro')) tipoVeiculo = 'Carro';
-                        else if (str.toLowerCase().includes('moto')) tipoVeiculo = 'Moto';
-                        else if (str.toLowerCase().includes('sem') || str.toLowerCase().includes('vt')) tipoVeiculo = 'Sem Veículo / VT';
-                        else tipoVeiculo = str;
-                    }
+                let longitude: number | null = null;
+                if (typeof rawLng === 'number') {
+                    longitude = rawLng;
+                } else if (rawLng) {
+                    const parsed = parseFloat(String(rawLng).replace(',', '.'));
+                    longitude = isNaN(parsed) ? null : parsed;
+                }
 
-                    if ((idPulsus || codigoSetor) && endereco) { 
-                        const colab = colaboradores.find(c => 
-                            (idPulsus && c.ID_Pulsus === idPulsus) || 
-                            (codigoSetor && c.CodigoSetor === codigoSetor)
-                        ); 
-                        if (colab) {
-                            const hasExisting = Boolean(colab.EnderecoBase && colab.EnderecoBase.trim().length > 0);
-                            updates.push({ 
-                                id: colab.ID_Colaborador, 
-                                nome: colab.Nome,
-                                endereco,
-                                latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
-                                longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
-                                tipoVeiculo,
-                                hasExisting
-                            }); 
-                        }
+                const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
+                let tipoVeiculo = undefined;
+                if (rawTipoVeiculo) {
+                    const str = String(rawTipoVeiculo).trim();
+                    if (str.toLowerCase().includes('carro')) tipoVeiculo = 'Carro';
+                    else if (str.toLowerCase().includes('moto')) tipoVeiculo = 'Moto';
+                    else if (str.toLowerCase().includes('sem') || str.toLowerCase().includes('vt')) tipoVeiculo = 'Sem Veículo / VT';
+                    else tipoVeiculo = str;
+                }
+
+                if ((idPulsus || codigoSetor) && endereco) { 
+                    const colab = colaboradores.find(c => 
+                        (idPulsus && c.ID_Pulsus === idPulsus) || 
+                        (codigoSetor && c.CodigoSetor === codigoSetor)
+                    ); 
+                    if (colab) {
+                        const hasExisting = Boolean(colab.EnderecoBase && colab.EnderecoBase.trim().length > 0);
+                        updates.push({ 
+                            id: colab.ID_Colaborador, 
+                            nome: colab.Nome,
+                            endereco,
+                            latitude: (latitude !== null && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
+                            longitude: (longitude !== null && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
+                            tipoVeiculo,
+                            hasExisting
+                        }); 
                     }
-                });
-                setPreview(updates);
-            } });
+                }
+            });
+            setPreview(updates);
         };
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const text = event.target?.result as string;
-            if (text && text.includes('\uFFFD')) {
-                const readerIso = new FileReader();
-                readerIso.onload = (eIso) => {
-                    processFileContent(eIso.target?.result as string);
+        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+        if (isExcel) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const buffer = evt.target?.result;
+                    const workbook = XLSX.read(buffer, { type: 'array', raw: true });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
+                    processRows(rows);
+                } catch (err: any) {
+                    alert("Erro ao ler planilha do Excel: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target?.result as string;
+                const parseCsvContent = (contentStr: string) => {
+                    Papa.parse(contentStr, { header: true, skipEmptyLines: true, complete: (results) => {
+                        processRows(results.data);
+                    } });
                 };
-                readerIso.readAsText(file, 'ISO-8859-1');
-            } else {
-                processFileContent(text);
-            }
-        };
-        reader.readAsText(file, 'UTF-8');
+                if (text && text.includes('\uFFFD')) {
+                    const readerIso = new FileReader();
+                    readerIso.onload = (eIso) => {
+                        parseCsvContent(eIso.target?.result as string);
+                    };
+                    readerIso.readAsText(file, 'ISO-8859-1');
+                } else {
+                    parseCsvContent(text);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
     };
 
     const handleSave = async () => {
@@ -504,7 +540,7 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
         }
         setIsProcessing(true);
         try { 
-            await batchUpdateColaboradoresAddress(itemsToSave, "Importação via CSV"); 
+            await batchUpdateColaboradoresAddress(itemsToSave, "Importação via Excel/CSV"); 
             refreshData(); 
             onClose(); 
         } catch (e: any) { 
@@ -524,8 +560,8 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] p-4">
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 w-full max-w-lg transition-colors">
                 <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Importar Endereços, Coordenadas e Veículos</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione um CSV/TSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b>, <b>'LatitudeBase'</b>, <b>'LongitudeBase'</b> e <b>'TipoVeiculo'</b>.</p>
-                <input type="file" accept=".csv,.txt,.tsv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Selecione uma planilha do Excel (<b>.xlsx / .xls</b>) ou CSV com as colunas <b>'ID_Pulsus'</b> (ou Setor), <b>'EnderecoBase'</b>, <b>'LatitudeBase'</b>, <b>'LongitudeBase'</b> e <b>'TipoVeiculo'</b>.</p>
+                <input type="file" accept=".xlsx,.xls,.csv,.txt,.tsv" onChange={handleFileUpload} className="mb-6 block w-full text-sm text-slate-500 dark:text-slate-400 file:bg-blue-50 dark:file:bg-blue-950/60 file:text-blue-700 dark:file:text-sky-300 file:border-0 file:rounded-lg file:px-4 file:py-2 cursor-pointer" />
                 
                 {preview.length > 0 && (
                     <div className="space-y-4 mb-6">
