@@ -2009,6 +2009,7 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
             console.warn('[Fuel360 WARN] Falha ao verificar/alterar colunas de FuelColaboradores:', eCols.message);
         }
 
+        console.log(`[Fuel360 LOG] Iniciando batch-address para ${items.length} colaboradores...`);
         for (const item of items) {
             const hasCoords = item.latitude !== undefined && item.latitude !== null && !isNaN(item.latitude) &&
                               item.longitude !== undefined && item.longitude !== null && !isNaN(item.longitude);
