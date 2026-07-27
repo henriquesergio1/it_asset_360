@@ -1069,8 +1069,8 @@ async function initializeDatabase() {
                         TipoVeiculo NVARCHAR(50) DEFAULT 'Carro',
                         Ativo BIT DEFAULT 1,
                         EnderecoBase NVARCHAR(MAX) NULL,
-                        LatitudeBase DECIMAL(12, 9) NULL,
-                        LongitudeBase DECIMAL(12, 9) NULL
+                        LatitudeBase FLOAT NULL,
+                        LongitudeBase FLOAT NULL
                     )
                 `);
             } else {
@@ -1080,10 +1080,14 @@ async function initializeDatabase() {
                     await pool.request().query("ALTER TABLE FuelColaboradores ADD EnderecoBase NVARCHAR(MAX) NULL");
                 }
                 if (!cols.includes('latitudebase')) {
-                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase DECIMAL(12, 9) NULL");
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase FLOAT NULL");
+                } else {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LatitudeBase FLOAT NULL");
                 }
                 if (!cols.includes('longitudebase')) {
-                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase DECIMAL(12, 9) NULL");
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase FLOAT NULL");
+                } else {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LongitudeBase FLOAT NULL");
                 }
             }
 
@@ -1984,7 +1988,7 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         
-        // Garantir inline no SQL Server que as colunas existam antes de qualquer UPDATE
+        // Garantir inline no SQL Server que as colunas existam e tenham tipo FLOAT antes de qualquer UPDATE
         try {
             const checkCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelColaboradores'");
             const cols = checkCols.recordset.map(c => c.COLUMN_NAME.toLowerCase());
@@ -1992,10 +1996,14 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
                 await pool.request().query("ALTER TABLE FuelColaboradores ADD EnderecoBase NVARCHAR(MAX) NULL");
             }
             if (!cols.includes('latitudebase')) {
-                await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase DECIMAL(12, 9) NULL");
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase FLOAT NULL");
+            } else {
+                await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LatitudeBase FLOAT NULL");
             }
             if (!cols.includes('longitudebase')) {
-                await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase DECIMAL(12, 9) NULL");
+                await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase FLOAT NULL");
+            } else {
+                await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LongitudeBase FLOAT NULL");
             }
         } catch (eCols) {
             console.warn('[Fuel360 WARN] Falha ao verificar/alterar colunas de FuelColaboradores:', eCols.message);
