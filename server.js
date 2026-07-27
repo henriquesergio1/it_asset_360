@@ -1498,6 +1498,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         const nativeRes = await pool.request().query(`
             SELECT devices.PulsusId as id_pulsus,
                    Users.FullName  AS nome,
+                   Users.Cpf       AS cpf,
                    Devices.InternalCode AS codigo_setor,
                    Sectors.Name AS grupo
             FROM Devices devices
@@ -1537,23 +1538,26 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             activePulsusIds.add(idPulsus);
             const existing = fuelMap.get(idPulsus);
             const codigoSetorNum = Number(nItem.codigo_setor) || 0;
+            const nCpf = nItem.cpf ? String(nItem.cpf).trim() : '';
             if (!existing) {
                 novos.push({
                     id_pulsus: idPulsus,
                     nome: nItem.nome,
                     matchType: 'NEW',
-                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor' }
+                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf }
                 });
             } else {
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
                 const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
                 const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
+                const cpfDiff = Boolean(nCpf && (existing.CPF || '').trim() !== nCpf);
 
-                if (nameDiff || sectorDiff || groupDiff) {
+                if (nameDiff || sectorDiff || groupDiff || cpfDiff) {
                     const changes = [];
                     if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
                     if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
                     if (groupDiff) changes.push({ field: 'Grupo', oldValue: existing.Grupo, newValue: nItem.grupo });
+                    if (cpfDiff) changes.push({ field: 'CPF', oldValue: existing.CPF, newValue: nCpf });
 
                     alterados.push({
                         id_pulsus: idPulsus,
@@ -1561,7 +1565,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                         matchType: 'ID_MATCH',
                         id_colaborador: existing.ID_Colaborador,
                         existingColab: existing,
-                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor' },
+                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf || existing.CPF },
                         changes
                     });
                 } else {
@@ -1609,29 +1613,40 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
         for (const item of items) {
             if (item.syncAction === 'INSERT') {
                 const tipoVeiculo = item.newData?.tipoVeiculo || 'Carro';
+                const cpfVal = item.newData?.cpf || null;
                 await pool.request()
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
                     .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
                     .input('Nome', sql.NVarChar, item.nome || '')
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
                     .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
+                    .input('CPF', sql.NVarChar, cpfVal)
                     .query(`
                         IF NOT EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
                         BEGIN
-                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, Ativo)
-                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, 1)
+                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, Ativo)
+                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, 1)
+                        END
+                        ELSE
+                        BEGIN
+                            UPDATE FuelColaboradores
+                            SET CPF = COALESCE(@CPF, CPF)
+                            WHERE ID_Pulsus = @ID_Pulsus
                         END
                     `);
                 processedCount++;
             } else if (item.syncAction === 'UPDATE_DATA') {
+                const cpfVal = item.newData?.cpf || null;
                 await pool.request()
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
                     .input('Nome', sql.NVarChar, item.nome || item.newData?.nome || '')
                     .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
+                    .input('CPF', sql.NVarChar, cpfVal)
                     .query(`
                         UPDATE FuelColaboradores 
-                        SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo 
+                        SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo,
+                            CPF = COALESCE(@CPF, CPF)
                         WHERE ID_Pulsus = @ID_Pulsus
                     `);
                 processedCount++;
