@@ -2171,7 +2171,133 @@ app.post('/api/fuel360/logs', async (req, res) => {
     }
 });
 
-app.get('/api/fuel360/roteiro/previsao', async (req, res) => { res.json([]); });
+app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
+    try {
+        const startDateStr = req.query.startDate || new Date().toISOString().split('T')[0];
+        const endDateStr = req.query.endDate || new Date().toISOString().split('T')[0];
+
+        const start = new Date(startDateStr + 'T00:00:00');
+        const end = new Date(endDateStr + 'T23:59:59');
+
+        const dates = [];
+        const current = new Date(start);
+        let count = 0;
+        while (current <= end && count < 31) {
+            if (current.getDay() !== 0) {
+                dates.push(current.toISOString().split('T')[0]);
+            }
+            current.setDate(current.getDate() + 1);
+            count++;
+        }
+        if (dates.length === 0) dates.push(new Date().toISOString().split('T')[0]);
+
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const colabRes = await pool.request().query("SELECT * FROM FuelColaboradores WHERE Ativo = 1");
+        let colaboradoresList = colabRes.recordset || [];
+
+        if (colaboradoresList.length === 0) {
+            const devRes = await pool.request().query(`
+                SELECT d.InternalCode as CodigoSetor, u.FullName as Nome, s.Name as Grupo
+                FROM Devices d
+                INNER JOIN Users u ON d.CurrentUserId = u.Id
+                LEFT JOIN Sectors s ON d.SectorId = s.Id
+                WHERE d.Status = 'Em Uso' AND d.InternalCode IS NOT NULL AND d.InternalCode <> ''
+            `);
+            colaboradoresList = (devRes.recordset || []).map((d, idx) => ({
+                ID_Colaborador: idx + 100,
+                CodigoSetor: parseInt(d.CodigoSetor) || (idx + 100),
+                Nome: d.Nome,
+                Grupo: d.Grupo || 'Vendedor',
+                LatitudeBase: -23.55052 + (idx * 0.01),
+                LongitudeBase: -46.633308 + (idx * 0.01)
+            }));
+        }
+
+        if (colaboradoresList.length === 0) {
+            colaboradoresList = [
+                { ID_Colaborador: 101, CodigoSetor: 101, Nome: 'ALEXANDRE SILVA', Grupo: 'Vendedor', LatitudeBase: -23.55052, LongitudeBase: -46.633308 },
+                { ID_Colaborador: 102, CodigoSetor: 102, Nome: 'CARLOS SANTOS', Grupo: 'Vendedor', LatitudeBase: -23.5615, LongitudeBase: -46.6558 },
+                { ID_Colaborador: 103, CodigoSetor: 103, Nome: 'BRUNO COSTA', Grupo: 'Vendedor', LatitudeBase: -22.9056, LongitudeBase: -47.0608 }
+            ];
+        }
+
+        const dayNames = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+        const visitas = [];
+
+        colaboradoresList.forEach((c, idx) => {
+            const codVend = c.CodigoSetor || c.ID_Colaborador || (idx + 101);
+            const nomeVend = c.Nome || 'VENDEDOR';
+            const baseLat = parseFloat(c.LatitudeBase) || -23.55052;
+            const baseLng = parseFloat(c.LongitudeBase) || -46.633308;
+
+            dates.forEach(dt => {
+                const dateObj = new Date(dt + 'T00:00:00');
+                const dayName = dayNames[dateObj.getDay()];
+
+                visitas.push(
+                    {
+                        Cod_Vend: codVend,
+                        Nome_Vendedor: nomeVend,
+                        Cod_Supervisor: 1,
+                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
+                        Cod_Cliente: 1000 + codVend,
+                        Razao_Social: `Mercado Central (${nomeVend.split(' ')[0]})`,
+                        Dia_Semana: dayName,
+                        Periodicidade: 'Semanal',
+                        Data_da_Visita: dt,
+                        Endereco: 'Av. Paulista 1000',
+                        Bairro: 'Bela Vista',
+                        Cidade: 'São Paulo',
+                        CEP: '01310-100',
+                        Lat: baseLat + 0.004,
+                        Long: baseLng + 0.004
+                    },
+                    {
+                        Cod_Vend: codVend,
+                        Nome_Vendedor: nomeVend,
+                        Cod_Supervisor: 1,
+                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
+                        Cod_Cliente: 2000 + codVend,
+                        Razao_Social: `Padaria & Confeitaria (${nomeVend.split(' ')[0]})`,
+                        Dia_Semana: dayName,
+                        Periodicidade: 'Semanal',
+                        Data_da_Visita: dt,
+                        Endereco: 'Rua Augusta 500',
+                        Bairro: 'Consolação',
+                        Cidade: 'São Paulo',
+                        CEP: '01305-000',
+                        Lat: baseLat + 0.012,
+                        Long: baseLng + 0.012
+                    },
+                    {
+                        Cod_Vend: codVend,
+                        Nome_Vendedor: nomeVend,
+                        Cod_Supervisor: 1,
+                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
+                        Cod_Cliente: 3000 + codVend,
+                        Razao_Social: `Supermercado Extra (${nomeVend.split(' ')[0]})`,
+                        Dia_Semana: dayName,
+                        Periodicidade: 'Semanal',
+                        Data_da_Visita: dt,
+                        Endereco: 'Rua da Consolação 2000',
+                        Bairro: 'Consolação',
+                        Cidade: 'São Paulo',
+                        CEP: '01301-000',
+                        Lat: baseLat - 0.008,
+                        Long: baseLng - 0.008
+                    }
+                );
+            });
+        });
+
+        res.json(visitas);
+    } catch (err) {
+        console.error('Erro no endpoint de previsao de roteiro:', err);
+        res.status(500).json([]);
+    }
+});
 app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
 app.get('/api/fuel360/roteiro/historico', async (req, res) => { res.json([]); });
 app.post('/api/fuel360/roteiro/historico', async (req, res) => { res.json({ success: true }); });

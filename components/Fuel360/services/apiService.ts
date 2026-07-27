@@ -321,7 +321,7 @@ const MockService = {
     ],
     getVisitasPrevistas: async (startDate?: string, endDate?: string): Promise<VisitaPrevista[]> => {
         await new Promise(r => setTimeout(r, 800));
-        return mockApiData.getMockVisitasPrevistas();
+        return mockApiData.getMockVisitasPrevistas(startDate, endDate);
     },
     getPromoterClients: async (): Promise<any[]> => {
         await new Promise(r => setTimeout(r, 800));
