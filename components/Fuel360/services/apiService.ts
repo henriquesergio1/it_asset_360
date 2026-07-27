@@ -85,8 +85,43 @@ const RealService = {
     login: (usuario: string, senha: string): Promise<AuthResponse> => apiRequest('/login', 'POST', { usuario, senha }),
     getSystemStatus: (): Promise<LicenseStatus> => apiRequest('/system/status'),
     updateLicense: (key: string): Promise<{message: string}> => apiRequest('/system/license', 'POST', { key }),
-    getSystemConfig: (): Promise<SystemConfig> => apiRequest('/system/config'),
-    updateSystemConfig: (config: SystemConfig): Promise<void> => apiRequest('/system/config', 'PUT', config),
+    getSystemConfig: async (): Promise<SystemConfig> => {
+        try {
+            const res = await fetch('/api/bootstrap');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.settings) {
+                    return {
+                        companyName: data.settings.appName || 'Empresa',
+                        logoUrl: data.settings.logoUrl || '',
+                        headquartersAddress: data.settings.headquartersAddress || '',
+                        headquartersLat: data.settings.headquartersLat,
+                        headquartersLong: data.settings.headquartersLong,
+                        cnpj: data.settings.cnpj,
+                        razaoSocial: data.settings.appName
+                    };
+                }
+            }
+        } catch (e) {}
+        return apiRequest('/system/config');
+    },
+    updateSystemConfig: async (config: SystemConfig): Promise<void> => {
+        try {
+            await fetch('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    appName: config.companyName,
+                    logoUrl: config.logoUrl,
+                    cnpj: config.cnpj,
+                    headquartersAddress: config.headquartersAddress,
+                    headquartersLat: config.headquartersLat,
+                    headquartersLong: config.headquartersLong
+                })
+            });
+        } catch (e) {}
+        return apiRequest('/system/config', 'PUT', config);
+    },
     getIntegrationConfig: (): Promise<IntegrationConfig> => apiRequest('/system/integration'),
     updateIntegrationConfig: (config: IntegrationConfig): Promise<void> => apiRequest('/system/integration', 'PUT', config),
     testDbConnection: (config: DbConnectionConfig): Promise<{success: boolean, message: string}> => apiRequest('/system/test-connection', 'POST', { config }),

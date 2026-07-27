@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil, RhTermTemplate } from '../types';
 import { hasPermission, resolveUserPermissions } from '../utils/rbac';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor, MapPin } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -658,6 +658,35 @@ ORDER BY a.CODCET;`;
  const [isTestingConnection, setIsTestingConnection] = useState(false);
  const [isPasswordModified, setIsPasswordModified] = useState(false);
   const [isSavingZabbix, setIsSavingZabbix] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  const handleGeocodeAddress = async () => {
+    if (!settingsForm.headquartersAddress?.trim()) {
+      showToast('Digite o endereço completo da sede para buscar as coordenadas.', 'error');
+      return;
+    }
+    setIsGeocoding(true);
+    try {
+      const address = settingsForm.headquartersAddress.trim();
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+      if (!res.ok) throw new Error('Falha no serviço de localização.');
+      const data = await res.json();
+      if (!data || data.length === 0) throw new Error('Endereço não encontrado no mapa.');
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      setSettingsForm(prev => ({
+        ...prev,
+        headquartersLat: lat,
+        headquartersLong: lon
+      }));
+      showToast('Coordenadas da sede encontradas e preenchidas!', 'success');
+    } catch (err: any) {
+      showToast(`Erro ao buscar coordenadas: ${err.message}`, 'error');
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
  useEffect(() => {
  setSettingsForm(settings);
@@ -928,31 +957,147 @@ ORDER BY a.CODCET;`;
  )}
 
  {activeTab === 'SETTINGS' && (
- <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
- <form onSubmit={handleSettingsSubmit} className="max-w-2xl space-y-6">
- <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4"><Layout size={20} className=""/> Personalização do App</h3>
- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
- <div className="md:col-span-2">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">Nome da Aplicação</label>
- <input required className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-bold"value={settingsForm.appName} onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}/>
- </div>
- <div>
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">CNPJ da Empresa</label>
- <input className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white font-mono"value={settingsForm.cnpj || ''} onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} placeholder="00.000.000/0001-00"/>
- </div>
- <div className="md:col-span-2">
- <label className="block text-[11px] font-black uppercase mb-1 ml-1">URL do Logotipo</label>
- <div className="flex gap-4 items-center">
- <input className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm"value={settingsForm.logoUrl} onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} placeholder="https://..."/>
- {settingsForm.logoUrl && <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain rounded border p-1"alt="Logo Preview"/>}
- </div>
- </div>
- </div>
- <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
- <button type="submit"className="text-slate-900 dark:text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2"><Save size={18}/> Salvar Configurações</button>
- </div>
- </form>
- </div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
+      <form onSubmit={handleSettingsSubmit} className="space-y-8">
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+            <Layout size={20} className="text-blue-500"/> Cadastro da Empresa & Identidade Visual
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">Razão Social / Nome da Aplicação</label>
+              <input 
+                required 
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-bold"
+                value={settingsForm.appName || ''} 
+                onChange={e => setSettingsForm({...settingsForm, appName: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">CNPJ da Empresa</label>
+              <input 
+                className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-mono"
+                value={settingsForm.cnpj || ''} 
+                onChange={e => setSettingsForm({...settingsForm, cnpj: e.target.value})} 
+                placeholder="00.000.000/0001-00"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">URL do Logotipo</label>
+              <div className="flex gap-4 items-center">
+                <input 
+                  className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
+                  value={settingsForm.logoUrl || ''} 
+                  onChange={e => setSettingsForm({...settingsForm, logoUrl: e.target.value})} 
+                  placeholder="https://..."
+                />
+                {settingsForm.logoUrl && (
+                  <img src={settingsForm.logoUrl} className="h-10 w-10 object-contain rounded border border-slate-200 dark:border-slate-700 p-1 bg-white" alt="Logo Preview"/>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Seção Endereço e Geolocalização da Sede */}
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+            <MapPin size={20} className="text-blue-500"/> Endereço & Geolocalização da Sede (Reuniões de Ciclo)
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">Endereço Completo da Sede</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    className="flex-1 border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-medium text-sm"
+                    value={settingsForm.headquartersAddress || ''}
+                    onChange={e => setSettingsForm({...settingsForm, headquartersAddress: e.target.value})}
+                    placeholder="Rua, Número, Bairro, Cidade - UF, CEP"
+                  />
+                  <button 
+                    type="button"
+                    onClick={handleGeocodeAddress}
+                    disabled={isGeocoding}
+                    className="px-4 py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition flex items-center gap-2 disabled:opacity-50"
+                    title="Buscar Coordenadas no Mapa"
+                  >
+                    {isGeocoding ? <Loader2 size={16} className="animate-spin"/> : <Search size={16}/>}
+                    Buscar
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">Latitude</label>
+                  <input 
+                    type="number"
+                    step="any"
+                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-mono text-sm"
+                    value={settingsForm.headquartersLat !== undefined ? settingsForm.headquartersLat : ''}
+                    onChange={e => setSettingsForm({...settingsForm, headquartersLat: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300">Longitude</label>
+                  <input 
+                    type="number"
+                    step="any"
+                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-blue-500 outline-none bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-mono text-sm"
+                    value={settingsForm.headquartersLong !== undefined ? settingsForm.headquartersLong : ''}
+                    onChange={e => setSettingsForm({...settingsForm, headquartersLong: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 leading-relaxed font-medium flex items-start gap-2">
+                <Info size={18} className="shrink-0 text-blue-500 mt-0.5" />
+                <span>
+                  O endereço e as coordenadas da sede são utilizados por todos os módulos do sistema, incluindo a impressão de relatórios, assinaturas digitais, termos de comodato e os cálculos de distância de <b>Reunião de Ciclo</b> no Fuel360.
+                </span>
+              </div>
+            </div>
+
+            {/* Pré-visualização do Mapa */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-black uppercase mb-1 ml-1 text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                <MapPin size={14} className="text-blue-500"/> Pré-visualização do Local no Mapa
+              </label>
+              <div className="h-64 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-inner bg-slate-100 dark:bg-slate-900 flex items-center justify-center relative">
+                {settingsForm.headquartersLat && settingsForm.headquartersLong ? (
+                  <iframe 
+                    title="Mapa da Sede"
+                    width="100%" 
+                    height="100%" 
+                    frameBorder="0"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(settingsForm.headquartersLong - 0.005).toFixed(6)}%2C${(settingsForm.headquartersLat - 0.005).toFixed(6)}%2C${(settingsForm.headquartersLong + 0.005).toFixed(6)}%2C${(settingsForm.headquartersLat + 0.005).toFixed(6)}&layer=mapnik&marker=${settingsForm.headquartersLat}%2C${settingsForm.headquartersLong}`}
+                    className="w-full h-full border-0"
+                  />
+                ) : (
+                  <div className="text-center p-6 text-slate-400">
+                    <MapPin size={32} className="mx-auto mb-2 opacity-50"/>
+                    <p className="text-xs font-bold uppercase tracking-wider">Nenhuma coordenada configurada</p>
+                    <p className="text-[11px] mt-1">Preencha o endereço e clique em "Buscar" para carregar o mapa.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+          <button 
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-xl font-black uppercase text-xs tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-blue-600/20"
+          >
+            <Save size={18}/> Salvar Configurações Centralizadas
+          </button>
+        </div>
+      </form>
+    </div>
  )}
 
  {activeTab === 'TEMPLATE' && (

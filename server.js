@@ -499,6 +499,10 @@ async function initializeDatabase() {
                     if (checkZToken.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE SystemSettings ADD ZabbixToken NVARCHAR(MAX) NULL');
                     }
+                    const checkAddr = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'HeadquartersAddress'`);
+                    if (checkAddr.recordset.length === 0) {
+                        await pool.request().query('ALTER TABLE SystemSettings ADD HeadquartersAddress NVARCHAR(MAX) NULL, HeadquartersLat FLOAT NULL, HeadquartersLong FLOAT NULL');
+                    }
                 }
                 
                 if (table === 'Terms') {
@@ -1283,7 +1287,7 @@ app.get('/api/bootstrap', async (req, res) => {
             `),
             safeQuery(pool, "SELECT * FROM Users"),
             safeQuery(pool, "SELECT * FROM SystemUsers"),
-            safeQuery(pool, "SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
+            safeQuery(pool, "SELECT TOP 1 AppName as appName, LogoUrl as logoUrl, Cnpj as cnpj, HeadquartersAddress as headquartersAddress, HeadquartersLat as headquartersLat, HeadquartersLong as headquartersLong, TermTemplate as termTemplate, AccentColor as accentColor, LicenseKey as licenseKey, LicenseClient as licenseClient, LicenseExpires as licenseExpires, ZabbixUrl as zabbixUrl, ZabbixToken as zabbixToken FROM SystemSettings"),
             safeQuery(pool, "SELECT Id, Name, BrandId, TypeId FROM Models"), 
             safeQuery(pool, "SELECT * FROM Brands"),
             safeQuery(pool, "SELECT * FROM AssetTypes"),

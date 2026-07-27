@@ -247,6 +247,9 @@ export interface SystemSettings {
   appName: string;
   cnpj?: string; 
   logoUrl: string;
+  headquartersAddress?: string;
+  headquartersLat?: number;
+  headquartersLong?: number;
   termTemplate?: string; 
   returnTermTemplate?: string; 
   accentColor?: string;
