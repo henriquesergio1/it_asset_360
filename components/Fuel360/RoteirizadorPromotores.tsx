@@ -241,8 +241,8 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
 
     return (
         <div className="fixed inset-0 z-[300] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full h-full max-w-6xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
-                <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-10 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full h-[85vh] max-h-[850px] max-w-6xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                <div className="p-6 shrink-0 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 z-20 shadow-sm relative">
                     <div className="flex items-center">
                         <button onClick={onClose} className="mr-5 p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 border border-slate-100 dark:border-slate-800"><ArrowLeftIcon className="w-6 h-6"/></button>
                         <div>
@@ -265,9 +265,9 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                         <button onClick={onClose} className="px-8 py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95">FECHAR</button>
                     </div>
                 </div>
-                <div className="flex-1 relative">
+                <div className="flex-1 w-full relative min-h-[500px] overflow-hidden">
                     {loadingMap && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-50/80">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-50/80 dark:bg-slate-900/80">
                             <SpinnerIcon className="w-12 h-12 text-blue-600 animate-spin mb-4"/>
                             <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Calculando rota terrestre segura...</p>
                         </div>
@@ -278,9 +278,9 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                             (route.validPoints[0]?.Long && !isNaN(route.validPoints[0]?.Long)) ? route.validPoints[0].Long : -46.633308
                         ]} 
                         zoom={13} 
-                        style={{ height: '100%', width: '100%', zIndex: 0 }}
+                        style={{ height: '100%', width: '100%', minHeight: '500px', zIndex: 0 }}
                     >
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
                         <MapAutoFit points={route.allPoints} />
                         
                         {/* Linhas de Rota (Apenas para pontos válidos e se não for inativo) */}
