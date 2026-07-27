@@ -2321,136 +2321,53 @@ app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
 
-        // 1. TENTA CONSULTAR A QUERY DO ROTEIRIZADOR EXTERNO (SE CONFIGURADA EM SYSTEMSETTINGS)
+        // 1. CONSULTAR QUERY DO ROTEIRIZADOR EXTERNO CONFIGURADA EM SYSTEMSETTINGS
         const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
         const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
 
         if (s && s.ExtRoute_Host && s.ExtRoute_Query && s.ExtRoute_Host.trim() !== '' && s.ExtRoute_Query.trim() !== '') {
+            let extPool = null;
             try {
-                const extRouteConfig = {
+                console.log(`[Roteirizador ERP] Conectando ao ERP (${s.ExtRoute_Host}:${s.ExtRoute_Port || 1433})...`);
+                extPool = new sql.ConnectionPool({
                     server: s.ExtRoute_Host,
-                    authentication: {
-                        type: 'default',
-                        options: { userName: s.ExtRoute_User, password: s.ExtRoute_Pass }
-                    },
+                    port: parseInt(s.ExtRoute_Port || 1433),
+                    user: s.ExtRoute_User,
+                    password: s.ExtRoute_Pass,
+                    database: s.ExtRoute_Database,
                     options: {
-                        database: s.ExtRoute_Database,
-                        port: s.ExtRoute_Port || 1433,
                         encrypt: false,
                         trustServerCertificate: true,
-                        requestTimeout: 120000
+                        requestTimeout: 60000
                     }
-                };
-                const extPool = await sql.connect(extRouteConfig);
+                });
+                await extPool.connect();
+
+                console.log(`[Roteirizador ERP] Executando query para o período ${startDateStr} a ${endDateStr}...`);
                 const extRes = await extPool.request()
-                    .input('pStartDate', sql.Date, startDateStr)
-                    .input('pEndDate', sql.Date, endDateStr)
+                    .input('pStartDate', sql.NVarChar, startDateStr)
+                    .input('pEndDate', sql.NVarChar, endDateStr)
                     .query(s.ExtRoute_Query);
 
+                await extPool.close();
+
                 if (extRes.recordset && extRes.recordset.length > 0) {
+                    console.log(`[Roteirizador ERP] Sucesso! ${extRes.recordset.length} registros de visitas carregados do ERP.`);
                     const normalized = extRes.recordset.map(row => normalizeVisitaData(row));
                     return res.json(normalized);
+                } else {
+                    console.log('[Roteirizador ERP] Query executada com sucesso mas retornou 0 linhas do ERP.');
+                    return res.json([]);
                 }
             } catch (extErr) {
-                console.warn('[Roteirizador Ext. WARN] Falha ao consultar banco externo de rotas:', extErr.message);
+                if (extPool) try { await extPool.close(); } catch(e) {}
+                console.error('[Roteirizador ERP ERROR] Falha ao consultar banco externo do Roteirizador:', extErr.message);
+                return res.json([]);
             }
+        } else {
+            console.log('[Roteirizador ERP] Configuração de integração ERP não preenchida em Administração.');
+            return res.json([]);
         }
-
-        // 2. FALLBACK SEGURO: USA COLABORADORES REAIS CADASTRADOS NO SISTEMA (SEM MOCKS HARDCODED)
-        const start = new Date(startDateStr + 'T00:00:00');
-        const end = new Date(endDateStr + 'T23:59:59');
-
-        const dates = [];
-        const current = new Date(start);
-        let count = 0;
-        while (current <= end && count < 31) {
-            if (current.getDay() !== 0) {
-                dates.push(current.toISOString().split('T')[0]);
-            }
-            current.setDate(current.getDate() + 1);
-            count++;
-        }
-        if (dates.length === 0) dates.push(new Date().toISOString().split('T')[0]);
-
-        const colabRes = await pool.request().query("SELECT * FROM FuelColaboradores WHERE Ativo = 1");
-        let colaboradoresList = colabRes.recordset || [];
-
-        if (colaboradoresList.length === 0) {
-            const devRes = await pool.request().query(`
-                SELECT d.InternalCode as CodigoSetor, u.FullName as Nome, s.Name as Grupo
-                FROM Devices d
-                INNER JOIN Users u ON d.CurrentUserId = u.Id
-                LEFT JOIN Sectors s ON d.SectorId = s.Id
-                WHERE d.Status = 'Em Uso' AND d.InternalCode IS NOT NULL AND d.InternalCode <> ''
-            `);
-            const rawDevs = devRes.recordset || [];
-            
-            const fieldKeywords = ['VEND', 'PROM', 'SUPERV', 'MERCHANDIS', 'COMERCIAL', 'TRADE', 'CAMPO', 'OPERACIONAL', 'REPRESENTANTE'];
-            const isField = (grp) => grp && fieldKeywords.some(kw => grp.toUpperCase().includes(kw));
-
-            colaboradoresList = rawDevs.filter(d => isField(d.Grupo)).map((d, idx) => ({
-                ID_Colaborador: idx + 1,
-                CodigoSetor: parseInt(d.CodigoSetor) || (idx + 1),
-                Nome: d.Nome,
-                Grupo: d.Grupo || 'Vendedor',
-                LatitudeBase: -23.55052 + (idx * 0.01),
-                LongitudeBase: -46.633308 + (idx * 0.01)
-            }));
-        }
-
-        const dayNames = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
-        const visitas = [];
-
-        colaboradoresList.forEach((c, idx) => {
-            const codVend = c.CodigoSetor || c.ID_Colaborador || (idx + 1);
-            const nomeVend = c.Nome;
-            const baseLat = parseFloat(c.LatitudeBase) || -23.55052;
-            const baseLng = parseFloat(c.LongitudeBase) || -46.633308;
-
-            dates.forEach(dt => {
-                const dateObj = new Date(dt + 'T00:00:00');
-                const dayName = dayNames[dateObj.getDay()];
-
-                visitas.push(
-                    {
-                        Cod_Vend: codVend,
-                        Nome_Vendedor: nomeVend,
-                        Cod_Supervisor: 1,
-                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
-                        Cod_Cliente: 1000 + codVend,
-                        Razao_Social: `Cliente Rota (${nomeVend.split(' ')[0]}) - Ponto A`,
-                        Dia_Semana: dayName,
-                        Periodicidade: 'Semanal',
-                        Data_da_Visita: dt,
-                        Endereco: 'Av. Paulista 1000',
-                        Bairro: 'Bela Vista',
-                        Cidade: 'São Paulo',
-                        CEP: '01310-100',
-                        Lat: baseLat + 0.004,
-                        Long: baseLng + 0.004
-                    },
-                    {
-                        Cod_Vend: codVend,
-                        Nome_Vendedor: nomeVend,
-                        Cod_Supervisor: 1,
-                        Nome_Supervisor: 'SUPERVISOR REGIONAL',
-                        Cod_Cliente: 2000 + codVend,
-                        Razao_Social: `Cliente Rota (${nomeVend.split(' ')[0]}) - Ponto B`,
-                        Dia_Semana: dayName,
-                        Periodicidade: 'Semanal',
-                        Data_da_Visita: dt,
-                        Endereco: 'Rua Augusta 500',
-                        Bairro: 'Consolação',
-                        Cidade: 'São Paulo',
-                        CEP: '01305-000',
-                        Lat: baseLat + 0.012,
-                        Long: baseLng + 0.012
-                    }
-                );
-            });
-        });
-
-        res.json(visitas);
     } catch (err) {
         console.error('Erro em GET /api/fuel360/roteiro/previsao:', err);
         res.json([]);
