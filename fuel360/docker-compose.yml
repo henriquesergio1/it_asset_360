@@ -1,0 +1,37 @@
+
+version: '3.8'
+
+services:
+  fuel360-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.txt
+    container_name: fuel360-api
+    restart: unless-stopped
+    ports:
+      # Mapeia a porta 3000 do container para a porta 3031 do seu servidor (Fuel360).
+      - "3031:3000"
+    
+    # As variáveis de ambiente (senhas, etc.) devem ser configuradas diretamente
+    # no Portainer ou em um arquivo .env na mesma pasta do docker-compose.
+    environment:
+      - API_PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-fuel360-secret-key-change-in-prod}
+      
+      # Conexão Principal (Banco Fuel360 - 10.10.10.100)
+      - DB_SERVER_FUEL360=${DB_SERVER_FUEL360}
+      - DB_DATABASE_FUEL360=${DB_DATABASE_FUEL360}
+      - DB_USER_FUEL360=${DB_USER_FUEL360}
+      - DB_PASSWORD_FUEL360=${DB_PASSWORD_FUEL360}
+
+  fuel360-frontend:
+    build:
+      context: . # Constrói a imagem a partir da raiz do projeto
+      dockerfile: Dockerfile.txt
+    container_name: fuel360-frontend
+    restart: unless-stopped
+    ports:
+      # Mapeia a porta 80 do container para a porta 8081 do servidor (Fuel360).
+      - "8081:80"
+    depends_on:
+      - fuel360-api

@@ -1050,6 +1050,12 @@ async function initializeDatabase() {
                     )
                 `);
             }
+            try {
+                const countGrupos = await pool.request().query("SELECT COUNT(*) as count FROM FuelGrupos");
+                if (countGrupos.recordset[0].count === 0) {
+                    await pool.request().query("INSERT INTO FuelGrupos (Nome) VALUES ('Vendedor'), ('Promotor'), ('Supervisor')");
+                }
+            } catch (e) {}
 
             const checkColab = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelColaboradores'");
             if (checkColab.recordset.length === 0) {
@@ -1438,6 +1444,34 @@ app.post('/api/fuel360/system/test-connection', async (req, res) => {
 app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        // Busca grupos cadastrados na tabela FuelGrupos
+        const gruposRes = await pool.request().query("SELECT Nome FROM FuelGrupos");
+        const registeredGroups = (gruposRes.recordset || []).map(g => (g.Nome || '').toUpperCase().trim());
+
+        const fieldKeywords = ['VEND', 'PROM', 'SUPERV', 'MERCHANDIS', 'COMERCIAL', 'TRADE', 'CAMPO', 'OPERACIONAL', 'REPRESENTANTE', 'MOTORISTA', 'ENTREGA'];
+
+        const isFieldSector = (sectorName) => {
+            if (!sectorName) return false;
+            const upper = sectorName.toUpperCase().trim();
+            if (registeredGroups.includes(upper)) return true;
+            return fieldKeywords.some(kw => upper.includes(kw));
+        };
+
+        const mapGroup = (sectorName) => {
+            if (!sectorName) return 'Vendedor';
+            const upper = sectorName.toUpperCase().trim();
+            if (registeredGroups.includes(upper)) {
+                const found = gruposRes.recordset.find(g => (g.Nome || '').toUpperCase().trim() === upper);
+                return found ? found.Nome : sectorName;
+            }
+            if (upper.includes('PROM') || upper.includes('MERCHANDIS') || upper.includes('TRADE')) return 'Promotor';
+            if (upper.includes('SUPERV') || upper.includes('GEREN') || upper.includes('COORDEN')) return 'Supervisor';
+            if (upper.includes('VEND') || upper.includes('COMERCIAL') || upper.includes('REPRESENTANTE')) return 'Vendedor';
+            return 'Vendedor';
+        };
+
         const nativeRes = await pool.request().query(`
             SELECT devices.PulsusId as id_pulsus,
                    Users.FullName  AS nome,
@@ -1455,7 +1489,14 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
               AND AssetTypes.Name = 'Celular'
             ORDER BY 3
         `);
-        const nativeItems = nativeRes.recordset || [];
+        
+        let nativeItems = nativeRes.recordset || [];
+
+        // Filtra apenas colaboradores pertencentes a setores operacionais/vendas/promotores/supervisores
+        nativeItems = nativeItems.filter(nItem => isFieldSector(nItem.grupo)).map(nItem => ({
+            ...nItem,
+            grupo: mapGroup(nItem.grupo)
+        }));
 
         const fuelColabRes = await pool.request().query(`SELECT * FROM FuelColaboradores`);
         const fuelItems = fuelColabRes.recordset || [];
@@ -1478,7 +1519,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                     id_pulsus: idPulsus,
                     nome: nItem.nome,
                     matchType: 'NEW',
-                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Outros' }
+                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor' }
                 });
             } else {
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
@@ -1497,7 +1538,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                         matchType: 'ID_MATCH',
                         id_colaborador: existing.ID_Colaborador,
                         existingColab: existing,
-                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Outros' },
+                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor' },
                         changes
                     });
                 } else {
@@ -1528,7 +1569,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         });
     } catch (err) {
         console.error('Erro ao gerar preview de importação nativa Fuel360:', err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
