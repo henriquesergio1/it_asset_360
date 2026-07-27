@@ -430,47 +430,66 @@ const AddressImportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = (
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]; if (!file) return;
-        Papa.parse(file, { header: true, skipEmptyLines: true, complete: async (results: Papa.ParseResult<any>) => {
-            const updates: any[] = [];
-            results.data.forEach((row: any) => {
-                const idPulsus = parseInt(row['ID_Pulsus'] || row['ID Pulsus'] || row['id_pulsus']);
-                const codigoSetor = parseInt(row['CodigoSetor'] || row['Setor'] || row['codigo_setor']);
-                const endereco = row['EnderecoBase'] || row['Endereco'] || row['endereco'];
-                
-                const rawLat = row['LatitudeBase'] || row['Latitude'] || row['lat'];
-                const rawLng = row['LongitudeBase'] || row['Longitude'] || row['lng'] || row['long'];
-                
-                const latitude = rawLat ? parseFloat(String(rawLat).replace(',', '.')) : null;
-                const longitude = rawLng ? parseFloat(String(rawLng).replace(',', '.')) : null;
 
-                const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
-                let tipoVeiculo = undefined;
-                if (rawTipoVeiculo) {
-                    const str = String(rawTipoVeiculo).trim();
-                    if (str.toLowerCase().includes('carro')) tipoVeiculo = 'Carro';
-                    else if (str.toLowerCase().includes('moto')) tipoVeiculo = 'Moto';
-                    else if (str.toLowerCase().includes('sem') || str.toLowerCase().includes('vt')) tipoVeiculo = 'Sem Veículo / VT';
-                    else tipoVeiculo = str;
-                }
+        const processFileContent = (content: string) => {
+            Papa.parse(content, { header: true, skipEmptyLines: true, complete: async (results: Papa.ParseResult<any>) => {
+                const updates: any[] = [];
+                results.data.forEach((row: any) => {
+                    const idPulsus = parseInt(row['ID_Pulsus'] || row['ID Pulsus'] || row['id_pulsus']);
+                    const codigoSetor = parseInt(row['CodigoSetor'] || row['Setor'] || row['codigo_setor']);
+                    const endereco = row['EnderecoBase'] || row['Endereco'] || row['endereco'];
+                    
+                    const rawLat = row['LatitudeBase'] || row['Latitude'] || row['lat'];
+                    const rawLng = row['LongitudeBase'] || row['Longitude'] || row['lng'] || row['long'];
+                    
+                    const latitude = rawLat ? parseFloat(String(rawLat).replace(',', '.')) : null;
+                    const longitude = rawLng ? parseFloat(String(rawLng).replace(',', '.')) : null;
 
-                if ((idPulsus || codigoSetor) && endereco) { 
-                    const colab = colaboradores.find(c => 
-                        (idPulsus && c.ID_Pulsus === idPulsus) || 
-                        (codigoSetor && c.CodigoSetor === codigoSetor)
-                    ); 
-                    if (colab) {
-                        updates.push({ 
-                            id: colab.ID_Colaborador, 
-                            endereco,
-                            latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
-                            longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
-                            tipoVeiculo
-                        }); 
+                    const rawTipoVeiculo = row['TipoVeiculo'] || row['Tipo Veiculo'] || row['Tipo_Veiculo'] || row['tipo_veiculo'];
+                    let tipoVeiculo = undefined;
+                    if (rawTipoVeiculo) {
+                        const str = String(rawTipoVeiculo).trim();
+                        if (str.toLowerCase().includes('carro')) tipoVeiculo = 'Carro';
+                        else if (str.toLowerCase().includes('moto')) tipoVeiculo = 'Moto';
+                        else if (str.toLowerCase().includes('sem') || str.toLowerCase().includes('vt')) tipoVeiculo = 'Sem Veículo / VT';
+                        else tipoVeiculo = str;
                     }
-                }
-            });
-            setPreview(updates);
-        } });
+
+                    if ((idPulsus || codigoSetor) && endereco) { 
+                        const colab = colaboradores.find(c => 
+                            (idPulsus && c.ID_Pulsus === idPulsus) || 
+                            (codigoSetor && c.CodigoSetor === codigoSetor)
+                        ); 
+                        if (colab) {
+                            updates.push({ 
+                                id: colab.ID_Colaborador, 
+                                endereco,
+                                latitude: (latitude && !isNaN(latitude)) ? latitude : colab.LatitudeBase,
+                                longitude: (longitude && !isNaN(longitude)) ? longitude : colab.LongitudeBase,
+                                tipoVeiculo
+                            }); 
+                        }
+                    }
+                });
+                setPreview(updates);
+            } });
+        };
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target?.result as string;
+            // Se a leitura inicial em UTF-8 gerou caracteres corrompidos (\uFFFD), relemos como ISO-8859-1 (Windows ANSI)
+            if (text && text.includes('\uFFFD')) {
+                const readerIso = new FileReader();
+                readerIso.onload = (eIso) => {
+                    processFileContent(eIso.target?.result as string);
+                };
+                readerIso.readAsText(file, 'ISO-8859-1');
+            } else {
+                processFileContent(text);
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
     };
 
     const handleSave = async () => {
