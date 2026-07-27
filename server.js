@@ -2011,8 +2011,8 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
                 .input('Endereco', sql.NVarChar, item.endereco || '');
 
             if (hasCoords && hasTipoVeiculo) {
-                reqQuery.input('Lat', sql.Decimal(12, 9), parseFloat(item.latitude));
-                reqQuery.input('Lng', sql.Decimal(12, 9), parseFloat(item.longitude));
+                reqQuery.input('Lat', sql.Float, parseFloat(item.latitude));
+                reqQuery.input('Lng', sql.Float, parseFloat(item.longitude));
                 reqQuery.input('TipoVeiculo', sql.NVarChar, String(item.tipoVeiculo).trim());
                 await reqQuery.query(`
                     UPDATE FuelColaboradores 
@@ -2020,8 +2020,8 @@ app.post('/api/fuel360/colaboradores/batch-address', async (req, res) => {
                     WHERE ID_Colaborador = @ID
                 `);
             } else if (hasCoords) {
-                reqQuery.input('Lat', sql.Decimal(12, 9), parseFloat(item.latitude));
-                reqQuery.input('Lng', sql.Decimal(12, 9), parseFloat(item.longitude));
+                reqQuery.input('Lat', sql.Float, parseFloat(item.latitude));
+                reqQuery.input('Lng', sql.Float, parseFloat(item.longitude));
                 await reqQuery.query(`
                     UPDATE FuelColaboradores 
                     SET EnderecoBase = @Endereco, LatitudeBase = @Lat, LongitudeBase = @Lng 
