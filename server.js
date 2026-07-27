@@ -1067,9 +1067,24 @@ async function initializeDatabase() {
                         Nome NVARCHAR(255) NOT NULL,
                         Grupo NVARCHAR(255) NOT NULL,
                         TipoVeiculo NVARCHAR(50) DEFAULT 'Carro',
-                        Ativo BIT DEFAULT 1
+                        Ativo BIT DEFAULT 1,
+                        EnderecoBase NVARCHAR(MAX) NULL,
+                        LatitudeBase DECIMAL(12, 9) NULL,
+                        LongitudeBase DECIMAL(12, 9) NULL
                     )
                 `);
+            } else {
+                const checkCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelColaboradores'");
+                const cols = checkCols.recordset.map(c => c.COLUMN_NAME.toLowerCase());
+                if (!cols.includes('enderecobase')) {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD EnderecoBase NVARCHAR(MAX) NULL");
+                }
+                if (!cols.includes('latitudebase')) {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LatitudeBase DECIMAL(12, 9) NULL");
+                }
+                if (!cols.includes('longitudebase')) {
+                    await pool.request().query("ALTER TABLE FuelColaboradores ADD LongitudeBase DECIMAL(12, 9) NULL");
+                }
             }
 
             const checkAusencias = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelAusencias'");
