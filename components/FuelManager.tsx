@@ -2,7 +2,6 @@ import React, { useContext, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Importacao } from './Fuel360/Importacao';
 import { Configuracao } from './Fuel360/Configuracao';
-import { AdminPanel } from './Fuel360/AdminPanel';
 import { GestaoEquipe } from './Fuel360/GestaoEquipe';
 import { Relatorios } from './Fuel360/Relatorios';
 import { GestaoAusencias } from './Fuel360/GestaoAusencias';
@@ -14,7 +13,7 @@ import { DataProvider } from './Fuel360/context/DataContext';
 import { AuthProvider } from './Fuel360/context/AuthContext';
 import { CalculatorIcon } from './Fuel360/icons';
 
-type FuelView = 'calculo' | 'roteirizador' | 'ajuste_rota' | 'comparativo' | 'simulacoes' | 'equipe' | 'ausencias' | 'relatorios' | 'config' | 'admin';
+type FuelView = 'calculo' | 'roteirizador' | 'ajuste_rota' | 'comparativo' | 'simulacoes' | 'equipe' | 'ausencias' | 'relatorios' | 'config';
 
 const FuelContent: React.FC = () => {
   const { subView } = useParams<{ subView?: string }>();
@@ -31,7 +30,6 @@ const FuelContent: React.FC = () => {
       case 'ausencias': return 'ausencias';
       case 'relatorios': return 'relatorios';
       case 'config': return 'config';
-      case 'admin': return 'admin';
       default: return 'calculo';
     }
   }, [subView]);
@@ -47,7 +45,6 @@ const FuelContent: React.FC = () => {
       case 'ausencias': return <GestaoAusencias />;
       case 'relatorios': return <Relatorios />;
       case 'config': return <Configuracao />;
-      case 'admin': return <AdminPanel />;
       default: return <Importacao />;
     }
   };

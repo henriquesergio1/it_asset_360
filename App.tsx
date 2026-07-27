@@ -250,7 +250,6 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/admin" icon={ShieldAlert} label="Administração Fuel" collapsed={isSidebarCollapsed} />
             </>
           )}
           
