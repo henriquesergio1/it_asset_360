@@ -1503,7 +1503,7 @@ export const Importacao: React.FC = () => {
                                                             {colab.Nome}
                                                             {!colab.Ativo && <span className="ml-2 bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 text-[10px] px-2 py-0.5 rounded font-black uppercase border border-red-200 dark:border-red-800">INATIVO</span>}
                                                         </div>
-                                                        <div className="text-xs text-slate-400">Setor: {colab.CodigoSetor} - ID: {idPulsus}</div>
+                                                        <div className="text-xs text-slate-400">{colab.Grupo ? `${colab.Grupo} • ` : ''}Setor: {colab.CodigoSetor} - ID: {idPulsus}</div>
                                                         {records[0].supervisor && <div className="text-[10px] text-indigo-400 font-bold mt-0.5">Sup: {records[0].supervisor}</div>}
                                                     </td>
                                                     <td className="p-4 text-center">
@@ -1651,7 +1651,7 @@ export const Importacao: React.FC = () => {
                                 <tr key={c.Colaborador.ID_Pulsus} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
                                     <td className="p-4">
                                         <div className="font-bold text-slate-800 dark:text-white">{c.Colaborador.Nome}</div>
-                                        <div className="text-xs text-slate-400 dark:text-slate-400">Setor: {c.Colaborador.CodigoSetor} - ID: {c.Colaborador.ID_Pulsus}</div>
+                                        <div className="text-xs text-slate-400 dark:text-slate-400">{c.Colaborador.Grupo ? `${c.Colaborador.Grupo} • ` : ''}Setor: {c.Colaborador.CodigoSetor} - ID: {c.Colaborador.ID_Pulsus}</div>
                                     </td>
                                     <td className="p-4 text-center">
                                         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${c.Colaborador.TipoVeiculo === 'Carro' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-800' : c.Colaborador.TipoVeiculo === 'Moto' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
