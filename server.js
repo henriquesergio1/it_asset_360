@@ -916,6 +916,13 @@ async function initializeDatabase() {
                 console.log('- Adicionando colunas de licenciamento em SystemSettings...');
                 await pool.request().query("ALTER TABLE SystemSettings ADD LicenseKey NVARCHAR(MAX) NULL, LicenseClient NVARCHAR(255) NULL, LicenseExpires DATETIME NULL");
             }
+
+            // Verifica colunas de endereço da sede
+            const checkHeadquarters = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'HeadquartersAddress'`);
+            if (checkHeadquarters.recordset.length === 0) {
+                console.log('- Adicionando colunas de endereço da sede em SystemSettings...');
+                await pool.request().query("ALTER TABLE SystemSettings ADD HeadquartersAddress NVARCHAR(MAX) NULL, HeadquartersLat FLOAT NULL, HeadquartersLong FLOAT NULL");
+            }
         }
 
         // Garante que exista pelo menos um usuário administrador
@@ -5335,9 +5342,22 @@ async function updateUserPendingStatus(pool, userId) {
 
     
     // --- SYSTEM SETTINGS API ENDPOINTS ---
+    const ensureSettingsColumns = async (pool) => {
+        try {
+            const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'HeadquartersAddress'`);
+            if (check.recordset.length === 0) {
+                console.log('- Auto-healing: Adicionando colunas HeadquartersAddress, HeadquartersLat, HeadquartersLong em SystemSettings...');
+                await pool.request().query("ALTER TABLE SystemSettings ADD HeadquartersAddress NVARCHAR(MAX) NULL, HeadquartersLat FLOAT NULL, HeadquartersLong FLOAT NULL");
+            }
+        } catch (e) {
+            console.warn('[SETTINGS MIGRATION WARN]:', e.message);
+        }
+    };
+
     app.get('/api/settings', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
+            await ensureSettingsColumns(pool);
             const result = await pool.request().query(`
                 SELECT TOP 1 
                     AppName as appName, 
@@ -5376,6 +5396,7 @@ async function updateUserPendingStatus(pool, userId) {
             } = req.body;
             
             const pool = await sql.connect(dbConfig);
+            await ensureSettingsColumns(pool);
             const check = await pool.request().query("SELECT COUNT(*) as count FROM SystemSettings");
             
             const parsedLat = (headquartersLat !== undefined && headquartersLat !== null && !isNaN(Number(headquartersLat))) ? parseFloat(headquartersLat) : null;
