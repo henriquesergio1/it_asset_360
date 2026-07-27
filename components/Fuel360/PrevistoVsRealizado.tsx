@@ -1495,7 +1495,21 @@ export const PrevistoVsRealizado: React.FC = () => {
                                                 position={[colab.LatitudeBase, colab.LongitudeBase]} 
                                                 icon={createBaseIcon(pColor)}
                                             >
-                                                <Popup>Base: {colab.Nome}</Popup>
+                                                <Popup>
+                                                    <div className="flex items-center gap-3 p-1 min-w-[200px]">
+                                                        {(colab as any)?.Foto ? (
+                                                            <img src={(colab as any).Foto} alt={colab.Nome} className="w-10 h-10 rounded-full object-cover border-2 border-blue-500 shadow shrink-0" />
+                                                        ) : (
+                                                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-base border border-blue-300 shrink-0">
+                                                                {(colab.Nome || 'C')[0]?.toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
+                                                            <p className="text-xs font-bold text-slate-800 leading-tight">{colab.Nome}</p>
+                                                        </div>
+                                                    </div>
+                                                </Popup>
                                             </Marker>
                                         );
                                     }

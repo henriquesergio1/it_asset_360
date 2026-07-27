@@ -1952,7 +1952,36 @@ app.get('/api/fuel360/colaboradores', async (req, res) => {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Nome ASC');
-        res.json(result.recordset || []);
+        const rhRes = await pool.request().query("SELECT FullName, Cpf, Photo FROM RhCollaborators WHERE Photo IS NOT NULL AND Photo <> ''");
+        const userRes = await pool.request().query("SELECT FullName, Cpf, Photo FROM Users WHERE Photo IS NOT NULL AND Photo <> ''");
+
+        const cleanCpf = (c) => c ? String(c).replace(/\D/g, '') : '';
+        const cleanName = (n) => n ? String(n).trim().toLowerCase() : '';
+
+        const photoMapCpf = new Map();
+        const photoMapName = new Map();
+
+        (userRes.recordset || []).forEach(u => {
+            if (u.Cpf) photoMapCpf.set(cleanCpf(u.Cpf), u.Photo);
+            if (u.FullName) photoMapName.set(cleanName(u.FullName), u.Photo);
+        });
+
+        (rhRes.recordset || []).forEach(r => {
+            if (r.Cpf) photoMapCpf.set(cleanCpf(r.Cpf), r.Photo);
+            if (r.FullName) photoMapName.set(cleanName(r.FullName), r.Photo);
+        });
+
+        const items = (result.recordset || []).map(f => {
+            const fCpf = cleanCpf(f.CPF);
+            const fName = cleanName(f.Nome);
+            const foto = (fCpf && photoMapCpf.get(fCpf)) || (fName && photoMapName.get(fName)) || null;
+            return {
+                ...f,
+                Foto: foto
+            };
+        });
+
+        res.json(items);
     } catch (err) {
         console.warn('[Fuel360 WARN] Falha ao buscar colaboradores:', err.message);
         res.json([]);

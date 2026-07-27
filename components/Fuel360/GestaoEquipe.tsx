@@ -134,13 +134,22 @@ const ColaboradorModal: React.FC<{
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 w-full max-w-3xl max-h-[92vh] overflow-y-auto relative text-slate-900 dark:text-white transition-colors">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-600 to-cyan-500"></div>
                 <div className="flex justify-between items-center mb-5">
-                    <div>
-                        <h3 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white">{colaborador ? 'Editar Colaborador' : `Novo Colaborador`}</h3>
-                        {colaborador?.EnderecoPendente && (
-                            <div className="flex items-center text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-800 px-2 py-0.5 rounded-md mt-1 animate-pulse">
-                                <ExclamationIcon className="w-3 h-3 mr-1"/> REVISÃO DE ENDEREÇO OBRIGATÓRIA
+                    <div className="flex items-center gap-3">
+                        {colaborador?.Foto ? (
+                            <img src={colaborador.Foto} alt={colaborador.Nome} className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 shadow-md shrink-0" />
+                        ) : (
+                            <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-sky-300 flex items-center justify-center font-bold text-lg border-2 border-blue-400 shrink-0">
+                                {(colaborador?.Nome || 'C')[0]?.toUpperCase()}
                             </div>
                         )}
+                        <div>
+                            <h3 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white">{colaborador ? 'Editar Colaborador' : `Novo Colaborador`}</h3>
+                            {colaborador?.EnderecoPendente && (
+                                <div className="flex items-center text-red-600 dark:text-red-400 font-bold text-xs bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-800 px-2 py-0.5 rounded-md mt-1 animate-pulse">
+                                    <ExclamationIcon className="w-3 h-3 mr-1"/> REVISÃO DE ENDEREÇO OBRIGATÓRIA
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"><XCircleIcon className="w-6 h-6"/></button>
                 </div>
@@ -760,16 +769,27 @@ export const GestaoEquipe: React.FC = () => {
                                 <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
                                     <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></td>
                                     <td className="p-4">
-                                        <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
-                                            {c.Nome}
-                                            {isPendingAddr && c.Ativo && (
-                                                <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
-                                                    <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
-                                                </span>
+                                        <div className="flex items-center gap-3">
+                                            {c.Foto ? (
+                                                <img src={c.Foto} alt={c.Nome} className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700 shrink-0">
+                                                    {(c.Nome || 'C')[0]?.toUpperCase()}
+                                                </div>
                                             )}
-                                            {c.EnderecoBase && !isPendingAddr && <span className="ml-2" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
+                                            <div>
+                                                <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
+                                                    {c.Nome}
+                                                    {isPendingAddr && c.Ativo && (
+                                                        <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
+                                                            <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
+                                                        </span>
+                                                    )}
+                                                    {c.EnderecoBase && !isPendingAddr && <span className="ml-1" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
+                                                </div>
+                                                <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
+                                            </div>
                                         </div>
-                                        <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
                                     </td>
                                     <td className="p-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-300">{c.Grupo}</td>
                                     <td className="p-4 text-center">

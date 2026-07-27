@@ -93,9 +93,10 @@ const optimizeRoute = (points: VisitaPrevista[], colab?: Colaborador): VisitaPre
     }
 
     // Define o ponto de partida (Nó 0)
-    let startNode: VisitaPrevista = {
+    let startNode: VisitaPrevista & { Foto?: string } = {
         Cod_Vend: colab?.CodigoSetor || 0, 
         Nome_Vendedor: colab?.Nome || "Sistema", 
+        Foto: (colab as any)?.Foto,
         Cod_Supervisor: 0, Nome_Supervisor: "", Cod_Cliente: 0,
         Razao_Social: startLabel, 
         Dia_Semana: "", Periodicidade: "", Data_da_Visita: "",
@@ -299,18 +300,31 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                                 <Popup>
                                     <div className="p-1 min-w-[260px]">
                                         <div className="mb-3 border-b border-slate-100 pb-2">
-                                            <p className={`font-black text-[10px] uppercase mb-1 ${p.isExcluded ? 'text-slate-400' : 'text-blue-600'}`}>
-                                                {p.isExcluded 
-                                                    ? "PONTO IGNORADO (FORA DA ROTA)" 
-                                                    : (p.mapIndex === 0 
-                                                        ? (p.isCentroid ? "PONTO MÉDIO CALCULADO (CENTROIDE)" : "PARTIDA/RETORNO (CASA)") 
-                                                        : `SEQUÊNCIA DA VISITA #${p.mapIndex}`
-                                                    )
-                                                }
-                                            </p>
-                                            <p className="text-sm font-black text-slate-800 leading-tight">
-                                                {p.mapIndex === 0 && !p.isExcluded ? p.Nome_Vendedor : `${p.Cod_Cliente} - ${p.Razao_Social}`}
-                                            </p>
+                                            {p.mapIndex === 0 && !p.isExcluded && (
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    {p.Foto ? (
+                                                        <img src={p.Foto} alt={p.Nome_Vendedor} className="w-10 h-10 rounded-full object-cover border-2 border-blue-500 shadow shrink-0" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-base border border-blue-300 shrink-0">
+                                                            {(p.Nome_Vendedor || 'P')[0]?.toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
+                                                        <p className="text-sm font-black text-slate-800 leading-tight">{p.Nome_Vendedor}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {p.mapIndex !== 0 && (
+                                                <>
+                                                    <p className={`font-black text-[10px] uppercase mb-1 ${p.isExcluded ? 'text-slate-400' : 'text-blue-600'}`}>
+                                                        {p.isExcluded ? "PONTO IGNORADO (FORA DA ROTA)" : `SEQUÊNCIA DA VISITA #${p.mapIndex}`}
+                                                    </p>
+                                                    <p className="text-sm font-black text-slate-800 leading-tight">
+                                                        {`${p.Cod_Cliente} - ${p.Razao_Social}`}
+                                                    </p>
+                                                </>
+                                            )}
                                         </div>
                                         
                                         <div className="space-y-2">

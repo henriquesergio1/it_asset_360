@@ -29,6 +29,7 @@ export interface Colaborador {
     TipoVeiculo: TipoVeiculoReembolso;
     Ativo: boolean;
     CPF?: string;
+    Foto?: string;
     UsuarioAlteracao?: string;
     MotivoAlteracao?: string;
     LatitudeBase?: number;
