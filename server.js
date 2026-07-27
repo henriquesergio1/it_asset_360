@@ -847,6 +847,9 @@ async function initializeDatabase() {
             }
         }
 
+        // --- FUEL360 TABLES AUTO-INIT ---
+        await ensureFuelTablesExist(pool);
+
         // --- CONSUMABLES TABLES ---
         const checkConsumables = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Consumables'");
         if (checkConsumables.recordset.length === 0) {
@@ -1608,6 +1611,7 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
     }
     try {
         const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
         let processedCount = 0;
 
         for (const item of items) {
