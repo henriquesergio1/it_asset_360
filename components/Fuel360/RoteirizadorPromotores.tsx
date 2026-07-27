@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useContext } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import * as XLSX from 'xlsx';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { DataContext } from './context/DataContext';
@@ -160,21 +160,30 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
     const [retornoCoords, setRetornoCoords] = useState<any[]>([]);
     const [kmRealLocal, setKmRealLocal] = useState<number | null>(route.kmReal || null);
     const [loadingMap, setLoadingMap] = useState(true);
+    const fetchedHashRef = useRef<string>('');
 
-    // Cria um hash das coordenadas para evitar re-renderizações infinitas
+    // Cria um hash único das coordenadas e parametros para evitar re-renderizações infinitas
     const pointsHash = useMemo(() => {
-        return JSON.stringify(route.validPoints.map((p: any) => `${p.Lat.toFixed(5)},${p.Long.toFixed(5)}`));
-    }, [route.validPoints]);
+        const coords = (route.validPoints || []).map((p: any) => `${p.Lat.toFixed(5)},${p.Long.toFixed(5)}`).join('|');
+        return `${coords}_RT:${route.isRoundTrip}_IN:${route.isInactive}`;
+    }, [route.validPoints, route.isRoundTrip, route.isInactive]);
 
     useEffect(() => {
+        // Se já foi buscado para este hash exato nesta montagem, ignora
+        if (fetchedHashRef.current === pointsHash) {
+            return;
+        }
+
         // Se a rota for de um inativo, não calcula nada
         if (route.isInactive) {
             setKmRealLocal(0);
             setLoadingMap(false);
+            fetchedHashRef.current = pointsHash;
             return;
         }
 
         const loadGeometry = async () => {
+            fetchedHashRef.current = pointsHash;
             setLoadingMap(true);
             const data = await getOSRMData(route.validPoints, route.isRoundTrip);
             if (data) {
