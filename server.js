@@ -1476,25 +1476,36 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         const gruposRes = await pool.request().query("SELECT Nome FROM FuelGrupos");
         const registeredGroups = (gruposRes.recordset || []).map(g => (g.Nome || '').toUpperCase().trim());
 
-        const fieldKeywords = ['VEND', 'PROM', 'SUPERV', 'MERCHANDIS', 'COMERCIAL', 'TRADE', 'CAMPO', 'OPERACIONAL', 'REPRESENTANTE', 'MOTORISTA', 'ENTREGA'];
+        // Whitelist estrita para o módulo Fuel360: Vendedor, Promotor, Supervisor e Merchandising
+        const allowedKeywords = ['VEND', 'PROM', 'SUPERV', 'MERCHANDIS', 'COMERCIAL', 'TRADE', 'REPRESENTANTE'];
+        const ignoredKeywords = ['MOTORISTA', 'ENTREGA', 'LOGISTICA', 'FROTA', 'TRANSPORTE'];
 
-        const isFieldSector = (sectorName) => {
-            if (!sectorName) return false;
-            const upper = sectorName.toUpperCase().trim();
-            if (registeredGroups.includes(upper)) return true;
-            return fieldKeywords.some(kw => upper.includes(kw));
+        const isFieldSector = (sectorName, jobTitle) => {
+            const sUpper = (sectorName || '').toUpperCase().trim();
+            const jUpper = (jobTitle || '').toUpperCase().trim();
+
+            // Bloqueio explícito de transporte/motoristas
+            if (ignoredKeywords.some(kw => sUpper.includes(kw) || jUpper.includes(kw))) {
+                return false;
+            }
+
+            if (registeredGroups.includes(sUpper) || registeredGroups.includes(jUpper)) return true;
+            return allowedKeywords.some(kw => sUpper.includes(kw) || jUpper.includes(kw));
         };
 
-        const mapGroup = (sectorName) => {
-            if (!sectorName) return 'Vendedor';
-            const upper = sectorName.toUpperCase().trim();
-            if (registeredGroups.includes(upper)) {
-                const found = gruposRes.recordset.find(g => (g.Nome || '').toUpperCase().trim() === upper);
-                return found ? found.Nome : sectorName;
+        const mapGroup = (sectorName, jobTitle) => {
+            const sUpper = (sectorName || '').toUpperCase().trim();
+            const jUpper = (jobTitle || '').toUpperCase().trim();
+            const combined = `${sUpper} ${jUpper}`;
+
+            if (registeredGroups.includes(sUpper)) {
+                const found = gruposRes.recordset.find(g => (g.Nome || '').toUpperCase().trim() === sUpper);
+                if (found) return found.Nome;
             }
-            if (upper.includes('PROM') || upper.includes('MERCHANDIS') || upper.includes('TRADE')) return 'Promotor';
-            if (upper.includes('SUPERV') || upper.includes('GEREN') || upper.includes('COORDEN')) return 'Supervisor';
-            if (upper.includes('VEND') || upper.includes('COMERCIAL') || upper.includes('REPRESENTANTE')) return 'Vendedor';
+
+            if (combined.includes('PROM') || combined.includes('MERCHANDIS') || combined.includes('TRADE')) return 'Promotor';
+            if (combined.includes('SUPERV') || combined.includes('GEREN') || combined.includes('COORDEN')) return 'Supervisor';
+            if (combined.includes('VEND') || combined.includes('COMERCIAL') || combined.includes('REPRESENTANTE')) return 'Vendedor';
             return 'Vendedor';
         };
 
@@ -1502,6 +1513,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             SELECT devices.PulsusId as id_pulsus,
                    Users.FullName  AS nome,
                    Users.Cpf       AS cpf,
+                   Users.JobTitle  AS cargo,
                    Devices.InternalCode AS codigo_setor,
                    Sectors.Name AS grupo
             FROM Devices devices
@@ -1519,10 +1531,10 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         
         let nativeItems = nativeRes.recordset || [];
 
-        // Filtra apenas colaboradores pertencentes a setores operacionais/vendas/promotores/supervisores
-        nativeItems = nativeItems.filter(nItem => isFieldSector(nItem.grupo)).map(nItem => ({
+        // Filtra estritamente colaboradores autorizados de campo (Vendas, Promotores, Supervisores e Merchandising)
+        nativeItems = nativeItems.filter(nItem => isFieldSector(nItem.grupo, nItem.cargo)).map(nItem => ({
             ...nItem,
-            grupo: mapGroup(nItem.grupo)
+            grupo: mapGroup(nItem.grupo, nItem.cargo)
         }));
 
         const fuelColabRes = await pool.request().query(`SELECT * FROM FuelColaboradores`);
