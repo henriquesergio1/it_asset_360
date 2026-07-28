@@ -494,6 +494,30 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const handleOpenGoogleMaps = () => {
+    const lat = formData.latitude;
+    const lon = formData.longitude;
+    if (lat !== undefined && lat !== null && lon !== undefined && lon !== null && !isNaN(lat) && !isNaN(lon)) {
+      window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
+      return;
+    }
+
+    const street = (formData.street || '').trim();
+    const num = (formData.number || '').trim();
+    const neighborhood = (formData.neighborhood || '').trim();
+    const city = (formData.city || '').trim();
+    const state = (formData.state || '').trim();
+    const zip = (formData.zipCode || '').replace(/\D/g, '');
+
+    const full = [num ? `${street}, ${num}` : street, neighborhood, city, state, zip].filter(Boolean).join(', ');
+    if (full.trim()) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full.trim())}`, '_blank');
+      return;
+    }
+
+    showToast('Informe as coordenadas ou endereço para visualizar no Google Maps.', 'error');
+  };
+
   const cleanDocument = (val?: string) => (val || '').replace(/\D/g, '');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2063,27 +2087,36 @@ const UserManager: React.FC = () => {
                           />
                         </div>
 
-                        <div className="md:col-span-2 flex items-end">
+                        <div className="md:col-span-2 flex items-end gap-2">
                           {!isViewOnly && (
                             <button
                               type="button"
                               disabled={isGeocoding}
                               onClick={() => handleGeocodeAddress()}
-                              className="w-full h-[50px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md disabled:opacity-50"
+                              className="flex-1 h-[50px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md disabled:opacity-50"
                             >
                               {isGeocoding ? (
                                 <>
-                                  <RefreshCw size={16} className="animate-spin" />
+                                  <RefreshCw size={15} className="animate-spin" />
                                   <span>Buscando...</span>
                                 </>
                               ) : (
                                 <>
-                                  <Globe size={16} />
+                                  <Globe size={15} />
                                   <span>Buscar Lat/Long</span>
                                 </>
                               )}
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={handleOpenGoogleMaps}
+                            className="px-4 h-[50px] bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
+                            title="Abrir mapa no Google Maps em nova aba"
+                          >
+                            <ExternalLink size={15} />
+                            <span>Google Maps</span>
+                          </button>
                         </div>
                       </div>
                     </div>
