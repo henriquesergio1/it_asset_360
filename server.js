@@ -1817,9 +1817,24 @@ async function ensureFuelTablesExist(pool) {
                     DataFechamento DATETIME DEFAULT GETDATE(),
                     TotalKmTotal DECIMAL(10,2),
                     TotalKmReembolsavel DECIMAL(10,2),
-                    TotalValorReembolso DECIMAL(10,2)
+                    TotalValorReembolso DECIMAL(10,2),
+                    UsuarioFechamento NVARCHAR(255) NULL,
+                    OrigemDados NVARCHAR(50) NULL,
+                    MotivoEdicao NVARCHAR(MAX) NULL
                 )
             `);
+        } else {
+            const checkHistCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+            const hCols = checkHistCols.recordset.map(r => (r.COLUMN_NAME || '').toLowerCase());
+            if (!hCols.includes('usuariofechamento')) {
+                try { await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD UsuarioFechamento NVARCHAR(255) NULL"); } catch (e) {}
+            }
+            if (!hCols.includes('origemdados')) {
+                try { await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD OrigemDados NVARCHAR(50) NULL"); } catch (e) {}
+            }
+            if (!hCols.includes('motivoedicao')) {
+                try { await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD MotivoEdicao NVARCHAR(MAX) NULL"); } catch (e) {}
+            }
         }
 
         const checkReembDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDetalhe'");
@@ -2447,6 +2462,10 @@ app.get('/api/fuel360/calculo/historico', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+
+        const checkHistCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+        const hCols = new Set(checkHistCols.recordset.map(r => (r.COLUMN_NAME || '').toLowerCase()));
+
         const result = await pool.request().query(`
             SELECT 
                 ID_Fechamento AS ID_Historico,
@@ -2456,9 +2475,9 @@ app.get('/api/fuel360/calculo/historico', async (req, res) => {
                 COALESCE(TotalValorReembolso, 0) AS TotalGeral,
                 COALESCE(TotalValorReembolso, 0) AS TotalValorReembolso,
                 COALESCE(TotalKmTotal, 0) AS TotalKmTotal,
-                UsuarioFechamento,
-                OrigemDados,
-                MotivoEdicao
+                ${hCols.has('usuariofechamento') ? 'UsuarioFechamento' : 'NULL AS UsuarioFechamento'},
+                ${hCols.has('origemdados') ? 'OrigemDados' : 'NULL AS OrigemDados'},
+                ${hCols.has('motivoedicao') ? 'MotivoEdicao' : 'NULL AS MotivoEdicao'}
             FROM FuelReembolsoHistorico 
             ORDER BY ID_Fechamento DESC
         `);
@@ -2583,19 +2602,40 @@ app.post('/api/fuel360/calculo', async (req, res) => {
             sumKmTotal = itens.reduce((acc, i) => acc + (i.TotalKM || i.KmRodadoTotal || 0), 0);
         }
 
-        const histRes = await pool.request()
+        // Verifica dinamicamente quais colunas existem para montar o INSERT com 100% de segurança
+        const checkHistCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+        const hCols = new Set(checkHistCols.recordset.map(r => (r.COLUMN_NAME || '').toLowerCase()));
+
+        const reqHist = pool.request()
             .input('Periodo', sql.NVarChar, periodo)
             .input('TotalKmTotal', sql.Decimal(10,2), sumKmTotal)
             .input('TotalKmReembolsavel', sql.Decimal(10,2), sumKmTotal)
-            .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso)
-            .input('UsuarioFechamento', sql.NVarChar, usuarioFechamento)
-            .input('OrigemDados', sql.NVarChar, origem)
-            .input('MotivoEdicao', sql.NVarChar, motivoEdicao)
-            .query(`
-                INSERT INTO FuelReembolsoHistorico (Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso, DataFechamento, UsuarioFechamento, OrigemDados, MotivoEdicao)
-                OUTPUT INSERTED.ID_Fechamento
-                VALUES (@Periodo, @TotalKmTotal, @TotalKmReembolsavel, @TotalValorReembolso, GETDATE(), @UsuarioFechamento, @OrigemDados, @MotivoEdicao)
-            `);
+            .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso);
+
+        let colsQuery = "Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso, DataFechamento";
+        let valsQuery = "@Periodo, @TotalKmTotal, @TotalKmReembolsavel, @TotalValorReembolso, GETDATE()";
+
+        if (hCols.has('usuariofechamento')) {
+            colsQuery += ", UsuarioFechamento";
+            valsQuery += ", @UsuarioFechamento";
+            reqHist.input('UsuarioFechamento', sql.NVarChar, usuarioFechamento);
+        }
+        if (hCols.has('origemdados')) {
+            colsQuery += ", OrigemDados";
+            valsQuery += ", @OrigemDados";
+            reqHist.input('OrigemDados', sql.NVarChar, origem);
+        }
+        if (hCols.has('motivoedicao')) {
+            colsQuery += ", MotivoEdicao";
+            valsQuery += ", @MotivoEdicao";
+            reqHist.input('MotivoEdicao', sql.NVarChar, motivoEdicao);
+        }
+
+        const histRes = await reqHist.query(`
+            INSERT INTO FuelReembolsoHistorico (${colsQuery})
+            OUTPUT INSERTED.ID_Fechamento
+            VALUES (${valsQuery})
+        `);
         const idFechamento = histRes.recordset[0].ID_Fechamento;
 
         if (Array.isArray(itens)) {
