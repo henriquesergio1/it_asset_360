@@ -6772,59 +6772,14 @@ async function updateUserPendingStatus(pool, userId) {
             const numStr = number ? `, ${number}` : '';
             const cityState = state ? `${city} - ${state}` : city;
             candidateQueries.push(`${street}${numStr}${formattedZip ? ', ' + formattedZip : ''}, ${cityState}, Brasil`);
+            candidateQueries.push(`${formattedZip ? formattedZip + ', ' : ''}${number ? number + ', ' : ''}${cityState}, Brasil`);
             candidateQueries.push(`${street}${numStr}, ${cityState}, Brasil`);
-            if (formattedZip && number) {
-                candidateQueries.push(`${formattedZip}, ${number}, ${cityState}, Brasil`);
-            }
         }
 
         if (candidateQueries.length === 0) {
             return res.status(400).json({ success: false, message: 'Nenhum endereço ou localização fornecida.' });
         }
 
-        const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
-        };
-
-        // 1ª Estratégia: Simulação Transparente do Google Maps (Extração de !3d / !4d e @lat,lon)
-        for (const query of candidateQueries) {
-            try {
-                const googleUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
-                const response = await fetch(googleUrl, { 
-                    headers, 
-                    redirect: 'follow' 
-                });
-
-                const finalUrl = response.url || '';
-                const htmlText = await response.text();
-
-                // Tenta extrair !3d...!4d (Pino Predial Exato do Google)
-                const pinMatch = finalUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || htmlText.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-                if (pinMatch) {
-                    const lat = parseFloat(pinMatch[1]);
-                    const lon = parseFloat(pinMatch[2]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        return res.json({ success: true, lat, lon, source: 'google_pin', query });
-                    }
-                }
-
-                // Tenta extrair @lat,lon (Centroide/Visualização do Google Maps)
-                const centerMatch = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || htmlText.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-                if (centerMatch) {
-                    const lat = parseFloat(centerMatch[1]);
-                    const lon = parseFloat(centerMatch[2]);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        return res.json({ success: true, lat, lon, source: 'google_center', query });
-                    }
-                }
-            } catch (errG) {
-                console.warn('[Geocode System] Falha na extração Google Maps:', errG.message);
-            }
-        }
-
-        // 2ª Estratégia: Fallback para Nominatim OpenStreetMap
         for (const query of candidateQueries) {
             try {
                 const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;

@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Download, Filter, 
   FilterX, MoreHorizontal, UserPlus, Info, 
   MapPin, Phone, Mail, CreditCard, Hash, FileText, Globe, 
-  ExternalLink, Power, History, Shield, 
+  ExternalLink, Power, History, Shield, Link as LinkIcon, 
   Smartphone, Camera, UserCheck,
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, ShieldCheck,   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
   Save, Eye, EyeOff, Key, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle, Copy
@@ -501,6 +501,51 @@ const UserManager: React.FC = () => {
     }
 
     showToast('Informe as coordenadas ou endereço para visualizar no Google Maps.', 'error');
+  };
+
+  const handleExtractFromGoogleMapsUrl = (urlInput?: string) => {
+    const targetUrl = urlInput || prompt('Cole o link completo do Google Maps (ex: https://www.google.com/maps/place/...):');
+    if (!targetUrl || !targetUrl.trim()) return;
+
+    const rawUrl = targetUrl.trim();
+
+    // Estratégia 1: Pino Predial Exato (!3d-23.562181!4d-46.3982927)
+    const pinMatch = rawUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if (pinMatch) {
+      const lat = parseFloat(pinMatch[1]);
+      const lon = parseFloat(pinMatch[2]);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
+        showToast('Coordenadas exatas salvas com sucesso (Google Maps)!', 'success');
+        return;
+      }
+    }
+
+    // Estratégia 2: Centroide do Mapa (@-23.5565974,-46.3969903)
+    const centerMatch = rawUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (centerMatch) {
+      const lat = parseFloat(centerMatch[1]);
+      const lon = parseFloat(centerMatch[2]);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
+        showToast('Coordenadas extraídas do centro do mapa (Google Maps)!', 'success');
+        return;
+      }
+    }
+
+    // Estratégia 3: Parâmetro q=lat,lon ou ll=lat,lon
+    const qMatch = rawUrl.match(/(?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (qMatch) {
+      const lat = parseFloat(qMatch[1]);
+      const lon = parseFloat(qMatch[2]);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
+        showToast('Coordenadas salvas do link do mapa!', 'success');
+        return;
+      }
+    }
+
+    showToast('Não foi possível identificar coordenadas no link colado. Verifique a URL do Google Maps.', 'error');
   };
 
   const cleanDocument = (val?: string) => (val || '').replace(/\D/g, '');
@@ -2118,6 +2163,15 @@ const UserManager: React.FC = () => {
                           >
                             <ExternalLink size={15} />
                             <span>Google Maps</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExtractFromGoogleMapsUrl()}
+                            className="px-4 h-[50px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
+                            title="Cole a URL do Google Maps para extrair a Latitude e Longitude exata da casa"
+                          >
+                            <LinkIcon size={15} />
+                            <span>Extrair de Link</span>
                           </button>
                         </div>
                       </div>
