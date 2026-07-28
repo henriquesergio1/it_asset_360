@@ -19,6 +19,128 @@ const centroidIcon = L.divIcon({
     html: `<div style="background-color:#ea580c; color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>`,
     iconSize: [30, 30], iconAnchor: [15, 15]
 });
+const SaveSimulationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (descricao: string) => void;
+    periodo: string;
+    totalKm: number;
+    totalColabs: number;
+    isOverwrite: boolean;
+    existingDescricao?: string;
+    isSaving: boolean;
+    groupType: string;
+}> = ({ isOpen, onClose, onConfirm, periodo, totalKm, totalColabs, isOverwrite, existingDescricao, isSaving, groupType }) => {
+    const [descricao, setDescricao] = useState('');
+
+    useEffect(() => {
+        if (isOpen) setDescricao('');
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transition-all">
+                {/* Header */}
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                            <CheckCircleIcon className="w-6 h-6"/>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800 dark:text-white leading-tight">Salvar Simulação de Rota</h3>
+                            <p className="text-xs font-medium text-slate-400 dark:text-slate-400 uppercase tracking-wider">{groupType}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} disabled={isSaving} className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-xl transition">
+                        <XCircleIcon className="w-6 h-6"/>
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 space-y-5">
+                    {/* Sumário */}
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-400 uppercase">Período:</span>
+                            <span className="font-bold text-slate-700 dark:text-slate-200">{periodo}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-400 uppercase">Colaboradores:</span>
+                            <span className="font-bold text-slate-700 dark:text-slate-200">{totalColabs} selecionados</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">Total KM Calculado:</span>
+                            <span className="text-base font-black text-indigo-600 dark:text-indigo-400">{totalKm.toFixed(2)} km</span>
+                        </div>
+                    </div>
+
+                    {/* Alerta de Sobrescrita */}
+                    {isOverwrite && (
+                        <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 p-4 rounded-2xl flex items-start gap-3 text-amber-900 dark:text-amber-200">
+                            <ExclamationIcon className="w-6 h-6 text-amber-500 shrink-0 mt-0.5"/>
+                            <div className="text-xs space-y-1">
+                                <p className="font-bold text-amber-800 dark:text-amber-300">Simulação pré-existente encontrada!</p>
+                                <p>Já existe uma simulação salva para o mesmo período e com o mesmo KM Total (<b>{totalKm.toFixed(2)} km</b>).</p>
+                                {existingDescricao && <p className="italic font-semibold text-amber-700 dark:text-amber-400">"{existingDescricao}"</p>}
+                                <p className="font-bold pt-1 text-amber-900 dark:text-amber-200">Ao prosseguir, a simulação existente será SOBRESCRITA.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Input de Descrição */}
+                    <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Descrição / Identificador da Simulação <span className="text-slate-400 font-normal">(Opcional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={descricao}
+                            onChange={(e) => setDescricao(e.target.value)}
+                            placeholder="Ex: Ajuste Fator 1.3, Rota Especial Jean, etc."
+                            disabled={isSaving}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 text-sm font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                        />
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        className="px-5 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onConfirm(descricao)}
+                        disabled={isSaving}
+                        className={`px-6 py-3 rounded-2xl text-xs font-black text-white shadow-lg flex items-center transition-all ${
+                            isOverwrite 
+                                ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30' 
+                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
+                        }`}
+                    >
+                        {isSaving ? (
+                            <>
+                                <SpinnerIcon className="w-4 h-4 mr-2 animate-spin"/> Salvando...
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircleIcon className="w-4 h-4 mr-2"/>
+                                {isOverwrite ? 'Sobrescrever e Salvar' : 'Salvar Simulação'}
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const createNumberedIcon = (number: number) => {
     return L.divIcon({
@@ -757,8 +879,17 @@ export const RoteirizadorVendedores: React.FC = () => {
         setProgress({ current: 0, total: 0 });
     };
 
-    const handleSaveForecast = async () => {
-        // FILTRAGEM: Apenas os selecionados
+    const [saveModalData, setSaveModalData] = useState<{
+        isOpen: boolean;
+        periodo: string;
+        totalKm: number;
+        totalColabs: number;
+        isOverwrite: boolean;
+        overwriteId?: number;
+        existingDescricao?: string;
+    } | null>(null);
+
+    const handleOpenSaveModal = async () => {
         const sellersToSave = groupedData.filter(s => selectedSellerIds.has(s.id));
         
         if (sellersToSave.length === 0) {
@@ -772,43 +903,36 @@ export const RoteirizadorVendedores: React.FC = () => {
             ? ` - Equipe ${supervisors.find(s => s.id === selectedSupervisor)?.name.split(' ')[0]}` 
             : '';
         const formattedPeriod = `[VENDEDOR] ${formatDate(startDate)} a ${formatDate(endDate)}${supervisorTag}`;
-        
+
         setSaving(true);
-        let overwriteId: number | undefined = undefined;
-
         try {
-            // Check de Duplicidade por Período e KM
             const checkRes = await checkRotaPrevistaExists(formattedPeriod, totalKmCalculado);
-            if (checkRes.exists) {
-                const descText = checkRes.descricao ? `\nDescrição existente: "${checkRes.descricao}"` : '';
-                const confirmOverwrite = confirm(
-                    `Já existe uma simulação salva para o mesmo período e com o mesmo KM Total (${totalKmCalculado.toFixed(2)} km).${descText}\n\nDeseja SOBRESCREVER a simulação existente?`
-                );
-                if (!confirmOverwrite) {
-                    setSaving(false);
-                    return;
-                }
-                overwriteId = checkRes.id;
-            } else {
-                if (!confirm(`Deseja salvar a simulação para ${sellersToSave.length} VENDEDORES selecionados?\nPeríodo: ${formattedPeriod}`)) {
-                    setSaving(false);
-                    return;
-                }
-            }
+            setSaveModalData({
+                isOpen: true,
+                periodo: formattedPeriod,
+                totalKm: totalKmCalculado,
+                totalColabs: sellersToSave.length,
+                isOverwrite: checkRes.exists,
+                overwriteId: checkRes.id,
+                existingDescricao: checkRes.descricao
+            });
+        } catch (e: any) {
+            alert("Erro ao verificar duplicidade: " + e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
 
-            // Pergunta por Descrição Opcional
-            const userDesc = prompt("Deseja inserir uma descrição para identificar esta simulação? (Opcional)\nEx: Ajuste Fator 1.3, Equipe Jean, etc.", "");
-            if (userDesc === null) {
-                setSaving(false);
-                return;
-            }
-
-            // Prepara o payload
+    const handleConfirmSaveSimulation = async (userDesc: string) => {
+        if (!saveModalData) return;
+        const sellersToSave = groupedData.filter(s => selectedSellerIds.has(s.id));
+        setSaving(true);
+        try {
             const payload = {
-                Periodo: formattedPeriod,
-                TotalKM: totalKmCalculado,
+                Periodo: saveModalData.periodo,
+                TotalKM: saveModalData.totalKm,
                 Descricao: userDesc.trim() || undefined,
-                overwriteId: overwriteId,
+                overwriteId: saveModalData.overwriteId,
                 Itens: sellersToSave.map(seller => ({
                     ID_Pulsus: seller.colabRef.ID_Pulsus || seller.id,
                     Nome: seller.name,
@@ -823,6 +947,7 @@ export const RoteirizadorVendedores: React.FC = () => {
             };
 
             await saveRotaPrevista(payload);
+            setSaveModalData(null);
             alert("Simulação salva com sucesso!");
         } catch (e: any) {
             alert("Erro ao salvar: " + e.message);
@@ -842,11 +967,26 @@ export const RoteirizadorVendedores: React.FC = () => {
                 />
             )}
             
+            {saveModalData && (
+                <SaveSimulationModal
+                    isOpen={saveModalData.isOpen}
+                    onClose={() => setSaveModalData(null)}
+                    onConfirm={handleConfirmSaveSimulation}
+                    periodo={saveModalData.periodo}
+                    totalKm={saveModalData.totalKm}
+                    totalColabs={saveModalData.totalColabs}
+                    isOverwrite={saveModalData.isOverwrite}
+                    existingDescricao={saveModalData.existingDescricao}
+                    isSaving={saving}
+                    groupType="EQUIPE DE VENDAS"
+                />
+            )}
+            
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div><h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Roteirizador Previsto</h2><p className="text-slate-500 dark:text-slate-400 font-medium">Controle e validação terrestre para a equipe de <b>Vendas</b>.</p></div>
                 <div className="flex gap-3">
                     {rawData.length > 0 && (
-                        <button onClick={handleSaveForecast} disabled={saving || calculatingReal} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl flex items-center transition-all disabled:opacity-50">
+                        <button onClick={handleOpenSaveModal} disabled={saving || calculatingReal} className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-3 rounded-2xl shadow-xl flex items-center transition-all disabled:opacity-50">
                             {saving ? <SpinnerIcon className="w-5 h-5 mr-3 animate-spin"/> : <CheckCircleIcon className="w-5 h-5 mr-3"/>}
                             SALVAR SIMULAÇÃO
                         </button>
