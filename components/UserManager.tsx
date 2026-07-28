@@ -2141,6 +2141,15 @@ const UserManager: React.FC = () => {
                               )}
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={handleOpenGoogleMaps}
+                            className="px-4 h-[50px] bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
+                            title="Abrir endereço/coordenadas no Google Maps em nova aba"
+                          >
+                            <ExternalLink size={15} />
+                            <span>Google Maps</span>
+                          </button>
 
                         </div>
                       </div>
