@@ -6759,48 +6759,7 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
-    app.post('/api/system/geocode', async (req, res) => {
-        const { address, street, number, neighborhood, city, state, zip } = req.body || {};
 
-        let candidateQueries = [];
-        if (address && address.trim()) {
-            candidateQueries.push(address.trim());
-        }
-        if (street && city) {
-            const cleanZip = (zip || '').replace(/\D/g, '');
-            const formattedZip = cleanZip.length === 8 ? `${cleanZip.substring(0, 5)}-${cleanZip.substring(5)}` : '';
-            const numStr = number ? `, ${number}` : '';
-            const cityState = state ? `${city} - ${state}` : city;
-            candidateQueries.push(`${street}${numStr}${formattedZip ? ', ' + formattedZip : ''}, ${cityState}, Brasil`);
-            candidateQueries.push(`${formattedZip ? formattedZip + ', ' : ''}${number ? number + ', ' : ''}${cityState}, Brasil`);
-            candidateQueries.push(`${street}${numStr}, ${cityState}, Brasil`);
-        }
-
-        if (candidateQueries.length === 0) {
-            return res.status(400).json({ success: false, message: 'Nenhum endereço ou localização fornecida.' });
-        }
-
-        for (const query of candidateQueries) {
-            try {
-                const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-                const nomRes = await fetch(nomUrl, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-                if (nomRes.ok) {
-                    const data = await nomRes.json();
-                    if (data && data.length > 0) {
-                        const lat = parseFloat(data[0].lat);
-                        const lon = parseFloat(data[0].lon);
-                        if (!isNaN(lat) && !isNaN(lon)) {
-                            return res.json({ success: true, lat, lon, source: 'nominatim', query });
-                        }
-                    }
-                }
-            } catch (errN) {
-                console.warn('[Geocode System] Falha Nominatim OSM:', errN.message);
-            }
-        }
-
-        return res.status(404).json({ success: false, message: 'Coordenadas não localizadas nos motores de mapa.' });
-    });
 
     app.get('/api/system/status', async (req, res) => {
         try {
