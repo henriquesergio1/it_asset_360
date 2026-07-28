@@ -192,7 +192,23 @@ const RealService = {
     corrigirAusenciasHistorico: (ids: number[]): Promise<void> => apiRequest('/relatorios/fix-conflicts', 'POST', { ids }),
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
-    geocodeAddress: (address: string): Promise<{lat: number, lon: number}> => apiRequest('/system/geocode', 'POST', { address }),
+    geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
+        try {
+            const result = await apiRequest('/system/geocode', 'POST', { address }) as any;
+            if (result && result.lat && result.lon) return { lat: result.lat, lon: result.lon };
+        } catch (e) {
+            console.warn('[Fuel360] Fallback geocode client-side:', e);
+        }
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+            }
+        }
+        throw new Error('Endereço não localizado no mapa.');
+    },
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         const R = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
