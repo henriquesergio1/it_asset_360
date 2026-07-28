@@ -435,32 +435,36 @@ const UserManager: React.FC = () => {
     const city = (formData.city || '').trim();
     const state = (formData.state || '').trim();
     const zip = (formData.zipCode || '').replace(/\D/g, '');
+    const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
     const attempts: Array<{ label: string; query: string }> = [];
 
     if (overrideAddress?.trim()) {
       attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
     } else {
-      // 1ª opção: Endereço completo com número (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
+      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
+      if (street && city && formattedZip) {
+        const addrNum = num ? `${street}, ${num}` : street;
+        attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
+      }
+      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
+      if (formattedZip && num && city) {
+        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
+      }
+      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
+      if (formattedZip) {
+        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
+      }
+      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
       if (street && city) {
         const addrNum = num ? `${street}, ${num}` : street;
         const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Endereço Completo com Número', query: full });
+        attempts.push({ label: 'Logradouro e Número', query: full });
       }
-      // 2ª opção: Sem número (ex: Rua Noventa e Cinco, São Paulo - SP, Brasil)
+      // 5ª opção: Logradouro + Bairro + Cidade
       if (street && city) {
         const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro / Bairro', query: streetOnly });
-      }
-      // 3ª opção: Busca por CEP (ex: 08466-003, Brasil)
-      if (zip.length === 8) {
-        const formattedZip = `${zip.substring(0, 5)}-${zip.substring(5)}`;
-        attempts.push({ label: 'Busca por CEP', query: `${formattedZip}, Brasil` });
-        attempts.push({ label: 'Busca por CEP Números', query: `${zip}, Brasil` });
-      }
-      // 4ª opção: Bairro + Cidade + UF
-      if (neighborhood && city) {
-        attempts.push({ label: 'Bairro e Cidade', query: `${neighborhood}, ${city} - ${state}, Brasil` });
+        attempts.push({ label: 'Logradouro e Bairro', query: streetOnly });
       }
     }
 
@@ -1277,14 +1281,21 @@ const UserManager: React.FC = () => {
       const city = (colab.city || '').trim();
       const state = (colab.state || '').trim();
       const zip = (colab.cep || '').replace(/\D/g, '');
+      const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
       const importQueries: string[] = [];
+      if (street && city && formattedZip) {
+        const addrNum = num ? `${street}, ${num}` : street;
+        importQueries.push(`${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil`);
+      }
+      if (formattedZip && num && city) {
+        importQueries.push(`${formattedZip}, ${num}, ${city}, Brasil`);
+      }
+      if (formattedZip) {
+        importQueries.push(`${formattedZip}, Brasil`);
+      }
       if (street && city) {
         importQueries.push([num ? `${street}, ${num}` : street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '));
-        importQueries.push([street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '));
-      }
-      if (zip.length === 8) {
-        importQueries.push(`${zip.substring(0, 5)}-${zip.substring(5)}, Brasil`);
       }
 
       for (const qStr of importQueries) {
