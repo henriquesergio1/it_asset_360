@@ -1141,10 +1141,21 @@ async function initializeDatabase() {
                         DataFechamento DATETIME DEFAULT GETDATE(),
                         TotalKmTotal DECIMAL(10,2),
                         TotalKmReembolsavel DECIMAL(10,2),
-                        TotalValorReembolso DECIMAL(10,2)
+                        TotalValorReembolso DECIMAL(10,2),
+                        UsuarioFechamento NVARCHAR(255) NULL,
+                        OrigemDados NVARCHAR(50) NULL,
+                        MotivoEdicao NVARCHAR(MAX) NULL
                     )
                 `);
             }
+
+            try {
+                const checkHistCols = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelReembolsoHistorico'");
+                const hCols = checkHistCols.recordset.map(r => (r.COLUMN_NAME || '').toLowerCase());
+                if (!hCols.includes('usuariofechamento')) await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD UsuarioFechamento NVARCHAR(255) NULL");
+                if (!hCols.includes('origemdados')) await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD OrigemDados NVARCHAR(50) NULL");
+                if (!hCols.includes('motivoedicao')) await pool.request().query("ALTER TABLE FuelReembolsoHistorico ADD MotivoEdicao NVARCHAR(MAX) NULL");
+            } catch (eHCols) {}
 
             const checkReembDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelReembolsoDetalhe'");
             if (checkReembDet.recordset.length === 0) {
@@ -2436,7 +2447,21 @@ app.get('/api/fuel360/calculo/historico', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query('SELECT * FROM FuelReembolsoHistorico ORDER BY ID_Fechamento DESC');
+        const result = await pool.request().query(`
+            SELECT 
+                ID_Fechamento AS ID_Historico,
+                ID_Fechamento,
+                Periodo,
+                DataFechamento,
+                COALESCE(TotalValorReembolso, 0) AS TotalGeral,
+                COALESCE(TotalValorReembolso, 0) AS TotalValorReembolso,
+                COALESCE(TotalKmTotal, 0) AS TotalKmTotal,
+                UsuarioFechamento,
+                OrigemDados,
+                MotivoEdicao
+            FROM FuelReembolsoHistorico 
+            ORDER BY ID_Fechamento DESC
+        `);
         res.json(result.recordset || []);
     } catch (err) {
         console.error('Erro ao buscar historico de calculo:', err);
@@ -2448,10 +2473,57 @@ app.get('/api/fuel360/calculo/historico/:id', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request()
+        
+        // 1. Busca os registros diários detalhados vinculados ao fechamento
+        const diarioRes = await pool.request()
             .input('ID', sql.Int, req.params.id)
-            .query('SELECT * FROM FuelReembolsoDetalhe WHERE ID_Fechamento = @ID');
-        res.json(result.recordset || []);
+            .query(`
+                SELECT 
+                    d.ID_Diario,
+                    d.ID_Fechamento,
+                    d.ID_Colaborador AS ID_Pulsus,
+                    d.Data AS DataOcorrencia,
+                    d.KmRodadoReembolsavel AS KM_Dia,
+                    d.MotivoAusencia,
+                    d.Ausente,
+                    det.ID_Detalhe,
+                    COALESCE(det.Nome, col.Nome, 'Colaborador ' + CAST(d.ID_Colaborador AS NVARCHAR(50))) AS Nome,
+                    COALESCE(det.Grupo, col.Grupo, 'Vendedor') AS Grupo,
+                    COALESCE(det.TipoVeiculo, col.TipoVeiculo, 'Carro') AS TipoVeiculo,
+                    (d.KmRodadoReembolsavel * (
+                        CASE WHEN COALESCE(det.TipoVeiculo, col.TipoVeiculo, 'Carro') = 'Moto' THEN 0.50 ELSE 0.85 END
+                    )) AS Valor_Dia
+                FROM FuelReembolsoDiario d
+                LEFT JOIN FuelReembolsoDetalhe det ON det.ID_Fechamento = d.ID_Fechamento AND det.ID_Colaborador = d.ID_Colaborador
+                LEFT JOIN FuelColaboradores col ON col.ID_Pulsus = d.ID_Colaborador OR col.ID_Colaborador = d.ID_Colaborador
+                WHERE d.ID_Fechamento = @ID
+                ORDER BY d.Data ASC
+            `);
+
+        if (diarioRes.recordset && diarioRes.recordset.length > 0) {
+            return res.json(diarioRes.recordset);
+        }
+
+        // 2. Fallback: Se não houver diários por dia, retorna o resumo dos colaboradores de FuelReembolsoDetalhe
+        const detalheRes = await pool.request()
+            .input('ID', sql.Int, req.params.id)
+            .query(`
+                SELECT 
+                    det.ID_Detalhe,
+                    det.ID_Fechamento,
+                    det.ID_Colaborador AS ID_Pulsus,
+                    det.Nome,
+                    det.Grupo,
+                    det.TipoVeiculo,
+                    det.KmRodadoReembolsavel AS KM_Dia,
+                    det.ValorReembolso AS Valor_Dia,
+                    det.ID_Detalhe AS ID_Diario,
+                    GETDATE() AS DataOcorrencia
+                FROM FuelReembolsoDetalhe det
+                WHERE det.ID_Fechamento = @ID
+            `);
+
+        res.json(detalheRes.recordset || []);
     } catch (err) {
         console.error('Erro ao buscar detalhes de calculo:', err);
         res.json([]);
@@ -2479,6 +2551,9 @@ app.post('/api/fuel360/calculo', async (req, res) => {
     const overwrite = b.Overwrite || b.overwrite;
     const itens = b.Itens || b.itens || b.detalhes;
     const diario = b.diario;
+    const usuarioFechamento = b._adminUser || b.UsuarioFechamento || 'Sistema';
+    const origem = b.OrigemDados || b.origemDados || 'CSV';
+    const motivoEdicao = b.MotivoOverwrite || b.motivoOverwrite || null;
 
     if (!periodo) {
         return res.status(400).json({ success: false, message: 'O campo Período é obrigatório.' });
@@ -2513,10 +2588,13 @@ app.post('/api/fuel360/calculo', async (req, res) => {
             .input('TotalKmTotal', sql.Decimal(10,2), sumKmTotal)
             .input('TotalKmReembolsavel', sql.Decimal(10,2), sumKmTotal)
             .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso)
+            .input('UsuarioFechamento', sql.NVarChar, usuarioFechamento)
+            .input('OrigemDados', sql.NVarChar, origem)
+            .input('MotivoEdicao', sql.NVarChar, motivoEdicao)
             .query(`
-                INSERT INTO FuelReembolsoHistorico (Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso)
+                INSERT INTO FuelReembolsoHistorico (Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso, DataFechamento, UsuarioFechamento, OrigemDados, MotivoEdicao)
                 OUTPUT INSERTED.ID_Fechamento
-                VALUES (@Periodo, @TotalKmTotal, @TotalKmReembolsavel, @TotalValorReembolso)
+                VALUES (@Periodo, @TotalKmTotal, @TotalKmReembolsavel, @TotalValorReembolso, GETDATE(), @UsuarioFechamento, @OrigemDados, @MotivoEdicao)
             `);
         const idFechamento = histRes.recordset[0].ID_Fechamento;
 

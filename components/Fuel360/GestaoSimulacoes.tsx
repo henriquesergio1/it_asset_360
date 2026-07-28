@@ -261,10 +261,10 @@ export const GestaoSimulacoes: React.FC = () => {
 
     // Helper de Agrupamento
     const groupItems = (items: any[], idKey: string) => {
-        const groups = new Map<number, { name: string, items: any[], totalKm: number, totalVal?: number }>();
+        const groups = new Map<any, { name: string, items: any[], totalKm: number, totalVal?: number }>();
         (items || []).forEach((item: any) => {
             if (!item) return;
-            const key = item[idKey]; // ID_RotaDet ou ID_Pulsus/Detalhe
+            const key = item[idKey] ?? item.ID_Pulsus ?? item.ID_Detalhe ?? item.Nome ?? Math.random();
             if (!groups.has(key)) {
                 groups.set(key, { name: item.Nome || 'Sem Nome', items: [], totalKm: 0, totalVal: 0 });
             }
