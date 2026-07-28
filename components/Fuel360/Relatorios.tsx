@@ -310,8 +310,8 @@ export const Relatorios: React.FC = () => {
         });
     }, [analyticData, sortBy]);
 
-    const totalPago = reportData.reduce((acc, item) => acc + item.ValorReembolso, 0);
-    const totalKM = reportData.reduce((acc, item) => acc + item.TotalKM, 0);
+    const totalPago = reportData.reduce((acc, item) => acc + (Number(item.ValorReembolso) || 0), 0);
+    const totalKM = reportData.reduce((acc, item) => acc + (Number(item.TotalKM) || 0), 0);
     
     // Identificar conflitos globais
     const conflictingIds = useMemo(() => {

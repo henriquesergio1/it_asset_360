@@ -2722,13 +2722,53 @@ app.put('/api/fuel360/calculo/diario/:id', async (req, res) => {
 });
 
 app.get('/api/fuel360/relatorios/reembolso', async (req, res) => {
+    const { startDate, endDate, colab, group } = req.query;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query(`
-            SELECT d.*, h.Periodo, h.DataFechamento
+
+        const request = pool.request();
+        let whereClauses = [];
+
+        if (startDate) {
+            request.input('StartDate', sql.Date, startDate);
+            whereClauses.push('CAST(h.DataFechamento AS DATE) >= @StartDate');
+        }
+        if (endDate) {
+            request.input('EndDate', sql.Date, endDate);
+            whereClauses.push('CAST(h.DataFechamento AS DATE) <= @EndDate');
+        }
+        if (colab) {
+            request.input('Colab', sql.Int, parseInt(colab));
+            whereClauses.push('d.ID_Colaborador = @Colab');
+        }
+        if (group) {
+            request.input('Group', sql.NVarChar, group);
+            whereClauses.push('(d.Grupo = @Group OR col.Grupo = @Group)');
+        }
+
+        const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+        const result = await request.query(`
+            SELECT 
+                d.ID_Detalhe,
+                h.ID_Fechamento,
+                h.DataFechamento AS DataGeracao,
+                h.Periodo AS PeriodoReferencia,
+                COALESCE(h.UsuarioFechamento, 'Sistema') AS UsuarioGerador,
+                COALESCE(d.ID_Colaborador, 0) AS ID_Pulsus,
+                COALESCE(col.CodigoSetor, d.ID_Colaborador, 0) AS CodigoSetor,
+                COALESCE(d.Nome, col.Nome, 'Colaborador ' + CAST(d.ID_Colaborador AS NVARCHAR(50))) AS NomeColaborador,
+                COALESCE(d.Grupo, col.Grupo, 'Vendedor') AS Grupo,
+                COALESCE(d.TipoVeiculo, col.TipoVeiculo, 'Carro') AS TipoVeiculo,
+                COALESCE(d.KmRodadoReembolsavel, d.KmRodadoTotal, 0) AS TotalKM,
+                COALESCE(d.ValorReembolso, 0) AS ValorReembolso,
+                COALESCE(h.OrigemDados, 'CSV') AS OrigemDados,
+                h.MotivoEdicao
             FROM FuelReembolsoDetalhe d
             INNER JOIN FuelReembolsoHistorico h ON d.ID_Fechamento = h.ID_Fechamento
+            LEFT JOIN FuelColaboradores col ON col.ID_Pulsus = d.ID_Colaborador OR col.ID_Colaborador = d.ID_Colaborador
+            ${whereSql}
             ORDER BY h.ID_Fechamento DESC, d.Nome ASC
         `);
         res.json(result.recordset || []);
@@ -2739,13 +2779,60 @@ app.get('/api/fuel360/relatorios/reembolso', async (req, res) => {
 });
 
 app.get('/api/fuel360/relatorios/analitico', async (req, res) => {
+    const { startDate, endDate, colab, group } = req.query;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query(`
-            SELECT r.*, c.Nome as NomeColaborador, c.Grupo
+
+        const request = pool.request();
+        let whereClauses = [];
+
+        if (startDate) {
+            request.input('StartDate', sql.Date, startDate);
+            whereClauses.push('r.Data >= @StartDate');
+        }
+        if (endDate) {
+            request.input('EndDate', sql.Date, endDate);
+            whereClauses.push('r.Data <= @EndDate');
+        }
+        if (colab) {
+            request.input('Colab', sql.Int, parseInt(colab));
+            whereClauses.push('r.ID_Colaborador = @Colab');
+        }
+        if (group) {
+            request.input('Group', sql.NVarChar, group);
+            whereClauses.push('(det.Grupo = @Group OR col.Grupo = @Group)');
+        }
+
+        const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+        const result = await request.query(`
+            SELECT 
+                r.ID_Diario,
+                r.ID_Fechamento,
+                r.ID_Colaborador AS ID_Pulsus,
+                r.Data AS DataOcorrencia,
+                COALESCE(r.KmRodadoReembolsavel, r.KmRodadoTotal, 0) AS KM_Dia,
+                COALESCE(
+                    (r.KmRodadoReembolsavel * CASE WHEN COALESCE(det.TipoVeiculo, col.TipoVeiculo, 'Carro') = 'Moto' THEN 0.50 ELSE 0.85 END), 
+                    0
+                ) AS Valor_Dia,
+                r.MotivoAusencia AS Observacao,
+                COALESCE(r.Ausente, 0) AS TemAusencia,
+                r.MotivoAusencia,
+                COALESCE(det.Nome, col.Nome, 'Colaborador ' + CAST(r.ID_Colaborador AS NVARCHAR(50))) AS NomeColaborador,
+                COALESCE(det.Grupo, col.Grupo, 'Vendedor') AS Grupo,
+                COALESCE(det.TipoVeiculo, col.TipoVeiculo, 'Carro') AS TipoVeiculo,
+                COALESCE(col.CodigoSetor, r.ID_Colaborador, 0) AS CodigoSetor,
+                h.DataFechamento AS DataGeracao,
+                h.Periodo AS PeriodoReferencia,
+                COALESCE(h.OrigemDados, 'CSV') AS OrigemDados,
+                h.MotivoEdicao
             FROM FuelReembolsoDiario r
-            LEFT JOIN FuelColaboradores c ON r.ID_Colaborador = c.ID_Colaborador
+            INNER JOIN FuelReembolsoHistorico h ON r.ID_Fechamento = h.ID_Fechamento
+            LEFT JOIN FuelReembolsoDetalhe det ON det.ID_Fechamento = r.ID_Fechamento AND det.ID_Colaborador = r.ID_Colaborador
+            LEFT JOIN FuelColaboradores col ON col.ID_Pulsus = r.ID_Colaborador OR col.ID_Colaborador = r.ID_Colaborador
+            ${whereSql}
             ORDER BY r.Data DESC
         `);
         res.json(result.recordset || []);
