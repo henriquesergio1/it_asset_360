@@ -464,54 +464,45 @@ const UserManager: React.FC = () => {
       });
     } else {
       const normalizedStreet = normalizeStreet(street);
-      const streetAndNum = num ? `${normalizedStreet} ${num}` : normalizedStreet;
+      const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
+      const cityState = state ? `${city} - ${state}` : city;
 
-      // 1ª opção: Busca Estruturada Direta (Alta Precisão Predial)
+      // 1ª opção: Endereço completo com número, CEP, Cidade e Estado
+      if (normalizedStreet && city) {
+        const fullQ = [addrNum, formattedZip, neighborhood, cityState, 'Brasil'].filter(Boolean).join(', ');
+        attempts.push({ 
+          label: 'Endereço e Número na Cidade', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQ)}&limit=1` 
+        });
+      }
+
+      // 2ª opção: CEP + Número + Cidade e Estado
+      if (formattedZip && num && city) {
+        attempts.push({ 
+          label: 'CEP, Número e Cidade', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, ${num}, ${cityState}, Brasil`)}&limit=1` 
+        });
+      }
+
+      // 3ª opção: Busca Estruturada Limpa (Rua sem número + Cidade + Estado + CEP)
       if (normalizedStreet && city) {
         const params = new URLSearchParams({
           format: 'json',
-          street: streetAndNum,
+          street: normalizedStreet,
           city: city,
           country: 'Brazil',
           limit: '1'
         });
         if (state) params.append('state', state);
         if (formattedZip) params.append('postalcode', formattedZip);
-        attempts.push({ label: 'Busca Estruturada Alta Precisão', url: `https://nominatim.openstreetmap.org/search?${params.toString()}` });
+        attempts.push({ label: 'Logradouro Estruturado na Cidade', url: `https://nominatim.openstreetmap.org/search?${params.toString()}` });
       }
 
-      // 2ª opção: Endereço completo com CEP
-      if (normalizedStreet && city && formattedZip) {
-        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
+      // 4ª opção: Busca por CEP ancorada na Cidade
+      if (formattedZip && city) {
         attempts.push({ 
-          label: 'Endereço Completo com CEP', 
-          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil`)}&limit=1` 
-        });
-      }
-
-      // 3ª opção: CEP + Número + Cidade
-      if (formattedZip && num && city) {
-        attempts.push({ 
-          label: 'CEP e Número da Casa', 
-          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, ${num}, ${city}, Brasil`)}&limit=1` 
-        });
-      }
-
-      // 4ª opção: Busca restrita por CEP
-      if (formattedZip) {
-        attempts.push({ 
-          label: 'Âncora Geográfica por CEP', 
-          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, Brasil`)}&limit=1` 
-        });
-      }
-
-      // 5ª opção: Logradouro e Número sem CEP
-      if (normalizedStreet && city) {
-        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
-        const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ 
-          label: 'Logradouro e Número', 
-          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}&limit=1` 
+          label: 'Âncora por CEP e Cidade', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, ${cityState}, Brasil`)}&limit=1` 
         });
       }
     }
