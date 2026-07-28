@@ -49,17 +49,17 @@ const SearchableSelect: React.FC<{
     return (
         <div className="relative w-full" ref={wrapperRef}>
             <div 
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-slate-800 focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 outline-none cursor-pointer flex items-center justify-between"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-white focus-within:ring-2 focus-within:ring-blue-600 focus-within:border-blue-600 outline-none cursor-pointer flex items-center justify-between transition-colors"
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <span className={`block truncate ${!selectedOption ? 'text-slate-500' : ''}`}>
+                <span className={`block truncate ${!selectedOption ? 'text-slate-500 dark:text-slate-400' : ''}`}>
                     {selectedOption ? `[${selectedOption.CodigoSetor}] - ${selectedOption.Nome}` : placeholder}
                 </span>
                 <div className="flex items-center">
                     {value && (
                         <button 
                             onClick={(e) => { e.stopPropagation(); onChange(''); setIsOpen(false); }}
-                            className="mr-2 text-slate-400 hover:text-slate-600"
+                            className="mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                         >
                             <XCircleIcon className="w-4 h-4"/>
                         </button>
@@ -69,15 +69,15 @@ const SearchableSelect: React.FC<{
             </div>
 
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
-                    <div className="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col transition-colors">
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 sticky top-0">
                         <div className="relative">
                             <SearchIcon className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400"/>
                             <input 
                                 type="text"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="w-full bg-white border border-slate-300 rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:border-blue-500"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white rounded-md pl-8 pr-3 py-1.5 text-sm outline-none focus:border-blue-500"
                                 placeholder="Buscar por Nome ou Código..."
                                 autoFocus
                                 onClick={e => e.stopPropagation()}
@@ -86,21 +86,21 @@ const SearchableSelect: React.FC<{
                     </div>
                     <div className="overflow-y-auto flex-1">
                         <div 
-                            className={`p-2 hover:bg-blue-50 cursor-pointer text-sm font-bold text-blue-600 ${value === '' ? 'bg-blue-50' : ''}`}
+                            className={`p-2 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer text-sm font-bold text-blue-600 dark:text-sky-400 ${value === '' ? 'bg-blue-50 dark:bg-blue-950/40' : ''}`}
                             onClick={() => { onChange(''); setIsOpen(false); }}
                         >
                             Todos os Colaboradores
                         </div>
                         {filteredOptions.length === 0 ? (
-                            <div className="p-4 text-center text-xs text-slate-400 italic">Nenhum resultado encontrado.</div>
+                            <div className="p-4 text-center text-xs text-slate-400 dark:text-slate-500 italic">Nenhum resultado encontrado.</div>
                         ) : (
                             filteredOptions.map(opt => (
                                 <div 
                                     key={opt.ID_Pulsus}
-                                    className={`p-2 hover:bg-slate-50 cursor-pointer text-sm border-b border-slate-50 last:border-0 ${String(opt.ID_Pulsus) === value ? 'bg-blue-50 font-medium' : 'text-slate-700'}`}
+                                    className={`p-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 cursor-pointer text-sm border-b border-slate-50 dark:border-slate-700/50 last:border-0 ${String(opt.ID_Pulsus) === value ? 'bg-blue-50 dark:bg-slate-700 font-medium text-blue-600 dark:text-sky-400' : 'text-slate-700 dark:text-slate-200'}`}
                                     onClick={() => { onChange(String(opt.ID_Pulsus)); setIsOpen(false); }}
                                 >
-                                    <span className="font-mono font-bold text-xs text-slate-500 mr-2">[{opt.CodigoSetor}]</span>
+                                    <span className="font-mono font-bold text-xs text-slate-500 dark:text-slate-400 mr-2">[{opt.CodigoSetor}]</span>
                                     {opt.Nome}
                                 </div>
                             ))
@@ -444,16 +444,16 @@ export const Relatorios: React.FC = () => {
                 </div>
                 
                 {/* SORTING CONTROLS */}
-                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-end">
-                    <div className="flex items-center space-x-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
+                    <div className="flex items-center space-x-3 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
                         <span className="text-xs font-bold text-slate-400 uppercase">Ordenar:</span>
                         <label className="flex items-center cursor-pointer">
                             <input type="radio" name="sortRel" checked={sortBy === 'NOME'} onChange={() => setSortBy('NOME')} className="mr-1 accent-blue-600"/>
-                            <span className="text-xs font-bold text-slate-600">Nome</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Nome</span>
                         </label>
                         <label className="flex items-center cursor-pointer">
                             <input type="radio" name="sortRel" checked={sortBy === 'SETOR'} onChange={() => setSortBy('SETOR')} className="mr-1 accent-blue-600"/>
-                            <span className="text-xs font-bold text-slate-600">Setor</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Setor</span>
                         </label>
                     </div>
                 </div>
@@ -464,8 +464,8 @@ export const Relatorios: React.FC = () => {
                 <div className="animate-fade-in-up space-y-6 relative z-0">
                     {/* Retroactive Conflict Alert */}
                     {conflictingIds.length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex justify-between items-center animate-pulse print:hidden">
-                            <div className="flex items-center text-red-700">
+                        <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl p-4 flex justify-between items-center animate-pulse print:hidden">
+                            <div className="flex items-center text-red-700 dark:text-red-300">
                                 <ExclamationIcon className="w-6 h-6 mr-3"/>
                                 <div>
                                     <p className="font-bold">Atenção: Conflito Retroativo Detectado</p>
@@ -484,61 +484,61 @@ export const Relatorios: React.FC = () => {
 
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:grid-cols-3 print:gap-2">
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center print:border print:p-4">
-                            <div className="p-4 bg-emerald-50 rounded-full mr-4 border border-emerald-100 print:hidden">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center print:border print:p-4 transition-colors">
+                            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/50 rounded-full mr-4 border border-emerald-100 dark:border-emerald-900/60 print:hidden">
                                 <span className="text-2xl">💰</span>
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Pago</p>
-                                <p className="text-2xl font-extrabold text-slate-800">{totalPago.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                <p className="text-sm font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Total Pago</p>
+                                <p className="text-2xl font-extrabold text-slate-800 dark:text-white">{totalPago.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                             </div>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center print:border print:p-4">
-                             <div className="p-4 bg-blue-50 rounded-full mr-4 border border-blue-100 print:hidden">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center print:border print:p-4 transition-colors">
+                             <div className="p-4 bg-blue-50 dark:bg-blue-950/50 rounded-full mr-4 border border-blue-100 dark:border-blue-900/60 print:hidden">
                                 <span className="text-2xl">🚗</span>
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">KM Total</p>
-                                <p className="text-2xl font-extrabold text-slate-800">{totalKM.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} km</p>
+                                <p className="text-sm font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">KM Total</p>
+                                <p className="text-2xl font-extrabold text-slate-800 dark:text-white">{totalKM.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} km</p>
                             </div>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center print:border print:p-4">
-                             <div className="p-4 bg-purple-50 rounded-full mr-4 border border-purple-100 print:hidden">
-                                <UsersIcon className="w-6 h-6 text-purple-600"/>
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center print:border print:p-4 transition-colors">
+                             <div className="p-4 bg-purple-50 dark:bg-purple-950/50 rounded-full mr-4 border border-purple-100 dark:border-purple-900/60 print:hidden">
+                                <UsersIcon className="w-6 h-6 text-purple-600 dark:text-purple-400"/>
                             </div>
                             <div>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Registros</p>
-                                <p className="text-2xl font-extrabold text-slate-800">{reportData.length}</p>
+                                <p className="text-sm font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider">Registros</p>
+                                <p className="text-2xl font-extrabold text-slate-800 dark:text-white">{reportData.length}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* View Switcher Tabs (Hidden on Print) */}
-                    <div className="flex border-b border-slate-200 print:hidden">
+                    <div className="flex border-b border-slate-200 dark:border-slate-800 print:hidden">
                         <button 
                             onClick={() => setViewMode('SINTETICO')}
-                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'SINTETICO' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'SINTETICO' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                         >
                             <DocumentReportIcon className="w-5 h-5 mr-2"/>
                             Visão Sintética (Resumo)
                         </button>
                         <button 
                             onClick={() => setViewMode('ANALITICO')}
-                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'ANALITICO' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'ANALITICO' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                         >
                             <ChartBarIcon className="w-5 h-5 mr-2"/>
                             Visão Analítica (Dia a Dia)
                         </button>
                         <button 
                             onClick={() => setViewMode('RANKING')}
-                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'RANKING' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'RANKING' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                         >
                             <TrophyIcon className="w-5 h-5 mr-2"/>
                             Ranking & Insights
                         </button>
                         <button 
                             onClick={() => setViewMode('CICLO')}
-                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'CICLO' ? 'border-b-2 border-emerald-600 text-emerald-600 bg-emerald-50/30' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`px-6 py-3 text-sm font-bold flex items-center transition-all ${viewMode === 'CICLO' ? 'border-b-2 border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/30' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                         >
                             <CalendarIcon className="w-5 h-5 mr-2"/>
                             Reunião de Ciclo (Assinaturas)
@@ -546,9 +546,9 @@ export const Relatorios: React.FC = () => {
                     </div>
 
                     {/* Table Area */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print:border-none print:shadow-none">
-                        <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center print:hidden">
-                            <h3 className="font-bold text-slate-700">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden print:border-none print:shadow-none transition-colors">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center print:hidden">
+                            <h3 className="font-bold text-slate-700 dark:text-white">
                                 {viewMode === 'CICLO' ? 'Registros de Reunião de Ciclo' : (viewMode === 'SINTETICO' ? 'Detalhamento por Colaborador' : viewMode === 'ANALITICO' ? 'Detalhamento Diário Agrupado' : 'Ranking Financeiro')}
                             </h3>
                             <div className="flex gap-2">
@@ -561,7 +561,7 @@ export const Relatorios: React.FC = () => {
                                         Imprimir Lista de Assinaturas (Ciclo)
                                     </button>
                                 )}
-                                <button onClick={() => window.print()} className="text-slate-500 hover:text-blue-600 p-2 rounded hover:bg-white transition" title="Imprimir (Nativo)"><PrinterIcon className="w-5 h-5"/></button>
+                                <button onClick={() => window.print()} className="text-slate-500 dark:text-slate-300 hover:text-blue-600 dark:hover:text-sky-400 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Imprimir (Nativo)"><PrinterIcon className="w-5 h-5"/></button>
                             </div>
                         </div>
                         
@@ -570,49 +570,49 @@ export const Relatorios: React.FC = () => {
                                 <div className="p-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-600 uppercase mb-4">Top 10 - Maior Valor Pago (R$)</h4>
+                                            <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase mb-4">Top 10 - Maior Valor Pago (R$)</h4>
                                             <div className="space-y-3">
                                                 {rankingData.map((item, idx) => (
-                                                    <div key={item.ID_Detalhe} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                    <div key={item.ID_Detalhe} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-100 dark:border-slate-800">
                                                         <div className="flex items-center">
-                                                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mr-3 ${idx < 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}>{idx + 1}</span>
+                                                            <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mr-3 ${idx < 3 ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>{idx + 1}</span>
                                                             <div>
-                                                                <p className="text-sm font-bold text-slate-800">{item.NomeColaborador}</p>
-                                                                <p className="text-[10px] text-slate-400 uppercase font-bold">{item.Grupo} - {item.CodigoSetor || item.ID_Pulsus}</p>
+                                                                <p className="text-sm font-bold text-slate-800 dark:text-white">{item.NomeColaborador}</p>
+                                                                <p className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-bold">{item.Grupo} - {item.CodigoSetor || item.ID_Pulsus}</p>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-black text-emerald-600 text-sm">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                                                            <p className="font-mono text-slate-400 text-xs">{item.TotalKM.toFixed(1)} km</p>
+                                                            <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                                            <p className="font-mono text-slate-400 dark:text-slate-400 text-xs">{item.TotalKM.toFixed(1)} km</p>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-600 uppercase mb-4">Distribuição Financeira por Veículo</h4>
-                                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 h-full flex flex-col justify-center">
+                                            <h4 className="text-sm font-bold text-slate-600 dark:text-slate-300 uppercase mb-4">Distribuição Financeira por Veículo</h4>
+                                            <div className="bg-slate-50 dark:bg-slate-800/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 h-full flex flex-col justify-center">
                                                 <div className="flex items-end space-x-2 h-40 mb-4">
                                                     <div className="w-1/2 bg-blue-500 rounded-t-lg relative group transition-all hover:opacity-90" style={{ height: `${vehicleStats.TotalVal > 0 ? (vehicleStats.CarroVal / vehicleStats.TotalVal) * 100 : 0}%` }}>
-                                                        <div className="absolute -top-8 w-full text-center font-bold text-blue-600">{vehicleStats.TotalVal > 0 ? ((vehicleStats.CarroVal / vehicleStats.TotalVal) * 100).toFixed(1) : 0}%</div>
+                                                        <div className="absolute -top-8 w-full text-center font-bold text-blue-600 dark:text-sky-400">{vehicleStats.TotalVal > 0 ? ((vehicleStats.CarroVal / vehicleStats.TotalVal) * 100).toFixed(1) : 0}%</div>
                                                     </div>
                                                     <div className="w-1/2 bg-amber-500 rounded-t-lg relative group transition-all hover:opacity-90" style={{ height: `${vehicleStats.TotalVal > 0 ? (vehicleStats.MotoVal / vehicleStats.TotalVal) * 100 : 0}%` }}>
-                                                        <div className="absolute -top-8 w-full text-center font-bold text-amber-600">{vehicleStats.TotalVal > 0 ? ((vehicleStats.MotoVal / vehicleStats.TotalVal) * 100).toFixed(1) : 0}%</div>
+                                                        <div className="absolute -top-8 w-full text-center font-bold text-amber-600 dark:text-amber-400">{vehicleStats.TotalVal > 0 ? ((vehicleStats.MotoVal / vehicleStats.TotalVal) * 100).toFixed(1) : 0}%</div>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-3 text-xs border-t border-slate-200 pt-4">
+                                                <div className="flex flex-col gap-3 text-xs border-t border-slate-200 dark:border-slate-700 pt-4">
                                                     <div className="flex justify-between items-center">
-                                                        <div className="flex items-center font-bold text-slate-600"><span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span> Carro</div>
+                                                        <div className="flex items-center font-bold text-slate-600 dark:text-slate-300"><span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span> Carro</div>
                                                         <div className="text-right">
-                                                            <div className="font-bold text-blue-600">{vehicleStats.CarroVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                                                            <div className="text-[10px] text-slate-400">{vehicleStats.Carro.toFixed(0)} km</div>
+                                                            <div className="font-bold text-blue-600 dark:text-sky-400">{vehicleStats.CarroVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{vehicleStats.Carro.toFixed(0)} km</div>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <div className="flex items-center font-bold text-slate-600"><span className="w-3 h-3 bg-amber-500 rounded-full mr-2"></span> Moto</div>
+                                                        <div className="flex items-center font-bold text-slate-600 dark:text-slate-300"><span className="w-3 h-3 bg-amber-500 rounded-full mr-2"></span> Moto</div>
                                                         <div className="text-right">
-                                                            <div className="font-bold text-amber-600">{vehicleStats.MotoVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                                                            <div className="text-[10px] text-slate-400">{vehicleStats.Moto.toFixed(0)} km</div>
+                                                            <div className="font-bold text-amber-600 dark:text-amber-400">{vehicleStats.MotoVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{vehicleStats.Moto.toFixed(0)} km</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -622,8 +622,8 @@ export const Relatorios: React.FC = () => {
                                 </div>
                             ) : viewMode === 'SINTETICO' ? (
                                 /* TABELA SINTÉTICA */
-                                <table className="w-full text-sm text-left text-slate-600">
-                                    <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 border-b border-slate-100 font-semibold sticky top-0 bg-white z-10 print:bg-white print:border-b-2 print:border-black">
+                                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                                    <thead className="text-xs text-slate-400 dark:text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 font-semibold sticky top-0 bg-white dark:bg-slate-900 z-10 print:bg-white print:border-b-2 print:border-black">
                                         <tr>
                                             <th className="p-4 tracking-wider">Data Ger.</th>
                                             <th className="p-4 tracking-wider">Origem</th>
@@ -634,38 +634,38 @@ export const Relatorios: React.FC = () => {
                                             <th className="p-4 tracking-wider text-right">Valor Pago</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-50">
+                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                                         {sortedReportData.length === 0 ? (
-                                            <tr><td colSpan={7} className="p-12 text-center text-slate-400">Nenhum registro encontrado para este período.</td></tr>
+                                            <tr><td colSpan={7} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhum registro encontrado para este período.</td></tr>
                                         ) : (
                                             sortedReportData.map((item) => (
-                                                <tr key={item.ID_Detalhe} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="p-4 text-xs font-mono">{new Date(item.DataGeracao).toLocaleDateString()}</td>
+                                                <tr key={item.ID_Detalhe} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                    <td className="p-4 text-xs font-mono text-slate-600 dark:text-slate-300">{new Date(item.DataGeracao).toLocaleDateString()}</td>
                                                     <td className="p-4">
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${item.OrigemDados === 'ROTEIRIZADOR' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${item.OrigemDados === 'ROTEIRIZADOR' ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                                                             {item.OrigemDados || 'CSV'}
                                                         </span>
                                                         {item.MotivoEdicao && (
                                                             <div className="mt-1 print:hidden" title={item.MotivoEdicao}>
-                                                                <span className="flex items-center text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 uppercase w-fit cursor-help">
+                                                                <span className="flex items-center text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/60 uppercase w-fit cursor-help">
                                                                     <PencilIcon className="w-2 h-2 mr-1"/> Editado
                                                                 </span>
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td className="p-4 text-xs font-medium text-slate-500">{item.PeriodoReferencia}</td>
+                                                    <td className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400">{item.PeriodoReferencia}</td>
                                                     <td className="p-4">
-                                                        <div className="font-bold text-slate-800">{item.NomeColaborador}</div>
-                                                        <div className="text-[10px] text-slate-400 font-bold uppercase">{item.Grupo} - {item.CodigoSetor || item.ID_Pulsus}</div>
+                                                        <div className="font-bold text-slate-800 dark:text-white">{item.NomeColaborador}</div>
+                                                        <div className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase">{item.Grupo} - {item.CodigoSetor || item.ID_Pulsus}</div>
                                                     </td>
                                                     <td className="p-4 text-center">
-                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.TipoVeiculo === 'Carro' ? 'bg-blue-50 text-blue-600 border-blue-100' : item.TipoVeiculo === 'Moto' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${item.TipoVeiculo === 'Carro' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-900' : item.TipoVeiculo === 'Moto' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
                                                             {item.TipoVeiculo === 'Carro' ? <CarIcon className="w-3 h-3 mr-1"/> : item.TipoVeiculo === 'Moto' ? <MotoIcon className="w-3 h-3 mr-1"/> : null}
                                                             {item.TipoVeiculo}
                                                         </span>
                                                     </td>
-                                                    <td className="p-4 text-right font-mono text-slate-700">{item.TotalKM.toFixed(2)}</td>
-                                                    <td className="p-4 text-right font-bold text-emerald-600">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                    <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200">{item.TotalKM.toFixed(2)}</td>
+                                                    <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                 </tr>
                                             ))
                                         )}
@@ -673,8 +673,8 @@ export const Relatorios: React.FC = () => {
                                 </table>
                             ) : (
                                 /* TABELA ANALÍTICA AGRUPADA */
-                                <table className="w-full text-sm text-left text-slate-600">
-                                    <thead className="text-xs text-slate-400 uppercase bg-slate-50/50 border-b border-slate-100 font-semibold sticky top-0 bg-white z-10">
+                                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                                    <thead className="text-xs text-slate-400 dark:text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 font-semibold sticky top-0 bg-white dark:bg-slate-900 z-10">
                                         <tr>
                                             <th className="p-4 w-12 text-center print:hidden"></th>
                                             <th className="p-4 tracking-wider">Origem</th>
@@ -684,9 +684,9 @@ export const Relatorios: React.FC = () => {
                                             <th className="p-4 tracking-wider text-right">Total Valor (Periodo)</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {groupedAnalyticData.length === 0 ? (
-                                            <tr><td colSpan={6} className="p-12 text-center text-slate-400">Nenhum detalhe diário encontrado para este período.</td></tr>
+                                            <tr><td colSpan={6} className="p-12 text-center text-slate-400 dark:text-slate-500">Nenhum detalhe diário encontrado para este período.</td></tr>
                                         ) : (
                                             groupedAnalyticData.map((group) => {
                                                 const isExpanded = expandedRows.has(group.info.ID_Pulsus);
@@ -695,82 +695,82 @@ export const Relatorios: React.FC = () => {
                                                         {/* Parent Row */}
                                                         <tr 
                                                             onClick={() => toggleRow(group.info.ID_Pulsus)}
-                                                            className={`cursor-pointer transition-colors ${group.hasConflicts ? 'bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500' : (isExpanded ? 'bg-blue-50/50' : 'hover:bg-slate-50')}`}
+                                                            className={`cursor-pointer transition-colors ${group.hasConflicts ? 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border-l-4 border-l-red-500' : (isExpanded ? 'bg-blue-50/50 dark:bg-slate-800/80' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50')}`}
                                                         >
                                                             <td className="p-4 text-center print:hidden">
-                                                                <div className={`transition-transform duration-200 ${isExpanded ? 'text-blue-600' : 'text-slate-400'}`}>
+                                                                <div className={`transition-transform duration-200 ${isExpanded ? 'text-blue-600 dark:text-sky-400' : 'text-slate-400'}`}>
                                                                     {isExpanded ? <ChevronDownIcon className="w-5 h-5"/> : <ChevronRightIcon className="w-5 h-5"/>}
                                                                 </div>
                                                             </td>
                                                             <td className="p-4">
-                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${group.info.OrigemDados === 'ROTEIRIZADOR' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${group.info.OrigemDados === 'ROTEIRIZADOR' ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                                                                     {group.info.OrigemDados || 'CSV'}
                                                                 </span>
                                                                 {group.info.MotivoEdicao && (
                                                                     <div className="mt-1 print:hidden" title={group.info.MotivoEdicao}>
-                                                                        <span className="flex items-center text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 uppercase w-fit">
+                                                                        <span className="flex items-center text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/60 uppercase w-fit">
                                                                             <PencilIcon className="w-2 h-2 mr-1"/> Editado
                                                                         </span>
                                                                     </div>
                                                                 )}
                                                             </td>
                                                             <td className="p-4">
-                                                                <div className="font-bold text-slate-800 text-base">{group.info.NomeColaborador}</div>
-                                                                <div className="text-[10px] text-slate-500 font-bold uppercase">
+                                                                <div className="font-bold text-slate-800 dark:text-white text-base">{group.info.NomeColaborador}</div>
+                                                                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">
                                                                     {group.info.Grupo} - {group.info.CodigoSetor || group.info.ID_Pulsus}
                                                                 </div>
                                                                 {group.hasConflicts && (
-                                                                    <div className="text-xs font-bold text-red-600 mt-1 flex items-center">
+                                                                    <div className="text-xs font-bold text-red-600 dark:text-red-400 mt-1 flex items-center">
                                                                         <ExclamationIcon className="w-3 h-3 mr-1"/>
                                                                         Conflito de Ausência Detectado
                                                                     </div>
                                                                 )}
                                                             </td>
                                                             <td className="p-4 text-center">
-                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${group.info.TipoVeiculo === 'Carro' ? 'bg-blue-50 text-blue-600 border-blue-100' : group.info.TipoVeiculo === 'Moto' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${group.info.TipoVeiculo === 'Carro' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-900' : group.info.TipoVeiculo === 'Moto' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
                                                                     {group.info.TipoVeiculo === 'Carro' ? <CarIcon className="w-3 h-3 mr-1"/> : group.info.TipoVeiculo === 'Moto' ? <MotoIcon className="w-3 h-3 mr-1"/> : null}
                                                                     {group.info.TipoVeiculo}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-4 text-right font-mono text-slate-700 font-bold">{group.totalKm.toFixed(2)} km</td>
-                                                            <td className="p-4 text-right font-bold text-emerald-600 text-lg">{group.totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                            <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200 font-bold">{group.totalKm.toFixed(2)} km</td>
+                                                            <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400 text-lg">{group.totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                         </tr>
 
                                                         {/* Expanded Child Row */}
                                                         {isExpanded && (
-                                                            <tr className="bg-slate-50/50 shadow-inner">
+                                                            <tr className="bg-slate-50/50 dark:bg-slate-800/30 shadow-inner">
                                                                 <td colSpan={6} className="p-4 pl-16 print:pl-4">
-                                                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                                                                    <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                                                                         <table className="w-full text-xs">
-                                                                            <thead className="bg-slate-100 text-slate-500 uppercase font-semibold">
+                                                                            <thead className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase font-semibold">
                                                                                 <tr>
                                                                                     <th className="px-4 py-2 text-left">Data</th>
                                                                                     <th className="px-4 py-2 text-right">KM Percorrido</th>
                                                                                     <th className="px-4 py-2 text-right">Valor Calculado</th>
                                                                                 </tr>
                                                                             </thead>
-                                                                            <tbody className="divide-y divide-slate-50 text-slate-600">
+                                                                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
                                                                                 {group.items.sort((a,b) => new Date(a.DataOcorrencia).getTime() - new Date(b.DataOcorrencia).getTime()).map(day => {
                                                                                     // Check conflict
                                                                                     const isConflict = day.TemAusencia && day.Valor_Dia > 0;
                                                                                     return (
-                                                                                        <tr key={day.ID_Diario} className={`hover:bg-blue-50/30 ${isConflict ? 'bg-red-50' : ''}`}>
-                                                                                            <td className="px-4 py-2 font-mono flex items-center">
+                                                                                        <tr key={day.ID_Diario} className={`hover:bg-blue-50/30 dark:hover:bg-slate-800/50 ${isConflict ? 'bg-red-50 dark:bg-red-950/40' : ''}`}>
+                                                                                            <td className="px-4 py-2 font-mono flex items-center text-slate-700 dark:text-slate-300">
                                                                                                 {new Date(day.DataOcorrencia).toLocaleDateString('pt-BR')}
-                                                                                                {isConflict && <span className="ml-2 text-red-600 text-[10px] font-bold border border-red-200 bg-white px-1 rounded flex items-center"><ExclamationIcon className="w-3 h-3 mr-1"/> Conflito: {day.MotivoAusencia}</span>}
+                                                                                                {isConflict && <span className="ml-2 text-red-600 dark:text-red-400 text-[10px] font-bold border border-red-200 dark:border-red-900 bg-white dark:bg-slate-900 px-1 rounded flex items-center"><ExclamationIcon className="w-3 h-3 mr-1"/> Conflito: {day.MotivoAusencia}</span>}
                                                                                             </td>
-                                                                                            <td className={`px-4 py-2 text-right font-mono ${isConflict ? 'text-red-600 line-through' : ''}`}>{day.KM_Dia.toFixed(2)} km</td>
-                                                                                            <td className="px-4 py-2 text-right font-bold text-slate-700">
+                                                                                            <td className={`px-4 py-2 text-right font-mono ${isConflict ? 'text-red-600 dark:text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{day.KM_Dia.toFixed(2)} km</td>
+                                                                                            <td className="px-4 py-2 text-right font-bold text-slate-700 dark:text-slate-200">
                                                                                                 {day.Observacao ? (
                                                                                                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                                                                                        day.Observacao.toLowerCase().includes('féria') ? 'bg-amber-100 text-amber-700' :
-                                                                                                        day.Observacao.toLowerCase().includes('atestado') ? 'bg-red-100 text-red-700' :
-                                                                                                        'bg-slate-200 text-slate-700'
+                                                                                                        day.Observacao.toLowerCase().includes('féria') ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300' :
+                                                                                                        day.Observacao.toLowerCase().includes('atestado') ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300' :
+                                                                                                        'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                                                                                                     }`}>
                                                                                                         {day.Observacao}
                                                                                                     </span>
                                                                                                 ) : (
-                                                                                                    <span className={isConflict ? 'text-red-600 line-through' : ''}>
+                                                                                                    <span className={isConflict ? 'text-red-600 dark:text-red-400 line-through' : ''}>
                                                                                                         {day.Valor_Dia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                                                                     </span>
                                                                                                 )}
