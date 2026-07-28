@@ -125,7 +125,14 @@ const RouteSelectionModal: React.FC<{
                                                 <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded border border-slate-300 uppercase">Pendente</span>
                                             }
                                         </td>
-                                        <td className="p-3 font-bold text-slate-700">{item.Periodo}</td>
+                                        <td className="p-3">
+                                            <p className="font-bold text-slate-700">{item.Periodo}</p>
+                                            {item.Descricao && (
+                                                <p className="text-xs font-semibold text-blue-600 mt-0.5 italic">
+                                                    "{item.Descricao}"
+                                                </p>
+                                            )}
+                                        </td>
                                         <td className="p-3 font-mono text-xs">{new Date(item.DataSimulacao).toLocaleString('pt-BR')}</td>
                                         <td className="p-3 text-right font-mono">{item.TotalKM.toFixed(1)} km</td>
                                         <td className="p-3 text-center">
