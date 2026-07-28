@@ -686,45 +686,14 @@ ORDER BY a.CODCET;`;
     }
     setIsGeocoding(true);
     try {
-      const rawAddress = settingsForm.headquartersAddress.trim();
-      const normalizedAddress = rawAddress
-        .replace(/^r\.\s+/i, 'Rua ')
-        .replace(/^r\s+/i, 'Rua ')
-        .replace(/^av\.\s+/i, 'Avenida ')
-        .replace(/^av\s+/i, 'Avenida ')
-        .replace(/^dr\.\s+/i, 'Doutor ')
-        .replace(/^dr\s+/i, 'Doutor ')
-        .replace(/^prof\.\s+/i, 'Professor ')
-        .replace(/^rod\.\s+/i, 'Rodovia ');
-
-      const queries = [
-        normalizedAddress,
-        rawAddress,
-        normalizedAddress.includes('Brasil') ? normalizedAddress : `${normalizedAddress}, Brasil`
-      ];
-
-      let lat: number | null = null;
-      let lon: number | null = null;
-
-      for (const qStr of queries) {
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(qStr)}&limit=1`;
-          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-              lat = parseFloat(data[0].lat);
-              lon = parseFloat(data[0].lon);
-              break;
-            }
-          }
-        } catch (e) {
-          console.warn('Tentativa geocode sede falhou:', qStr, e);
-        }
-      }
-
-      if (lat === null || lon === null) throw new Error('Endereço não encontrado no mapa.');
-
+      const address = settingsForm.headquartersAddress.trim();
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+      if (!res.ok) throw new Error('Falha no serviço de localização.');
+      const data = await res.json();
+      if (!data || data.length === 0) throw new Error('Endereço não encontrado no mapa.');
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
       setSettingsForm(prev => ({
         ...prev,
         headquartersLat: lat,
