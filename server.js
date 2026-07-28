@@ -577,7 +577,9 @@ async function initializeDatabase() {
                         { name: 'Street', type: 'NVARCHAR(255)' },
                         { name: 'Number', type: 'NVARCHAR(50)' },
                         { name: 'Complement', type: 'NVARCHAR(255)' },
-                        { name: 'Neighborhood', type: 'NVARCHAR(255)' }
+                        { name: 'Neighborhood', type: 'NVARCHAR(255)' },
+                        { name: 'Latitude', type: 'FLOAT' },
+                        { name: 'Longitude', type: 'FLOAT' }
                     ];
 
                     for (const col of colsToAdd) {
@@ -1514,6 +1516,9 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                    Users.FullName  AS nome,
                    Users.Cpf       AS cpf,
                    Users.JobTitle  AS cargo,
+                   Users.Address   AS endereco,
+                   Users.Latitude  AS latitude,
+                   Users.Longitude AS longitude,
                    Devices.InternalCode AS codigo_setor,
                    Sectors.Name AS grupo
             FROM Devices devices
@@ -1554,12 +1559,15 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             const existing = fuelMap.get(idPulsus);
             const codigoSetorNum = Number(nItem.codigo_setor) || 0;
             const nCpf = nItem.cpf ? String(nItem.cpf).trim() : '';
+            const nAddress = nItem.endereco ? String(nItem.endereco).trim() : null;
+            const nLat = nItem.latitude !== undefined && nItem.latitude !== null ? Number(nItem.latitude) : null;
+            const nLon = nItem.longitude !== undefined && nItem.longitude !== null ? Number(nItem.longitude) : null;
             if (!existing) {
                 novos.push({
                     id_pulsus: idPulsus,
                     nome: nItem.nome,
                     matchType: 'NEW',
-                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf }
+                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf, endereco_base: nAddress, latitude_base: nLat, longitude_base: nLon }
                 });
             } else {
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
@@ -1638,6 +1646,9 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
             if (item.syncAction === 'INSERT') {
                 const tipoVeiculo = item.newData?.tipoVeiculo || 'Carro';
                 const cpfVal = item.newData?.cpf || null;
+                const endVal = item.newData?.endereco_base || null;
+                const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
+                const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;
                 await pool.request()
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
                     .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
@@ -1645,32 +1656,47 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
                     .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
                     .input('CPF', sql.NVarChar, cpfVal)
+                    .input('EnderecoBase', sql.NVarChar, endVal)
+                    .input('LatitudeBase', sql.Float, latVal)
+                    .input('LongitudeBase', sql.Float, lonVal)
                     .query(`
                         IF NOT EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
                         BEGIN
-                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, Ativo)
-                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, 1)
+                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, EnderecoBase, LatitudeBase, LongitudeBase, Ativo)
+                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, @EnderecoBase, @LatitudeBase, @LongitudeBase, 1)
                         END
                         ELSE
                         BEGIN
                             UPDATE FuelColaboradores
-                            SET CPF = COALESCE(@CPF, CPF)
+                            SET CPF = COALESCE(@CPF, CPF),
+                                EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
+                                LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
+                                LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase)
                             WHERE ID_Pulsus = @ID_Pulsus
                         END
                     `);
                 processedCount++;
             } else if (item.syncAction === 'UPDATE_DATA') {
                 const cpfVal = item.newData?.cpf || null;
+                const endVal = item.newData?.endereco_base || null;
+                const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
+                const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;
                 await pool.request()
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
                     .input('Nome', sql.NVarChar, item.nome || item.newData?.nome || '')
                     .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
                     .input('CPF', sql.NVarChar, cpfVal)
+                    .input('EnderecoBase', sql.NVarChar, endVal)
+                    .input('LatitudeBase', sql.Float, latVal)
+                    .input('LongitudeBase', sql.Float, lonVal)
                     .query(`
                         UPDATE FuelColaboradores 
                         SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo,
-                            CPF = COALESCE(@CPF, CPF)
+                            CPF = COALESCE(@CPF, CPF),
+                            EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
+                            LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
+                            LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase)
                         WHERE ID_Pulsus = @ID_Pulsus
                     `);
                 processedCount++;

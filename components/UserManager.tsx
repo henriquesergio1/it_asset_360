@@ -3,7 +3,7 @@ import {
   Plus, Search, User as UserIcon, Edit2, Trash2, 
   ChevronLeft, ChevronRight, Download, Filter, 
   FilterX, MoreHorizontal, UserPlus, Info, 
-  MapPin, Phone, Mail, CreditCard, Hash, FileText, 
+  MapPin, Phone, Mail, CreditCard, Hash, FileText, Globe, 
   ExternalLink, Power, History, Shield, 
   Smartphone, Camera, UserCheck,
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, ShieldCheck,   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
@@ -75,7 +75,7 @@ const UserManager: React.FC = () => {
     assetDetails: ''
   });
 
-  const [formData, setFormData] = useState<Partial<User & { gender?: string; birthDate?: string; phone?: string; personalPhone?: string; city?: string; state?: string; zipCode?: string; hireDate?: string; notes?: string; }>>({
+  const [formData, setFormData] = useState<Partial<User & { gender?: string; birthDate?: string; phone?: string; personalPhone?: string; city?: string; state?: string; zipCode?: string; hireDate?: string; notes?: string; latitude?: number; longitude?: number; }>>({
     fullName: '',
     email: '',
     cpf: '',
@@ -89,12 +89,15 @@ const UserManager: React.FC = () => {
     city: '',
     state: '',
     zipCode: '',
+    latitude: undefined,
+    longitude: undefined,
     sectorId: '',
     hireDate: '',
     status: UserStatus.ACTIVE,
     notes: '',
     active: true
   });
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
     const saved = localStorage.getItem('user_manager_columns');
@@ -414,6 +417,43 @@ const UserManager: React.FC = () => {
       console.error('Erro ao buscar CEP:', err);
     } finally {
       setCepLoading(false);
+    }
+  };
+
+  const handleGeocodeAddress = async (overrideAddress?: string) => {
+    const street = formData.street || '';
+    const num = formData.number || '';
+    const neighborhood = formData.neighborhood || '';
+    const city = formData.city || '';
+    const state = formData.state || '';
+    const zip = formData.zipCode || '';
+
+    const fullAddr = overrideAddress || [street, num, neighborhood, city, state, zip].filter(Boolean).join(', ');
+    if (!fullAddr.trim()) {
+      showToast('Digite ao menos o endereço, cidade e UF para buscar as coordenadas.', 'error');
+      return null;
+    }
+    setIsGeocoding(true);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddr.trim())}&limit=1`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+      if (!res.ok) throw new Error('Falha no serviço de localização.');
+      const data = await res.json();
+      if (!data || data.length === 0) throw new Error('Endereço não encontrado no mapa.');
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      setFormData(prev => ({
+        ...prev,
+        latitude: lat,
+        longitude: lon
+      }));
+      showToast('Coordenadas (Lat/Long) encontradas e preenchidas!', 'success');
+      return { lat, lon };
+    } catch (err: any) {
+      showToast(`Erro ao buscar coordenadas: ${err.message}`, 'error');
+      return null;
+    } finally {
+      setIsGeocoding(false);
     }
   };
 
@@ -1147,6 +1187,26 @@ const UserManager: React.FC = () => {
     if (!window.confirm(`Confirmar a importação de "${colab.fullName}" para o módulo de T.I.?`)) return;
     const addressStr = [colab.street, colab.number, colab.complement, colab.neighborhood, colab.city, colab.state]
       .filter(Boolean).join(', ');
+    
+    // Geocodificação automática na importação do RH para o TI
+    let lat = colab.latitude;
+    let lon = colab.longitude;
+    if ((lat === undefined || lon === undefined || lat === null || lon === null) && addressStr.trim()) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressStr.trim())}&limit=1`;
+        const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+        if (res.ok) {
+          const gData = await res.json();
+          if (gData && gData.length > 0) {
+            lat = parseFloat(gData[0].lat);
+            lon = parseFloat(gData[0].lon);
+          }
+        }
+      } catch (e) {
+        console.warn('Geocodificação na importação do RH falhou:', e);
+      }
+    }
+
     const newUser: User = {
       id: Math.random().toString(36).substr(2, 9),
       fullName: colab.fullName,
@@ -1166,6 +1226,8 @@ const UserManager: React.FC = () => {
       neighborhood: colab.neighborhood || '',
       city: colab.city || '',
       state: colab.state || '',
+      latitude: lat,
+      longitude: lon,
       phone: cleanDocument(colab.corporatePhone || colab.personalPhone),
       personalPhone: cleanDocument(colab.personalPhone),
       gender: colab.gender || 'Masculino',
@@ -1915,6 +1977,58 @@ const UserManager: React.FC = () => {
                           maxLength={2}
                           onChange={e => setFormData({...formData, state: e.target.value})} 
                         />
+                      </div>
+
+                      {/* Coordenadas GPS (Lat / Long) */}
+                      <div className="md:col-span-6 grid grid-cols-1 md:grid-cols-6 gap-4 pt-3 border-t border-slate-200 dark:border-slate-700/60 mt-1">
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Latitude (GPS)</label>
+                          <input 
+                            disabled={isViewOnly} 
+                            type="number" 
+                            step="any"
+                            placeholder="-23.5505" 
+                            className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                            value={formData.latitude !== undefined && formData.latitude !== null ? formData.latitude : ''} 
+                            onChange={e => setFormData({...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined})} 
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold uppercase mb-1 tracking-wider text-slate-500 dark:text-slate-400/80">Longitude (GPS)</label>
+                          <input 
+                            disabled={isViewOnly} 
+                            type="number" 
+                            step="any"
+                            placeholder="-46.6333" 
+                            className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-emerald-500 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 text-slate-900 dark:text-white" 
+                            value={formData.longitude !== undefined && formData.longitude !== null ? formData.longitude : ''} 
+                            onChange={e => setFormData({...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined})} 
+                          />
+                        </div>
+
+                        <div className="md:col-span-2 flex items-end">
+                          {!isViewOnly && (
+                            <button
+                              type="button"
+                              disabled={isGeocoding}
+                              onClick={() => handleGeocodeAddress()}
+                              className="w-full h-[50px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-2 transition shadow-md disabled:opacity-50"
+                            >
+                              {isGeocoding ? (
+                                <>
+                                  <RefreshCw size={16} className="animate-spin" />
+                                  <span>Buscando...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Globe size={16} />
+                                  <span>Buscar Lat/Long</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

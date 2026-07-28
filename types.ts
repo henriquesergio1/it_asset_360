@@ -210,7 +210,7 @@ export interface User {
   pendingIssuesNote?: string;
   onLeaveUntil?: string; // Opcional: data de retorno
 
-  // Endereço estruturado
+  // Endereço estruturado & Coordenadas
   zipCode?: string;
   street?: string;
   number?: string;
@@ -218,6 +218,8 @@ export interface User {
   neighborhood?: string;
   city?: string;
   state?: string;
+  latitude?: number;
+  longitude?: number;
 
   // Contato
   phone?: string;
