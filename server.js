@@ -6759,7 +6759,6 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
-
     app.get('/api/system/status', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);

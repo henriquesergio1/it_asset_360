@@ -1507,7 +1507,6 @@ export const PrevistoVsRealizado: React.FC = () => {
                                                         <div>
                                                             <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
                                                             <p className="text-xs font-bold text-slate-800 leading-tight">{colab.Nome}</p>
-                                                            <p className="text-[11px] font-bold text-slate-500 lowercase mt-0.5">{(colab.Grupo || 'colaborador').toLowerCase()} - {colab.CodigoSetor || colab.ID_Pulsus}</p>
                                                         </div>
                                                     </div>
                                                 </Popup>

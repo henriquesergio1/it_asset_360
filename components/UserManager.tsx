@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Download, Filter, 
   FilterX, MoreHorizontal, UserPlus, Info, 
   MapPin, Phone, Mail, CreditCard, Hash, FileText, Globe, 
-  ExternalLink, Power, History, Shield, Link as LinkIcon, 
+  ExternalLink, Power, History, Shield, 
   Smartphone, Camera, UserCheck,
   Briefcase, CheckCircle2, Clock, AlertCircle, RefreshCw, X, ShieldCheck,   FileSignature, ChevronDown, CheckSquare, Upload, Share2, 
   Save, Eye, EyeOff, Key, FileUp, Building2, Users, FileSpreadsheet, SlidersHorizontal, Check, AlertTriangle, Copy
@@ -442,20 +442,20 @@ const UserManager: React.FC = () => {
     if (overrideAddress?.trim()) {
       attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
     } else {
-      // 1ª opção: CEP + Número + Cidade (Alta Precisão por CEP no Brasil)
-      if (zip && num && city) {
-        attempts.push({ label: 'CEP e Número da Casa', query: `${zip}, ${num}, ${city}, Brasil` });
-      }
-      // 2ª opção: Endereço completo com CEP
+      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
       if (street && city && formattedZip) {
         const addrNum = num ? `${street}, ${num}` : street;
         attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
       }
-      // 3ª opção: Busca por CEP
-      if (zip) {
-        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${zip}, Brasil` });
+      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
+      if (formattedZip && num && city) {
+        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
       }
-      // 4ª opção: Endereço completo sem CEP
+      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
+      if (formattedZip) {
+        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
+      }
+      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
       if (street && city) {
         const addrNum = num ? `${street}, ${num}` : street;
         const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
@@ -484,15 +484,13 @@ const UserManager: React.FC = () => {
             if (data && data.length > 0) {
               const lat = parseFloat(data[0].lat);
               const lon = parseFloat(data[0].lon);
-              if (!isNaN(lat) && !isNaN(lon)) {
-                setFormData(prev => ({
-                  ...prev,
-                  latitude: lat,
-                  longitude: lon
-                }));
-                showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
-                return { lat, lon };
-              }
+              setFormData(prev => ({
+                ...prev,
+                latitude: lat,
+                longitude: lon
+              }));
+              showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
+              return { lat, lon };
             }
           }
         } catch (eQuery) {
@@ -531,8 +529,6 @@ const UserManager: React.FC = () => {
 
     showToast('Informe as coordenadas ou endereço para visualizar no Google Maps.', 'error');
   };
-
-
 
   const cleanDocument = (val?: string) => (val || '').replace(/\D/g, '');
 
@@ -2145,12 +2141,11 @@ const UserManager: React.FC = () => {
                             type="button"
                             onClick={handleOpenGoogleMaps}
                             className="px-4 h-[50px] bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
-                            title="Abrir endereço/coordenadas no Google Maps em nova aba"
+                            title="Abrir mapa no Google Maps em nova aba"
                           >
                             <ExternalLink size={15} />
                             <span>Google Maps</span>
                           </button>
-
                         </div>
                       </div>
                     </div>
