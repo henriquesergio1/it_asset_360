@@ -41,7 +41,7 @@ const SearchableSelect: React.FC<{
             opt.Nome.toLowerCase().includes(lowerTerm) || 
             String(opt.CodigoSetor).includes(lowerTerm) ||
             String(opt.ID_Pulsus).includes(lowerTerm)
-        ).sort((a,b) => a.Nome.localeCompare(b.Nome));
+        ).sort((a,b) => (a.Nome || '').localeCompare(b.Nome || ''));
     }, [options, searchTerm]);
 
     const selectedOption = options.find(o => String(o.ID_Pulsus) === value);
@@ -259,7 +259,9 @@ export const Relatorios: React.FC = () => {
                 const setorB = b.CodigoSetor || b.ID_Pulsus || 0;
                 return setorA - setorB;
             } else {
-                return a.NomeColaborador.localeCompare(b.NomeColaborador);
+                const nameA = a.NomeColaborador || (a as any).Nome || '';
+                const nameB = b.NomeColaborador || (b as any).Nome || '';
+                return nameA.localeCompare(nameB);
             }
         });
     }, [reportData, sortBy]);
@@ -301,7 +303,9 @@ export const Relatorios: React.FC = () => {
                 const setorB = b.info.CodigoSetor || b.info.ID_Pulsus || 0;
                 return setorA - setorB;
             } else {
-                return a.info.NomeColaborador.localeCompare(b.info.NomeColaborador);
+                const nameA = a.info?.NomeColaborador || (a.info as any)?.Nome || '';
+                const nameB = b.info?.NomeColaborador || (b.info as any)?.Nome || '';
+                return nameA.localeCompare(nameB);
             }
         });
     }, [analyticData, sortBy]);

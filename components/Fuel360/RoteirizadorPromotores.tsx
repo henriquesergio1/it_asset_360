@@ -929,7 +929,7 @@ export const RoteirizadorPromotores: React.FC = () => {
                         isInactive: seller.isInactive // Passa para o dia
                     });
                 }
-                return { ...seller, totalKm, totalKmReal, days: daysArr.sort((a,b) => a.date.localeCompare(b.date)), hasAlert: sellerHasAlert };
+                return { ...seller, totalKm, totalKmReal, days: daysArr.sort((a,b) => (a.date || '').localeCompare(b.date || '')), hasAlert: sellerHasAlert };
             }).sort((a,b) => (Number(a.id) || 0) - (Number(b.id) || 0));
         } catch (e) {
             console.error("Erro ao agrupar dados:", e);

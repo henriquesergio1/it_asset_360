@@ -710,7 +710,7 @@ export const RoteirizadorVendedores: React.FC = () => {
                     isInactive: seller.isInactive // Passa para o dia
                 });
             }
-            return { ...seller, totalKm, totalKmReal, days: daysArr.sort((a,b) => a.date.localeCompare(b.date)), hasAlert: sellerHasAlert };
+            return { ...seller, totalKm, totalKmReal, days: daysArr.sort((a,b) => (a.date || '').localeCompare(b.date || '')), hasAlert: sellerHasAlert };
         }).sort((a,b) => a.id - b.id);
     }, [rawData, tortuosity, isRoundTrip, colaboradores, realDistances, excludedIds, selectedSupervisor, MAX_DAILY_KM, MAX_CLIENT_DIST]);
 

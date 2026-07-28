@@ -348,7 +348,7 @@ export const PrevistoVsRealizado: React.FC = () => {
         });
         return Array.from(map.entries())
             .map(([id, name]) => ({ id, label: `${id} - ${name}` }))
-            .sort((a,b) => a.label.localeCompare(b.label));
+            .sort((a,b) => (a.label || '').localeCompare(b.label || ''));
     }, [allPlannedData]);
 
     // 3. EFEITO CENTRAL: Filtrar e Cruzar Dados
@@ -585,7 +585,7 @@ export const PrevistoVsRealizado: React.FC = () => {
         });
 
         // Sort events by time
-        events.sort((a,b) => a.time.localeCompare(b.time));
+        events.sort((a,b) => (a.time || '').localeCompare(b.time || ''));
 
         setInsights(events);
     };
@@ -992,7 +992,7 @@ export const PrevistoVsRealizado: React.FC = () => {
         });
         const opts = Array.from(map.entries())
             .map(([id, name]) => ({ id, label: `${id} - ${name}` }))
-            .sort((a,b) => a.label.localeCompare(b.label));
+            .sort((a,b) => (a.label || '').localeCompare(b.label || ''));
         return [{ id: 'ALL', label: 'Todos os Promotores' }, ...opts];
     }, [roteiroManualData]);
 
@@ -1034,7 +1034,7 @@ export const PrevistoVsRealizado: React.FC = () => {
             );
         }
 
-        list.sort((a, b) => a.nome.localeCompare(b.nome));
+        list.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
         return list;
     }, [roteiroManualData, promoterTeamFilter, promoterSearchTerm]);

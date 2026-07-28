@@ -194,7 +194,7 @@ const ReportPrint: React.FC<ReportPrintProps> = ({ dados, periodo, source, onClo
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-400">
-                        {dadosProcessados.sort((a,b) => a.Colaborador.Nome.localeCompare(b.Colaborador.Nome)).map((item, idx) => {
+                        {dadosProcessados.sort((a,b) => (a.Colaborador?.Nome || '').localeCompare(b.Colaborador?.Nome || '')).map((item, idx) => {
                             const valorFinal = item.ValorPagar + (item.Ajuste || 0);
                             return (
                                 <tr key={idx} className="hover:bg-slate-50 break-inside-avoid shadow-none">
