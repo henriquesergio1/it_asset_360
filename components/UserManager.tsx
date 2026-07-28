@@ -461,6 +461,11 @@ const UserManager: React.FC = () => {
         const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
         attempts.push({ label: 'Logradouro e Número', query: full });
       }
+      // 5ª opção: Logradouro + Bairro + Cidade
+      if (street && city) {
+        const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
+        attempts.push({ label: 'Logradouro e Bairro', query: streetOnly });
+      }
     }
 
     if (attempts.length === 0) {
@@ -472,28 +477,13 @@ const UserManager: React.FC = () => {
     try {
       for (const attempt of attempts) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=3`;
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=1`;
           const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-              // Validação de segurança: rejeitar coordenadas que estejam em outra cidade quando a cidade for informada
-              let match = data.find((d: any) => {
-                const displayName = (d.display_name || '').toLowerCase();
-                const targetCity = city.toLowerCase();
-                if (targetCity && !displayName.includes(targetCity)) {
-                  if (displayName.includes('pindamonhangaba') || displayName.includes('taubaté') || displayName.includes('tremembé') || displayName.includes('guaratinguetá')) {
-                    return false;
-                  }
-                }
-                return true;
-              });
-
-              if (!match) match = data[0];
-
-              const lat = parseFloat(match.lat);
-              const lon = parseFloat(match.lon);
-              
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
               if (!isNaN(lat) && !isNaN(lon)) {
                 setFormData(prev => ({
                   ...prev,
