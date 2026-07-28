@@ -2241,6 +2241,61 @@ ORDER BY a.CODCET;`;
         );
       })}
     </div>
+
+    {/* Seção Módulo Fuel360 */}
+    <div className="space-y-1 pt-3 border-t border-slate-200 dark:border-slate-700/60">
+      <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block px-2 pb-1 border-b border-emerald-500/20">Módulo Fuel360 (Reembolso & Telemetria)</span>
+      {[
+        { label: '⛽ Módulo Fuel360 (Acesso Geral)', readKey: 'fuel360_leitura', writeKey: 'fuel360_escrita', aliases: ['moduloFuel360', 'fuel360'] },
+        { label: '🧮 Cálculo de Reembolso', readKey: 'fuel_calculo_leitura', writeKey: 'fuel_calculo_escrita', aliases: ['fuel_calculo'] },
+        { label: '🗺️ Roteirizador & Ajuste de Rota', readKey: 'fuel_roteirizador_leitura', writeKey: 'fuel_roteirizador_escrita', aliases: ['fuel_roteirizador'] },
+        { label: '📈 Previsto x Realizado (Telemetria)', readKey: 'fuel_comparativo_leitura', writeKey: 'fuel_comparativo_escrita', aliases: ['fuel_comparativo'] },
+        { label: '📋 Gestão de Simulações e Cálculos', readKey: 'fuel_simulacoes_leitura', writeKey: 'fuel_simulacoes_escrita', aliases: ['fuel_simulacoes'] },
+        { label: '👥 Equipe & Setores Fuel360', readKey: 'fuel_equipe_leitura', writeKey: 'fuel_equipe_escrita', aliases: ['fuel_equipe'] },
+        { label: '📅 Ausências Fuel360', readKey: 'fuel_ausencias_leitura', writeKey: 'fuel_ausencias_escrita', aliases: ['fuel_ausencias'] },
+        { label: '📊 Relatórios B.I. Fuel360', readKey: 'fuel_relatorios_leitura', writeKey: 'fuel_relatorios_escrita', aliases: ['fuel_relatorios'] },
+        { label: '⚙️ Parâmetros KM/L', readKey: 'fuel_config_leitura', writeKey: 'fuel_config_escrita', aliases: ['fuel_config'] }
+      ].map(m => {
+        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a]);
+        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a + '_escrita']);
+
+        return (
+          <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
+            <div className="flex gap-8">
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isReadChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.readKey]: val };
+                    m.aliases.forEach(a => { updatedPerms[a] = val; });
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                />
+              </div>
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isWriteChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.writeKey]: val };
+                    m.aliases.forEach(a => { updatedPerms[a] = val; updatedPerms[a + '_escrita'] = val; });
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   </div>
   </div>
  </div>
