@@ -262,15 +262,18 @@ export const GestaoSimulacoes: React.FC = () => {
     // Helper de Agrupamento
     const groupItems = (items: any[], idKey: string) => {
         const groups = new Map<number, { name: string, items: any[], totalKm: number, totalVal?: number }>();
-        items.forEach((item: any) => {
+        (items || []).forEach((item: any) => {
+            if (!item) return;
             const key = item[idKey]; // ID_RotaDet ou ID_Pulsus/Detalhe
             if (!groups.has(key)) {
-                groups.set(key, { name: item.Nome, items: [], totalKm: 0, totalVal: 0 });
+                groups.set(key, { name: item.Nome || 'Sem Nome', items: [], totalKm: 0, totalVal: 0 });
             }
             const g = groups.get(key)!;
             g.items.push(item);
-            g.totalKm += item.KM || item.KM_Dia;
-            if(item.Valor_Dia) g.totalVal = (g.totalVal || 0) + item.Valor_Dia;
+            g.totalKm += Number(item.KM || item.KM_Dia || 0);
+            if (item.Valor_Dia !== undefined && item.Valor_Dia !== null) {
+                g.totalVal = (g.totalVal || 0) + Number(item.Valor_Dia || 0);
+            }
         });
         return Array.from(groups.values());
     };
@@ -345,9 +348,9 @@ export const GestaoSimulacoes: React.FC = () => {
                                                     {renderPeriodWithTag(calc.Periodo)}
                                                     {calc.MotivoEdicao && <div className="text-[10px] text-amber-600 dark:text-amber-400 font-normal mt-1 flex items-center"><PencilIcon className="w-3 h-3 mr-1"/> Editado/Recalculado</div>}
                                                 </td>
-                                                <td className="p-5 font-mono text-xs text-slate-700 dark:text-slate-300">{new Date(calc.DataFechamento).toLocaleString('pt-BR')}</td>
-                                                <td className="p-5 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{calc.UsuarioFechamento}</td>
-                                                <td className="p-5 text-right font-bold text-emerald-600 dark:text-emerald-400 text-base">{calc.TotalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                <td className="p-5 font-mono text-xs text-slate-700 dark:text-slate-300">{calc.DataFechamento ? new Date(calc.DataFechamento).toLocaleString('pt-BR') : '-'}</td>
+                                                <td className="p-5 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{calc.UsuarioFechamento || '-'}</td>
+                                                <td className="p-5 text-right font-bold text-emerald-600 dark:text-emerald-400 text-base">{(Number(calc.TotalGeral) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                 <td className="p-5 text-right"><span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-[10px] font-bold uppercase border border-emerald-200 dark:border-emerald-800">Fechado</span></td>
                                             </tr>
                                             {expandedCalc === calc.ID_Historico && (
@@ -359,8 +362,8 @@ export const GestaoSimulacoes: React.FC = () => {
                                                                 <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/60 flex justify-between items-center border-b border-emerald-100 dark:border-emerald-900">
                                                                     <span className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">{group.name}</span>
                                                                     <div className="flex gap-4 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                                                                        <span>Total KM: {group.totalKm.toFixed(2)}</span>
-                                                                        <span>Valor: {group.totalVal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                                                        <span>Total KM: {(Number(group.totalKm) || 0).toFixed(2)}</span>
+                                                                        <span>Valor: {(Number(group.totalVal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-0">
@@ -368,11 +371,11 @@ export const GestaoSimulacoes: React.FC = () => {
                                                                         <div key={day.ID_Diario} className="p-3 border-r border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex flex-col justify-between h-full relative group">
                                                                             <div>
                                                                                 <p className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-bold mb-1">{formatDisplayDate(day.DataOcorrencia)}</p>
-                                                                                <p className="text-sm font-black text-slate-700 dark:text-white">{day.KM_Dia.toFixed(2)} km</p>
-                                                                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{day.Valor_Dia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                                                                <p className="text-sm font-black text-slate-700 dark:text-white">{(Number(day.KM_Dia) || 0).toFixed(2)} km</p>
+                                                                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{(Number(day.Valor_Dia) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                                                                             </div>
                                                                             <button 
-                                                                                onClick={() => setEditData({ id: day.ID_Diario, km: day.KM_Dia, date: day.DataOcorrencia, name: group.name })} 
+                                                                                onClick={() => setEditData({ id: day.ID_Diario, km: Number(day.KM_Dia || 0), date: day.DataOcorrencia, name: group.name })} 
                                                                                 className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 p-1 rounded transition-all"
                                                                                 title="Editar e Recalcular"
                                                                             >
@@ -420,9 +423,9 @@ export const GestaoSimulacoes: React.FC = () => {
                                                         </p>
                                                     )}
                                                 </td>
-                                                <td className="p-5 font-mono text-xs text-slate-700 dark:text-slate-300">{new Date(sim.DataSimulacao).toLocaleString('pt-BR')}</td>
-                                                <td className="p-5 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{sim.UsuarioSimulacao}</td>
-                                                <td className="p-5 text-right font-bold text-indigo-600 dark:text-indigo-400 font-mono">{sim.TotalKM.toFixed(2)} km</td>
+                                                <td className="p-5 font-mono text-xs text-slate-700 dark:text-slate-300">{sim.DataSimulacao ? new Date(sim.DataSimulacao).toLocaleString('pt-BR') : '-'}</td>
+                                                <td className="p-5 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{sim.UsuarioSimulacao || '-'}</td>
+                                                <td className="p-5 text-right font-bold text-indigo-600 dark:text-indigo-400 font-mono">{(Number(sim.TotalKM) || 0).toFixed(2)} km</td>
                                                 <td className="p-5 text-right">
                                                     {sim.JaCalculado ? 
                                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-200 dark:border-slate-700 uppercase flex items-center w-fit ml-auto">Vinculado</span> : 
@@ -451,18 +454,18 @@ export const GestaoSimulacoes: React.FC = () => {
                                                             <div key={idx} className="bg-white dark:bg-slate-900 rounded-xl border border-indigo-100 dark:border-indigo-900 overflow-hidden shadow-sm">
                                                                 <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-950/60 flex justify-between items-center border-b border-indigo-100 dark:border-indigo-900">
                                                                     <span className="font-bold text-indigo-900 dark:text-indigo-200 text-sm">{group.name}</span>
-                                                                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Total: {group.totalKm.toFixed(2)} km</span>
+                                                                    <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Total: {(Number(group.totalKm) || 0).toFixed(2)} km</span>
                                                                 </div>
                                                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-0">
                                                                     {group.items.sort((a, b) => new Date(a.DataVisita).getTime() - new Date(b.DataVisita).getTime()).map((day: any) => (
                                                                         <div key={day.ID_RotaDia} className="p-3 border-r border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors flex flex-col justify-between h-full relative group">
                                                                             <div>
                                                                                 <p className="text-[10px] text-slate-400 dark:text-slate-400 uppercase font-bold mb-1">{formatDisplayDate(day.DataVisita)}</p>
-                                                                                <p className="text-sm font-black text-slate-700 dark:text-white">{day.KM.toFixed(2)} km</p>
+                                                                                <p className="text-sm font-black text-slate-700 dark:text-white">{(Number(day.KM) || 0).toFixed(2)} km</p>
                                                                             </div>
                                                                             {!sim.JaCalculado && (
                                                                                 <button 
-                                                                                    onClick={() => setEditData({ id: day.ID_RotaDia, km: day.KM, date: day.DataVisita, name: group.name })} 
+                                                                                    onClick={() => setEditData({ id: day.ID_RotaDia, km: Number(day.KM || 0), date: day.DataVisita, name: group.name })} 
                                                                                     className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 p-1 rounded transition-all"
                                                                                     title="Editar KM"
                                                                                 >
