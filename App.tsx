@@ -43,10 +43,10 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: a
     <NavLink 
       to={to} 
       className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:text-white'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
-      title={collapsed ? label : undefined}
+      title={label}
     >
       <Icon size={20} className="shrink-0" />
-      {!collapsed && <span className="font-medium overflow-hidden whitespace-nowrap">{label}</span>}
+      {!collapsed && <span className="text-xs font-semibold truncate tracking-tight" title={label}>{label}</span>}
     </NavLink>
   );
 };
@@ -245,7 +245,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações / Histórico" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} />
               <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} />
