@@ -428,6 +428,23 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const normalizeStreet = (str: string): string => {
+    if (!str) return '';
+    return str
+      .replace(/^r\.\s+/i, 'Rua ')
+      .replace(/^r\s+/i, 'Rua ')
+      .replace(/^av\.\s+/i, 'Avenida ')
+      .replace(/^av\s+/i, 'Avenida ')
+      .replace(/^dr\.\s+/i, 'Doutor ')
+      .replace(/^dr\s+/i, 'Doutor ')
+      .replace(/^prof\.\s+/i, 'Professor ')
+      .replace(/^prof\s+/i, 'Professor ')
+      .replace(/^rod\.\s+/i, 'Rodovia ')
+      .replace(/^rod\s+/i, 'Rodovia ')
+      .replace(/^est\.\s+/i, 'Estrada ')
+      .replace(/^est\s+/i, 'Estrada ');
+  };
+
   const handleGeocodeAddress = async (overrideAddress?: string) => {
     const street = (formData.street || '').trim();
     const num = (formData.number || '').trim();
@@ -437,34 +454,65 @@ const UserManager: React.FC = () => {
     const zip = (formData.zipCode || '').replace(/\D/g, '');
     const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
-    const attempts: Array<{ label: string; query: string }> = [];
+    const attempts: Array<{ label: string; url: string }> = [];
 
     if (overrideAddress?.trim()) {
-      attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
+      const cleanOverride = normalizeStreet(overrideAddress.trim());
+      attempts.push({ 
+        label: 'Endereço Informado', 
+        url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanOverride)}&limit=1` 
+      });
     } else {
-      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
-      if (street && city && formattedZip) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
+      const normalizedStreet = normalizeStreet(street);
+      const streetAndNum = num ? `${normalizedStreet} ${num}` : normalizedStreet;
+
+      // 1ª opção: Busca Estruturada Direta (Alta Precisão Predial)
+      if (normalizedStreet && city) {
+        const params = new URLSearchParams({
+          format: 'json',
+          street: streetAndNum,
+          city: city,
+          country: 'Brazil',
+          limit: '1'
+        });
+        if (state) params.append('state', state);
+        if (formattedZip) params.append('postalcode', formattedZip);
+        attempts.push({ label: 'Busca Estruturada Alta Precisão', url: `https://nominatim.openstreetmap.org/search?${params.toString()}` });
       }
-      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
+
+      // 2ª opção: Endereço completo com CEP
+      if (normalizedStreet && city && formattedZip) {
+        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
+        attempts.push({ 
+          label: 'Endereço Completo com CEP', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil`)}&limit=1` 
+        });
+      }
+
+      // 3ª opção: CEP + Número + Cidade
       if (formattedZip && num && city) {
-        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
+        attempts.push({ 
+          label: 'CEP e Número da Casa', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, ${num}, ${city}, Brasil`)}&limit=1` 
+        });
       }
-      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
+
+      // 4ª opção: Busca restrita por CEP
       if (formattedZip) {
-        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
+        attempts.push({ 
+          label: 'Âncora Geográfica por CEP', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, Brasil`)}&limit=1` 
+        });
       }
-      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
-      if (street && city) {
-        const addrNum = num ? `${street}, ${num}` : street;
+
+      // 5ª opção: Logradouro e Número sem CEP
+      if (normalizedStreet && city) {
+        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
         const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Número', query: full });
-      }
-      // 5ª opção: Logradouro + Bairro + Cidade
-      if (street && city) {
-        const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Bairro', query: streetOnly });
+        attempts.push({ 
+          label: 'Logradouro e Número', 
+          url: `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(full)}&limit=1` 
+        });
       }
     }
 
@@ -477,8 +525,7 @@ const UserManager: React.FC = () => {
     try {
       for (const attempt of attempts) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=1`;
-          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+          const res = await fetch(attempt.url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -1283,25 +1330,40 @@ const UserManager: React.FC = () => {
       const zip = (colab.cep || '').replace(/\D/g, '');
       const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
-      const importQueries: string[] = [];
-      if (street && city && formattedZip) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        importQueries.push(`${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil`);
+      const normalizedStreet = normalizeStreet(street);
+      const streetAndNum = num ? `${normalizedStreet} ${num}` : normalizedStreet;
+
+      const importUrls: string[] = [];
+      if (normalizedStreet && city) {
+        const params = new URLSearchParams({
+          format: 'json',
+          street: streetAndNum,
+          city: city,
+          country: 'Brazil',
+          limit: '1'
+        });
+        if (state) params.append('state', state);
+        if (formattedZip) params.append('postalcode', formattedZip);
+        importUrls.push(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
+      }
+      if (normalizedStreet && city && formattedZip) {
+        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
+        importUrls.push(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil`)}&limit=1`);
       }
       if (formattedZip && num && city) {
-        importQueries.push(`${formattedZip}, ${num}, ${city}, Brasil`);
+        importUrls.push(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, ${num}, ${city}, Brasil`)}&limit=1`);
       }
       if (formattedZip) {
-        importQueries.push(`${formattedZip}, Brasil`);
+        importUrls.push(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(`${formattedZip}, Brasil`)}&limit=1`);
       }
-      if (street && city) {
-        importQueries.push([num ? `${street}, ${num}` : street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '));
+      if (normalizedStreet && city) {
+        const addrNum = num ? `${normalizedStreet}, ${num}` : normalizedStreet;
+        importUrls.push(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent([addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '))}&limit=1`);
       }
 
-      for (const qStr of importQueries) {
+      for (const targetUrl of importUrls) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(qStr)}&limit=1`;
-          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+          const res = await fetch(targetUrl, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
           if (res.ok) {
             const gData = await res.json();
             if (gData && gData.length > 0) {
@@ -1311,7 +1373,7 @@ const UserManager: React.FC = () => {
             }
           }
         } catch (e) {
-          console.warn('Geocodificação em cascata na importação falhou para query:', qStr, e);
+          console.warn('Geocodificação em cascata na importação falhou para query:', targetUrl, e);
         }
       }
     }

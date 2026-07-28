@@ -433,6 +433,7 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                                                     <div>
                                                         <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
                                                         <p className="text-sm font-black text-slate-800 leading-tight">{p.Nome_Vendedor}</p>
+                                                        <p className="text-[11px] font-bold text-slate-500 lowercase mt-0.5">{(p.Grupo || 'vendedor').toLowerCase()} - {p.CodigoSetor || p.Cod_Vend || p.ID_Pulsus}</p>
                                                     </div>
                                                 </div>
                                             )}
