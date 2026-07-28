@@ -435,69 +435,42 @@ const UserManager: React.FC = () => {
     const city = (formData.city || '').trim();
     const state = (formData.state || '').trim();
     const zip = (formData.zipCode || '').replace(/\D/g, '');
-    const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
-    const attempts: Array<{ label: string; query: string }> = [];
-
-    if (overrideAddress?.trim()) {
-      attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
-    } else {
-      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
-      if (street && city && formattedZip) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
-      }
-      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
-      if (formattedZip && num && city) {
-        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
-      }
-      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
-      if (formattedZip) {
-        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
-      }
-      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
-      if (street && city) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Número', query: full });
-      }
-      // 5ª opção: Logradouro + Bairro + Cidade
-      if (street && city) {
-        const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Bairro', query: streetOnly });
-      }
-    }
-
-    if (attempts.length === 0) {
-      showToast('Digite ao menos o endereço ou CEP, cidade e UF para buscar as coordenadas.', 'error');
+    if (!overrideAddress?.trim() && !street && !zip) {
+      showToast('Digite ao menos o endereço ou CEP para buscar as coordenadas.', 'error');
       return null;
     }
 
     setIsGeocoding(true);
     try {
-      for (const attempt of attempts) {
-        try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=1`;
-          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-              const lat = parseFloat(data[0].lat);
-              const lon = parseFloat(data[0].lon);
-              setFormData(prev => ({
-                ...prev,
-                latitude: lat,
-                longitude: lon
-              }));
-              showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
-              return { lat, lon };
-            }
-          }
-        } catch (eQuery) {
-          console.warn(`Tentativa de geocodificação (${attempt.label}) falhou:`, eQuery);
+      const apiRes = await fetch('/api/system/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: overrideAddress?.trim(),
+          street,
+          number: num,
+          neighborhood,
+          city,
+          state,
+          zip
+        })
+      });
+
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        if (data.success && !isNaN(data.lat) && !isNaN(data.lon)) {
+          setFormData(prev => ({
+            ...prev,
+            latitude: data.lat,
+            longitude: data.lon
+          }));
+          const labelSource = data.source?.includes('google') ? 'Google Maps (Precisão Extraída)' : 'OpenStreetMap';
+          showToast(`Coordenadas encontradas via ${labelSource}!`, 'success');
+          return { lat: data.lat, lon: data.lon };
         }
       }
-      throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o endereço, cidade e UF estão corretos.');
+      throw new Error('Endereço ou CEP não localizado no mapa.');
     } catch (err: any) {
       showToast(err.message, 'error');
       return null;
