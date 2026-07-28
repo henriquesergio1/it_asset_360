@@ -414,6 +414,11 @@ export const GestaoSimulacoes: React.FC = () => {
                                                 <td className="p-5 text-center text-slate-400">{expandedSim === sim.ID_RotaHist ? <ChevronDownIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400"/> : <ChevronRightIcon className="w-5 h-5"/>}</td>
                                                 <td className="p-5">
                                                     {renderPeriodWithTag(sim.Periodo)}
+                                                    {sim.Descricao && (
+                                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1 italic">
+                                                            "{sim.Descricao}"
+                                                        </p>
+                                                    )}
                                                 </td>
                                                 <td className="p-5 font-mono text-xs text-slate-700 dark:text-slate-300">{new Date(sim.DataSimulacao).toLocaleString('pt-BR')}</td>
                                                 <td className="p-5 text-xs font-bold uppercase text-slate-700 dark:text-slate-300">{sim.UsuarioSimulacao}</td>

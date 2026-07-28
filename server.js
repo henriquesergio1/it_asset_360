@@ -1819,12 +1819,19 @@ async function ensureFuelTablesExist(pool) {
                 CREATE TABLE FuelSimulacoesHistorico (
                     ID_RotaHist INT IDENTITY(1,1) PRIMARY KEY,
                     Periodo NVARCHAR(255) NOT NULL,
+                    Descricao NVARCHAR(500) NULL,
                     DataSimulacao DATETIME DEFAULT GETDATE(),
                     TotalKM FLOAT DEFAULT 0,
                     UsuarioSimulacao NVARCHAR(255) DEFAULT 'Administrador TI',
                     JaCalculado BIT DEFAULT 0
                 )
             `);
+        } else {
+            const colsRes = await pool.request().query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FuelSimulacoesHistorico'");
+            const cols = (colsRes.recordset || []).map(c => c.COLUMN_NAME.toLowerCase());
+            if (!cols.includes('descricao')) {
+                await pool.request().query("ALTER TABLE FuelSimulacoesHistorico ADD Descricao NVARCHAR(500) NULL");
+            }
         }
 
         const checkSimDet = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelSimulacoesDetalhe'");
@@ -2656,6 +2663,31 @@ app.get('/api/fuel360/osrm', async (req, res) => {
 
 app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
 
+// Checa se já existe simulação salva para o mesmo período e com o mesmo KM Total
+app.get('/api/fuel360/roteiro/exists', async (req, res) => {
+    const { periodo, totalKm } = req.query;
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request()
+            .input('Periodo', sql.NVarChar, periodo || '')
+            .input('TotalKM', sql.Float, parseFloat(totalKm || 0))
+            .query(`
+                SELECT ID_RotaHist, Periodo, TotalKM, Descricao
+                FROM FuelSimulacoesHistorico
+                WHERE Periodo = @Periodo AND ABS(TotalKM - @TotalKM) < 0.05
+            `);
+        
+        if (result.recordset && result.recordset.length > 0) {
+            const item = result.recordset[0];
+            return res.json({ exists: true, id: item.ID_RotaHist, periodo: item.Periodo, totalKm: item.TotalKM, descricao: item.Descricao });
+        }
+        res.json({ exists: false });
+    } catch (err) {
+        res.json({ exists: false });
+    }
+});
+
 // Endpoints NATIVOS de Histórico e Simulação do Roteiro Previsto no Fuel360
 app.get('/api/fuel360/roteiro/historico', async (req, res) => {
     try {
@@ -2670,19 +2702,27 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
 });
 
 app.post('/api/fuel360/roteiro/historico', async (req, res) => {
-    const { Periodo, TotalKM, Itens } = req.body;
+    const { Periodo, TotalKM, Descricao, overwriteId, Itens } = req.body;
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
 
+        // Se o operador optou por sobrescrever uma simulação existente com mesmo período e KM
+        if (overwriteId) {
+            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDiario WHERE ID_RotaHist = @OID');
+            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesDetalhe WHERE ID_RotaHist = @OID');
+            await pool.request().input('OID', sql.Int, overwriteId).query('DELETE FROM FuelSimulacoesHistorico WHERE ID_RotaHist = @OID');
+        }
+
         const histRes = await pool.request()
             .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
+            .input('Descricao', sql.NVarChar, Descricao || null)
             .input('TotalKM', sql.Float, TotalKM || 0)
             .input('UsuarioSimulacao', sql.NVarChar, 'Administrador TI')
             .query(`
-                INSERT INTO FuelSimulacoesHistorico (Periodo, TotalKM, UsuarioSimulacao)
+                INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao)
                 OUTPUT INSERTED.ID_RotaHist
-                VALUES (@Periodo, @TotalKM, @UsuarioSimulacao)
+                VALUES (@Periodo, @Descricao, @TotalKM, @UsuarioSimulacao)
             `);
 
         const idRotaHist = histRes.recordset[0].ID_RotaHist;

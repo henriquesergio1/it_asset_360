@@ -174,6 +174,8 @@ const RealService = {
     },
     getPromoterClients: (): Promise<any[]> => apiRequest('/roteiro/promotores/clientes'),
     // Rota Prevista (Simulações)
+    checkRotaPrevistaExists: (periodo: string, totalKm: number): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => 
+        apiRequest(`/roteiro/exists?periodo=${encodeURIComponent(periodo)}&totalKm=${totalKm}`),
     saveRotaPrevista: (payload: any): Promise<void> => apiRequest('/roteiro/historico', 'POST', payload),
     getRotaPrevistaHistory: (): Promise<RotaPrevistaSaved[]> => apiRequest('/roteiro/historico'),
     getRotaPrevistaDetails: (id: number): Promise<RotaPrevistaItem[]> => apiRequest(`/roteiro/historico/${id}`),
@@ -332,6 +334,7 @@ const MockService = {
             { Cod_Cliente: 6933603, Razao_Social: 'Supermercado Rossi New Ltda', Lat: -23.55452, Long: -46.637308 },
         ];
     },
+    checkRotaPrevistaExists: async (): Promise<{ exists: boolean; id?: number; periodo?: string; totalKm?: number; descricao?: string }> => ({ exists: false }),
     saveRotaPrevista: async () => {},
     getRotaPrevistaHistory: async () => [],
     getRotaPrevistaDetails: async () => [],
@@ -370,7 +373,7 @@ export const {
     getImportPreview, syncColaboradores, getFuelConfig, updateFuelConfig, getFuelConfigHistory,
     getAusencias, createAusencia, deleteAusencia, saveCalculo, checkCalculoExists,
     getRelatorioReembolso, getRelatorioAnalitico, logAction, getSystemLogs, getVisitasPrevistas, getPromoterClients,
-    saveRotaPrevista, getRotaPrevistaHistory, getRotaPrevistaDetails,
+    saveRotaPrevista, checkRotaPrevistaExists, getRotaPrevistaHistory, getRotaPrevistaDetails,
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
     geocodeAddress, getOSRMData, calcDistance

@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { DataContext } from './context/DataContext';
-import { getVisitasPrevistas, saveRotaPrevista, getOSRMData } from './services/apiService';
+import { getVisitasPrevistas, saveRotaPrevista, checkRotaPrevistaExists, getOSRMData } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { LocationMarkerIcon, SpinnerIcon, CalculatorIcon, ChevronRightIcon, ChevronDownIcon, ArrowLeftIcon, GlobeIcon, RefreshIcon, UsersIcon, ExclamationIcon, CheckCircleIcon, TrashIcon, CalendarIcon, PlusCircleIcon, XCircleIcon, UserGroupIcon } from './icons';
 import L from 'leaflet';
@@ -773,14 +773,42 @@ export const RoteirizadorVendedores: React.FC = () => {
             : '';
         const formattedPeriod = `[VENDEDOR] ${formatDate(startDate)} a ${formatDate(endDate)}${supervisorTag}`;
         
-        if (!confirm(`Deseja salvar a simulação para ${sellersToSave.length} VENDEDORES selecionados?\nPeríodo: ${formattedPeriod}`)) return;
-
         setSaving(true);
+        let overwriteId: number | undefined = undefined;
+
         try {
+            // Check de Duplicidade por Período e KM
+            const checkRes = await checkRotaPrevistaExists(formattedPeriod, totalKmCalculado);
+            if (checkRes.exists) {
+                const descText = checkRes.descricao ? `\nDescrição existente: "${checkRes.descricao}"` : '';
+                const confirmOverwrite = confirm(
+                    `Já existe uma simulação salva para o mesmo período e com o mesmo KM Total (${totalKmCalculado.toFixed(2)} km).${descText}\n\nDeseja SOBRESCREVER a simulação existente?`
+                );
+                if (!confirmOverwrite) {
+                    setSaving(false);
+                    return;
+                }
+                overwriteId = checkRes.id;
+            } else {
+                if (!confirm(`Deseja salvar a simulação para ${sellersToSave.length} VENDEDORES selecionados?\nPeríodo: ${formattedPeriod}`)) {
+                    setSaving(false);
+                    return;
+                }
+            }
+
+            // Pergunta por Descrição Opcional
+            const userDesc = prompt("Deseja inserir uma descrição para identificar esta simulação? (Opcional)\nEx: Ajuste Fator 1.3, Equipe Jean, etc.", "");
+            if (userDesc === null) {
+                setSaving(false);
+                return;
+            }
+
             // Prepara o payload
             const payload = {
                 Periodo: formattedPeriod,
                 TotalKM: totalKmCalculado,
+                Descricao: userDesc.trim() || undefined,
+                overwriteId: overwriteId,
                 Itens: sellersToSave.map(seller => ({
                     ID_Pulsus: seller.colabRef.ID_Pulsus || seller.id,
                     Nome: seller.name,

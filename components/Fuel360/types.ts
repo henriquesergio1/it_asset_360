@@ -291,6 +291,7 @@ export interface RotaPrevistaSaved {
     DataSimulacao: string;
     TotalKM: number;
     UsuarioSimulacao: string;
+    Descricao?: string;
     JaCalculado?: boolean;
 }
 
