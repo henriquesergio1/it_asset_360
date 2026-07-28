@@ -2348,18 +2348,43 @@ app.get('/api/fuel360/ausencias', async (req, res) => {
 });
 
 app.post('/api/fuel360/ausencias', async (req, res) => {
-    const { id_colaborador, dataInicio, dataFim, motivo } = req.body;
+    const b = req.body || {};
+    const idColab = b.ID_Colaborador || b.id_colaborador || b.ID_Pulsus;
+    const dtInicio = b.DataInicio || b.dataInicio;
+    const dtFim = b.DataFim || b.dataFim;
+    const motivo = b.Motivo || b.motivo || 'Ausência';
+
+    if (!idColab) {
+        return res.status(400).json({ success: false, message: 'O ID do colaborador é obrigatório.' });
+    }
+
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+
         const result = await pool.request()
-            .input('ID_Colaborador', sql.Int, id_colaborador)
-            .input('DataInicio', sql.Date, dataInicio)
-            .input('DataFim', sql.Date, dataFim)
-            .input('Motivo', sql.NVarChar, motivo || 'Ausência')
+            .input('ID_Colaborador', sql.Int, parseInt(idColab))
+            .input('DataInicio', sql.Date, dtInicio)
+            .input('DataFim', sql.Date, dtFim)
+            .input('Motivo', sql.NVarChar, motivo)
             .query('INSERT INTO FuelAusencias (ID_Colaborador, DataInicio, DataFim, Motivo) OUTPUT INSERTED.* VALUES (@ID_Colaborador, @DataInicio, @DataFim, @Motivo)');
-        res.json(result.recordset[0]);
+        
+        const createdRow = result.recordset[0];
+
+        // Busca o nome do colaborador para retornar no objeto
+        const colabRes = await pool.request()
+            .input('ID', sql.Int, parseInt(idColab))
+            .query('SELECT Nome, ID_Pulsus FROM FuelColaboradores WHERE ID_Colaborador = @ID');
+
+        const colab = colabRes.recordset[0];
+
+        res.json({
+            ...createdRow,
+            NomeColaborador: colab ? colab.Nome : '',
+            ID_Pulsus: colab ? colab.ID_Pulsus : null
+        });
     } catch (err) {
+        console.error('Erro ao salvar ausência:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
