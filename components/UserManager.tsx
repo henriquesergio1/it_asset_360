@@ -421,36 +421,73 @@ const UserManager: React.FC = () => {
   };
 
   const handleGeocodeAddress = async (overrideAddress?: string) => {
-    const street = formData.street || '';
-    const num = formData.number || '';
-    const neighborhood = formData.neighborhood || '';
-    const city = formData.city || '';
-    const state = formData.state || '';
-    const zip = formData.zipCode || '';
+    const street = (formData.street || '').trim();
+    const num = (formData.number || '').trim();
+    const neighborhood = (formData.neighborhood || '').trim();
+    const city = (formData.city || '').trim();
+    const state = (formData.state || '').trim();
+    const zip = (formData.zipCode || '').replace(/\D/g, '');
 
-    const fullAddr = overrideAddress || [street, num, neighborhood, city, state, zip].filter(Boolean).join(', ');
-    if (!fullAddr.trim()) {
-      showToast('Digite ao menos o endereço, cidade e UF para buscar as coordenadas.', 'error');
+    const attempts: Array<{ label: string; query: string }> = [];
+
+    if (overrideAddress?.trim()) {
+      attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
+    } else {
+      // 1ª opção: Endereço completo com número (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
+      if (street && city) {
+        const addrNum = num ? `${street}, ${num}` : street;
+        const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
+        attempts.push({ label: 'Endereço Completo com Número', query: full });
+      }
+      // 2ª opção: Sem número (ex: Rua Noventa e Cinco, São Paulo - SP, Brasil)
+      if (street && city) {
+        const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
+        attempts.push({ label: 'Logradouro / Bairro', query: streetOnly });
+      }
+      // 3ª opção: Busca por CEP (ex: 08466-003, Brasil)
+      if (zip.length === 8) {
+        const formattedZip = `${zip.substring(0, 5)}-${zip.substring(5)}`;
+        attempts.push({ label: 'Busca por CEP', query: `${formattedZip}, Brasil` });
+        attempts.push({ label: 'Busca por CEP Números', query: `${zip}, Brasil` });
+      }
+      // 4ª opção: Bairro + Cidade + UF
+      if (neighborhood && city) {
+        attempts.push({ label: 'Bairro e Cidade', query: `${neighborhood}, ${city} - ${state}, Brasil` });
+      }
+    }
+
+    if (attempts.length === 0) {
+      showToast('Digite ao menos o endereço ou CEP, cidade e UF para buscar as coordenadas.', 'error');
       return null;
     }
+
     setIsGeocoding(true);
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddr.trim())}&limit=1`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-      if (!res.ok) throw new Error('Falha no serviço de localização.');
-      const data = await res.json();
-      if (!data || data.length === 0) throw new Error('Endereço não encontrado no mapa.');
-      const lat = parseFloat(data[0].lat);
-      const lon = parseFloat(data[0].lon);
-      setFormData(prev => ({
-        ...prev,
-        latitude: lat,
-        longitude: lon
-      }));
-      showToast('Coordenadas (Lat/Long) encontradas e preenchidas!', 'success');
-      return { lat, lon };
+      for (const attempt of attempts) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=1`;
+          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              setFormData(prev => ({
+                ...prev,
+                latitude: lat,
+                longitude: lon
+              }));
+              showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
+              return { lat, lon };
+            }
+          }
+        } catch (eQuery) {
+          console.warn(`Tentativa de geocodificação (${attempt.label}) falhou:`, eQuery);
+        }
+      }
+      throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o endereço, cidade e UF estão corretos.');
     } catch (err: any) {
-      showToast(`Erro ao buscar coordenadas: ${err.message}`, 'error');
+      showToast(err.message, 'error');
       return null;
     } finally {
       setIsGeocoding(false);
@@ -1188,22 +1225,41 @@ const UserManager: React.FC = () => {
     const addressStr = [colab.street, colab.number, colab.complement, colab.neighborhood, colab.city, colab.state]
       .filter(Boolean).join(', ');
     
-    // Geocodificação automática na importação do RH para o TI
+    // Geocodificação automática com fallback na importação do RH para o TI
     let lat = colab.latitude;
     let lon = colab.longitude;
-    if ((lat === undefined || lon === undefined || lat === null || lon === null) && addressStr.trim()) {
-      try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressStr.trim())}&limit=1`;
-        const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-        if (res.ok) {
-          const gData = await res.json();
-          if (gData && gData.length > 0) {
-            lat = parseFloat(gData[0].lat);
-            lon = parseFloat(gData[0].lon);
+    if ((lat === undefined || lon === undefined || lat === null || lon === null)) {
+      const street = (colab.street || '').trim();
+      const num = (colab.number || '').trim();
+      const neighborhood = (colab.neighborhood || '').trim();
+      const city = (colab.city || '').trim();
+      const state = (colab.state || '').trim();
+      const zip = (colab.cep || '').replace(/\D/g, '');
+
+      const importQueries: string[] = [];
+      if (street && city) {
+        importQueries.push([num ? `${street}, ${num}` : street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '));
+        importQueries.push([street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', '));
+      }
+      if (zip.length === 8) {
+        importQueries.push(`${zip.substring(0, 5)}-${zip.substring(5)}, Brasil`);
+      }
+
+      for (const qStr of importQueries) {
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(qStr)}&limit=1`;
+          const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+          if (res.ok) {
+            const gData = await res.json();
+            if (gData && gData.length > 0) {
+              lat = parseFloat(gData[0].lat);
+              lon = parseFloat(gData[0].lon);
+              break;
+            }
           }
+        } catch (e) {
+          console.warn('Geocodificação em cascata na importação falhou para query:', qStr, e);
         }
-      } catch (e) {
-        console.warn('Geocodificação na importação do RH falhou:', e);
       }
     }
 
