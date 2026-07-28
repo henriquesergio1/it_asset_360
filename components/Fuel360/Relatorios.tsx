@@ -586,8 +586,8 @@ export const Relatorios: React.FC = () => {
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                                                            <p className="font-mono text-slate-400 dark:text-slate-400 text-xs">{item.TotalKM.toFixed(1)} km</p>
+                                                            <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{(Number(item.ValorReembolso) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                                                            <p className="font-mono text-slate-400 dark:text-slate-400 text-xs">{(Number(item.TotalKM) || 0).toFixed(1)} km</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -608,15 +608,15 @@ export const Relatorios: React.FC = () => {
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center font-bold text-slate-600 dark:text-slate-300"><span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span> Carro</div>
                                                         <div className="text-right">
-                                                            <div className="font-bold text-blue-600 dark:text-sky-400">{vehicleStats.CarroVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{vehicleStats.Carro.toFixed(0)} km</div>
+                                                            <div className="font-bold text-blue-600 dark:text-sky-400">{(Number(vehicleStats.CarroVal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{(Number(vehicleStats.Carro) || 0).toFixed(0)} km</div>
                                                         </div>
                                                     </div>
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex items-center font-bold text-slate-600 dark:text-slate-300"><span className="w-3 h-3 bg-amber-500 rounded-full mr-2"></span> Moto</div>
                                                         <div className="text-right">
-                                                            <div className="font-bold text-amber-600 dark:text-amber-400">{vehicleStats.MotoVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{vehicleStats.Moto.toFixed(0)} km</div>
+                                                            <div className="font-bold text-amber-600 dark:text-amber-400">{(Number(vehicleStats.MotoVal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                                            <div className="text-[10px] text-slate-400 dark:text-slate-400">{(Number(vehicleStats.Moto) || 0).toFixed(0)} km</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -668,8 +668,8 @@ export const Relatorios: React.FC = () => {
                                                             {item.TipoVeiculo}
                                                         </span>
                                                     </td>
-                                                    <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200">{item.TotalKM.toFixed(2)}</td>
-                                                    <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{item.ValorReembolso.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                    <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200">{(Number(item.TotalKM) || 0).toFixed(2)}</td>
+                                                    <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400">{(Number(item.ValorReembolso) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                 </tr>
                                             ))
                                         )}
@@ -736,8 +736,8 @@ export const Relatorios: React.FC = () => {
                                                                     {group.info.TipoVeiculo}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200 font-bold">{group.totalKm.toFixed(2)} km</td>
-                                                            <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400 text-lg">{group.totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                            <td className="p-4 text-right font-mono text-slate-700 dark:text-slate-200 font-bold">{(Number(group.totalKm) || 0).toFixed(2)} km</td>
+                                                            <td className="p-4 text-right font-bold text-emerald-600 dark:text-emerald-400 text-lg">{(Number(group.totalVal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                         </tr>
 
                                                         {/* Expanded Child Row */}
@@ -763,7 +763,7 @@ export const Relatorios: React.FC = () => {
                                                                                                 {new Date(day.DataOcorrencia).toLocaleDateString('pt-BR')}
                                                                                                 {isConflict && <span className="ml-2 text-red-600 dark:text-red-400 text-[10px] font-bold border border-red-200 dark:border-red-900 bg-white dark:bg-slate-900 px-1 rounded flex items-center"><ExclamationIcon className="w-3 h-3 mr-1"/> Conflito: {day.MotivoAusencia}</span>}
                                                                                             </td>
-                                                                                            <td className={`px-4 py-2 text-right font-mono ${isConflict ? 'text-red-600 dark:text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{day.KM_Dia.toFixed(2)} km</td>
+                                                                                            <td className={`px-4 py-2 text-right font-mono ${isConflict ? 'text-red-600 dark:text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'}`}>{(Number(day.KM_Dia) || 0).toFixed(2)} km</td>
                                                                                             <td className="px-4 py-2 text-right font-bold text-slate-700 dark:text-slate-200">
                                                                                                 {day.Observacao ? (
                                                                                                     <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
@@ -775,7 +775,7 @@ export const Relatorios: React.FC = () => {
                                                                                                     </span>
                                                                                                 ) : (
                                                                                                     <span className={isConflict ? 'text-red-600 dark:text-red-400 line-through' : ''}>
-                                                                                                        {day.Valor_Dia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                                                        {(Number(day.Valor_Dia) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                                                                     </span>
                                                                                                 )}
                                                                                             </td>

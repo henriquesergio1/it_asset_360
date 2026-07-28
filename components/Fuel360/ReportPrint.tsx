@@ -162,7 +162,7 @@ const ReportPrint: React.FC<ReportPrintProps> = ({ dados, periodo, source, onClo
                     <div className="grid grid-cols-3 gap-x-8 text-slate-700">
                         <div>
                             <p className="text-[8px] text-slate-400 uppercase font-black">Combustível</p>
-                            <p className="font-bold">R$ {configReembolso.PrecoCombustivel.toFixed(2)}/L</p>
+                            <p className="font-bold">R$ {(Number(configReembolso.PrecoCombustivel) || 0).toFixed(2)}/L</p>
                         </div>
                         <div>
                             <p className="text-[8px] text-slate-400 uppercase font-black">Média (C/M)</p>
@@ -170,14 +170,14 @@ const ReportPrint: React.FC<ReportPrintProps> = ({ dados, periodo, source, onClo
                         </div>
                         <div>
                             <p className="text-[8px] text-slate-400 uppercase font-black">KM Total</p>
-                            <p className="font-bold">{totalKM.toFixed(1)} km</p>
+                            <p className="font-bold">{(Number(totalKM) || 0).toFixed(1)} km</p>
                         </div>
                     </div>
                     
                     <div className="text-right border-l border-slate-200 pl-4">
                         <p className="text-[8px] text-slate-400 uppercase font-black">Valor Total Geral</p>
                         <p className="text-2xl font-black text-blue-900 leading-none">
-                            {totalPagar.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {(Number(totalPagar) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </p>
                     </div>
                 </div>
@@ -210,10 +210,10 @@ const ReportPrint: React.FC<ReportPrintProps> = ({ dados, periodo, source, onClo
                                         {item.Colaborador.TipoVeiculo === 'Carro' ? 'CAR' : 'MT'}
                                     </td>
                                     <td className="border border-slate-400 p-2 text-right font-black text-slate-900 whitespace-nowrap">
-                                        {item.TotalKM.toFixed(1)}
+                                        {(Number(item.TotalKM) || 0).toFixed(1)}
                                     </td>
                                     <td className="border border-slate-400 p-2 text-right font-black text-blue-900 whitespace-nowrap bg-blue-50/5">
-                                        {valorFinal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        {(Number(valorFinal) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </td>
                                     {source === 'CICLO' && (
                                         <td className="border border-slate-400 p-2 align-bottom">
