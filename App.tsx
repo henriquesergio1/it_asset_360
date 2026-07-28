@@ -46,7 +46,7 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: a
       title={label}
     >
       <Icon size={20} className="shrink-0" />
-      {!collapsed && <span className="text-xs font-semibold truncate tracking-tight" title={label}>{label}</span>}
+      {!collapsed && <span className="text-[13.5px] font-bold truncate tracking-tight" title={label}>{label}</span>}
     </NavLink>
   );
 };
