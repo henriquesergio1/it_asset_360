@@ -2416,15 +2416,46 @@ app.get('/api/fuel360/calculo/exists', async (req, res) => {
 });
 
 app.post('/api/fuel360/calculo', async (req, res) => {
-    const { periodo, totalKmTotal, totalKmReembolsavel, totalValorReembolso, detalhes, diario } = req.body;
+    const b = req.body || {};
+    const periodo = b.Periodo || b.periodo;
+    const totalValorReembolso = b.TotalGeral ?? b.totalValorReembolso ?? 0;
+    const overwrite = b.Overwrite || b.overwrite;
+    const itens = b.Itens || b.itens || b.detalhes;
+    const diario = b.diario;
+
+    if (!periodo) {
+        return res.status(400).json({ success: false, message: 'O campo Período é obrigatório.' });
+    }
+
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+
+        // Se for Overwrite (reprocessamento), exclui os registros antigos deste período se existirem
+        if (overwrite) {
+            const oldRes = await pool.request()
+                .input('Periodo', sql.NVarChar, periodo)
+                .query('SELECT ID_Fechamento FROM FuelReembolsoHistorico WHERE Periodo = @Periodo');
+
+            for (const row of (oldRes.recordset || [])) {
+                const oldId = row.ID_Fechamento;
+                await pool.request().input('FID', sql.Int, oldId).query('DELETE FROM FuelReembolsoDiario WHERE ID_Fechamento = @FID');
+                await pool.request().input('FID', sql.Int, oldId).query('DELETE FROM FuelReembolsoDetalhe WHERE ID_Fechamento = @FID');
+                await pool.request().input('FID', sql.Int, oldId).query('DELETE FROM FuelReembolsoHistorico WHERE ID_Fechamento = @FID');
+            }
+        }
+
+        // Calcula total de KM Geral
+        let sumKmTotal = b.totalKmTotal || 0;
+        if (!sumKmTotal && Array.isArray(itens)) {
+            sumKmTotal = itens.reduce((acc, i) => acc + (i.TotalKM || i.KmRodadoTotal || 0), 0);
+        }
+
         const histRes = await pool.request()
             .input('Periodo', sql.NVarChar, periodo)
-            .input('TotalKmTotal', sql.Decimal(10,2), totalKmTotal || 0)
-            .input('TotalKmReembolsavel', sql.Decimal(10,2), totalKmReembolsavel || 0)
-            .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso || 0)
+            .input('TotalKmTotal', sql.Decimal(10,2), sumKmTotal)
+            .input('TotalKmReembolsavel', sql.Decimal(10,2), sumKmTotal)
+            .input('TotalValorReembolso', sql.Decimal(10,2), totalValorReembolso)
             .query(`
                 INSERT INTO FuelReembolsoHistorico (Periodo, TotalKmTotal, TotalKmReembolsavel, TotalValorReembolso)
                 OUTPUT INSERTED.ID_Fechamento
@@ -2432,26 +2463,51 @@ app.post('/api/fuel360/calculo', async (req, res) => {
             `);
         const idFechamento = histRes.recordset[0].ID_Fechamento;
 
-        if (Array.isArray(detalhes)) {
-            for (const d of detalhes) {
+        if (Array.isArray(itens)) {
+            for (const d of itens) {
+                const idColab = d.ID_Pulsus || d.id_colaborador || 0;
+                const nome = d.Nome || d.nome || '';
+                const grupo = d.Grupo || d.grupo || '';
+                const tipoVeiculo = d.TipoVeiculo || d.tipoVeiculo || 'Carro';
+                const kmTotal = d.TotalKM || d.kmRodadoTotal || 0;
+                const valorReemb = d.ValorReembolso || d.valorReembolso || 0;
+                const regDiarios = d.RegistrosDiarios || d.registrosDiarios;
+
+                const diasTrabalhados = d.DiasTrabalhados || (Array.isArray(regDiarios) ? regDiarios.length : 0);
+
                 await pool.request()
                     .input('ID_Fechamento', sql.Int, idFechamento)
-                    .input('ID_Colaborador', sql.Int, d.id_colaborador || 0)
-                    .input('Nome', sql.NVarChar, d.nome || '')
-                    .input('Grupo', sql.NVarChar, d.grupo || '')
-                    .input('TipoVeiculo', sql.NVarChar, d.tipoVeiculo || 'Carro')
-                    .input('DiasTrabalhados', sql.Int, d.diasTrabalhados || 0)
-                    .input('KmRodadoTotal', sql.Decimal(10,2), d.kmRodadoTotal || 0)
-                    .input('KmRodadoReembolsavel', sql.Decimal(10,2), d.kmRodadoReembolsavel || 0)
-                    .input('ValorReembolso', sql.Decimal(10,2), d.valorReembolso || 0)
+                    .input('ID_Colaborador', sql.Int, idColab)
+                    .input('Nome', sql.NVarChar, nome)
+                    .input('Grupo', sql.NVarChar, grupo)
+                    .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
+                    .input('DiasTrabalhados', sql.Int, diasTrabalhados)
+                    .input('KmRodadoTotal', sql.Decimal(10,2), kmTotal)
+                    .input('KmRodadoReembolsavel', sql.Decimal(10,2), kmTotal)
+                    .input('ValorReembolso', sql.Decimal(10,2), valorReemb)
                     .query(`
                         INSERT INTO FuelReembolsoDetalhe (ID_Fechamento, ID_Colaborador, Nome, Grupo, TipoVeiculo, DiasTrabalhados, KmRodadoTotal, KmRodadoReembolsavel, ValorReembolso)
                         VALUES (@ID_Fechamento, @ID_Colaborador, @Nome, @Grupo, @TipoVeiculo, @DiasTrabalhados, @KmRodadoTotal, @KmRodadoReembolsavel, @ValorReembolso)
                     `);
-            }
-        }
 
-        if (Array.isArray(diario)) {
+                if (Array.isArray(regDiarios)) {
+                    for (const r of regDiarios) {
+                        await pool.request()
+                            .input('ID_Fechamento', sql.Int, idFechamento)
+                            .input('ID_Colaborador', sql.Int, idColab)
+                            .input('Data', sql.Date, r.Data || r.data)
+                            .input('KmRodadoTotal', sql.Decimal(10,2), r.KM || r.kmRodadoTotal || 0)
+                            .input('KmRodadoReembolsavel', sql.Decimal(10,2), r.KM || r.kmRodadoReembolsavel || 0)
+                            .input('Ausente', sql.Bit, r.ausente ? 1 : 0)
+                            .input('MotivoAusencia', sql.NVarChar, r.Observacao || r.motivoAusencia || null)
+                            .query(`
+                                INSERT INTO FuelReembolsoDiario (ID_Fechamento, ID_Colaborador, Data, KmRodadoTotal, KmRodadoReembolsavel, Ausente, MotivoAusencia)
+                                VALUES (@ID_Fechamento, @ID_Colaborador, @Data, @KmRodadoTotal, @KmRodadoReembolsavel, @Ausente, @MotivoAusencia)
+                            `);
+                    }
+                }
+            }
+        } else if (Array.isArray(diario)) {
             for (const r of diario) {
                 await pool.request()
                     .input('ID_Fechamento', sql.Int, idFechamento)
