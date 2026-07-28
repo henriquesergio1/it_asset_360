@@ -353,6 +353,12 @@ const UserManager: React.FC = () => {
       if (!dataToSet.street && dataToSet.address) {
         dataToSet.street = dataToSet.address;
       }
+      if (dataToSet.latitude !== undefined && dataToSet.latitude !== null && dataToSet.latitude !== '') {
+        dataToSet.latitude = parseFloat(dataToSet.latitude);
+      }
+      if (dataToSet.longitude !== undefined && dataToSet.longitude !== null && dataToSet.longitude !== '') {
+        dataToSet.longitude = parseFloat(dataToSet.longitude);
+      }
       setFormData(dataToSet);
       setIsViewOnly(view);
     } else {
@@ -373,6 +379,8 @@ const UserManager: React.FC = () => {
         number: '',
         complement: '',
         neighborhood: '',
+        latitude: undefined,
+        longitude: undefined,
         sectorId: '',
         hireDate: new Date().toISOString().split('T')[0],
         status: UserStatus.ACTIVE,
@@ -526,8 +534,13 @@ const UserManager: React.FC = () => {
       alert('CEP deve ter 8 dígitos.');
       return;
     }
+    const latNum = formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== ('' as any) ? parseFloat(String(formData.latitude)) : undefined;
+    const lonNum = formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== ('' as any) ? parseFloat(String(formData.longitude)) : undefined;
+
     const sanitizedForm = {
       ...formData,
+      latitude: latNum,
+      longitude: lonNum,
       cpf: cleanDocument(formData.cpf),
       rg: cleanDocument(formData.rg),
       pis: cleanDocument(formData.pis),
@@ -572,8 +585,13 @@ const UserManager: React.FC = () => {
       alert('CEP deve ter 8 dígitos.');
       return;
     }
+    const latNum = formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== ('' as any) ? parseFloat(String(formData.latitude)) : undefined;
+    const lonNum = formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== ('' as any) ? parseFloat(String(formData.longitude)) : undefined;
+
     const sanitizedForm = {
       ...formData,
+      latitude: latNum,
+      longitude: lonNum,
       cpf: cleanDocument(formData.cpf),
       rg: cleanDocument(formData.rg),
       pis: cleanDocument(formData.pis),

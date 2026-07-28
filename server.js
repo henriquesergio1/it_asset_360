@@ -86,7 +86,9 @@ const DB_SCHEMAS = {
         Number NVARCHAR(50) NULL,
         Complement NVARCHAR(255) NULL,
         Neighborhood NVARCHAR(255) NULL,
-        Photo NVARCHAR(MAX) NULL
+        Photo NVARCHAR(MAX) NULL,
+        Latitude FLOAT NULL,
+        Longitude FLOAT NULL
     )`,
     AuditLogs: `(
         Id NVARCHAR(255) PRIMARY KEY,
@@ -558,12 +560,12 @@ async function initializeDatabase() {
                         await pool.request().query("ALTER TABLE Users ADD OnLeaveUntil DATETIME NULL");
                     }
 
-                    // v3.26.4 - Novos campos de colaboradores
+                    // v3.26.4 & v3.100.3 - Novos campos de colaboradores
                     const checkCols = await pool.request().query(`
                         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = 'Users' AND COLUMN_NAME IN ('Gender', 'BirthDate', 'Phone', 'PersonalPhone', 'City', 'State', 'ZipCode', 'HireDate', 'Notes')
+                        WHERE TABLE_NAME = 'Users'
                     `);
-                    const existingCols = checkCols.recordset.map(r => r.COLUMN_NAME);
+                    const existingCols = checkCols.recordset.map(r => (r.COLUMN_NAME || '').toLowerCase());
                     const colsToAdd = [
                         { name: 'Gender', type: 'NVARCHAR(50)' },
                         { name: 'BirthDate', type: 'DATETIME' },
@@ -583,9 +585,13 @@ async function initializeDatabase() {
                     ];
 
                     for (const col of colsToAdd) {
-                        if (!existingCols.includes(col.name)) {
+                        if (!existingCols.includes(col.name.toLowerCase())) {
                             console.log(`- Adicionando coluna ${col.name} em Users...`);
-                            await pool.request().query(`ALTER TABLE Users ADD ${col.name} ${col.type} NULL`);
+                            try {
+                                await pool.request().query(`ALTER TABLE Users ADD ${col.name} ${col.type} NULL`);
+                            } catch (eCol) {
+                                console.warn(`Aviso ao adicionar coluna ${col.name} em Users:`, eCol.message);
+                            }
                         }
                     }
                 }
