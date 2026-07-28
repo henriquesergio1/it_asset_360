@@ -442,20 +442,20 @@ const UserManager: React.FC = () => {
     if (overrideAddress?.trim()) {
       attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
     } else {
-      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
+      // 1ª opção: CEP + Número + Cidade (Alta Precisão por CEP no Brasil)
+      if (zip && num && city) {
+        attempts.push({ label: 'CEP e Número da Casa', query: `${zip}, ${num}, ${city}, Brasil` });
+      }
+      // 2ª opção: Endereço completo com CEP
       if (street && city && formattedZip) {
         const addrNum = num ? `${street}, ${num}` : street;
         attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
       }
-      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
-      if (formattedZip && num && city) {
-        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
+      // 3ª opção: Busca por CEP
+      if (zip) {
+        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${zip}, Brasil` });
       }
-      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
-      if (formattedZip) {
-        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
-      }
-      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
+      // 4ª opção: Endereço completo sem CEP
       if (street && city) {
         const addrNum = num ? `${street}, ${num}` : street;
         const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
@@ -532,50 +532,7 @@ const UserManager: React.FC = () => {
     showToast('Informe as coordenadas ou endereço para visualizar no Google Maps.', 'error');
   };
 
-  const handleExtractFromGoogleMapsUrl = (urlInput?: string) => {
-    const targetUrl = urlInput || prompt('Cole o link completo do Google Maps (ex: https://www.google.com/maps/place/...):');
-    if (!targetUrl || !targetUrl.trim()) return;
 
-    const rawUrl = targetUrl.trim();
-
-    // Estratégia 1: Pino Predial Exato (!3d-23.562181!4d-46.3982927)
-    const pinMatch = rawUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-    if (pinMatch) {
-      const lat = parseFloat(pinMatch[1]);
-      const lon = parseFloat(pinMatch[2]);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
-        showToast('Coordenadas exatas salvas com sucesso (Google Maps)!', 'success');
-        return;
-      }
-    }
-
-    // Estratégia 2: Centroide do Mapa (@-23.5565974,-46.3969903)
-    const centerMatch = rawUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (centerMatch) {
-      const lat = parseFloat(centerMatch[1]);
-      const lon = parseFloat(centerMatch[2]);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
-        showToast('Coordenadas extraídas do centro do mapa (Google Maps)!', 'success');
-        return;
-      }
-    }
-
-    // Estratégia 3: Parâmetro q=lat,lon ou ll=lat,lon
-    const qMatch = rawUrl.match(/(?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (qMatch) {
-      const lat = parseFloat(qMatch[1]);
-      const lon = parseFloat(qMatch[2]);
-      if (!isNaN(lat) && !isNaN(lon)) {
-        setFormData(prev => ({ ...prev, latitude: lat, longitude: lon }));
-        showToast('Coordenadas salvas do link do mapa!', 'success');
-        return;
-      }
-    }
-
-    showToast('Não foi possível identificar coordenadas no link colado. Verifique a URL do Google Maps.', 'error');
-  };
 
   const cleanDocument = (val?: string) => (val || '').replace(/\D/g, '');
 
@@ -2184,24 +2141,7 @@ const UserManager: React.FC = () => {
                               )}
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={handleOpenGoogleMaps}
-                            className="px-4 h-[50px] bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
-                            title="Abrir mapa no Google Maps em nova aba"
-                          >
-                            <ExternalLink size={15} />
-                            <span>Google Maps</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleExtractFromGoogleMapsUrl()}
-                            className="px-4 h-[50px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-md shrink-0"
-                            title="Cole a URL do Google Maps para extrair a Latitude e Longitude exata da casa"
-                          >
-                            <LinkIcon size={15} />
-                            <span>Extrair de Link</span>
-                          </button>
+
                         </div>
                       </div>
                     </div>
