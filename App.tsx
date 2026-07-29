@@ -35,6 +35,20 @@ import { RhAssetManager } from './components/RhAssetManager';
 import SystemInfoModal from './components/SystemInfoModal';
 const FuelManager = lazy(() => import('./components/FuelManager'));
 
+const getDefaultTiPath = (user: any, isAdmin?: boolean): string => {
+  if (isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura')) {
+    return '/';
+  }
+  if (hasPermission(user, 'relatorios_leitura')) return '/reports';
+  if (hasPermission(user, 'colaboradores_leitura')) return '/users';
+  if (hasPermission(user, 'chips_leitura')) return '/sims';
+  if (hasPermission(user, 'licencas_leitura')) return '/accounts';
+  if (hasPermission(user, 'consumiveis_leitura')) return '/consumables';
+  if (hasPermission(user, 'tarefas_leitura')) return '/tasks';
+  if (hasPermission(user, 'entrega_leitura')) return '/operations';
+  return '/reports';
+};
+
 const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
   const location = useLocation();
   const isActive = location.pathname === to;
@@ -102,7 +116,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     } else if (mod === 'FUEL') {
       navigate('/fuel360');
     } else {
-      navigate('/');
+      navigate(getDefaultTiPath(user, isAdmin));
     }
   };
 
@@ -407,10 +421,15 @@ const AppRoutes = () => {
       hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
       hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
 
+    const hasTiDashboardAccess = isAdmin || hasPermission(user, 'admin') || 
+      hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura');
+
+    const defaultTiPath = getDefaultTiPath(user, isAdmin);
+
     return (
         <Routes>
-            <Route path="/login" element={isAuthenticated ? (!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : <Navigate to="/" replace />) : <Login />} />
-            <Route path="/" element={<ProtectedRoute module="TI">{!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : <Dashboard />}</ProtectedRoute>} />
+            <Route path="/login" element={isAuthenticated ? (!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : <Navigate to={defaultTiPath} replace />) : <Login />} />
+            <Route path="/" element={<ProtectedRoute module="TI">{!hasTiAccess && hasRhAccess ? <Navigate to="/rh/dashboard" replace /> : !hasTiDashboardAccess ? <Navigate to={defaultTiPath} replace /> : <Dashboard />}</ProtectedRoute>} />
             <Route path="/devices" element={<ProtectedRoute module="TI"><DeviceManager /></ProtectedRoute>} />
             <Route path="/sims" element={<ProtectedRoute module="TI"><SimManager /></ProtectedRoute>} />
             <Route path="/accounts" element={<ProtectedRoute module="TI"><AccountManager /></ProtectedRoute>} />
@@ -447,7 +466,7 @@ const AppRoutes = () => {
             <Route path="/fuel360/:subView" element={<ProtectedRoute module="FUEL"><FuelManager /></ProtectedRoute>} />
 
             <Route path="/sign-term/:token" element={<DigitalSignature />} />
-            <Route path="*" element={<Navigate to={!hasTiAccess && hasRhAccess ? "/rh/dashboard" : "/"} replace />} />
+            <Route path="*" element={<Navigate to={!hasTiAccess && hasRhAccess ? "/rh/dashboard" : defaultTiPath} replace />} />
         </Routes>
     );
 }
