@@ -193,16 +193,27 @@ const RealService = {
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
     geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
-        const zipMatch = (address || '').replace(/\D/g, '').match(/\d{8}/);
+        const addrStr = address || '';
+        const zipMatch = addrStr.replace(/\D/g, '').match(/\d{8}/);
+        
+        const numMatch = addrStr.match(/(?:,|\b)\s*(\d{1,5})\s*(?:,|\b|$)/);
+        const numVal = numMatch ? parseInt(numMatch[1], 10) : 0;
+
         if (zipMatch) {
             try {
                 const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${zipMatch[0]}`);
                 if (resCep.ok) {
                     const cData = await resCep.json();
                     if (cData && cData.lat && cData.lng) {
-                        const lat = parseFloat(cData.lat);
-                        const lon = parseFloat(cData.lng);
-                        if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+                        let lat = parseFloat(cData.lat);
+                        let lon = parseFloat(cData.lng);
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            if (numVal > 0 && numVal < 2000) {
+                                const offset = Math.min(numVal * 0.000025, 0.0004);
+                                lat = parseFloat((lat - offset).toFixed(6));
+                            }
+                            return { lat, lon };
+                        }
                     }
                 }
             } catch (eCep) {
@@ -210,7 +221,7 @@ const RealService = {
             }
         }
 
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr)}&limit=1`;
         const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
         if (res.ok) {
             const data = await res.json();
@@ -218,7 +229,7 @@ const RealService = {
                 return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
             }
         }
-        throw new Error('Endereço não localizado no mapa.');
+        throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');
     },
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         const R = 6371;

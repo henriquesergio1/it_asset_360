@@ -527,7 +527,7 @@ const UserManager: React.FC = () => {
         }
       }
 
-      throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o endereço, cidade e UF estão corretos.');
+      throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');
     } catch (err: any) {
       showToast(err.message, 'error');
       return null;
