@@ -568,8 +568,24 @@ const UserManager: React.FC = () => {
       alert('CEP deve ter 8 dígitos.');
       return;
     }
-    const latNum = formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== ('' as any) ? parseFloat(String(formData.latitude)) : undefined;
-    const lonNum = formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== ('' as any) ? parseFloat(String(formData.longitude)) : undefined;
+
+    const hasAddress = (formData.street || '').trim().length > 0 || (formData.zipCode || '').trim().length > 0;
+    if (hasAddress && !(formData.number || '').trim()) {
+      showToast('O campo Número é obrigatório para cadastrar o endereço do colaborador.', 'error');
+      return;
+    }
+
+    let latNum = formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== ('' as any) ? parseFloat(String(formData.latitude)) : undefined;
+    let lonNum = formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== ('' as any) ? parseFloat(String(formData.longitude)) : undefined;
+
+    // Busca automática de coordenadas ao salvar se houver endereço
+    if (hasAddress && (latNum === undefined || lonNum === undefined || isNaN(latNum) || isNaN(lonNum))) {
+      const geoResult = await handleGeocodeAddress();
+      if (geoResult && geoResult.lat && geoResult.lon) {
+        latNum = geoResult.lat;
+        lonNum = geoResult.lon;
+      }
+    }
 
     const sanitizedForm = {
       ...formData,
