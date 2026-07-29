@@ -237,7 +237,12 @@ const RealService = {
                     const bMaxLon = parseFloat(match.boundingbox[3]);
 
                     if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
-                        const fraction = Math.min(numVal / 150, 1.0);
+                        const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
+                        const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
+                        const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
+                        const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
+
+                        const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
                         lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
                         lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
                     }
