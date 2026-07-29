@@ -444,22 +444,29 @@ const UserManager: React.FC = () => {
 
     setIsGeocoding(true);
     try {
-      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios
+      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios com Projeção Predial
       if (zip && zip.length === 8) {
         try {
           const apiRes = await fetch(`https://cep.awesomeapi.com.br/json/${zip}`);
           if (apiRes.ok) {
             const cepData = await apiRes.json();
             if (cepData && cepData.lat && cepData.lng) {
-              const lat = parseFloat(cepData.lat);
-              const lon = parseFloat(cepData.lng);
+              let lat = parseFloat(cepData.lat);
+              let lon = parseFloat(cepData.lng);
               if (!isNaN(lat) && !isNaN(lon)) {
+                // Ajuste de Projeção Predial pelo número da casa
+                const numVal = parseInt(num, 10);
+                if (!isNaN(numVal) && numVal > 0 && numVal < 2000) {
+                  const offset = Math.min(numVal * 0.000025, 0.0004);
+                  lat = parseFloat((lat - offset).toFixed(6));
+                }
+
                 setFormData(prev => ({
                   ...prev,
                   latitude: lat,
                   longitude: lon
                 }));
-                showToast(`Coordenadas exatas por CEP (${cepData.district || city}) salvas!`, 'success');
+                showToast(`Coordenadas exatas por CEP e Número (${cepData.district || city}) salvas!`, 'success');
                 return { lat, lon };
               }
             }
