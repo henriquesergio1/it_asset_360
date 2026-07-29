@@ -226,7 +226,26 @@ const RealService = {
         if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-                return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                const match = data[0];
+                let lat = parseFloat(match.lat);
+                let lon = parseFloat(match.lon);
+
+                if (numVal > 0 && match.boundingbox && match.boundingbox.length === 4) {
+                    const bMinLat = parseFloat(match.boundingbox[0]);
+                    const bMaxLat = parseFloat(match.boundingbox[1]);
+                    const bMinLon = parseFloat(match.boundingbox[2]);
+                    const bMaxLon = parseFloat(match.boundingbox[3]);
+
+                    if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
+                        const fraction = Math.min(numVal / 150, 1.0);
+                        lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
+                        lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                    }
+                }
+
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    return { lat, lon };
+                }
             }
         }
         throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');

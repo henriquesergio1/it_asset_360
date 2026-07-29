@@ -511,15 +511,31 @@ const UserManager: React.FC = () => {
 
               if (!match) match = data[0];
 
-              const lat = parseFloat(match.lat);
-              const lon = parseFloat(match.lon);
+              let lat = parseFloat(match.lat);
+              let lon = parseFloat(match.lon);
+
+              // Interpolação geométrica precisa por boundingbox pelo número do imóvel
+              const numVal = parseInt(num, 10);
+              if (!isNaN(numVal) && numVal > 0 && match.boundingbox && match.boundingbox.length === 4) {
+                const bMinLat = parseFloat(match.boundingbox[0]);
+                const bMaxLat = parseFloat(match.boundingbox[1]);
+                const bMinLon = parseFloat(match.boundingbox[2]);
+                const bMaxLon = parseFloat(match.boundingbox[3]);
+
+                if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
+                  const fraction = Math.min(numVal / 150, 1.0);
+                  lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
+                  lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                }
+              }
+
               if (!isNaN(lat) && !isNaN(lon)) {
                 setFormData(prev => ({
                   ...prev,
                   latitude: lat,
                   longitude: lon
                 }));
-                showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
+                showToast(`Coordenadas exatas encontradas (${attempt.label})!`, 'success');
                 return { lat, lon };
               }
             }

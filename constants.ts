@@ -1,4 +1,4 @@
-export const SYSTEM_VERSION = '3.100.29';
+export const SYSTEM_VERSION = '3.100.30';
 export const APP_VERSION = SYSTEM_VERSION;
 
 // Estilos sistêmicos para padronização (UI Pattern)
