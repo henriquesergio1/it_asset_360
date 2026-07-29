@@ -445,12 +445,14 @@ const UserManager: React.FC = () => {
     setIsGeocoding(true);
     try {
       // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios com Projeção Predial
+      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios com Projeção Predial
       if (zip && zip.length === 8) {
         try {
           const apiRes = await fetch(`https://cep.awesomeapi.com.br/json/${zip}`);
           if (apiRes.ok) {
             const cepData = await apiRes.json();
-            if (cepData && cepData.lat && cepData.lng) {
+            // Apenas utiliza a coordenada direta do CEP se o CEP for de um logradouro específico (address não vazio)
+            if (cepData && cepData.address && cepData.lat && cepData.lng) {
               let lat = parseFloat(cepData.lat);
               let lon = parseFloat(cepData.lng);
               if (!isNaN(lat) && !isNaN(lon)) {

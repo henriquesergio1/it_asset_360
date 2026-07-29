@@ -204,7 +204,7 @@ const RealService = {
                 const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${zipMatch[0]}`);
                 if (resCep.ok) {
                     const cData = await resCep.json();
-                    if (cData && cData.lat && cData.lng) {
+                    if (cData && cData.address && cData.lat && cData.lng) {
                         let lat = parseFloat(cData.lat);
                         let lon = parseFloat(cData.lng);
                         if (!isNaN(lat) && !isNaN(lon)) {
