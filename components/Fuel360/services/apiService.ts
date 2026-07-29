@@ -209,8 +209,8 @@ const RealService = {
                         let lon = parseFloat(cData.lng);
                         if (!isNaN(lat) && !isNaN(lon)) {
                             if (numVal > 0 && numVal < 2000) {
-                                const offset = Math.min(numVal * 0.000025, 0.0004);
-                                lat = parseFloat((lat - offset).toFixed(6));
+                                const numOffset = (numVal / 100) * 0.00025;
+                                lat = parseFloat((lat - numOffset).toFixed(6));
                             }
                             return { lat, lon };
                         }

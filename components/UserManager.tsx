@@ -456,11 +456,11 @@ const UserManager: React.FC = () => {
               let lat = parseFloat(cepData.lat);
               let lon = parseFloat(cepData.lng);
               if (!isNaN(lat) && !isNaN(lon)) {
-                // Ajuste de Projeção Predial pelo número da casa
+                // Ajuste de Projeção Predial pelo número da casa (Direção métrica precisa)
                 const numVal = parseInt(num, 10);
                 if (!isNaN(numVal) && numVal > 0 && numVal < 2000) {
-                  const offset = Math.min(numVal * 0.000025, 0.0004);
-                  lat = parseFloat((lat - offset).toFixed(6));
+                  const numOffset = (numVal / 100) * 0.00025;
+                  lat = parseFloat((lat - numOffset).toFixed(6));
                 }
 
                 setFormData(prev => ({
