@@ -2140,53 +2140,50 @@ ORDER BY a.CODCET;`;
         { label: '📄 Relatórios T.I.', readKey: 'relatorios_leitura', writeKey: 'relatorios_escrita' },
         { label: '🔄 Entrega / Devolução T.I.', readKey: 'entrega_leitura', writeKey: 'entrega_escrita' },
         { label: '⚙️ Configurações do Sistema', readKey: 'sistema_leitura', writeKey: 'sistema_escrita' }
-      ].map(m => (
-        <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
-          <div className="flex gap-8">
-            <div className="w-16 flex justify-center">
-              <input 
-                type="checkbox" 
-                disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || !!profileForm.Permissoes?.[m.readKey.replace('_leitura', '')]} 
-                onChange={e => {
-                  const val = e.target.checked;
-                  const legacyKey = m.readKey.replace('_leitura', '');
-                  setProfileForm({
-                    ...profileForm,
-                    Permissoes: {
-                      ...profileForm.Permissoes,
-                      [m.readKey]: val,
-                      [legacyKey]: val
+      ].map(m => {
+        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey];
+        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey];
+
+        return (
+          <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{m.label}</span>
+            <div className="flex gap-8">
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isReadChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.readKey]: val };
+                    if (!val) {
+                      updatedPerms[m.writeKey] = false;
                     }
-                  });
-                }}
-                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
-              />
-            </div>
-            <div className="w-16 flex justify-center">
-              <input 
-                type="checkbox" 
-                disabled={profileForm.Permissoes?.admin}
-                checked={profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || !!profileForm.Permissoes?.[m.writeKey.replace('_escrita', '')]} 
-                onChange={e => {
-                  const val = e.target.checked;
-                  const legacyKey = m.writeKey.replace('_escrita', '');
-                  setProfileForm({
-                    ...profileForm,
-                    Permissoes: {
-                      ...profileForm.Permissoes,
-                      [m.writeKey]: val,
-                      [legacyKey]: val
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+              </div>
+              <div className="w-16 flex justify-center">
+                <input 
+                  type="checkbox" 
+                  disabled={profileForm.Permissoes?.admin}
+                  checked={isWriteChecked} 
+                  onChange={e => {
+                    const val = e.target.checked;
+                    const updatedPerms = { ...profileForm.Permissoes, [m.writeKey]: val };
+                    if (val) {
+                      updatedPerms[m.readKey] = true;
                     }
-                  });
-                }}
-                className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
-              />
+                    setProfileForm({ ...profileForm, Permissoes: updatedPerms });
+                  }}
+                  className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
 
     {/* Seção Módulo R.H. */}
@@ -2201,8 +2198,8 @@ ORDER BY a.CODCET;`;
         { label: '🥾 Estoque de Itens / EPI R.H.', readKey: 'rh_estoque_leitura', writeKey: 'rh_estoque_escrita', aliases: ['rh_estoque', 'rh_ativos'] },
         { label: '📊 Relatórios R.H.', readKey: 'rh_relatorios_leitura', writeKey: 'rh_relatorios_escrita', aliases: ['rh_relatorios'] }
       ].map(m => {
-        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a]);
-        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a + '_escrita']);
+        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey];
+        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey];
 
         return (
           <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
@@ -2216,6 +2213,9 @@ ORDER BY a.CODCET;`;
                   onChange={e => {
                     const val = e.target.checked;
                     const updatedPerms = { ...profileForm.Permissoes, [m.readKey]: val };
+                    if (!val) {
+                      updatedPerms[m.writeKey] = false;
+                    }
                     m.aliases.forEach(a => { updatedPerms[a] = val; });
                     setProfileForm({ ...profileForm, Permissoes: updatedPerms });
                   }}
@@ -2230,6 +2230,9 @@ ORDER BY a.CODCET;`;
                   onChange={e => {
                     const val = e.target.checked;
                     const updatedPerms = { ...profileForm.Permissoes, [m.writeKey]: val };
+                    if (val) {
+                      updatedPerms[m.readKey] = true;
+                    }
                     m.aliases.forEach(a => { updatedPerms[a] = val; updatedPerms[a + '_escrita'] = val; });
                     setProfileForm({ ...profileForm, Permissoes: updatedPerms });
                   }}
@@ -2256,8 +2259,8 @@ ORDER BY a.CODCET;`;
         { label: '📊 Relatórios B.I. Fuel360', readKey: 'fuel_relatorios_leitura', writeKey: 'fuel_relatorios_escrita', aliases: ['fuel_relatorios'] },
         { label: '⚙️ Parâmetros KM/L', readKey: 'fuel_config_leitura', writeKey: 'fuel_config_escrita', aliases: ['fuel_config'] }
       ].map(m => {
-        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a]);
-        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey] || m.aliases.some(a => !!profileForm.Permissoes?.[a + '_escrita']);
+        const isReadChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.readKey];
+        const isWriteChecked = !!profileForm.Permissoes?.admin || !!profileForm.Permissoes?.[m.writeKey];
 
         return (
           <div key={m.readKey} className="flex items-center justify-between p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/30 rounded-lg">
@@ -2271,6 +2274,9 @@ ORDER BY a.CODCET;`;
                   onChange={e => {
                     const val = e.target.checked;
                     const updatedPerms = { ...profileForm.Permissoes, [m.readKey]: val };
+                    if (!val) {
+                      updatedPerms[m.writeKey] = false;
+                    }
                     m.aliases.forEach(a => { updatedPerms[a] = val; });
                     setProfileForm({ ...profileForm, Permissoes: updatedPerms });
                   }}
@@ -2285,6 +2291,9 @@ ORDER BY a.CODCET;`;
                   onChange={e => {
                     const val = e.target.checked;
                     const updatedPerms = { ...profileForm.Permissoes, [m.writeKey]: val };
+                    if (val) {
+                      updatedPerms[m.readKey] = true;
+                    }
                     m.aliases.forEach(a => { updatedPerms[a] = val; updatedPerms[a + '_escrita'] = val; });
                     setProfileForm({ ...profileForm, Permissoes: updatedPerms });
                   }}
