@@ -437,66 +437,89 @@ const UserManager: React.FC = () => {
     const zip = (formData.zipCode || '').replace(/\D/g, '');
     const formattedZip = zip.length === 8 ? `${zip.substring(0, 5)}-${zip.substring(5)}` : '';
 
-    const attempts: Array<{ label: string; query: string }> = [];
-
-    if (overrideAddress?.trim()) {
-      attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
-    } else {
-      // 1ª opção: Endereço completo com CEP (ex: Rua Noventa e Cinco, 14, 08466-003, São Paulo - SP, Brasil)
-      if (street && city && formattedZip) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
-      }
-      // 2ª opção: CEP + Número + Cidade (ex: 08466-003, 14, São Paulo, Brasil)
-      if (formattedZip && num && city) {
-        attempts.push({ label: 'CEP e Número da Casa', query: `${formattedZip}, ${num}, ${city}, Brasil` });
-      }
-      // 3ª opção: Busca restrita por CEP (ex: 08466-003, Brasil)
-      if (formattedZip) {
-        attempts.push({ label: 'Âncora Geográfica por CEP', query: `${formattedZip}, Brasil` });
-      }
-      // 4ª opção: Endereço completo sem CEP (ex: Rua Noventa e Cinco, 14, São Paulo - SP, Brasil)
-      if (street && city) {
-        const addrNum = num ? `${street}, ${num}` : street;
-        const full = [addrNum, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Número', query: full });
-      }
-      // 5ª opção: Logradouro + Bairro + Cidade
-      if (street && city) {
-        const streetOnly = [street, neighborhood, city, state, 'Brasil'].filter(Boolean).join(', ');
-        attempts.push({ label: 'Logradouro e Bairro', query: streetOnly });
-      }
-    }
-
-    if (attempts.length === 0) {
+    if (!overrideAddress?.trim() && !street && !zip) {
       showToast('Digite ao menos o endereço ou CEP, cidade e UF para buscar as coordenadas.', 'error');
       return null;
     }
 
     setIsGeocoding(true);
     try {
+      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios
+      if (zip && zip.length === 8) {
+        try {
+          const apiRes = await fetch(`https://cep.awesomeapi.com.br/json/${zip}`);
+          if (apiRes.ok) {
+            const cepData = await apiRes.json();
+            if (cepData && cepData.lat && cepData.lng) {
+              const lat = parseFloat(cepData.lat);
+              const lon = parseFloat(cepData.lng);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lon
+                }));
+                showToast(`Coordenadas exatas por CEP (${cepData.district || city}) salvas!`, 'success');
+                return { lat, lon };
+              }
+            }
+          }
+        } catch (eCep) {
+          console.warn('Consulta AwesomeAPI CEP falhou, tentando fallback:', eCep);
+        }
+      }
+
+      // 2ª Opção: Fallback Nominatim OSM com filtro estrito de cidade
+      const attempts: Array<{ label: string; query: string }> = [];
+      if (overrideAddress?.trim()) {
+        attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
+      } else {
+        if (street && city) {
+          const addrNum = num ? `${street}, ${num}` : street;
+          attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
+          attempts.push({ label: 'Logradouro e Número', query: `${addrNum}, ${neighborhood}, ${city} - ${state}, Brasil` });
+        }
+      }
+
       for (const attempt of attempts) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=1`;
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=5`;
           const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-              const lat = parseFloat(data[0].lat);
-              const lon = parseFloat(data[0].lon);
-              setFormData(prev => ({
-                ...prev,
-                latitude: lat,
-                longitude: lon
-              }));
-              showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
-              return { lat, lon };
+              // Validação estrita: descarta cidades divergentes se a cidade for informada
+              let match = data.find((d: any) => {
+                const displayName = (d.display_name || '').toLowerCase();
+                const targetCity = city.toLowerCase();
+                if (targetCity && !displayName.includes(targetCity)) {
+                  if (displayName.includes('tremembé') || displayName.includes('taubaté') || displayName.includes('pindamonhangaba')) {
+                    return false;
+                  }
+                }
+                return true;
+              });
+
+              if (!match) match = data[0];
+
+              const lat = parseFloat(match.lat);
+              const lon = parseFloat(match.lon);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lon
+                }));
+                showToast(`Coordenadas encontradas (${attempt.label})!`, 'success');
+                return { lat, lon };
+              }
             }
           }
         } catch (eQuery) {
           console.warn(`Tentativa de geocodificação (${attempt.label}) falhou:`, eQuery);
         }
       }
+
       throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o endereço, cidade e UF estão corretos.');
     } catch (err: any) {
       showToast(err.message, 'error');
