@@ -1104,6 +1104,9 @@ async function initializeDatabase() {
                 } else {
                     await pool.request().query("ALTER TABLE FuelColaboradores ALTER COLUMN LongitudeBase FLOAT NULL");
                 }
+                try {
+                    await pool.request().query("UPDATE FuelColaboradores SET CPF = REPLACE(REPLACE(CPF, '.', ''), '-', '') WHERE CPF IS NOT NULL AND (CPF LIKE '%.%' OR CPF LIKE '%-%')");
+                } catch (eClean) {}
             }
 
             const checkAusencias = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelAusencias'");
@@ -1575,7 +1578,8 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             activePulsusIds.add(idPulsus);
             const existing = fuelMap.get(idPulsus);
             const codigoSetorNum = Number(nItem.codigo_setor) || 0;
-            const nCpf = nItem.cpf ? String(nItem.cpf).trim() : '';
+            const cleanNCpf = nItem.cpf ? String(nItem.cpf).replace(/\D/g, '') : '';
+            const cleanExistCpf = existing?.CPF ? String(existing.CPF).replace(/\D/g, '') : '';
             const nAddress = nItem.endereco ? String(nItem.endereco).trim() : null;
             const nLat = nItem.latitude !== undefined && nItem.latitude !== null ? Number(nItem.latitude) : null;
             const nLon = nItem.longitude !== undefined && nItem.longitude !== null ? Number(nItem.longitude) : null;
@@ -1584,20 +1588,20 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                     id_pulsus: idPulsus,
                     nome: nItem.nome,
                     matchType: 'NEW',
-                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf, endereco_base: nAddress, latitude_base: nLat, longitude_base: nLon }
+                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: cleanNCpf, endereco_base: nAddress, latitude_base: nLat, longitude_base: nLon }
                 });
             } else {
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
                 const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
                 const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
-                const cpfDiff = Boolean(nCpf && (existing.CPF || '').trim() !== nCpf);
+                const cpfDiff = Boolean(cleanNCpf && cleanExistCpf !== cleanNCpf);
 
                 if (nameDiff || sectorDiff || groupDiff || cpfDiff) {
                     const changes = [];
                     if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
                     if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
                     if (groupDiff) changes.push({ field: 'Grupo', oldValue: existing.Grupo, newValue: nItem.grupo });
-                    if (cpfDiff) changes.push({ field: 'CPF', oldValue: existing.CPF, newValue: nCpf });
+                    if (cpfDiff) changes.push({ field: 'CPF', oldValue: cleanExistCpf, newValue: cleanNCpf });
 
                     alterados.push({
                         id_pulsus: idPulsus,
@@ -1605,7 +1609,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                         matchType: 'ID_MATCH',
                         id_colaborador: existing.ID_Colaborador,
                         existingColab: existing,
-                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: nCpf || existing.CPF },
+                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: cleanNCpf || cleanExistCpf },
                         changes
                     });
                 } else {
@@ -1662,7 +1666,7 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
         for (const item of items) {
             if (item.syncAction === 'INSERT') {
                 const tipoVeiculo = item.newData?.tipoVeiculo || 'Carro';
-                const cpfVal = item.newData?.cpf || null;
+                const cpfVal = item.newData?.cpf ? String(item.newData.cpf).replace(/\D/g, '') : null;
                 const endVal = item.newData?.endereco_base || null;
                 const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
                 const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;
@@ -1694,7 +1698,7 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                     `);
                 processedCount++;
             } else if (item.syncAction === 'UPDATE_DATA') {
-                const cpfVal = item.newData?.cpf || null;
+                const cpfVal = item.newData?.cpf ? String(item.newData.cpf).replace(/\D/g, '') : null;
                 const endVal = item.newData?.endereco_base || null;
                 const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
                 const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;

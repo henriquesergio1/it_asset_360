@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { 
     UsersIcon, PlusCircleIcon, PencilIcon, TrashIcon, XCircleIcon, CheckCircleIcon, ExclamationIcon, SpinnerIcon, LocationMarkerIcon, UserGroupIcon, CarIcon, MotoIcon, UserIcon, ChevronDownIcon, ChevronUpIcon, UploadIcon, ArrowRightIcon, RefreshIcon, BriefcaseIcon, SearchIcon, GlobeIcon
 } from './icons';
+import { formatCPF } from '../../utils/rhValidation';
 
 // --- COMPONENTE: MODAL DE COLABORADOR ---
 const ColaboradorModal: React.FC<{ 
@@ -365,9 +366,13 @@ const SyncModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
                                                             {a.changes.map((diff, idx) => (
                                                                 <div key={idx} className={`flex items-center text-[9px] px-2 py-1 rounded border ${diff.field === 'Nome' ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
                                                                     <span className="font-bold text-slate-400 uppercase mr-2">{diff.field}:</span>
-                                                                    <span className="text-slate-500 dark:text-slate-400 line-through">{diff.oldValue}</span>
+                                                                    <span className="text-slate-500 dark:text-slate-400 line-through">
+                                                                        {diff.field === 'CPF' ? formatCPF(String(diff.oldValue || '')) : diff.oldValue}
+                                                                    </span>
                                                                     <ArrowRightIcon className="w-2 h-2 mx-1.5 text-blue-400"/>
-                                                                    <span className={`${diff.field === 'Nome' ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-sky-300'} font-black`}>{diff.newValue}</span>
+                                                                    <span className={`${diff.field === 'Nome' ? 'text-amber-700 dark:text-amber-300' : 'text-blue-700 dark:text-sky-300'} font-black`}>
+                                                                        {diff.field === 'CPF' ? formatCPF(String(diff.newValue || '')) : diff.newValue}
+                                                                    </span>
                                                                 </div>
                                                             ))}
                                                         </div>
