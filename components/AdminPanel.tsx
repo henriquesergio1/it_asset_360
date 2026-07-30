@@ -687,6 +687,35 @@ ORDER BY a.CODCET;`;
     setIsGeocoding(true);
     try {
       const address = settingsForm.headquartersAddress.trim();
+      
+      // 1ª Prioridade: Google Maps Engine (/api/geocode)
+      try {
+        const gRes = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address })
+        });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData && gData.success && gData.lat && gData.lon) {
+            const lat = parseFloat(gData.lat);
+            const lon = parseFloat(gData.lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              setSettingsForm(prev => ({
+                ...prev,
+                headquartersLat: lat,
+                headquartersLong: lon
+              }));
+              showToast('Coordenadas exatas da sede encontradas via Google Maps!', 'success');
+              return;
+            }
+          }
+        }
+      } catch (eGoogle) {
+        console.warn('Geocodificação Google Maps falhou no Admin, usando fallback:', eGoogle);
+      }
+
+      // 2ª Opção: Fallback OpenStreetMap
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
       const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
       if (!res.ok) throw new Error('Falha no serviço de localização.');

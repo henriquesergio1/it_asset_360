@@ -636,11 +636,36 @@ const UserManager: React.FC = () => {
       return;
     }
 
+    const existingUser = editingId ? users.find(u => u.id === editingId) : null;
+
+    const initialStreet = (existingUser?.street || '').trim().toLowerCase();
+    const initialNumber = (existingUser?.number || '').trim().toLowerCase();
+    const initialNeighborhood = (existingUser?.neighborhood || '').trim().toLowerCase();
+    const initialCity = (existingUser?.city || '').trim().toLowerCase();
+    const initialState = (existingUser?.state || '').trim().toLowerCase();
+    const initialZip = (existingUser?.zipCode || '').replace(/\D/g, '');
+
+    const currentStreet = (formData.street || '').trim().toLowerCase();
+    const currentNumber = (formData.number || '').trim().toLowerCase();
+    const currentNeighborhood = (formData.neighborhood || '').trim().toLowerCase();
+    const currentCity = (formData.city || '').trim().toLowerCase();
+    const currentState = (formData.state || '').trim().toLowerCase();
+    const currentZip = (formData.zipCode || '').replace(/\D/g, '');
+
+    const addressChanged = Boolean(editingId && (
+      initialStreet !== currentStreet ||
+      initialNumber !== currentNumber ||
+      initialNeighborhood !== currentNeighborhood ||
+      initialCity !== currentCity ||
+      initialState !== currentState ||
+      initialZip !== currentZip
+    ));
+
     let latNum = formData.latitude !== undefined && formData.latitude !== null && formData.latitude !== ('' as any) ? parseFloat(String(formData.latitude)) : undefined;
     let lonNum = formData.longitude !== undefined && formData.longitude !== null && formData.longitude !== ('' as any) ? parseFloat(String(formData.longitude)) : undefined;
 
-    // Busca automática de coordenadas ao salvar se houver endereço
-    if (hasAddress && (latNum === undefined || lonNum === undefined || isNaN(latNum) || isNaN(lonNum))) {
+    // Recaptura automática de coordenadas se houver endereço e (coordenadas ausentes OU endereço alterado)
+    if (hasAddress && (addressChanged || latNum === undefined || lonNum === undefined || isNaN(latNum) || isNaN(lonNum))) {
       const geoResult = await handleGeocodeAddress();
       if (geoResult && geoResult.lat && geoResult.lon) {
         latNum = geoResult.lat;
