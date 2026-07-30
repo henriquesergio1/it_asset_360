@@ -4490,36 +4490,36 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* Modal de Justificativa de Alteração Cadastral (Obrigatório) */}
       {isReasonModalOpen && pendingSaveData && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center gap-2 text-indigo-500 font-bold uppercase text-xs tracking-wider">
+        <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold uppercase text-xs tracking-wider">
               <AlertTriangle size={18} className="text-amber-500" />
               <span>Justificativa de Alteração</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed font-bold">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-bold">
               Para prosseguir e salvar as alterações cadastrais do colaborador de R.H., por favor, informe brevemente o motivo desta alteração.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo da Alteração</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 ml-1">Motivo da Alteração</label>
               <textarea 
                 required
                 placeholder="Ex: Ajuste salarial acordado em convenção coletiva / Correção de grafia no nome."
                 value={editReasonText}
                 onChange={e => setEditReasonText(e.target.value)}
-                className="w-full border border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-indigo-500 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[90px] font-medium"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button 
                 onClick={() => { setIsReasonModalOpen(false); setPendingSaveData(null); setEditReasonText(''); }}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-355 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                className="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Cancelar
               </button>
               <button 
                 disabled={!editReasonText.trim()}
                 onClick={handleConfirmEditReason}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
               >
                 Salvar Cadastro
               </button>

@@ -6896,7 +6896,7 @@ async function updateUserPendingStatus(pool, userId) {
 
     async function runErpPontoSync(customConfig = null, targetPis = null) {
         const pool = await sql.connect(dbConfig);
-        await ensureSystemTablesExist(pool);
+        await initializeDatabase();
 
         let cfg = customConfig;
         if (!cfg || !cfg.server || !cfg.user) {
@@ -7031,7 +7031,7 @@ async function updateUserPendingStatus(pool, userId) {
     app.get('/api/erp/rh-ponto/config', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            await ensureSystemTablesExist(pool);
+            await initializeDatabase();
             const result = await pool.request().query("SELECT TOP 1 ErpPontoServer as server, ErpPontoDatabase as database, ErpPontoUser as user, ErpPontoPassword as password, ErpPontoPort as port, ErpPontoQuery as selectionQuery, ErpPontoLastSync as lastSync, ErpPontoLastStatus as lastStatus FROM SystemSettings");
             const cfg = result.recordset[0] || {};
             res.json({ success: true, config: cfg });
@@ -7044,7 +7044,7 @@ async function updateUserPendingStatus(pool, userId) {
         try {
             const { server: pontoServer, database, user, password, port, selectionQuery } = req.body;
             const pool = await sql.connect(dbConfig);
-            await ensureSystemTablesExist(pool);
+            await initializeDatabase();
 
             await pool.request()
                 .input('s', sql.NVarChar, pontoServer || '')
@@ -7105,7 +7105,7 @@ async function updateUserPendingStatus(pool, userId) {
             }
 
             const pool = await sql.connect(dbConfig);
-            await ensureSystemTablesExist(pool);
+            await initializeDatabase();
 
             let query = "SELECT FuncionarioId as funcionario_id, Nome as nome, NPis as n_pis, TotalBanco as total_banco, UpdatedAt as updated_at FROM RhPontoBancoHoras";
             let request = pool.request();
