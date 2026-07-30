@@ -5,6 +5,7 @@ import { Bell, BellOff, AlertTriangle, AlertCircle, Package, Clock, X, Check, Sh
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { parseLocalDate } from './recurrenceUtils';
+import { parseLocalDateParts } from '../utils/rhValidation';
 import { hasPermission } from '../utils/rbac';
 
 export const NotificationCenter: React.FC = () => {
@@ -146,11 +147,9 @@ export const NotificationCenter: React.FC = () => {
     
     return rhCollaborators.filter(c => {
       if (!c.birthDate || c.status === 'Demitido') return false;
-      const parts = c.birthDate.split('-');
-      if (parts.length < 3) return false;
-      const birthMonth = parseInt(parts[1], 10);
-      const birthDay = parseInt(parts[2], 10);
-      return birthMonth === currentMonth && birthDay === currentDay;
+      const parts = parseLocalDateParts(c.birthDate);
+      if (!parts) return false;
+      return parts.month === currentMonth && parts.day === currentDay;
     }).map(c => ({
       id: `rh-birthday-${c.id}`,
       title: 'Aniversariante do Dia 🎂',

@@ -3,6 +3,7 @@ import { useData } from '../contexts/DataContext';
 import { Link } from 'react-router-dom';
 import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { parseLocalDateParts, formatDateBR, formatBirthdayDisplay } from '../utils/rhValidation';
 
 export const RhDashboard: React.FC = () => {
   const { rhCollaborators, rhOccurrences, rhTerms, sectors } = useData();
@@ -38,8 +39,8 @@ export const RhDashboard: React.FC = () => {
     const currentMonth = new Date().getMonth() + 1; // 1-12
     return rhCollaborators.filter(c => {
       if (!c.birthDate || c.status === 'Demitido') return false;
-      const birthMonth = parseInt(c.birthDate.split('-')[1], 10);
-      return birthMonth === currentMonth;
+      const parts = parseLocalDateParts(c.birthDate);
+      return parts ? parts.month === currentMonth : false;
     });
   }, [rhCollaborators]);
 
@@ -396,7 +397,7 @@ export const RhDashboard: React.FC = () => {
                   <div>
                     <span className="block font-bold text-xs text-slate-900 dark:text-white">{doc.collaborator.fullName}</span>
                     <span className="text-[10px] block font-bold text-amber-600 dark:text-amber-400">{doc.type}</span>
-                    <span className="text-[9px] opacity-60 block">Vence em {new Date(doc.date).toLocaleDateString('pt-BR')} ({doc.daysRemaining} dias restantes)</span>
+                    <span className="text-[9px] opacity-60 block">Vence em {formatDateBR(doc.date)} ({doc.daysRemaining} dias restantes)</span>
                   </div>
                   <ChevronRight size={16} className="opacity-55 text-amber-500" />
                 </div>
@@ -424,7 +425,7 @@ export const RhDashboard: React.FC = () => {
                   <div>
                     <span className="block font-bold text-xs text-slate-900 dark:text-white">{c.fullName}</span>
                     <span className="text-[10px] opacity-75 block text-indigo-600 dark:text-indigo-400 font-bold">
-                      Dia {c.birthDate.split('-')[2]} de {new Date(c.birthDate).toLocaleString('pt-BR', { month: 'long' })}
+                      {formatBirthdayDisplay(c.birthDate)}
                     </span>
                   </div>
                   <Cake size={16} className="text-indigo-400/80" />

@@ -18,7 +18,7 @@ import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { hasPermission } from '../utils/rbac';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
-  formatCPF, formatPhone, formatCEP, cleanDocument 
+  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR 
 } from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
@@ -1451,7 +1451,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         <span className={isColabDemitido ? "text-slate-400 line-through" : ""}>{c.fullName}</span>
                         {isColabDemitido && (
                           <span className="text-[9px] font-black tracking-wider uppercase text-rose-500 mt-1 flex items-center gap-1">
-                            <AlertTriangle size={10} /> Demitido em {c.terminationDate ? new Date(c.terminationDate).toLocaleDateString('pt-BR') : '---'}
+                            <AlertTriangle size={10} /> Demitido em {c.terminationDate ? formatDateBR(c.terminationDate) : '---'}
                           </span>
                         )}
                       </div>
@@ -1466,7 +1466,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-900 rounded font-black text-[10px] tracking-wide uppercase">{c.contractType}</span>
                   </td>
                 )}
-                {visibleColumns.includes('hireDate') && <td className="px-6 py-4 text-slate-500">{c.hireDate ? new Date(c.hireDate).toLocaleDateString('pt-BR') : '---'}</td>}
+                {visibleColumns.includes('hireDate') && <td className="px-6 py-4 text-slate-500">{c.hireDate ? formatDateBR(c.hireDate) : '---'}</td>}
                 {visibleColumns.includes('salary') && (
                   <td className="px-6 py-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {revealSalaries[c.id] 
@@ -1754,7 +1754,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? new Date(selectedColab.hireDate).toLocaleDateString('pt-BR') : '---'}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? formatDateBR(selectedColab.hireDate) : '---'}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Jornada Semanal</span>
@@ -1828,7 +1828,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Data de Nascimento</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? new Date(selectedColab.birthDate).toLocaleDateString('pt-BR') : '---'}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? formatDateBR(selectedColab.birthDate) : '---'}</span>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Gênero</span>

@@ -110,3 +110,71 @@ export const formatCEP = (value: string) => {
     .replace(/(\d{5})(\d)/, '$1-$2')
     .replace(/(-\d{3})\d+?$/, '$1');
 };
+
+/**
+ * Extrai dia, mês e ano de qualquer string de data (ISO 8601, YYYY-MM-DD, DD/MM/YYYY)
+ * sem sofrer alteração de fuso horário nem contaminação por sufixos "T00:00:00.000Z".
+ */
+export const parseLocalDateParts = (dateStr: string | null | undefined): { day: number; month: number; year: number; dayStr: string; monthStr: string; yearStr: string } | null => {
+  if (!dateStr) return null;
+  const str = String(dateStr).trim();
+  const clean = str.split('T')[0].split(' ')[0];
+
+  let year = 0, month = 0, day = 0;
+
+  if (clean.includes('-')) {
+    const parts = clean.split('-');
+    if (parts.length >= 3) {
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      day = parseInt(parts[2], 10);
+    }
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/');
+    if (parts.length >= 3) {
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+    }
+  }
+
+  if (isNaN(year) || isNaN(month) || isNaN(day) || day === 0 || month === 0) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      year = d.getUTCFullYear();
+      month = d.getUTCMonth() + 1;
+      day = d.getUTCDate();
+    } else {
+      return null;
+    }
+  }
+
+  return {
+    day,
+    month,
+    year,
+    dayStr: String(day).padStart(2, '0'),
+    monthStr: String(month).padStart(2, '0'),
+    yearStr: String(year)
+  };
+};
+
+/**
+ * Formata a data no padrão brasileiro DD/MM/YYYY imune a fuso horário.
+ */
+export const formatDateBR = (dateStr: string | null | undefined): string => {
+  const parts = parseLocalDateParts(dateStr);
+  if (!parts) return dateStr || '---';
+  return `${parts.dayStr}/${parts.monthStr}/${parts.yearStr}`;
+};
+
+/**
+ * Formata aniversário (ex: "Dia 30 de julho").
+ */
+export const formatBirthdayDisplay = (dateStr: string | null | undefined): string => {
+  const parts = parseLocalDateParts(dateStr);
+  if (!parts) return dateStr || '---';
+  const monthNames = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const monthName = monthNames[parts.month - 1] || 'mês';
+  return `Dia ${parts.dayStr} de ${monthName}`;
+};
