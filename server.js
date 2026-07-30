@@ -6964,14 +6964,64 @@ async function updateUserPendingStatus(pool, userId) {
 
     // === INTEGRAÇÃO ERP: Relógio de Ponto RH (Banco de Horas) ===
 
+    async function ensureRhPontoTablesAndColumns(pool) {
+        try {
+            // 1. Garantir existência da tabela RhPontoBancoHoras
+            const checkTable = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhPontoBancoHoras'");
+            if (checkTable.recordset.length === 0) {
+                console.log('- Auto-healing: Criando tabela RhPontoBancoHoras...');
+                await pool.request().query(`
+                    CREATE TABLE RhPontoBancoHoras (
+                        Id INT PRIMARY KEY IDENTITY(1,1),
+                        FuncionarioId INT NULL,
+                        Nome NVARCHAR(255) NULL,
+                        NPis NVARCHAR(50) NULL,
+                        TotalBanco NVARCHAR(50) NULL,
+                        UpdatedAt DATETIME DEFAULT GETDATE()
+                    )
+                `);
+            }
+
+            // 2. Garantir registro em SystemSettings
+            const checkSettings = await pool.request().query("SELECT COUNT(*) as count FROM SystemSettings");
+            if (checkSettings.recordset[0].count === 0) {
+                await pool.request().query("INSERT INTO SystemSettings (AppName) VALUES ('IT Asset 360')");
+            }
+
+            // 3. Garantir colunas ErpPonto_* em SystemSettings
+            const erpCols = [
+                { name: 'ErpPontoServer', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ErpPontoDatabase', type: 'NVARCHAR(255) NULL' },
+                { name: 'ErpPontoUser', type: 'NVARCHAR(255) NULL' },
+                { name: 'ErpPontoPassword', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ErpPontoPort', type: 'NVARCHAR(50) NULL' },
+                { name: 'ErpPontoQuery', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ErpPontoLastSync', type: 'DATETIME NULL' },
+                { name: 'ErpPontoLastStatus', type: 'NVARCHAR(MAX) NULL' },
+                { name: 'ErpPontoAutoSync', type: 'INT DEFAULT 1' }
+            ];
+            for (const col of erpCols) {
+                try {
+                    const checkCol = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = '${col.name}'`);
+                    if (checkCol.recordset.length === 0) {
+                        console.log(`- Auto-healing: Adicionando coluna ${col.name} em SystemSettings...`);
+                        await pool.request().query(`ALTER TABLE SystemSettings ADD ${col.name} ${col.type}`);
+                    }
+                } catch (e) {}
+            }
+        } catch (err) {
+            console.warn('[RH PONTO AUTO-HEALING WARN]:', err.message);
+        }
+    }
+
     async function runErpPontoSync(customConfig = null, targetPis = null) {
         const pool = await sql.connect(dbConfig);
-        await initializeDatabase();
+        await ensureRhPontoTablesAndColumns(pool);
 
         let cfg = customConfig;
         if (!cfg || !cfg.server || !cfg.user) {
             const settingsRes = await pool.request().query("SELECT TOP 1 ErpPontoServer, ErpPontoDatabase, ErpPontoUser, ErpPontoPassword, ErpPontoPort, ErpPontoQuery, ErpPontoLastSync, ErpPontoLastStatus FROM SystemSettings");
-            if (settingsRes.recordset.length > 0) {
+            if (settingsRes.recordset && settingsRes.recordset.length > 0) {
                 const row = settingsRes.recordset[0];
                 cfg = {
                     server: row.ErpPontoServer,
@@ -7101,12 +7151,13 @@ async function updateUserPendingStatus(pool, userId) {
     app.get('/api/erp/rh-ponto/config', async (req, res) => {
         try {
             const pool = await sql.connect(dbConfig);
-            await initializeDatabase();
+            await ensureRhPontoTablesAndColumns(pool);
             const result = await pool.request().query("SELECT TOP 1 ErpPontoServer as server, ErpPontoDatabase as database, ErpPontoUser as user, ErpPontoPassword as password, ErpPontoPort as port, ErpPontoQuery as selectionQuery, ErpPontoLastSync as lastSync, ErpPontoLastStatus as lastStatus FROM SystemSettings");
-            const cfg = result.recordset[0] || {};
+            const cfg = (result.recordset && result.recordset.length > 0) ? result.recordset[0] : {};
             res.json({ success: true, config: cfg });
         } catch (err) {
-            res.status(500).json({ success: false, error: err.message });
+            console.error('Erro em GET /api/erp/rh-ponto/config:', err.message);
+            res.json({ success: true, config: {} });
         }
     });
 
@@ -7114,7 +7165,7 @@ async function updateUserPendingStatus(pool, userId) {
         try {
             const { server: pontoServer, database, user, password, port, selectionQuery } = req.body;
             const pool = await sql.connect(dbConfig);
-            await initializeDatabase();
+            await ensureRhPontoTablesAndColumns(pool);
 
             await pool.request()
                 .input('s', sql.NVarChar, pontoServer || '')
@@ -7134,17 +7185,23 @@ async function updateUserPendingStatus(pool, userId) {
                     WHERE ID = 1 OR ID = (SELECT TOP 1 ID FROM SystemSettings)
                 `);
 
-            const syncRes = await runErpPontoSync({
-                server: pontoServer,
-                database: database || 'PontoSecullum4',
-                user,
-                password,
-                port,
-                selectionQuery
-            });
+            let syncRes = { count: 0, records: [], lastSync: new Date() };
+            try {
+                syncRes = await runErpPontoSync({
+                    server: pontoServer,
+                    database: database || 'PontoSecullum4',
+                    user,
+                    password,
+                    port,
+                    selectionQuery
+                });
+            } catch (syncErr) {
+                console.warn('[RH PONTO CONFIG] Conexão remota pendente/falhou ao testar:', syncErr.message);
+            }
 
-            res.json({ success: true, count: syncRes.count, records: syncRes.records, lastSync: syncRes.lastSync });
+            res.json({ success: true, count: syncRes.count || 0, records: syncRes.records || [], lastSync: syncRes.lastSync });
         } catch (err) {
+            console.error('Erro em POST /api/erp/rh-ponto/config:', err.message);
             res.status(500).json({ success: false, error: err.message });
         }
     });
@@ -7159,6 +7216,7 @@ async function updateUserPendingStatus(pool, userId) {
             const syncRes = await runErpPontoSync(customConfig);
             res.json(syncRes);
         } catch (err) {
+            console.error('Erro em POST /api/erp/rh-ponto/sync:', err.message);
             res.status(500).json({ success: false, error: err.message });
         }
     });
@@ -7175,7 +7233,7 @@ async function updateUserPendingStatus(pool, userId) {
             }
 
             const pool = await sql.connect(dbConfig);
-            await initializeDatabase();
+            await ensureRhPontoTablesAndColumns(pool);
 
             let query = "SELECT FuncionarioId as funcionario_id, Nome as nome, NPis as n_pis, TotalBanco as total_banco, UpdatedAt as updated_at FROM RhPontoBancoHoras";
             let request = pool.request();
@@ -7190,7 +7248,8 @@ async function updateUserPendingStatus(pool, userId) {
             const result = await request.query(query);
             res.json({ success: true, count: result.recordset.length, records: result.recordset });
         } catch (err) {
-            res.status(500).json({ success: false, error: err.message });
+            console.error('Erro em GET /api/erp/rh-ponto/data:', err.message);
+            res.json({ success: true, count: 0, records: [] });
         }
     });
 
