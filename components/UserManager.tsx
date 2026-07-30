@@ -444,61 +444,30 @@ const UserManager: React.FC = () => {
 
     setIsGeocoding(true);
     try {
-      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios com Projeção Predial
-      // 1ª Opção (Alta Precisão Brasileira): AwesomeAPI por CEP Correios com Projeção Predial
-      if (zip && zip.length === 8) {
-        try {
-          const apiRes = await fetch(`https://cep.awesomeapi.com.br/json/${zip}`);
-          if (apiRes.ok) {
-            const cepData = await apiRes.json();
-            // Apenas utiliza a coordenada direta do CEP se o CEP for de um logradouro específico (address não vazio)
-            if (cepData && cepData.address && cepData.lat && cepData.lng) {
-              let lat = parseFloat(cepData.lat);
-              let lon = parseFloat(cepData.lng);
-              if (!isNaN(lat) && !isNaN(lon)) {
-                // Ajuste de Projeção Predial pelo número da casa (Direção métrica precisa)
-                const numVal = parseInt(num, 10);
-                if (!isNaN(numVal) && numVal > 0 && numVal < 2000) {
-                  const numOffset = (numVal / 100) * 0.00025;
-                  lat = parseFloat((lat - numOffset).toFixed(6));
-                }
-
-                setFormData(prev => ({
-                  ...prev,
-                  latitude: lat,
-                  longitude: lon
-                }));
-                showToast(`Coordenadas exatas por CEP e Número (${cepData.district || city}) salvas!`, 'success');
-                return { lat, lon };
-              }
-            }
-          }
-        } catch (eCep) {
-          console.warn('Consulta AwesomeAPI CEP falhou, tentando fallback:', eCep);
-        }
-      }
-
-      // 2ª Opção: Fallback Nominatim OSM com filtro estrito de cidade
+      // 1ª Opção (Alta Precisão Real): Busca por Logradouro, Número, Bairro, Cidade e UF via OpenStreetMap/Nominatim
       const attempts: Array<{ label: string; query: string }> = [];
       if (overrideAddress?.trim()) {
         attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });
       } else {
         if (street && city) {
           const addrNum = num ? `${street}, ${num}` : street;
-          attempts.push({ label: 'Endereço Completo com CEP', query: `${addrNum}, ${formattedZip}, ${city} - ${state}, Brasil` });
-          attempts.push({ label: 'Logradouro e Número', query: `${addrNum}, ${neighborhood}, ${city} - ${state}, Brasil` });
+          if (neighborhood) {
+            attempts.push({ label: 'Logradouro, Número e Bairro', query: `${addrNum}, ${neighborhood}, ${city} - ${state}, Brasil` });
+          }
+          attempts.push({ label: 'Logradouro e Número', query: `${addrNum}, ${city} - ${state}, Brasil` });
+          attempts.push({ label: 'Logradouro', query: `${street}, ${city} - ${state}, Brasil` });
         }
       }
 
       for (const attempt of attempts) {
         try {
-          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=5`;
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(attempt.query)}&limit=10&addressdetails=1`;
           const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-              // Validação estrita: descarta cidades divergentes se a cidade for informada
-              let match = data.find((d: any) => {
+              // Filtra por cidade para evitar divergências
+              let filtered = data.filter((d: any) => {
                 const displayName = (d.display_name || '').toLowerCase();
                 const targetCity = city.toLowerCase();
                 if (targetCity && !displayName.includes(targetCity)) {
@@ -509,28 +478,42 @@ const UserManager: React.FC = () => {
                 return true;
               });
 
-              if (!match) match = data[0];
+              if (filtered.length === 0) filtered = data;
 
-              let lat = parseFloat(match.lat);
-              let lon = parseFloat(match.lon);
+              // Seleção inteligente do segmento de logradouro mais preciso baseado no CEP e Número
+              let bestMatch = filtered[0];
 
-              // Interpolação geométrica precisa por escala predial brasileira (1m ~ 0.85 numerações)
+              if (zip && zip.length === 8) {
+                const zipPrefix = zip.substring(0, 5);
+                const zipMatch = filtered.find((d: any) => {
+                  const pc = (d.address && d.address.postcode ? d.address.postcode : '').replace(/\D/g, '');
+                  return pc.startsWith(zipPrefix);
+                });
+                if (zipMatch) bestMatch = zipMatch;
+              }
+
+              let lat = parseFloat(bestMatch.lat);
+              let lon = parseFloat(bestMatch.lon);
+
+              // Interpolação predial se houver boundingbox de segmento de rua
               const numVal = parseInt(num, 10);
-              if (!isNaN(numVal) && numVal > 0 && match.boundingbox && match.boundingbox.length === 4) {
-                const bMinLat = parseFloat(match.boundingbox[0]);
-                const bMaxLat = parseFloat(match.boundingbox[1]);
-                const bMinLon = parseFloat(match.boundingbox[2]);
-                const bMaxLon = parseFloat(match.boundingbox[3]);
+              if (!isNaN(numVal) && numVal > 0 && bestMatch.boundingbox && bestMatch.boundingbox.length === 4) {
+                const bMinLat = parseFloat(bestMatch.boundingbox[0]);
+                const bMaxLat = parseFloat(bestMatch.boundingbox[1]);
+                const bMinLon = parseFloat(bestMatch.boundingbox[2]);
+                const bMaxLon = parseFloat(bestMatch.boundingbox[3]);
 
                 if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
                   const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
                   const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
                   const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
-                  const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
 
-                  const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
-                  lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
-                  lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                  if (totalSpanMeters > 50 && totalSpanMeters < 5000) {
+                    const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
+                    const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
+                    lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
+                    lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                  }
                 }
               }
 
@@ -540,13 +523,38 @@ const UserManager: React.FC = () => {
                   latitude: lat,
                   longitude: lon
                 }));
-                showToast(`Coordenadas exatas encontradas (${attempt.label})!`, 'success');
+                showToast(`Coordenadas exatas da rua encontradas (${attempt.label})!`, 'success');
                 return { lat, lon };
               }
             }
           }
         } catch (eQuery) {
           console.warn(`Tentativa de geocodificação (${attempt.label}) falhou:`, eQuery);
+        }
+      }
+
+      // 2ª Opção (Fallback de Último Recurso): AwesomeAPI por CEP
+      if (zip && zip.length === 8) {
+        try {
+          const apiRes = await fetch(`https://cep.awesomeapi.com.br/json/${zip}`);
+          if (apiRes.ok) {
+            const cepData = await apiRes.json();
+            if (cepData && cepData.lat && cepData.lng) {
+              let lat = parseFloat(cepData.lat);
+              let lon = parseFloat(cepData.lng);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lon
+                }));
+                showToast(`Coordenadas aproximadas por CEP salvas!`, 'success');
+                return { lat, lon };
+              }
+            }
+          }
+        } catch (eCep) {
+          console.warn('Fallback CEP falhou:', eCep);
         }
       }
 

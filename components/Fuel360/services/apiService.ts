@@ -193,25 +193,72 @@ const RealService = {
     getSugestoesVinculo: (ids: number[]): Promise<any[]> => apiRequest('/colaboradores/smart-suggestions', 'POST', { ids }),
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
     geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
-        const addrStr = address || '';
+        const addrStr = (address || '').trim();
         const zipMatch = addrStr.replace(/\D/g, '').match(/\d{8}/);
-        
+        const cleanZip = zipMatch ? zipMatch[0] : '';
+        const zipPrefix = cleanZip.substring(0, 5);
+
         const numMatch = addrStr.match(/(?:,|\b)\s*(\d{1,5})\s*(?:,|\b|$)/);
         const numVal = numMatch ? parseInt(numMatch[1], 10) : 0;
 
-        if (zipMatch) {
+        // 1ª Opção: Busca de Alta Precisão por Logradouro no OpenStreetMap/Nominatim
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr)}&limit=10&addressdetails=1`;
+            const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    let bestMatch = data[0];
+                    if (zipPrefix.length === 5) {
+                        const zipMatchItem = data.find((d: any) => {
+                            const pc = (d.address && d.address.postcode ? d.address.postcode : '').replace(/\D/g, '');
+                            return pc.startsWith(zipPrefix);
+                        });
+                        if (zipMatchItem) bestMatch = zipMatchItem;
+                    }
+
+                    let lat = parseFloat(bestMatch.lat);
+                    let lon = parseFloat(bestMatch.lon);
+
+                    if (numVal > 0 && bestMatch.boundingbox && bestMatch.boundingbox.length === 4) {
+                        const bMinLat = parseFloat(bestMatch.boundingbox[0]);
+                        const bMaxLat = parseFloat(bestMatch.boundingbox[1]);
+                        const bMinLon = parseFloat(bestMatch.boundingbox[2]);
+                        const bMaxLon = parseFloat(bestMatch.boundingbox[3]);
+
+                        if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
+                            const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
+                            const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
+                            const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
+
+                            if (totalSpanMeters > 50 && totalSpanMeters < 5000) {
+                                const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
+                                const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
+                                lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
+                                lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
+                            }
+                        }
+                    }
+
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        return { lat, lon };
+                    }
+                }
+            }
+        } catch (eNom) {
+            console.warn('[Fuel360] Busca Nominatim falhou, tentando fallback CEP:', eNom);
+        }
+
+        // 2ª Opção (Fallback de Último Recurso): AwesomeAPI por CEP
+        if (cleanZip.length === 8) {
             try {
-                const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${zipMatch[0]}`);
+                const resCep = await fetch(`https://cep.awesomeapi.com.br/json/${cleanZip}`);
                 if (resCep.ok) {
                     const cData = await resCep.json();
-                    if (cData && cData.address && cData.lat && cData.lng) {
+                    if (cData && cData.lat && cData.lng) {
                         let lat = parseFloat(cData.lat);
                         let lon = parseFloat(cData.lng);
                         if (!isNaN(lat) && !isNaN(lon)) {
-                            if (numVal > 0 && numVal < 2000) {
-                                const numOffset = (numVal / 100) * 0.00025;
-                                lat = parseFloat((lat - numOffset).toFixed(6));
-                            }
                             return { lat, lon };
                         }
                     }
@@ -221,39 +268,7 @@ const RealService = {
             }
         }
 
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr)}&limit=1`;
-        const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-                const match = data[0];
-                let lat = parseFloat(match.lat);
-                let lon = parseFloat(match.lon);
-
-                if (numVal > 0 && match.boundingbox && match.boundingbox.length === 4) {
-                    const bMinLat = parseFloat(match.boundingbox[0]);
-                    const bMaxLat = parseFloat(match.boundingbox[1]);
-                    const bMinLon = parseFloat(match.boundingbox[2]);
-                    const bMaxLon = parseFloat(match.boundingbox[3]);
-
-                    if (!isNaN(bMinLat) && !isNaN(bMaxLat) && !isNaN(bMinLon) && !isNaN(bMaxLon)) {
-                        const latSpanMeters = Math.abs(bMaxLat - bMinLat) * 111000;
-                        const lonSpanMeters = Math.abs(bMaxLon - bMinLon) * 111000;
-                        const totalSpanMeters = Math.sqrt(latSpanMeters * latSpanMeters + lonSpanMeters * lonSpanMeters);
-                        const estimatedMaxNum = Math.max(Math.round(totalSpanMeters * 0.85), 100);
-
-                        const fraction = Math.min(numVal / estimatedMaxNum, 1.0);
-                        lat = parseFloat((bMaxLat - (fraction * (bMaxLat - bMinLat))).toFixed(6));
-                        lon = parseFloat((bMaxLon - (fraction * (bMaxLon - bMinLon))).toFixed(6));
-                    }
-                }
-
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    return { lat, lon };
-                }
-            }
-        }
-        throw new Error('Endereço ou CEP não localizado no mapa. Verifique se o logradouro, número e cidade estão corretos.');
+        throw new Error('Endereço não localizado.');
     },
     calcDistance: (lat1: number, lon1: number, lat2: number, lon2: number): number => {
         const R = 6371;
