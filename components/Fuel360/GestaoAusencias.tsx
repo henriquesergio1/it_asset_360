@@ -136,8 +136,12 @@ export const GestaoAusencias: React.FC = () => {
                 valA = (a.NomeColaborador || colabA?.Nome || '').toLowerCase();
                 valB = (b.NomeColaborador || colabB?.Nome || '').toLowerCase();
             } else if (sortField === 'codigo') {
-                valA = Number(a.ID_Pulsus || colabA?.ID_Pulsus || 0);
-                valB = Number(b.ID_Pulsus || colabB?.ID_Pulsus || 0);
+                valA = Number(colabA?.CodigoSetor || 0);
+                valB = Number(colabB?.CodigoSetor || 0);
+                if (valA === valB) {
+                    valA = Number(a.ID_Pulsus || colabA?.ID_Pulsus || 0);
+                    valB = Number(b.ID_Pulsus || colabB?.ID_Pulsus || 0);
+                }
             } else if (sortField === 'grupo') {
                 valA = (colabA?.Grupo || '').toLowerCase();
                 valB = (colabB?.Grupo || '').toLowerCase();
@@ -194,8 +198,8 @@ export const GestaoAusencias: React.FC = () => {
             const colab = colabMap.get(aus.ID_Colaborador) || colaboradores.find(c => c.ID_Pulsus === aus.ID_Pulsus);
             const isInactive = colab ? (colab.Ativo === false || (colab.Ativo as any) === 0) : false;
             return {
-                'ID Pulsus': aus.ID_Pulsus || colab?.ID_Pulsus || '-',
                 'Código Setor': colab?.CodigoSetor || '-',
+                'ID Pulsus': aus.ID_Pulsus || colab?.ID_Pulsus || '-',
                 'Colaborador': aus.NomeColaborador || colab?.Nome || '-',
                 'Status Colaborador': isInactive ? 'Inativo' : 'Ativo',
                 'Grupo / Cargo': colab?.Grupo || '-',
@@ -209,13 +213,13 @@ export const GestaoAusencias: React.FC = () => {
 
     // Exportação PDF
     const handleExportPDF = () => {
-        const headers = ['ID Pulsus', 'Setor', 'Colaborador', 'Status', 'Grupo', 'Período', 'Motivo'];
+        const headers = ['Setor', 'ID Pulsus', 'Colaborador', 'Status', 'Grupo', 'Período', 'Motivo'];
         const rows = ausenciasOrdenadas.map(aus => {
-            const colab = colabMap.get(aus.ID_Ausencia) || colabMap.get(aus.ID_Colaborador) || colaboradores.find(c => c.ID_Pulsus === aus.ID_Pulsus);
+            const colab = colabMap.get(aus.ID_Colaborador) || colaboradores.find(c => c.ID_Pulsus === aus.ID_Pulsus);
             const isInactive = colab ? (colab.Ativo === false || (colab.Ativo as any) === 0) : false;
             return [
-                String(aus.ID_Pulsus || colab?.ID_Pulsus || '-'),
                 String(colab?.CodigoSetor || '-'),
+                String(aus.ID_Pulsus || colab?.ID_Pulsus || '-'),
                 aus.NomeColaborador || colab?.Nome || '-',
                 isInactive ? 'INATIVO' : 'ATIVO',
                 colab?.Grupo || '-',
@@ -425,8 +429,8 @@ export const GestaoAusencias: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="p-5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                                <div className="font-mono text-slate-700 dark:text-slate-300">Pulsus: {aus.ID_Pulsus || colab?.ID_Pulsus || '-'}</div>
-                                                <div className="text-[11px] text-slate-400 dark:text-slate-500">Setor: {colab?.CodigoSetor || '-'}</div>
+                                                <div className="font-mono text-slate-800 dark:text-slate-100 font-bold">Setor: {colab?.CodigoSetor || '-'}</div>
+                                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">Pulsus: {aus.ID_Pulsus || colab?.ID_Pulsus || '-'}</div>
                                             </td>
                                             <td className="p-5 text-xs font-bold text-slate-600 dark:text-slate-300">
                                                 <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
