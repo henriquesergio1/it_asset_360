@@ -444,7 +444,37 @@ const UserManager: React.FC = () => {
 
     setIsGeocoding(true);
     try {
-      // 1ª Opção (Alta Precisão Real): Busca por Logradouro, Número, Bairro, Cidade e UF via OpenStreetMap/Nominatim
+      // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/geocode) - Precisão Milimétrica
+      const fullQuery = overrideAddress?.trim() || (street && city ? `${street}${num ? `, ${num}` : ''}${neighborhood ? ` - ${neighborhood}` : ''}, ${city} - ${state}` : '');
+      if (fullQuery) {
+        try {
+          const gRes = await fetch('/api/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: fullQuery })
+          });
+          if (gRes.ok) {
+            const gData = await gRes.json();
+            if (gData && gData.success && gData.lat && gData.lon) {
+              const lat = parseFloat(gData.lat);
+              const lon = parseFloat(gData.lon);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                setFormData(prev => ({
+                  ...prev,
+                  latitude: lat,
+                  longitude: lon
+                }));
+                showToast(`Coordenadas exatas salvas via Google Maps Engine!`, 'success');
+                return { lat, lon };
+              }
+            }
+          }
+        } catch (eGoogle) {
+          console.warn('Geocodificação via Google Maps falhou, tentando contingência:', eGoogle);
+        }
+      }
+
+      // 2ª Opção (Contingência): OpenStreetMap/Nominatim
       const attempts: Array<{ label: string; query: string }> = [];
       if (overrideAddress?.trim()) {
         attempts.push({ label: 'Endereço Informado', query: overrideAddress.trim() });

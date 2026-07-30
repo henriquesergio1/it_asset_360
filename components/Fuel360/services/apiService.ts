@@ -194,6 +194,23 @@ const RealService = {
     batchUpdateColaboradoresAddress: (items: any[], reason: string): Promise<void> => apiRequest('/colaboradores/batch-address', 'POST', { items, reason }),
     geocodeAddress: async (address: string): Promise<{lat: number, lon: number}> => {
         const addrStr = (address || '').trim();
+
+        // 1ª Prioridade Absoluta: Google Maps Engine via Backend Proxy (/api/geocode)
+        if (addrStr) {
+            try {
+                const gRes = await apiRequest<{ success: boolean; lat: number; lon: number }>('/geocode', 'POST', { address: addrStr });
+                if (gRes && gRes.success && gRes.lat && gRes.lon) {
+                    const lat = Number(gRes.lat);
+                    const lon = Number(gRes.lon);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        return { lat, lon };
+                    }
+                }
+            } catch (eGoogle) {
+                console.warn('[Fuel360] Geocodificação Google Maps falhou, tentando contingência:', eGoogle);
+            }
+        }
+
         const zipMatch = addrStr.replace(/\D/g, '').match(/\d{8}/);
         const cleanZip = zipMatch ? zipMatch[0] : '';
         const zipPrefix = cleanZip.substring(0, 5);
@@ -201,7 +218,7 @@ const RealService = {
         const numMatch = addrStr.match(/(?:,|\b)\s*(\d{1,5})\s*(?:,|\b|$)/);
         const numVal = numMatch ? parseInt(numMatch[1], 10) : 0;
 
-        // 1ª Opção: Busca de Alta Precisão por Logradouro no OpenStreetMap/Nominatim
+        // 2ª Opção (Contingência): OpenStreetMap/Nominatim
         try {
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addrStr)}&limit=10&addressdetails=1`;
             const res = await fetch(url, { headers: { 'User-Agent': 'ITAsset360App/1.0' } });

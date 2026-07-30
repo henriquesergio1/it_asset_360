@@ -1644,6 +1644,81 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
     }
 });
 
+// Endpoint de Geocodificação de Alta Precisão (Google Maps Engine Proxy)
+app.post('/api/geocode', async (req, res) => {
+    const { address } = req.body;
+    if (!address || typeof address !== 'string' || !address.trim()) {
+        return res.status(400).json({ success: false, message: 'Endereço não informado.' });
+    }
+
+    try {
+        const addrQuery = address.trim();
+        const url = `https://maps.google.com/maps?q=${encodeURIComponent(addrQuery)}&output=embed`;
+        const fetchRes = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'pt-BR,pt;q=0.9'
+            }
+        });
+
+        if (!fetchRes.ok) {
+            return res.status(502).json({ success: false, message: 'Falha na resposta do Google Maps.' });
+        }
+
+        const html = await fetchRes.text();
+
+        let lat = null;
+        let lon = null;
+
+        // Padrão 1: Coordenada direta [lat, lon]
+        const m1 = html.match(/\[(-?\d{1,2}\.\d{4,15}),\s*(-?\d{1,3}\.\d{4,15})\]/);
+        if (m1) {
+            const v1 = parseFloat(m1[1]);
+            const v2 = parseFloat(m1[2]);
+            if (v1 < 0 && v1 > -35 && v2 < -30 && v2 > -75) {
+                lat = v1;
+                lon = v2;
+            }
+        }
+
+        // Padrão 2: Estrutura initEmbed [span, lon, lat]
+        if (lat === null || lon === null) {
+            const m2 = html.match(/\[\[\[[\d\.]+,\s*(-?\d{1,3}\.\d{4,15}),\s*(-?\d{1,2}\.\d{4,15})\]/);
+            if (m2) {
+                const vLon = parseFloat(m2[1]);
+                const vLat = parseFloat(m2[2]);
+                if (vLat < 0 && vLat > -35 && vLon < -30 && vLon > -75) {
+                    lat = vLat;
+                    lon = vLon;
+                }
+            }
+        }
+
+        // Padrão 3: Regex geral em limites de coordenadas brasileiras
+        if (lat === null || lon === null) {
+            const matches = [...html.matchAll(/(-2\d\.\d{4,15}|-3[0-4]\.\d{4,15})[^\d\-]+(-4\d\.\d{4,15}|-3[4-9]\.\d{4,15}|-5\d\.\d{4,15}|-6\d\.\d{4,15})/g)];
+            if (matches.length > 0) {
+                lat = parseFloat(matches[0][1]);
+                lon = parseFloat(matches[0][2]);
+            }
+        }
+
+        if (lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
+            return res.json({
+                success: true,
+                lat,
+                lon,
+                provider: 'Google Maps'
+            });
+        }
+
+        return res.status(449).json({ success: false, message: 'Coordenadas não extraídas do pino do Google Maps.' });
+    } catch (err) {
+        console.error('Erro na geocodificação Google Maps:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Endpoint NATIVO de Sincronização de Colaboradores do Fuel360
 app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
     const { items } = req.body;
