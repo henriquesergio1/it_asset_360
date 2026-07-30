@@ -47,13 +47,6 @@ export const TaskDashboardWidget: React.FC<TaskDashboardWidgetProps> = ({ tasks,
             className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between group hover:border-indigo-500 dark:hover:border-indigo-400 transition-all cursor-pointer shadow-sm"
           >
             <div className="flex flex-1 items-center gap-3">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
-                task.isOverdue ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40' : 
-                task.isNearDue ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40' : 
-                'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40'
-              }`}>
-                {getAssignedUserName(task.assignedTo).charAt(0)}
-              </div>
               <div className="flex flex-col md:flex-row md:items-center md:gap-x-3 flex-wrap">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-sky-400 transition-colors">
                   {task.title}
