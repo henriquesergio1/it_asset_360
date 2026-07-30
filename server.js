@@ -105,6 +105,7 @@ const DB_SCHEMAS = {
     )`,
     SystemUsers: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), Email NVARCHAR(255) UNIQUE, Password NVARCHAR(255), Role NVARCHAR(50))`,
     SystemSettings: `(Id INT PRIMARY KEY IDENTITY(1,1), AppName NVARCHAR(255), LogoUrl NVARCHAR(MAX), Cnpj NVARCHAR(50), TermTemplate NVARCHAR(MAX), AccentColor NVARCHAR(50), LicenseKey NVARCHAR(MAX), LicenseClient NVARCHAR(255), LicenseExpires DATETIME)`,
+    RhPontoBancoHoras: `(Id INT PRIMARY KEY IDENTITY(1,1), FuncionarioId INT NULL, Nome NVARCHAR(255) NULL, NPis NVARCHAR(50) NULL, TotalBanco NVARCHAR(50) NULL, UpdatedAt DATETIME DEFAULT GETDATE())`,
     Models: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255), BrandId NVARCHAR(255), TypeId NVARCHAR(255), ImageBinary VARBINARY(MAX))`,
     Brands: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE)`,
     AssetTypes: `(Id NVARCHAR(255) PRIMARY KEY, Name NVARCHAR(255) UNIQUE, CustomFieldIds NVARCHAR(MAX), AllowMultipleUsers BIT DEFAULT 0, ShowZabbix BIT DEFAULT 0)`,
@@ -504,6 +505,25 @@ async function initializeDatabase() {
                     const checkAddr = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = 'HeadquartersAddress'`);
                     if (checkAddr.recordset.length === 0) {
                         await pool.request().query('ALTER TABLE SystemSettings ADD HeadquartersAddress NVARCHAR(MAX) NULL, HeadquartersLat FLOAT NULL, HeadquartersLong FLOAT NULL');
+                    }
+                    const erpCols = [
+                        { name: 'ErpPontoServer', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'ErpPontoDatabase', type: 'NVARCHAR(255) NULL' },
+                        { name: 'ErpPontoUser', type: 'NVARCHAR(255) NULL' },
+                        { name: 'ErpPontoPassword', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'ErpPontoPort', type: 'NVARCHAR(50) NULL' },
+                        { name: 'ErpPontoQuery', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'ErpPontoLastSync', type: 'DATETIME NULL' },
+                        { name: 'ErpPontoLastStatus', type: 'NVARCHAR(MAX) NULL' },
+                        { name: 'ErpPontoAutoSync', type: 'INT DEFAULT 1' }
+                    ];
+                    for (const col of erpCols) {
+                        try {
+                            const check = await pool.request().query(`SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SystemSettings' AND COLUMN_NAME = '${col.name}'`);
+                            if (check.recordset.length === 0) {
+                                await pool.request().query(`ALTER TABLE SystemSettings ADD ${col.name} ${col.type}`);
+                            }
+                        } catch (e) {}
                     }
                 }
                 
@@ -6873,78 +6893,260 @@ async function updateUserPendingStatus(pool, userId) {
     });
 
     // === INTEGRAÇÃO ERP: Relógio de Ponto RH (Banco de Horas) ===
-    app.post('/api/erp/rh-ponto/sync', async (req, res) => {
-        try {
-            const { server: pontoServer, database, user, password, port, selectionQuery } = req.body;
 
-            if (!pontoServer || !user || !password) {
-                return res.status(400).json({ success: false, error: 'Parâmetros de conexão incompletos. Informe servidor, usuário e senha.' });
+    async function runErpPontoSync(customConfig = null, targetPis = null) {
+        const pool = await sql.connect(dbConfig);
+        await ensureSystemTablesExist(pool);
+
+        let cfg = customConfig;
+        if (!cfg || !cfg.server || !cfg.user) {
+            const settingsRes = await pool.request().query("SELECT TOP 1 ErpPontoServer, ErpPontoDatabase, ErpPontoUser, ErpPontoPassword, ErpPontoPort, ErpPontoQuery, ErpPontoLastSync, ErpPontoLastStatus FROM SystemSettings");
+            if (settingsRes.recordset.length > 0) {
+                const row = settingsRes.recordset[0];
+                cfg = {
+                    server: row.ErpPontoServer,
+                    database: row.ErpPontoDatabase || 'PontoSecullum4',
+                    user: row.ErpPontoUser,
+                    password: row.ErpPontoPassword,
+                    port: row.ErpPontoPort || '1433',
+                    selectionQuery: row.ErpPontoQuery
+                };
             }
+        }
 
-            const pontoConfig = {
-                server: pontoServer,
-                database: database || 'PontoSecullum4',
-                user: user,
-                password: password,
-                port: port ? parseInt(port) : 1433,
-                options: { encrypt: false, trustServerCertificate: true },
-                requestTimeout: 30000,
-                connectionTimeout: 15000
-            };
+        if (!cfg || !cfg.server || !cfg.user || !cfg.password) {
+            throw new Error('Parâmetros de conexão incompletos. Configure o servidor de Relógio de Ponto no Painel de Administração.');
+        }
 
-            const defaultQuery = `
-                WITH UltimosFechamentos AS (
-                    SELECT 
-                        funcionario_id,
-                        COALESCE(MAX(data), '1900-01-01') AS DataLimite
-                    FROM calculos
-                    WHERE bajuste_obs = 'Encerramento do Banco de Horas'
-                    GROUP BY funcionario_id
-                ),
-                SomaMinutos AS (
-                    SELECT 
-                        c.funcionario_id,
-                        SUM(c.btotal) AS TotalMinutos
-                    FROM calculos c
-                    INNER JOIN UltimosFechamentos uf ON c.funcionario_id = uf.funcionario_id
-                    WHERE c.data > uf.DataLimite
-                      AND c.data < CAST(GETDATE() AS DATE)
-                    GROUP BY c.funcionario_id
-                )
+        const pontoConfig = {
+            server: cfg.server,
+            database: cfg.database || 'PontoSecullum4',
+            user: cfg.user,
+            password: cfg.password,
+            port: cfg.port ? parseInt(cfg.port) : 1433,
+            options: { encrypt: false, trustServerCertificate: true },
+            requestTimeout: 30000,
+            connectionTimeout: 15000
+        };
+
+        const defaultQuery = `
+            WITH UltimosFechamentos AS (
                 SELECT 
-                    f.id AS funcionario_id,
-                    f.nome,
-                    f.n_pis,
-                    COALESCE(
-                        CASE WHEN sm.TotalMinutos < 0 THEN '-' ELSE '' END +
-                        CAST(ABS(sm.TotalMinutos) / 60 AS VARCHAR(10)) + ':' +
-                        RIGHT('0' + CAST(ABS(sm.TotalMinutos) % 60 AS VARCHAR(2)), 2),
-                        '0:00'
-                    ) AS total_banco
-                FROM funcionarios f
-                LEFT JOIN SomaMinutos sm ON f.id = sm.funcionario_id
-                WHERE f.demissao IS NULL
-                  AND f.invisivel = 0
-                ORDER BY f.nome;
-            `;
+                    funcionario_id,
+                    COALESCE(MAX(data), '1900-01-01') AS DataLimite
+                FROM calculos
+                WHERE bajuste_obs = 'Encerramento do Banco de Horas'
+                GROUP BY funcionario_id
+            ),
+            SomaMinutos AS (
+                SELECT 
+                    c.funcionario_id,
+                    SUM(c.btotal) AS TotalMinutos
+                FROM calculos c
+                INNER JOIN UltimosFechamentos uf ON c.funcionario_id = uf.funcionario_id
+                WHERE c.data > uf.DataLimite
+                  AND c.data < CAST(GETDATE() AS DATE)
+                GROUP BY c.funcionario_id
+            )
+            SELECT 
+                f.id AS funcionario_id,
+                f.nome,
+                f.n_pis,
+                COALESCE(
+                    CASE WHEN sm.TotalMinutos < 0 THEN '-' ELSE '' END +
+                    CAST(ABS(sm.TotalMinutos) / 60 AS VARCHAR(10)) + ':' +
+                    RIGHT('0' + CAST(ABS(sm.TotalMinutos) % 60 AS VARCHAR(2)), 2),
+                    '0:00'
+                ) AS total_banco
+            FROM funcionarios f
+            LEFT JOIN SomaMinutos sm ON f.id = sm.funcionario_id
+            WHERE f.demissao IS NULL
+              AND f.invisivel = 0
+            ORDER BY f.nome;
+        `;
 
-            const finalQuery = (selectionQuery && selectionQuery.trim()) ? selectionQuery : defaultQuery;
+        let finalQuery = (cfg.selectionQuery && cfg.selectionQuery.trim()) ? cfg.selectionQuery : defaultQuery;
 
-            // Usa ConnectionPool dedicado (isolado do pool principal) para o banco do relógio
-            const poolPonto = await new sql.ConnectionPool(pontoConfig).connect();
-            let result;
-            try {
-                result = await poolPonto.request().query(finalQuery);
-            } finally {
-                try { await poolPonto.close(); } catch (e) {}
+        if (targetPis) {
+            const cleanPis = String(targetPis).replace(/\D/g, '');
+            if (cleanPis) {
+                if (finalQuery.toLowerCase().includes('where f.demissao is null')) {
+                    finalQuery = finalQuery.replace(/WHERE f\.demissao IS NULL/i, `WHERE f.demissao IS NULL AND (REPLACE(REPLACE(f.n_pis, '.', ''), '-', '') = '${cleanPis}')`);
+                } else if (finalQuery.toLowerCase().includes('where')) {
+                    finalQuery = finalQuery.replace(/WHERE/i, `WHERE (REPLACE(REPLACE(f.n_pis, '.', ''), '-', '') = '${cleanPis}') AND `);
+                }
             }
+        }
 
-            res.json({ success: true, count: result.recordset.length, records: result.recordset });
+        const poolPonto = await new sql.ConnectionPool(pontoConfig).connect();
+        let result;
+        try {
+            result = await poolPonto.request().query(finalQuery);
+        } finally {
+            try { await poolPonto.close(); } catch (e) {}
+        }
+
+        const records = result.recordset || [];
+
+        if (records.length > 0) {
+            for (const rec of records) {
+                const fId = rec.funcionario_id ? parseInt(rec.funcionario_id) : null;
+                const nome = rec.nome || '';
+                const pis = rec.n_pis || '';
+                const totalBanco = rec.total_banco || '0:00';
+
+                const existCheck = await pool.request()
+                    .input('pis', sql.NVarChar, pis)
+                    .input('fId', sql.Int, fId)
+                    .query("SELECT Id FROM RhPontoBancoHoras WHERE (NPis = @pis AND @pis <> '') OR FuncionarioId = @fId");
+
+                if (existCheck.recordset.length > 0) {
+                    await pool.request()
+                        .input('id', sql.Int, existCheck.recordset[0].Id)
+                        .input('nome', sql.NVarChar, nome)
+                        .input('pis', sql.NVarChar, pis)
+                        .input('totalBanco', sql.NVarChar, totalBanco)
+                        .query("UPDATE RhPontoBancoHoras SET Nome=@nome, NPis=@pis, TotalBanco=@totalBanco, UpdatedAt=GETDATE() WHERE Id=@id");
+                } else {
+                    await pool.request()
+                        .input('fId', sql.Int, fId)
+                        .input('nome', sql.NVarChar, nome)
+                        .input('pis', sql.NVarChar, pis)
+                        .input('totalBanco', sql.NVarChar, totalBanco)
+                        .query("INSERT INTO RhPontoBancoHoras (FuncionarioId, Nome, NPis, TotalBanco, UpdatedAt) VALUES (@fId, @nome, @pis, @totalBanco, GETDATE())");
+                }
+            }
+        }
+
+        const now = new Date();
+        const statusMsg = `Sucesso (${records.length} colaboradores atualizados)`;
+        await pool.request()
+            .input('lastSync', sql.DateTime, now)
+            .input('status', sql.NVarChar, statusMsg)
+            .query("UPDATE SystemSettings SET ErpPontoLastSync = @lastSync, ErpPontoLastStatus = @status WHERE ID = 1 OR ID = (SELECT TOP 1 ID FROM SystemSettings)");
+
+        return { success: true, count: records.length, records, lastSync: now, status: statusMsg };
+    }
+
+    app.get('/api/erp/rh-ponto/config', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            await ensureSystemTablesExist(pool);
+            const result = await pool.request().query("SELECT TOP 1 ErpPontoServer as server, ErpPontoDatabase as database, ErpPontoUser as user, ErpPontoPassword as password, ErpPontoPort as port, ErpPontoQuery as selectionQuery, ErpPontoLastSync as lastSync, ErpPontoLastStatus as lastStatus FROM SystemSettings");
+            const cfg = result.recordset[0] || {};
+            res.json({ success: true, config: cfg });
         } catch (err) {
-            console.error('[ERP Ponto] Erro na sincronização do relógio de ponto:', err.message);
             res.status(500).json({ success: false, error: err.message });
         }
     });
+
+    app.post('/api/erp/rh-ponto/config', async (req, res) => {
+        try {
+            const { server: pontoServer, database, user, password, port, selectionQuery } = req.body;
+            const pool = await sql.connect(dbConfig);
+            await ensureSystemTablesExist(pool);
+
+            await pool.request()
+                .input('s', sql.NVarChar, pontoServer || '')
+                .input('d', sql.NVarChar, database || 'PontoSecullum4')
+                .input('u', sql.NVarChar, user || '')
+                .input('p', sql.NVarChar, password || '')
+                .input('port', sql.NVarChar, port || '1433')
+                .input('q', sql.NVarChar, selectionQuery || '')
+                .query(`
+                    UPDATE SystemSettings SET 
+                        ErpPontoServer = @s, 
+                        ErpPontoDatabase = @d, 
+                        ErpPontoUser = @u, 
+                        ErpPontoPassword = @p, 
+                        ErpPontoPort = @port, 
+                        ErpPontoQuery = @q 
+                    WHERE ID = 1 OR ID = (SELECT TOP 1 ID FROM SystemSettings)
+                `);
+
+            const syncRes = await runErpPontoSync({
+                server: pontoServer,
+                database: database || 'PontoSecullum4',
+                user,
+                password,
+                port,
+                selectionQuery
+            });
+
+            res.json({ success: true, count: syncRes.count, records: syncRes.records, lastSync: syncRes.lastSync });
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
+    app.post('/api/erp/rh-ponto/sync', async (req, res) => {
+        try {
+            const { server: pontoServer, user, password } = req.body || {};
+            let customConfig = null;
+            if (pontoServer && user && password) {
+                customConfig = req.body;
+            }
+            const syncRes = await runErpPontoSync(customConfig);
+            res.json(syncRes);
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
+    app.get('/api/erp/rh-ponto/data', async (req, res) => {
+        try {
+            const { pis, live } = req.query;
+            if (live === 'true' || pis) {
+                try {
+                    await runErpPontoSync(null, pis ? String(pis) : null);
+                } catch (e) {
+                    console.log('[ERP Ponto] On-demand live fetch warning:', e.message);
+                }
+            }
+
+            const pool = await sql.connect(dbConfig);
+            await ensureSystemTablesExist(pool);
+
+            let query = "SELECT FuncionarioId as funcionario_id, Nome as nome, NPis as n_pis, TotalBanco as total_banco, UpdatedAt as updated_at FROM RhPontoBancoHoras";
+            let request = pool.request();
+            if (pis) {
+                const cleanPis = String(pis).replace(/\D/g, '');
+                query += " WHERE REPLACE(REPLACE(NPis, '.', ''), '-', '') = @pis";
+                request.input('pis', sql.NVarChar, cleanPis);
+            } else {
+                query += " ORDER BY Nome";
+            }
+
+            const result = await request.query(query);
+            res.json({ success: true, count: result.recordset.length, records: result.recordset });
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
+
+    // === AGENDADOR AUTOMÁTICO DIÁRIO PARA INTEGRAÇÃO ERP PONTO ===
+    function initErpPontoDailyScheduler() {
+        setInterval(async () => {
+            try {
+                const pool = await sql.connect(dbConfig);
+                const check = await pool.request().query("SELECT TOP 1 ErpPontoServer, ErpPontoUser, ErpPontoLastSync FROM SystemSettings");
+                if (check.recordset.length > 0) {
+                    const row = check.recordset[0];
+                    if (row.ErpPontoServer && row.ErpPontoUser) {
+                        const lastSync = row.ErpPontoLastSync ? new Date(row.ErpPontoLastSync) : null;
+                        const now = new Date();
+                        if (!lastSync || (now.getTime() - lastSync.getTime()) >= 24 * 60 * 60 * 1000) {
+                            console.log('[ERP Ponto Scheduler] Executando sincronização automática diária do banco de horas...');
+                            await runErpPontoSync();
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[ERP Ponto Scheduler] Erro no agendador diário:', err.message);
+            }
+        }, 60 * 60 * 1000);
+    }
+    setTimeout(initErpPontoDailyScheduler, 20000);
 
     // Vite middleware para desenvolvimento ou produção
     if (process.env.NODE_ENV !== "production") {

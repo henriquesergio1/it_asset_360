@@ -219,10 +219,36 @@ ORDER BY f.nome;`;
   const [rhPontoPort, setRhPontoPort] = useState(() => localStorage.getItem('rh_ponto_port') || '1433');
   const [rhPontoQuery, setRhPontoQuery] = useState(() => localStorage.getItem('rh_ponto_query') || DEFAULT_RH_PONTO_QUERY);
   const [rhPontoLoading, setRhPontoLoading] = useState(false);
-  const [rhPontoRecords, setRhPontoRecords] = useState<any[]>(() => {
-    const saved = localStorage.getItem('rh_banco_horas_cache');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [rhPontoRecords, setRhPontoRecords] = useState<any[]>([]);
+  const [rhPontoLastSync, setRhPontoLastSync] = useState<string | null>(null);
+  const [rhPontoLastStatus, setRhPontoLastStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/erp/rh-ponto/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.config) {
+          if (data.config.server) setRhPontoServer(data.config.server);
+          if (data.config.database) setRhPontoDb(data.config.database);
+          if (data.config.user) setRhPontoUser(data.config.user);
+          if (data.config.password) setRhPontoPassword(data.config.password);
+          if (data.config.port) setRhPontoPort(data.config.port);
+          if (data.config.selectionQuery) setRhPontoQuery(data.config.selectionQuery);
+          if (data.config.lastSync) setRhPontoLastSync(data.config.lastSync);
+          if (data.config.lastStatus) setRhPontoLastStatus(data.config.lastStatus);
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/erp/rh-ponto/data')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.records) {
+          setRhPontoRecords(data.records);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Estados Fuel360 ERP
   const DEFAULT_FUEL_ROTEIRO_QUERY = `WITH DatasMes AS (
@@ -338,7 +364,7 @@ ORDER BY a.CODCET;`;
       .catch(() => {});
   }, []);
 
-  const handleSyncRhPonto = async () => {
+  const handleSaveRhPontoConfig = async () => {
     setRhPontoLoading(true);
     try {
       localStorage.setItem('rh_ponto_server', rhPontoServer);
@@ -348,6 +374,36 @@ ORDER BY a.CODCET;`;
       localStorage.setItem('rh_ponto_port', rhPontoPort);
       localStorage.setItem('rh_ponto_query', rhPontoQuery);
 
+      const res = await fetch('/api/erp/rh-ponto/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          server: rhPontoServer,
+          database: rhPontoDb,
+          user: rhPontoUser,
+          password: rhPontoPassword,
+          port: rhPontoPort,
+          selectionQuery: rhPontoQuery
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRhPontoRecords(data.records || []);
+        if (data.lastSync) setRhPontoLastSync(data.lastSync);
+        showToast(`Configuração salva no banco de dados e sincronização diária agendada! ${data.count} colaboradores pareados.`, 'success');
+      } else {
+        showToast(`Erro ao salvar configuração: ${data.error}`, 'error');
+      }
+    } catch (err: any) {
+      showToast(`Falha ao conectar no ERP de Ponto: ${err.message}`, 'error');
+    } finally {
+      setRhPontoLoading(false);
+    }
+  };
+
+  const handleSyncRhPonto = async () => {
+    setRhPontoLoading(true);
+    try {
       const res = await fetch('/api/erp/rh-ponto/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -363,8 +419,8 @@ ORDER BY a.CODCET;`;
       const data = await res.json();
       if (data.success) {
         setRhPontoRecords(data.records || []);
-        localStorage.setItem('rh_banco_horas_cache', JSON.stringify(data.records || []));
-        showToast(`Integração realizada com sucesso! ${data.count} colaboradores pareados pelo relógio.`, 'success');
+        if (data.lastSync) setRhPontoLastSync(data.lastSync);
+        showToast(`Sincronização manual realizada com sucesso! ${data.count} colaboradores pareados pelo relógio.`, 'success');
       } else {
         showToast(`Erro na integração: ${data.error}`, 'error');
       }
@@ -1569,7 +1625,7 @@ ORDER BY a.CODCET;`;
           </div>
         </form>
       ) : erpSubTab === 'RH' ? (
-        <form onSubmit={(e) => { e.preventDefault(); handleSyncRhPonto(); }} className="space-y-8">
+        <form onSubmit={(e) => { e.preventDefault(); handleSaveRhPontoConfig(); }} className="space-y-8">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <RotateCcw size={20} className="text-indigo-500" /> Configuração de Banco de Dados - Relógio de Ponto (RH)
@@ -1584,9 +1640,19 @@ ORDER BY a.CODCET;`;
                 {rhPontoLoading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
                 Testar Conexão e Sincronizar
               </button>
-              <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+              <button type="submit" disabled={rhPontoLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm disabled:opacity-50">
                 <Save size={14} /> Salvar Configuração
               </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl">
+            <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div className="text-xs">
+              <p className="font-bold text-emerald-900 dark:text-emerald-300">Agendamento Diário Automático Ativo no Servidor</p>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                Última sincronização realizada em: <b>{rhPontoLastSync ? new Date(rhPontoLastSync).toLocaleString('pt-BR') : 'Aguardando primeira execução'}</b> {rhPontoLastStatus ? `(${rhPontoLastStatus})` : ''}
+              </p>
             </div>
           </div>
 

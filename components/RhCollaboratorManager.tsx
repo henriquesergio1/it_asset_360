@@ -135,6 +135,39 @@ export const RhCollaboratorManager: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [revealSalaries, setRevealSalaries] = useState<Record<string, boolean>>({});
   const [cepLoading, setCepLoading] = useState(false);
+  const [bancoHorasMap, setBancoHorasMap] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    fetch('/api/erp/rh-ponto/data')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.records) {
+          const dict: Record<string, string> = {};
+          data.records.forEach((r: any) => {
+            const clean = (r.n_pis || '').replace(/\D/g, '');
+            if (clean) dict[clean] = r.total_banco;
+          });
+          setBancoHorasMap(dict);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    if (!selectedColab || !selectedColab.pis) return;
+    const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
+    if (!cleanPis) return;
+
+    fetch(`/api/erp/rh-ponto/data?pis=${cleanPis}&live=true`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.records && data.records.length > 0) {
+          const rec = data.records[0];
+          setBancoHorasMap(prev => ({ ...prev, [cleanPis]: rec.total_banco }));
+        }
+      })
+      .catch(() => {});
+  }, [selectedColab]);
 
   // Tabs for creating/editing collaborator modal
   const [activeTab, setActiveTab] = useState<'cadastro' | 'dependentes' | 'documentos' | 'ocorrencias'>('cadastro');
@@ -1573,23 +1606,19 @@ export const RhCollaboratorManager: React.FC = () => {
                   
                   {/* Badge Banco de Horas vinculado por PIS */}
                   {(() => {
-                    const cacheStr = localStorage.getItem('rh_banco_horas_cache');
-                    if (!cacheStr) return null;
-                    let records: any[] = [];
-                    try { records = JSON.parse(cacheStr); } catch { return null; }
                     const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
                     if (!cleanPis) return null;
-                    const match = records.find((r: any) => (r.n_pis || '').replace(/\D/g, '') === cleanPis);
-                    if (!match) return null;
-                    const isNegative = match.total_banco.startsWith('-');
-                    const isZero = match.total_banco === '0:00';
+                    const saldo = bancoHorasMap[cleanPis];
+                    if (!saldo) return null;
+                    const isNegative = saldo.startsWith('-');
+                    const isZero = saldo === '0:00';
                     return (
-                      <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-1.5 mt-1" title="Atualizado sob demanda do ERP Ponto (Secullum)">
                         <RefreshCw size={10} className={isNegative ? 'text-rose-400' : isZero ? 'text-slate-400' : 'text-emerald-400'} />
                         <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Banco de Horas:</span>
                         <span className={`text-[10px] font-black font-mono ${
                           isNegative ? 'text-rose-500 dark:text-rose-400' : isZero ? 'text-slate-500' : 'text-emerald-600 dark:text-emerald-400'
-                        }`}>{match.total_banco}</span>
+                        }`}>{saldo}</span>
                         <span className="text-[9px] text-slate-400">{isNegative ? '(deve horas)' : isZero ? '(zerado)' : '(saldo positivo)'}</span>
                       </div>
                     );
