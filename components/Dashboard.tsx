@@ -1599,8 +1599,8 @@ const Dashboard = () => {
                             onClick={() => { setSelectedUserForModal(null); navigate(`/devices?deviceId=${d.id}`); }}
                             className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-emerald-500/50 transition-all cursor-pointer"
                           >
-                            <div className="h-12 w-12 rounded-lg bg-emerald-950/20 flex items-center justify-center border border-emerald-900/30 shrink-0 relative">
-                              <Smartphone className="text-emerald-500" size={24}/>
+                            <div className="h-12 w-12 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center border border-emerald-200 dark:border-emerald-800/40 shrink-0 relative">
+                              <Smartphone className="text-emerald-600 dark:text-emerald-400" size={24}/>
                               {isSharedResponsible && (
                                 <div className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 p-0.5 rounded-full" title="Ativo Compartilhado">
                                   <Users size={10}/>
@@ -1630,8 +1630,8 @@ const Dashboard = () => {
                           onClick={() => { setSelectedUserForModal(null); navigate(`/sims?simId=${sim.id}`); }}
                           className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-4 group hover:border-blue-500/50 transition-all cursor-pointer"
                         >
-                          <div className="h-12 w-12 rounded-lg bg-blue-950/20 flex items-center justify-center border border-blue-300 dark:border-sky-700/30 shrink-0">
-                            <Phone className="text-blue-500" size={24}/>
+                          <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-sky-950/40 flex items-center justify-center border border-blue-200 dark:border-sky-800/40 shrink-0">
+                            <Phone className="text-blue-600 dark:text-sky-400" size={24}/>
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter truncate">{sim.phoneNumber}</div>

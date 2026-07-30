@@ -353,7 +353,7 @@ const SimManager = () => {
                     )}
                     {visibleColumns.includes('operator') && (
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${sim.operator === 'Vivo' ? 'bg-purple-900/30 text-purple-400' : sim.operator === 'Claro' ? 'bg-red-900/30 text-red-400' : 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400'}`}>
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${sim.operator === 'Vivo' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40' : sim.operator === 'Claro' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40' : 'bg-blue-100 text-blue-800 dark:bg-sky-500/20 dark:text-sky-300 border border-blue-200 dark:border-sky-800/40'}`}>
                           {sim.operator}
                         </span>
                       </td>
