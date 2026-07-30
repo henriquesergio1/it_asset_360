@@ -25,8 +25,68 @@
     --color-slate-900: #0f172a;
   }
 
+  :root:not(.dark) {
+    --color-slate-100: #f1f5f9;
+    --color-slate-200: #cbd5e1;
+    --color-slate-300: #94a3b8;
+    --color-slate-400: #64748b;
+    --color-slate-500: #475569;
+    --color-slate-600: #334155;
+    --color-slate-700: #1e293b;
+    --color-slate-800: #0f172a;
+    --color-slate-900: #020617;
+  }
+
   body {
     font-family: var(--font-sans);
+  }
+
+  /* Refinamento de Alto Contraste e Bordas Definidas para o Tema Claro */
+  html:not(.dark) {
+    color-scheme: light;
+    color: #0f172a;
+  }
+
+  html:not(.dark) input,
+  html:not(.dark) select,
+  html:not(.dark) textarea {
+    border-color: #cbd5e1;
+    color: #0f172a;
+  }
+
+  html:not(.dark) input::placeholder,
+  html:not(.dark) textarea::placeholder {
+    color: #64748b;
+  }
+
+  html:not(.dark) input:focus,
+  html:not(.dark) select:focus,
+  html:not(.dark) textarea:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+  }
+
+  html:not(.dark) table th {
+    color: #0f172a;
+    font-weight: 700;
+    border-bottom-color: #cbd5e1;
+  }
+
+  html:not(.dark) table td {
+    border-bottom-color: #e2e8f0;
+  }
+
+  html:not(.dark) .border-slate-100,
+  html:not(.dark) .border-slate-200 {
+    border-color: #cbd5e1 !important;
+  }
+
+  html:not(.dark) .text-slate-400 {
+    color: #475569 !important;
+  }
+
+  html:not(.dark) .text-slate-500 {
+    color: #334155 !important;
   }
 
   /* Custom Scrollbar */
