@@ -2045,9 +2045,9 @@ const UserManager: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
-            <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
+            <div className="bg-slate-100 dark:bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-slate-900 dark:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
+              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"><X size={20}/></button>
             </div>
 
             <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
@@ -2062,9 +2062,9 @@ const UserManager: React.FC = () => {
               {activeTab === 'DATA' && (
                 <form id="userForm" onSubmit={handleSubmit} className="space-y-6">
                   {isViewOnly && (
-                    <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
-                      <Info className="text-emerald-600 dark:text-emerald-400" size={20} />
-                      <p className="text-xs font-bold text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p>
+                    <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/40 flex items-center gap-3 mb-4">
+                      <Info className="text-emerald-600 dark:text-emerald-400 shrink-0" size={20} />
+                      <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Modo de visualização. Clique no botão "Habilitar Edição" abaixo para realizar alterações.</p>
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

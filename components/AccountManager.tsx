@@ -691,7 +691,7 @@ const AccountManager = () => {
       {isModalOpen && editingAccount && (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700 flex flex-col max-h-[95vh] shadow-2xl transition-all ring-1 ring-white/10">
-            <div className="bg-black px-10 py-6 flex justify-between items-center border-b border-white/5 shrink-0">
+            <div className="bg-slate-100 dark:bg-slate-900 px-10 py-6 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-4">
                 <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner ${editingAccount.id ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
                    {editingAccount.id ? <ShieldCheck size={24}/> : <Plus size={24}/>}

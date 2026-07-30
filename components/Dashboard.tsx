@@ -783,14 +783,14 @@ const Dashboard = () => {
               {filteredExpedienteAlerts.length > 0 ? (
                 <div className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 dark:border-l-red-500 border-y border-r border-slate-200 dark:border-slate-700 rounded-xl p-4 animate-fade-in shadow-sm">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-red-900/30 text-red-400 rounded-lg shrink-0">
+                    <div className="p-2 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 rounded-lg shrink-0">
                       <Clock size={20} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex justify-between items-center mb-1">
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                           Alertas de Expediente
-                          <span className="ml-2 bg-red-900/40 text-red-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
+                          <span className="ml-2 bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase">
                             {filteredExpedienteAlerts.length}
                           </span>
                         </h3>
@@ -802,7 +802,7 @@ const Dashboard = () => {
                         </button>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
-                        Colaboradores com expediente <span className="font-bold text-red-400">FALSO</span> no ERP.
+                        Colaboradores com expediente <span className="font-bold text-rose-600 dark:text-rose-400">FALSO</span> no ERP.
                       </p>
                       
                       <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
@@ -811,16 +811,16 @@ const Dashboard = () => {
                           const now = new Date();
                           const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
                           return (
-                            <div key={alert.codigo} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-red-900/30 hover:border-red-700'}`}>
+                            <div key={alert.codigo} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-rose-200 dark:border-rose-900/30 hover:border-rose-500'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-900/40 text-amber-600 dark:text-amber-400' : ' bg-red-900/40 text-red-400'}`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400' : ' bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'}`}>
                                     {alert.nome.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
-                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-red-900/20 text-red-400'}`}>
+                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'}`}>
                                         {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
                                       </span>
                                     </div>
@@ -1518,9 +1518,9 @@ const Dashboard = () => {
       {selectedUserForModal && (
         <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
-            <div className="bg-black px-8 py-5 flex justify-between items-center shrink-0 border-b border-white/10">
+            <div className="bg-slate-100 dark:bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Detalhes do Colaborador</h3>
-              <button onClick={() => setSelectedUserForModal(null)} className="h-10 w-10 flex items-center justify-center bg-white/5 hover:text-slate-900 dark:text-white rounded-full hover:bg-white/10 transition-all"><X size={20}/></button>
+              <button onClick={() => setSelectedUserForModal(null)} className="h-10 w-10 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"><X size={20}/></button>
             </div>
 
             <div className="flex bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 overflow-x-auto shrink-0 px-4 pt-2">
@@ -1534,9 +1534,9 @@ const Dashboard = () => {
             <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-slate-800 transition-colors">
               {activeModalTab === 'DATA' && (
                 <div className="space-y-6">
-                  <div className="bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-900/40 flex items-center gap-3 mb-4">
-                    <Info className="text-emerald-600 dark:text-emerald-400" size={20} />
-                    <p className="text-xs font-bold text-emerald-200">Modo de visualização. As alterações de cadastro devem ser feitas na tela de colaboradores.</p>
+                  <div className="bg-emerald-50 dark:bg-emerald-500/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/40 flex items-center gap-3 mb-4">
+                    <Info className="text-emerald-600 dark:text-emerald-400 shrink-0" size={20} />
+                    <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Modo de visualização. As alterações de cadastro devem ser feitas na tela de colaboradores.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2">
