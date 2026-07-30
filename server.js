@@ -2649,7 +2649,7 @@ app.post('/api/fuel360/calculo', async (req, res) => {
     const overwrite = b.Overwrite || b.overwrite;
     const itens = b.Itens || b.itens || b.detalhes;
     const diario = b.diario;
-    const usuarioFechamento = b._adminUser || b.UsuarioFechamento || 'Sistema';
+    const usuarioFechamento = b.UsuarioFechamento || b.usuarioFechamento || b.criadoPor || b.usuario || b._adminUser || 'Operador';
     const origem = b.OrigemDados || b.origemDados || 'CSV';
     const motivoEdicao = b.MotivoOverwrite || b.motivoOverwrite || null;
 
@@ -3099,7 +3099,8 @@ app.get('/api/fuel360/roteiro/historico', async (req, res) => {
 });
 
 app.post('/api/fuel360/roteiro/historico', async (req, res) => {
-    const { Periodo, TotalKM, Descricao, overwriteId, Itens } = req.body;
+    const { Periodo, TotalKM, Descricao, overwriteId, Itens, UsuarioSimulacao, criadoPor, usuario, _adminUser } = req.body;
+    const userSim = UsuarioSimulacao || criadoPor || usuario || _adminUser || 'Operador';
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
@@ -3115,7 +3116,7 @@ app.post('/api/fuel360/roteiro/historico', async (req, res) => {
             .input('Periodo', sql.NVarChar, Periodo || 'Simulação sem Título')
             .input('Descricao', sql.NVarChar, Descricao || null)
             .input('TotalKM', sql.Float, TotalKM || 0)
-            .input('UsuarioSimulacao', sql.NVarChar, 'Administrador TI')
+            .input('UsuarioSimulacao', sql.NVarChar, userSim)
             .query(`
                 INSERT INTO FuelSimulacoesHistorico (Periodo, Descricao, TotalKM, UsuarioSimulacao)
                 OUTPUT INSERTED.ID_RotaHist

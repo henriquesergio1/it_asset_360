@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import * as XLSX from 'xlsx';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { DataContext } from './context/DataContext';
+import { useAuth } from './context/AuthContext';
 import { getPromoterClients, saveRotaPrevista, checkRotaPrevistaExists, getOSRMData } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { LocationMarkerIcon, SpinnerIcon, CalculatorIcon, ChevronRightIcon, ChevronDownIcon, ArrowLeftIcon, GlobeIcon, RefreshIcon, UsersIcon, ExclamationIcon, CheckCircleIcon, TrashIcon, CalendarIcon, PlusCircleIcon, XCircleIcon, UserGroupIcon } from './icons';
@@ -525,6 +526,7 @@ function levenshteinDistance(a: string, b: string): number {
 
 export const RoteirizadorPromotores: React.FC = () => {
     const { colaboradores, systemConfig } = useContext(DataContext);
+    const { user: authUser } = useAuth();
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [file, setFile] = useState<File | null>(null);
@@ -1156,6 +1158,7 @@ export const RoteirizadorPromotores: React.FC = () => {
                 TotalKM: saveModalData.totalKm,
                 Descricao: userDesc.trim() || undefined,
                 overwriteId: saveModalData.overwriteId,
+                UsuarioSimulacao: authUser?.Nome || 'Operador',
                 Itens: sellersToSave.map(seller => ({
                     ID_Pulsus: seller.colabRef.ID_Pulsus || seller.id,
                     Nome: seller.name,

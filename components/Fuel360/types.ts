@@ -102,6 +102,8 @@ export interface SalvarCalculoPayload {
     ID_RotaHist?: number | null;
     Overwrite?: boolean;
     MotivoOverwrite?: string;
+    UsuarioFechamento?: string;
+    _adminUser?: string;
     Itens: {
         ID_Pulsus: number;
         Nome: string;

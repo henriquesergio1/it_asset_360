@@ -2,6 +2,7 @@
 import { UploadIcon, DropIcon, CarIcon, MotoIcon, PrinterIcon, ExclamationIcon, CheckCircleIcon, SpinnerIcon, DocumentReportIcon, CalculatorIcon, ChevronDownIcon, ChevronRightIcon, PencilIcon, ArrowRightIcon, CalendarIcon, UsersIcon, PlusCircleIcon, ChevronUpIcon, ChartBarIcon, RefreshIcon, XCircleIcon, LocationMarkerIcon, UserGroupIcon } from './icons';
 import React, { useState, useContext, useMemo } from 'react';
 import { DataContext } from './context/DataContext';
+import { useAuth } from './context/AuthContext';
 import { CalculoReembolso, RegistroKM, SalvarCalculoPayload, StagingRecord, Colaborador, Ausencia, RotaPrevistaSaved } from './types';
 import { saveCalculo, checkCalculoExists, getAusencias, getSugestoesVinculo, getRotaPrevistaHistory, getRotaPrevistaDetails, getOSRMData, calcDistance } from './services/apiService';
 import Papa from 'papaparse';
@@ -381,6 +382,7 @@ import ReportPrint from './ReportPrint';
 // --- COMPONENTE PRINCIPAL ---
 export const Importacao: React.FC = () => {
     const { colaboradores, configReembolso, ausencias, logSystemAction, refreshData, addAusencia, systemConfig } = useContext(DataContext);
+    const { user: authUser } = useAuth();
     
     // Steps: 1=Upload, 2=Conferencia/Edicao, 3=Final/Salvar
     const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1131,6 +1133,8 @@ export const Importacao: React.FC = () => {
                 ID_RotaHist: finalOrigin === 'ROTEIRIZADOR' ? selectedRotaId : null, 
                 Overwrite: overwrite,
                 MotivoOverwrite: motivoOverwrite,
+                UsuarioFechamento: authUser?.Nome || 'Operador',
+                _adminUser: authUser?.Nome || 'Operador',
                 Itens: calculoFinal.map(c => ({
                     ID_Pulsus: c.Colaborador.ID_Pulsus,
                     Nome: c.Colaborador.Nome,

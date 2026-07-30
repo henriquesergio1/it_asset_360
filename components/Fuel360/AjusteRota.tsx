@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { DataContext } from './context/DataContext';
+import { useAuth } from './context/AuthContext';
 import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } from 'react-leaflet';
@@ -66,6 +67,7 @@ const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA
 
 export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
+    const { user: authUser } = useAuth();
     const [teamType, setTeamType] = useState<'vendedores' | 'promotores'>('vendedores');
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
@@ -565,6 +567,7 @@ export const AjusteRota: React.FC = () => {
             const payload = {
                 Periodo: periodName,
                 TotalKM: kpis.adjusted.totalKm,
+                UsuarioSimulacao: authUser?.Nome || 'Operador',
                 Itens: Array.from(groups.entries()).map(([vendedorId, visits]) => {
                     const colab = colaboradores.find(c => c.CodigoSetor === vendedorId);
                     
