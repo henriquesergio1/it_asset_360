@@ -660,7 +660,16 @@ export const RoteirizadorPromotores: React.FC = () => {
         try { 
             const clients = await getPromoterClients();
             const clientMap = new Map();
-            clients.forEach(c => clientMap.set(String(c.Cod_Cliente), c));
+            clients.forEach(c => {
+                const key = String(c.Cod_Cliente ?? c.COD_CLIENTE ?? c.CODCET ?? '').trim();
+                if (key) {
+                    clientMap.set(key, c);
+                    const keyNoZero = key.replace(/^0+/, '');
+                    if (keyNoZero && !clientMap.has(keyNoZero)) {
+                        clientMap.set(keyNoZero, c);
+                    }
+                }
+            });
 
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -677,14 +686,17 @@ export const RoteirizadorPromotores: React.FC = () => {
                     json.forEach((row: any) => {
                         const nome = row['NOME DO COLABORADOR'] || row['Nome'] || row['Colaborador'];
                         const diaSemana = row['SEMANA'] || row['DIA SEMANA'] || row['Dia'] || row['Data'];
-                        const codPdv = row['CODIGO PDV'] || row['Cod_Cliente'] || row['Codigo'];
+                        const codPdv = row['CODIGO PDV'] || row['Cod_Cliente'] || row['Codigo'] || row['Cod. Cliente'] || row['Cliente'] || row['CODIGO'];
 
                         if (nome && codPdv) {
                             const targetDates = getDatesInRange(startDate, endDate, diaSemana);
                             
                             if (targetDates.length > 0) {
                                 uniqueNames.add(nome);
-                                const clientData = clientMap.get(String(codPdv));
+                                const codPdvStr = String(codPdv).trim();
+                                const codPdvNoZero = codPdvStr.replace(/^0+/, '');
+                                const clientData = clientMap.get(codPdvStr) || clientMap.get(codPdvNoZero);
+
                                 targetDates.forEach(date => {
                                     parsedData.push({
                                         Cod_Vend: 0, 
@@ -696,10 +708,10 @@ export const RoteirizadorPromotores: React.FC = () => {
                                         Dia_Semana: diaSemana || '',
                                         Periodicidade: '',
                                         Data_da_Visita: date,
-                                        Endereco: clientData ? clientData.Endereco : '',
-                                        Bairro: clientData ? clientData.Bairro : '',
-                                        Cidade: clientData ? clientData.Cidade : '',
-                                        CEP: clientData ? clientData.CEP : '',
+                                        Endereco: clientData ? (clientData.Endereco || '') : '',
+                                        Bairro: clientData ? (clientData.Bairro || '') : '',
+                                        Cidade: clientData ? (clientData.Cidade || '') : '',
+                                        CEP: clientData ? (clientData.CEP || '') : '',
                                         Lat: clientData ? Number(clientData.Lat) : 0,
                                         Long: clientData ? Number(clientData.Long) : 0
                                     });

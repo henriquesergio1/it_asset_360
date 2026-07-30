@@ -3078,7 +3078,77 @@ app.get('/api/fuel360/osrm', async (req, res) => {
     }
 });
 
-app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => { res.json([]); });
+app.get('/api/fuel360/roteiro/promotores/clientes', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        await ensureSettingsColumns(pool);
+
+        const settingsRes = await pool.request().query("SELECT TOP 1 * FROM SystemSettings");
+        const s = settingsRes.recordset ? settingsRes.recordset[0] : null;
+
+        const host = (s && s.ExtPromoter_Host && s.ExtPromoter_Host.trim() !== '') ? s.ExtPromoter_Host : (s ? s.ExtRoute_Host : '');
+        const port = (s && s.ExtPromoter_Port) ? s.ExtPromoter_Port : (s ? s.ExtRoute_Port : 1433);
+        const user = (s && s.ExtPromoter_User && s.ExtPromoter_User.trim() !== '') ? s.ExtPromoter_User : (s ? s.ExtRoute_User : '');
+        const pass = (s && s.ExtPromoter_Pass && s.ExtPromoter_Pass.trim() !== '') ? s.ExtPromoter_Pass : (s ? s.ExtRoute_Pass : '');
+        const database = (s && s.ExtPromoter_Database && s.ExtPromoter_Database.trim() !== '') ? s.ExtPromoter_Database : (s ? s.ExtRoute_Database : '');
+        const query = (s && s.ExtPromoter_Query && s.ExtPromoter_Query.trim() !== '') ? s.ExtPromoter_Query : '';
+
+        if (host && host.trim() !== '' && query && query.trim() !== '') {
+            let extPool = null;
+            try {
+                console.log(`[Roteirizador Promotores ERP] Conectando ao ERP (${host}:${port || 1433})...`);
+                extPool = new sql.ConnectionPool({
+                    server: host,
+                    port: parseInt(port || 1433),
+                    user: user,
+                    password: pass,
+                    database: database,
+                    options: {
+                        encrypt: false,
+                        trustServerCertificate: true,
+                        requestTimeout: 60000
+                    }
+                });
+                await extPool.connect();
+
+                console.log(`[Roteirizador Promotores ERP] Executando Query SQL Clientes Promotores...`);
+                const extRes = await extPool.request().query(query);
+                await extPool.close();
+
+                if (extRes.recordset && extRes.recordset.length > 0) {
+                    console.log(`[Roteirizador Promotores ERP] Sucesso! ${extRes.recordset.length} clientes carregados do ERP.`);
+                    const normalized = extRes.recordset.map(row => {
+                        const cod = row.Cod_Cliente ?? row.COD_CLIENTE ?? row.CodCliente ?? row.CODCET ?? row.Cod_Pdv ?? row.CODIGO ?? row.Codigo;
+                        const razao = row.Razao_Social ?? row.RAZAO_SOCIAL ?? row.RazaoSocial ?? row.NOMRAZSCLCET ?? row.Nome ?? '';
+                        const lat = parseFloat(row.Lat ?? row.LAT ?? row.LATCET ?? row.Latitude ?? row.LATITUDE ?? 0);
+                        const lng = parseFloat(row.Long ?? row.LONG ?? row.LONCET ?? row.Longitude ?? row.LONGITUDE ?? row.Lng ?? 0);
+                        return {
+                            Cod_Cliente: cod,
+                            Razao_Social: razao,
+                            Lat: isNaN(lat) ? 0 : lat,
+                            Long: isNaN(lng) ? 0 : lng
+                        };
+                    });
+                    return res.json(normalized);
+                } else {
+                    console.log('[Roteirizador Promotores ERP] Query executada com sucesso mas retornou 0 linhas do ERP.');
+                    return res.json([]);
+                }
+            } catch (extErr) {
+                if (extPool) try { await extPool.close(); } catch(e) {}
+                console.error('[Roteirizador Promotores ERP ERROR] Falha ao consultar banco externo:', extErr.message);
+                return res.json([]);
+            }
+        } else {
+            console.log('[Roteirizador Promotores ERP] Configuração ou Query SQL Clientes Promotores não preenchida em Administração.');
+            return res.json([]);
+        }
+    } catch (err) {
+        console.error('Erro em GET /api/fuel360/roteiro/promotores/clientes:', err);
+        res.json([]);
+    }
+});
 
 // Checa se já existe simulação salva para o mesmo período e com o mesmo KM Total
 app.get('/api/fuel360/roteiro/exists', async (req, res) => {

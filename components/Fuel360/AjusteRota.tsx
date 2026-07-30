@@ -186,18 +186,29 @@ export const AjusteRota: React.FC = () => {
 
                 const clients = await getPromoterClients();
                 const clientMap = new Map();
-                clients.forEach(c => clientMap.set(String(c.Cod_Cliente), c));
+                clients.forEach(c => {
+                    const key = String(c.Cod_Cliente ?? c.COD_CLIENTE ?? c.CODCET ?? '').trim();
+                    if (key) {
+                        clientMap.set(key, c);
+                        const keyNoZero = key.replace(/^0+/, '');
+                        if (keyNoZero && !clientMap.has(keyNoZero)) {
+                            clientMap.set(keyNoZero, c);
+                        }
+                    }
+                });
 
                 const parsed: VisitaPrevista[] = [];
                 const uniqueNames = new Set<string>();
 
                 json.forEach(row => {
                     const nome = row['NOME DO COLABORADOR'] || row['Nome'] || row['Colaborador'];
-                    const codPdv = row['CODIGO PDV'] || row['Cod_Cliente'] || row['Codigo'] || row['Cod. Cliente'] || row['Cliente'];
+                    const codPdv = row['CODIGO PDV'] || row['Cod_Cliente'] || row['Codigo'] || row['Cod. Cliente'] || row['Cliente'] || row['CODIGO'];
                     
                     if (nome && codPdv) {
                         uniqueNames.add(nome);
-                        const clientData = clientMap.get(String(codPdv));
+                        const codPdvStr = String(codPdv).trim();
+                        const codPdvNoZero = codPdvStr.replace(/^0+/, '');
+                        const clientData = clientMap.get(codPdvStr) || clientMap.get(codPdvNoZero);
                         
                         const diaSemanaRaw = String(row['SEMANA'] || row['NOME DIA'] || row['DIA SEMANA'] || row['DIA SEN'] || row['Dia da Semana'] || 'SEGUNDA-FEIRA').trim().toUpperCase();
                         const diaSemana = (() => {
