@@ -216,12 +216,17 @@ const optimizeRoute = (points: VisitaPrevista[], colab?: Colaborador): VisitaPre
         }
     }
 
+    // Extrai o supervisor do primeiro ponto válido da rota
+    const firstSupervisor = validPoints.length > 0 ? (validPoints[0].Nome_Supervisor || '') : '';
+
     // Define o ponto de partida (Nó 0)
-    let startNode: VisitaPrevista & { Foto?: string } = {
+    let startNode: VisitaPrevista & { Foto?: string; Grupo?: string; NomeSupervisor?: string } = {
         Cod_Vend: colab?.CodigoSetor || 0, 
         Nome_Vendedor: colab?.Nome || "Sistema", 
         Foto: (colab as any)?.Foto,
-        Cod_Supervisor: 0, Nome_Supervisor: "", Cod_Cliente: 0,
+        Grupo: colab?.Grupo || '',
+        NomeSupervisor: firstSupervisor,
+        Cod_Supervisor: 0, Nome_Supervisor: firstSupervisor, Cod_Cliente: 0,
         Razao_Social: startLabel, 
         Dia_Semana: "", Periodicidade: "", Data_da_Visita: "",
         Endereco: startAddress, 
@@ -436,6 +441,17 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                                                     <div>
                                                         <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
                                                         <p className="text-sm font-black text-slate-800 leading-tight">{p.Nome_Vendedor}</p>
+                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                            {(p as any).Grupo && (
+                                                                <span className="inline-block bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">{(p as any).Grupo}</span>
+                                                            )}
+                                                            {p.Cod_Vend > 0 && (
+                                                                <span className="inline-block bg-slate-100 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">Setor {p.Cod_Vend}</span>
+                                                            )}
+                                                        </div>
+                                                        {(p.Nome_Supervisor || (p as any).NomeSupervisor) && (
+                                                            <p className="text-[10px] text-slate-500 mt-0.5"><span className="font-bold">Sup:</span> {p.Nome_Supervisor || (p as any).NomeSupervisor}</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}

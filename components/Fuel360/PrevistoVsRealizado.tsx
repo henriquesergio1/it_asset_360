@@ -1499,6 +1499,7 @@ export const PrevistoVsRealizado: React.FC = () => {
                                     if (!colab) colab = colaboradores.find(c => c.CodigoSetor === vId && c.Ativo);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
                                         const pColor = promoterColorMap.get(String(vId)) || '#94a3b8';
+                                        const supervisorDoColab = filteredRoteiroPoints.find(v => v.Cod_Vend === vId && v.Nome_Supervisor)?.Nome_Supervisor || '';
                                         return (
                                             <Marker 
                                                 eventHandlers={{ click: () => setSelectedPromoterForRoute(selectedPromoterForRoute === String(vId) ? 'ALL' : String(vId)) }}
@@ -1507,7 +1508,7 @@ export const PrevistoVsRealizado: React.FC = () => {
                                                 icon={createBaseIcon(pColor)}
                                             >
                                                 <Popup>
-                                                    <div className="flex items-center gap-3 p-1 min-w-[200px]">
+                                                    <div className="flex items-center gap-3 p-1 min-w-[220px]">
                                                         {(colab as any)?.Foto ? (
                                                             <img src={(colab as any).Foto} alt={colab.Nome} className="w-10 h-10 rounded-full object-cover border-2 border-blue-500 shadow shrink-0" />
                                                         ) : (
@@ -1518,6 +1519,17 @@ export const PrevistoVsRealizado: React.FC = () => {
                                                         <div>
                                                             <p className="font-black text-[10px] uppercase text-blue-600">PARTIDA/RETORNO (CASA)</p>
                                                             <p className="text-xs font-bold text-slate-800 leading-tight">{colab.Nome}</p>
+                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                                {colab.Grupo && (
+                                                                    <span className="inline-block bg-blue-100 text-blue-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">{colab.Grupo}</span>
+                                                                )}
+                                                                {colab.CodigoSetor > 0 && (
+                                                                    <span className="inline-block bg-slate-100 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">Setor {colab.CodigoSetor}</span>
+                                                                )}
+                                                            </div>
+                                                            {supervisorDoColab && (
+                                                                <p className="text-[10px] text-slate-500 mt-0.5"><span className="font-bold">Sup:</span> {supervisorDoColab}</p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </Popup>
