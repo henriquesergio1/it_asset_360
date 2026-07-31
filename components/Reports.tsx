@@ -1617,7 +1617,7 @@ const Reports = () => {
                               <td className="px-6 py-4">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
                                   a.status === 'Aprovado' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' :
-                                  a.status === 'Reprovado' ? 'bg-red-900/30 text-red-400' :
+                                  a.status === 'Reprovado' ? 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400' :
                                   'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
                                 }`}>
                                   {a.status}

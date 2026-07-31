@@ -461,7 +461,7 @@ const SimManager = () => {
         <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
             <div className="p-8 text-center border-b border-slate-200 dark:border-slate-700">
-              <div className="h-16 w-16 bg-red-900/30 rounded-2xl flex items-center justify-center text-red-400 mx-auto mb-4 border border-red-800/30 transition-transform"><AlertTriangle size={32} /></div>
+              <div className="h-16 w-16 bg-rose-50 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto mb-4 border border-rose-200 dark:border-rose-800/30 transition-transform"><AlertTriangle size={32} /></div>
               <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Remover Chip</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">Esta ação requer um motivo documentado.</p>
             </div>

@@ -1381,13 +1381,13 @@ const DeviceManager = () => {
  </div>
  </div>
  </div>
- <div className={`p-5 rounded-2xl border transition-all ${maintenanceRatio >= 0.6 ? ' bg-red-900/20 border-red-900/40' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600'}`}>
+ <div className={`p-5 rounded-2xl border transition-all ${maintenanceRatio >= 0.6 ? ' bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800/40' : ' bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
  <div className="flex justify-between items-start">
- <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-red-500' : ' text-slate-500 dark:text-slate-400'}`}>Índice de Manutenção</span>
- {maintenanceRatio >= 0.6 && <AlertTriangle size={16} className="animate-pulse"/>}
+ <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${maintenanceRatio >= 0.6 ? ' text-rose-600 dark:text-rose-400' : ' text-slate-500 dark:text-slate-400'}`}>Índice de Manutenção</span>
+ {maintenanceRatio >= 0.6 && <AlertTriangle size={16} className="animate-pulse text-rose-600 dark:text-rose-400"/>}
  </div>
  <div className="flex items-baseline gap-2 mt-1">
- <span className={`text-2xl font-black ${maintenanceRatio >= 0.6 ? ' text-red-400' : ' text-slate-900 dark:text-white'}`}>{(maintenanceRatio * 100).toFixed(1)}%</span>
+ <span className={`text-2xl font-black ${maintenanceRatio >= 0.6 ? ' text-rose-600 dark:text-rose-400' : ' text-slate-900 dark:text-white'}`}>{(maintenanceRatio * 100).toFixed(1)}%</span>
  </div>
  <div className="w-full bg-slate-700 h-1.5 rounded-full mt-3 overflow-hidden">
  <div className={`h-full transition-all duration-1000 ${maintenanceRatio >= 0.6 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width:`${Math.min(maintenanceRatio * 100, 100)}%`}}></div>
@@ -1627,16 +1627,16 @@ const DeviceManager = () => {
                 {audits?.filter(a => a.deviceId === editingId).length > 0 ? (
                   audits.filter(a => a.deviceId === editingId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(a => (
                     <div key={a.id} className="p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:border-indigo-900 transition-all group relative overflow-hidden">
-                      <div className={`absolute top-0 left-0 w-1 h-full ${a.status === 'Aprovado' ? 'bg-emerald-500' : a.status === 'Observação' ? 'bg-orange-500' : 'bg-red-500'}`} />
+                      <div className={`absolute top-0 left-0 w-1 h-full ${a.status === 'Aprovado' ? 'bg-emerald-500' : a.status === 'Observação' ? 'bg-amber-500' : 'bg-rose-500'}`} />
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${a.status === 'Aprovado' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : a.status === 'Observação' ? 'bg-orange-900/20 text-orange-400' : 'bg-red-900/20 text-red-400'}`}>
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${a.status === 'Aprovado' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30' : a.status === 'Observação' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30' : 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/30'}`}>
                             <ShieldCheck size={20}/>
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-slate-900 dark:text-white text-sm">{a.description}</p>
-                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${a.status === 'Aprovado' ? 'bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : a.status === 'Observação' ? 'bg-orange-900/40 text-orange-400 border border-orange-500/30' : 'bg-red-900/40 text-red-400 border border-red-500/30'}`}>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${a.status === 'Aprovado' ? 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' : a.status === 'Observação' ? 'bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' : 'bg-rose-50 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30'}`}>
                                 {a.status}
                               </span>
                             </div>

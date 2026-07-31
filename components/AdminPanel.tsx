@@ -1034,7 +1034,7 @@ ORDER BY a.CODCET;`;
                  <tr key={p.ID_Perfil} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all hover:bg-slate-100 dark:hover:bg-slate-700/60 bg-white dark:bg-slate-800">
                    <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{p.Nome}</td>
                    <td className="px-6 py-4">
-                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${p.Ativo ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>
+                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${p.Ativo ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30' : 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/30'}`}>
                        {p.Ativo ? 'Ativo' : 'Inativo'}
                      </span>
                    </td>

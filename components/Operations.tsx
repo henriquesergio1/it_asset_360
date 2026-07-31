@@ -646,10 +646,10 @@ const Operations = () => {
  <button 
  onClick={() => setInactivateAfterReturn(!inactivateAfterReturn)}
  className={`w-full flex items-center gap-4 p-6 rounded-3xl border-2 transition-all text-left group
- ${inactivateAfterReturn ? 'border-red-500 bg-red-900/20 ' : ' border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-red-200'}`}
+ ${inactivateAfterReturn ? 'border-rose-400 bg-rose-50 dark:bg-rose-950/30' : ' border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-rose-200'}`}
  >
  <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors
- ${inactivateAfterReturn ? ' bg-red-900/40 text-red-400' : ' bg-slate-100 dark:bg-slate-800 group-hover:text-red-400'}`}>
+ ${inactivateAfterReturn ? ' bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400' : ' bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-rose-600'}`}>
  <UserX size={24} />
  </div>
  <div className="flex-1">
