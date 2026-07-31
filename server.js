@@ -1634,21 +1634,30 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             const nAddress = nItem.endereco ? String(nItem.endereco).trim() : null;
             const nLat = nItem.latitude !== undefined && nItem.latitude !== null ? Number(nItem.latitude) : null;
             const nLon = nItem.longitude !== undefined && nItem.longitude !== null ? Number(nItem.longitude) : null;
+            const hasValidCoords = nLat !== null && nLon !== null && !isNaN(nLat) && !isNaN(nLon) && (nLat !== 0 || nLon !== 0);
+
             if (!existing) {
                 novos.push({
                     id_pulsus: idPulsus,
                     nome: nItem.nome,
                     matchType: 'NEW',
-                    newData: { codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: cleanNCpf, endereco_base: nAddress, latitude_base: nLat, longitude_base: nLon }
+                    newData: { 
+                        codigo_setor: codigoSetorNum, 
+                        grupo: nItem.grupo || 'Vendedor', 
+                        cpf: cleanNCpf, 
+                        endereco_base: hasValidCoords ? nAddress : null, 
+                        latitude_base: hasValidCoords ? nLat : null, 
+                        longitude_base: hasValidCoords ? nLon : null 
+                    }
                 });
             } else {
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
                 const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
                 const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
                 const cpfDiff = Boolean(cleanNCpf && cleanExistCpf !== cleanNCpf);
-                const addressDiff = Boolean(nAddress && (existing.EnderecoBase || '').trim() !== nAddress);
-                const latDiff = Boolean(nLat !== null && Number(existing.LatitudeBase) !== nLat);
-                const lonDiff = Boolean(nLon !== null && Number(existing.LongitudeBase) !== nLon);
+                const addressDiff = Boolean(hasValidCoords && nAddress && (existing.EnderecoBase || '').trim() !== nAddress);
+                const latDiff = Boolean(hasValidCoords && (existing.LatitudeBase === null || Number(existing.LatitudeBase) !== nLat));
+                const lonDiff = Boolean(hasValidCoords && (existing.LongitudeBase === null || Number(existing.LongitudeBase) !== nLon));
 
                 if (nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff) {
                     const changes = [];
@@ -1671,9 +1680,9 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                             codigo_setor: codigoSetorNum, 
                             grupo: nItem.grupo || 'Vendedor', 
                             cpf: cleanNCpf || cleanExistCpf,
-                            endereco_base: nAddress || existing.EnderecoBase,
-                            latitude_base: nLat !== null ? nLat : existing.LatitudeBase,
-                            longitude_base: nLon !== null ? nLon : existing.LongitudeBase
+                            endereco_base: hasValidCoords ? (nAddress || existing.EnderecoBase) : existing.EnderecoBase,
+                            latitude_base: hasValidCoords ? nLat : existing.LatitudeBase,
+                            longitude_base: hasValidCoords ? nLon : existing.LongitudeBase
                         },
                         changes
                     });
@@ -1855,9 +1864,9 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                         UPDATE FuelColaboradores 
                         SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo,
                             CPF = COALESCE(@CPF, CPF),
-                            EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
-                            LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
-                            LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase)
+                            EnderecoBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) AND @EnderecoBase IS NOT NULL AND @EnderecoBase <> '' THEN @EnderecoBase ELSE EnderecoBase END,
+                            LatitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LatitudeBase ELSE LatitudeBase END,
+                            LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END
                         WHERE ID_Pulsus = @ID_Pulsus
                     `);
                 processedCount++;
@@ -4313,7 +4322,9 @@ async function updateUserPendingStatus(pool, userId) {
                         const lonVal = uRow.Longitude !== undefined && uRow.Longitude !== null ? Number(uRow.Longitude) : null;
                         const fullName = uRow.FullName || uRow.Nome || '';
 
-                        if (endVal || latVal !== null || lonVal !== null) {
+                        const hasGps = endVal && latVal !== null && lonVal !== null && !isNaN(latVal) && !isNaN(lonVal) && (latVal !== 0 || lonVal !== 0);
+
+                        if (hasGps) {
                             await pool.request()
                                 .input('EndVal', sql.NVarChar, endVal)
                                 .input('LatVal', sql.Float, latVal)
@@ -4322,9 +4333,9 @@ async function updateUserPendingStatus(pool, userId) {
                                 .input('FullName', sql.NVarChar, fullName)
                                 .query(`
                                     UPDATE FuelColaboradores
-                                    SET EnderecoBase = COALESCE(@EndVal, EnderecoBase),
-                                        LatitudeBase = COALESCE(@LatVal, LatitudeBase),
-                                        LongitudeBase = COALESCE(@LonVal, LongitudeBase),
+                                    SET EnderecoBase = @EndVal,
+                                        LatitudeBase = @LatVal,
+                                        LongitudeBase = @LonVal,
                                         EnderecoPendente = 0
                                     WHERE (CPF IS NOT NULL AND REPLACE(REPLACE(CPF, '.', ''), '-', '') = @CleanCpf AND @CleanCpf IS NOT NULL AND @CleanCpf <> '')
                                        OR (LOWER(RTRIM(LTRIM(Nome))) = LOWER(RTRIM(LTRIM(@FullName))) AND @FullName <> '')
@@ -5571,7 +5582,9 @@ async function updateUserPendingStatus(pool, userId) {
                         const lonVal = updatedColab.Longitude !== undefined && updatedColab.Longitude !== null ? Number(updatedColab.Longitude) : null;
                         const fullName = updatedColab.FullName || updatedColab.Nome || '';
 
-                        if (endVal || latVal !== null || lonVal !== null) {
+                        const hasGps = endVal && latVal !== null && lonVal !== null && !isNaN(latVal) && !isNaN(lonVal) && (latVal !== 0 || lonVal !== 0);
+
+                        if (hasGps) {
                             await pool.request()
                                 .input('EndVal', sql.NVarChar, endVal)
                                 .input('LatVal', sql.Float, latVal)
@@ -5580,9 +5593,9 @@ async function updateUserPendingStatus(pool, userId) {
                                 .input('FullName', sql.NVarChar, fullName)
                                 .query(`
                                     UPDATE FuelColaboradores
-                                    SET EnderecoBase = COALESCE(@EndVal, EnderecoBase),
-                                        LatitudeBase = COALESCE(@LatVal, LatitudeBase),
-                                        LongitudeBase = COALESCE(@LonVal, LongitudeBase),
+                                    SET EnderecoBase = @EndVal,
+                                        LatitudeBase = @LatVal,
+                                        LongitudeBase = @LonVal,
                                         EnderecoPendente = 0
                                     WHERE (CPF IS NOT NULL AND REPLACE(REPLACE(CPF, '.', ''), '-', '') = @CleanCpf AND @CleanCpf IS NOT NULL AND @CleanCpf <> '')
                                        OR (LOWER(RTRIM(LTRIM(Nome))) = LOWER(RTRIM(LTRIM(@FullName))) AND @FullName <> '')
