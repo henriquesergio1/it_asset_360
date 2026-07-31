@@ -1174,10 +1174,10 @@ const DeviceManager = () => {
                   {model?.imageUrl ? <img src={model.imageUrl} className="h-full w-full object-cover" alt="Ativo" referrerPolicy="no-referrer" /> : <ImageIcon className="text-slate-700 dark:text-slate-300" size={16}/>}
                 </div>
                 <div className="min-w-0 flex flex-col gap-0.5">
-                  <div className="text-xs group-hover:text-blue-600 dark:text-sky-400 transition-colors uppercase tracking-tight flex items-center gap-1.5 flex-wrap">
+                  <div className="text-xs transition-colors uppercase tracking-tight flex items-center gap-1.5 flex-wrap">
                     <span className="font-black text-amber-600 dark:text-amber-400">{brand?.name || '---'}</span>
                     <span className="text-slate-600 dark:text-slate-400">-</span>
-                    <span className="font-bold text-slate-150 text-slate-900 dark:text-white">{model?.name || '---'}</span>
+                    <span className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">{model?.name || '---'}</span>
                     {type?.allowMultipleUsers && (
                       <span className="bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[8px] px-1.5 py-0.5 rounded border border-amber-800/50 flex items-center gap-1 shrink-0" title="Dispositivo Compartilhado">
                         <Users size={8}/> COMPARTILHADO

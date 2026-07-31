@@ -528,11 +528,11 @@ const AccountManager = () => {
             <tr 
               key={acc.id} 
               onClick={() => handleOpenModal(acc)} 
-              className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-indigo-500 transition-all cursor-pointer bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50 group"
+              className="transition-all cursor-pointer bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50 group"
             >
               {visibleColumns.includes('name') && (
                 <td className="px-6 py-4">
-                  <div className="font-bold text-slate-900 dark:text-white group-hover:text-white transition-colors">{acc.name}</div>
+                  <div className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">{acc.name}</div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{acc.type}</div>
                 </td>
               )}

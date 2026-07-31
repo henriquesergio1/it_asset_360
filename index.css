@@ -279,3 +279,26 @@
   min-height: 450px;
   z-index: 0;
 }
+
+/* PADRONIZAÇÃO DE HOVER ANT DESIGN 6 PARA TODAS AS TABELAS */
+tr.group {
+  position: relative;
+  transition: background-color 0.15s ease-in-out;
+}
+
+html:not(.dark) tr.group:hover {
+  background-color: #f0f7ff !important;
+}
+
+html:not(.dark) tr.group:hover td:first-child {
+  box-shadow: inset 4px 0 0 0 #1677ff !important;
+}
+
+html.dark tr.group:hover {
+  background-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+html.dark tr.group:hover td:first-child {
+  box-shadow: inset 4px 0 0 0 #38bdf8 !important;
+}
+

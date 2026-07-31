@@ -1955,7 +1955,7 @@ const UserManager: React.FC = () => {
                       );
                     })()}
                     <div className="min-w-0">
-                      <div className="font-semibold text-slate-900 dark:text-white text-[13px]">{u.fullName}</div>
+                      <div className="font-semibold text-slate-900 dark:text-white text-[13px] group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">{u.fullName}</div>
                       <div className="flex gap-1 mt-0.5">
                         {u.status === UserStatus.ON_LEAVE && (
                           <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400">
