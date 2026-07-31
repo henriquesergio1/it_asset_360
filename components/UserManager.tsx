@@ -2043,7 +2043,7 @@ const UserManager: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up border border-slate-200 dark:border-slate-700 transition-colors">
             <div className="bg-slate-100 dark:bg-slate-900 px-8 py-5 flex justify-between items-center shrink-0 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Colaborador' : 'Editar Colaborador') : 'Novo Colaborador'}</h3>

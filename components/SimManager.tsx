@@ -393,7 +393,7 @@ const SimManager = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in overflow-y-auto">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 shadow-2xl relative my-8">
             <div className="bg-white dark:bg-slate-800 p-6 flex justify-between items-center border-b border-slate-200 dark:border-slate-700 rounded-t-3xl">
               <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Chip' : 'Editar Chip') : 'Novo Chip / SIM'}</h3>
@@ -439,7 +439,7 @@ const SimManager = () => {
       )}
 
       {isReasonModalOpen && (
-        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
             <div className="p-8 text-center border-b border-slate-200 dark:border-slate-700">
               <div className="h-16 w-16 bg-blue-100 dark:bg-sky-500/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-sky-400 mx-auto mb-4 border border-blue-800/30"><Save size={32} /></div>
@@ -458,7 +458,7 @@ const SimManager = () => {
       )}
 
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-900/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-sm border border-slate-200 dark:border-slate-700 shadow-2xl relative overflow-hidden">
             <div className="p-8 text-center border-b border-slate-200 dark:border-slate-700">
               <div className="h-16 w-16 bg-rose-50 dark:bg-rose-950/40 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto mb-4 border border-rose-200 dark:border-rose-800/30 transition-transform"><AlertTriangle size={32} /></div>
