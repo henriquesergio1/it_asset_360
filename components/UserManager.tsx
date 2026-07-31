@@ -1920,7 +1920,7 @@ const UserManager: React.FC = () => {
               <tr 
                 key={u.id} 
                 onClick={() => handleOpenModal(u, true)} 
-                className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-emerald-500 bg-white dark:bg-slate-800 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-emerald-50 dark:bg-emerald-500/20 border-l-emerald-500' : ''}`}
+                className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer group bg-white dark:bg-slate-800 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-blue-50/80 dark:bg-sky-500/20 border-l-blue-600' : ''}`}
               >
                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   <input 

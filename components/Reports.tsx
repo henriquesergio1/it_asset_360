@@ -1580,7 +1580,7 @@ const Reports = () => {
                         auditsReportData.map(a => {
                           const device = devices.find(d => d.id === a.deviceId);
                           return (
-                            <tr key={a.id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-b border-slate-200 dark:border-slate-700/50 transition-all">
+                            <tr key={a.id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all group">
                               <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{new Date(a.date).toLocaleDateString('pt-BR')}</td>
                               <td 
                                 onClick={() => handleDeviceClick(a.deviceId)}

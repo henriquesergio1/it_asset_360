@@ -468,7 +468,7 @@ const Consumables = () => {
                                 filteredConsumables.map(c => {
                                     const isLowStock = c.CurrentStock <= c.MinStock;
                                     return (
-                                        <tr key={c.Id} className="hover:bg-slate-100 dark:hover:bg-slate-700/60 border-l-4 border-l-transparent hover:border-l-blue-500 transition-all cursor-pointer group">
+                                        <tr key={c.Id} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer group">
                                             {visibleColumns.includes('Name') && (
                                                 <td className="p-4">
                                                     <div className="font-bold text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 dark:text-sky-400 transition-colors">{c.Name}</div>

@@ -1,3 +1,3 @@
 
-export const SYSTEM_VERSION = '1.21.7';
+export const SYSTEM_VERSION = '1.21.8';
 export const APP_NAME = 'Fuel360';

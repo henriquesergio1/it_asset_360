@@ -498,7 +498,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
             filteredTasks.map((task) => (
               <tr 
                 key={task.id} 
-                className={`group border-l-4 border-l-transparent transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 hover:border-l-indigo-500 ${selectedTasksIds.includes(task.id) ? 'bg-indigo-900/10 border-l-indigo-500' : ' '}`}
+                className={`group border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer ${selectedTasksIds.includes(task.id) ? 'bg-blue-50/80 dark:bg-slate-700/80 border-l-blue-600' : ''}`}
                 onClick={() => setSelectedTaskId(task.id)}
               >
                 <td className="px-6 py-4 text-center" onClick={(e) => e.stopPropagation()}>

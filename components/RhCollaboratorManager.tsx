@@ -1463,7 +1463,7 @@ export const RhCollaboratorManager: React.FC = () => {
                   setDetailTab('cadastro');
                   setIsDetailModalOpen(true);
                 }}
-                className={`border-b border-slate-200 dark:border-slate-700/40 hover:bg-slate-100/60 dark:hover:bg-slate-900/30 cursor-pointer transition-all text-xs ${isColabDemitido ? 'bg-rose-50/10 text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-200'}`}
+                className={`border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 cursor-pointer transition-all text-xs group ${isColabDemitido ? 'bg-rose-50/10 text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-slate-200'}`}
               >
                 {visibleColumns.includes('fullName') && (
                   <td className="px-6 py-4 font-black">
