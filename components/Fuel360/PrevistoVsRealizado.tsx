@@ -1530,6 +1530,12 @@ export const PrevistoVsRealizado: React.FC = () => {
                                                             {supervisorDoColab && (
                                                                 <p className="text-[10px] text-slate-500 mt-0.5"><span className="font-bold">Sup:</span> {supervisorDoColab}</p>
                                                             )}
+                                                            <div className="flex gap-3 mt-2 pt-2 border-t border-slate-100">
+                                                                <div className="flex-1 bg-blue-50 rounded-lg px-2 py-1.5 text-center">
+                                                                    <p className="text-[9px] font-bold text-blue-400 uppercase">Clientes</p>
+                                                                    <p className="text-sm font-black text-blue-700">{filteredRoteiroPoints.filter(v => v.Cod_Vend === vId).length}</p>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </Popup>

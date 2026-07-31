@@ -453,6 +453,18 @@ const MapModal: React.FC<{ route: any; onCalculated: (km: number) => void; onTog
                                                     </div>
                                                 </div>
                                             )}
+                                            {p.mapIndex === 0 && !p.isExcluded && (
+                                                <div className="flex gap-3 mt-1 pt-2 border-t border-slate-100">
+                                                    <div className="flex-1 bg-blue-50 rounded-lg px-2 py-1.5 text-center">
+                                                        <p className="text-[9px] font-bold text-blue-400 uppercase">Clientes</p>
+                                                        <p className="text-sm font-black text-blue-700">{route.visitCount ?? (route.allPoints.filter((pt: any) => pt.mapIndex > 0 && !pt.isExcluded).length)}</p>
+                                                    </div>
+                                                    <div className="flex-1 bg-emerald-50 rounded-lg px-2 py-1.5 text-center">
+                                                        <p className="text-[9px] font-bold text-emerald-400 uppercase">Dist. Est.</p>
+                                                        <p className="text-sm font-black text-emerald-700">{route.km > 0 ? `${route.km.toFixed(1)} km` : '—'}</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {p.mapIndex !== 0 && (
                                                 <>
                                                     <p className={`font-black text-[10px] uppercase mb-1 ${p.isExcluded ? 'text-slate-400' : 'text-blue-600'}`}>
