@@ -12,6 +12,7 @@ import { AjusteRota } from './Fuel360/AjusteRota';
 import { DataProvider } from './Fuel360/context/DataContext';
 import { AuthProvider } from './Fuel360/context/AuthContext';
 import { CalculatorIcon } from './Fuel360/icons';
+import { UI_CARD_HEADER, UI_CARD_CONTAINER } from '../constants';
 
 type FuelView = 'calculo' | 'roteirizador' | 'ajuste_rota' | 'comparativo' | 'simulacoes' | 'equipe' | 'ausencias' | 'relatorios' | 'config';
 
@@ -50,9 +51,9 @@ const FuelContent: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Banner Header Adaptativo (Dark / Light) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+    <div className="space-y-6 animate-fade-in">
+      {/* Banner Header Padronizado (Tailwind Tokens) */}
+      <div className={UI_CARD_HEADER}>
         <div>
           <div className="flex items-center space-x-3 mb-1">
             <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl border border-emerald-500/20">
@@ -64,8 +65,8 @@ const FuelContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Container Principal Adaptativo */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm min-h-[600px] transition-colors">
+      {/* Container Principal Padronizado */}
+      <div className={`${UI_CARD_CONTAINER} min-h-[600px]`}>
         {renderContent()}
       </div>
     </div>

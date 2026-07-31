@@ -10,6 +10,8 @@ import {
 } from './icons';
 import { formatCPF } from '../../utils/rhValidation';
 
+const DEFAULT_GRUPOS = ['Vendedor', 'Promotor', 'Supervisor', 'Gerente', 'Coordenador', 'Diretor'];
+
 // --- COMPONENTE: MODAL DE COLABORADOR ---
 const ColaboradorModal: React.FC<{ 
     isOpen: boolean; 
@@ -27,6 +29,15 @@ const ColaboradorModal: React.FC<{
     const [addressChanged, setAddressChanged] = useState(false);
     const [quickCoords, setQuickCoords] = useState('');
 
+    const availableGroupNames = useMemo(() => {
+        const set = new Set<string>(DEFAULT_GRUPOS);
+        if (Array.isArray(grupos)) {
+            grupos.forEach(g => { if (g && g.Nome) set.add(g.Nome); });
+        }
+        if (formData.Grupo) set.add(formData.Grupo);
+        return Array.from(set);
+    }, [grupos, formData.Grupo]);
+
     useEffect(() => {
         setError(''); setMotivo(''); setSaving(false); setQuickCoords('');
         if (colaborador) { 
@@ -34,12 +45,12 @@ const ColaboradorModal: React.FC<{
             setOriginalAddress(colaborador.EnderecoBase || '');
             setAddressChanged(false);
         } else {
-            const defaultGroup = initialGroup === 'Todos' ? (grupos.length > 0 ? grupos[0].Nome : 'Vendedor') : initialGroup;
+            const defaultGroup = initialGroup === 'Todos' ? (availableGroupNames.length > 0 ? availableGroupNames[0] : 'Vendedor') : initialGroup;
             setFormData({ ID_Pulsus: undefined, CodigoSetor: undefined, Nome: '', Grupo: defaultGroup, TipoVeiculo: 'Carro', Ativo: true, LatitudeBase: 0, LongitudeBase: 0, EnderecoBase: '' });
             setOriginalAddress('');
             setAddressChanged(false);
         }
-    }, [colaborador, isOpen, initialGroup, grupos]);
+    }, [colaborador, isOpen, initialGroup, availableGroupNames]);
 
     if (!isOpen) return null;
 
@@ -159,16 +170,42 @@ const ColaboradorModal: React.FC<{
                     
                     {/* Linha 1: Setor, ID Pulsus, Grupo / Cargo */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Setor (Cód)</label><input type="number" value={formData.CodigoSetor ?? ''} onChange={e => setFormData({...formData, CodigoSetor: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 font-mono text-base shadow-sm outline-none" required /></div>
-                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">ID (Pulsus)</label><input type="number" value={formData.ID_Pulsus ?? ''} onChange={e => setFormData({...formData, ID_Pulsus: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 font-mono text-base shadow-sm outline-none" required /></div>
-                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Grupo / Cargo</label><select value={formData.Grupo || ''} onChange={e => setFormData({...formData, Grupo: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" required><option value="">Selecione...</option>{grupos.map(g => (<option key={g.ID_Grupo} value={g.Nome}>{g.Nome}</option>))}</select></div>
+                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Setor (Cód)</label><input type="number" value={formData.CodigoSetor ?? ''} onChange={e => setFormData({...formData, CodigoSetor: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 font-mono text-base shadow-sm outline-none font-bold" required /></div>
+                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">ID (Pulsus)</label><input type="number" value={formData.ID_Pulsus ?? ''} onChange={e => setFormData({...formData, ID_Pulsus: Number(e.target.value)})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 font-mono text-base shadow-sm outline-none font-bold" required /></div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Grupo / Cargo</label>
+                            <select 
+                                value={formData.Grupo || ''} 
+                                onChange={e => setFormData({...formData, Grupo: e.target.value})} 
+                                className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none font-medium" 
+                                required
+                            >
+                                <option value="" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Selecione...</option>
+                                {availableGroupNames.map(nome => (
+                                    <option key={nome} value={nome} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">
+                                        {nome}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     {/* Linha 2: Nome Completo, CPF, Veículo */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1 md:col-span-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={formData.Nome || ''} onChange={e => setFormData({...formData, Nome: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 text-sm shadow-sm outline-none" required /></div>
+                        <div className="space-y-1 md:col-span-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={formData.Nome || ''} onChange={e => setFormData({...formData, Nome: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 text-sm shadow-sm outline-none font-medium" required /></div>
                         <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">CPF</label><input type="text" value={formData.CPF || ''} onChange={e => { const raw = e.target.value.replace(/\D/g, '').substring(0, 11); const masked = raw.length > 9 ? raw.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4') : raw.length > 6 ? raw.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3') : raw.length > 3 ? raw.replace(/(\d{3})(\d{1,3})/, '$1.$2') : raw; setFormData({...formData, CPF: masked}); }} placeholder="000.000.000-00" className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-mono text-sm focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" /></div>
-                        <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Veículo</label><select value={formData.TipoVeiculo} onChange={e => setFormData({...formData, TipoVeiculo: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none"><option value="Carro">Carro</option><option value="Moto">Moto</option><option value="Sem Veículo / VT">Sem Veículo / VT</option></select></div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Veículo</label>
+                            <select 
+                                value={formData.TipoVeiculo} 
+                                onChange={e => setFormData({...formData, TipoVeiculo: e.target.value as any})} 
+                                className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none font-medium"
+                            >
+                                <option value="Carro" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Carro</option>
+                                <option value="Moto" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Moto</option>
+                                <option value="Sem Veículo / VT" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Sem Veículo / VT</option>
+                            </select>
+                        </div>
                     </div>
 
                     {/* Seção Coordenadas de Partida */}
@@ -707,120 +744,153 @@ export const GestaoEquipe: React.FC = () => {
                 </div>
             </div>
 
-            <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto flex items-center scrollbar-hide bg-white dark:bg-slate-900 rounded-t-xl transition-colors">
-                <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Todos</button>
-                {grupos.map(group => (
-                    <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{group.Nome}</button>
-                ))}
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-b-xl shadow-sm border border-slate-200 dark:border-slate-800 border-t-0 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative w-full md:w-80"><input type="text" placeholder="Buscar por nome ou ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-sm outline-none shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"/><div className="absolute left-3 top-2.5 text-slate-400"><SearchIcon className="w-4 h-4" /></div></div>
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                        <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'Nome' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nome</button>
-                        <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${sortBy === 'CodigoSetor' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Setor</button>
-                    </div>
+            {/* Container Unificado da Tabela e Filtros */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
+                {/* Aba de Seleção por Grupo */}
+                <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto flex items-center scrollbar-hide px-4 pt-2 bg-slate-50/50 dark:bg-slate-800/30 transition-colors">
+                    <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Todos</button>
+                    {grupos.map(group => (
+                        <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{group.Nome}</button>
+                    ))}
                 </div>
 
-                <div className="flex items-center space-x-4 flex-wrap gap-2">
-                    <button 
-                        onClick={() => setShowOnlyPendingAddress(!showOnlyPendingAddress)}
-                        className={`flex items-center px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${showOnlyPendingAddress ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-                    >
-                        <LocationMarkerIcon className="w-4 h-4 mr-2"/>
-                        Pendentes de Endereço
-                    </button>
-
-                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <input type="checkbox" id="showInactives" checked={showInactives} onChange={e => setShowInactives(e.target.checked)} className="h-4 w-4 text-blue-600 rounded" />
-                        <label htmlFor="showInactives" className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Exibir Inativos</label>
-                    </div>
-
-                    {selectedIds.size > 0 && (
-                        <div className="flex items-center bg-blue-50 dark:bg-blue-950/40 px-4 py-2 rounded-lg border border-blue-100 dark:border-blue-800 animate-fade-in shadow-sm">
-                            <span className="text-xs font-bold text-blue-700 dark:text-blue-300 mr-4">{selectedIds.size} selecionados</span>
-                            <div className="flex space-x-2">
-                                 {bulkAction === 'NONE' ? (<><button onClick={() => setBulkAction('MOVE')} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded hover:bg-blue-100">Mover</button><button onClick={() => { setBulkAction('VEHICLE'); setBulkValue(''); }} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded hover:bg-blue-100">Veículo</button></>) : (
-                                     <div className="flex items-center space-x-2">
-                                         {bulkAction === 'MOVE' && <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">{grupos.map(g => <option key={g.ID_Grupo} value={g.Nome}>{g.Nome}</option>)}</select>}
-                                         {bulkAction === 'VEHICLE' && (
-                                             <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-32 px-2 py-1 text-xs border rounded dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-                                                 <option value="">Selecione...</option>
-                                                 <option value="Carro">Carro</option>
-                                                 <option value="Moto">Moto</option>
-                                                 <option value="Sem Veículo / VT">Sem Veículo / VT</option>
-                                             </select>
-                                         )}
-                                         <button onClick={handleBulkSubmit} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded shadow-sm">{processingBulk ? <SpinnerIcon className="w-3 h-3"/> : "Aplicar"}</button>
-                                         <button onClick={() => { setBulkAction('NONE'); setBulkValue(''); }} className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded">X</button>
-                                     </div>
-                                 )}
-                            </div>
+                {/* Barra de Filtros e Busca */}
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        <div className="relative w-full md:w-80">
+                            <input type="text" placeholder="Buscar por nome ou ID..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-sm outline-none shadow-inner focus:ring-2 focus:ring-blue-500 transition-all"/>
+                            <div className="absolute left-3 top-2.5 text-slate-400"><SearchIcon className="w-4 h-4" /></div>
                         </div>
-                    )}
-                </div>
-            </div>
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
+                            <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'Nome' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nome</button>
+                            <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'CodigoSetor' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Setor</button>
+                        </div>
+                    </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
-                    <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-400 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
-                        <tr><th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></th><th className="p-4">Colaborador</th><th className="p-4">Grupo</th><th className="p-4 text-center">Veículo</th><th className="p-4 text-center">Status</th><th className="p-4 text-right">Ações</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredData.map(c => {
-                            const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
-                            return (
-                                <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
-                                    <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            {c.Foto ? (
-                                                <img src={c.Foto} alt={c.Nome} className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
-                                            ) : (
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700 shrink-0">
-                                                    {(c.Nome || 'C')[0]?.toUpperCase()}
+                    <div className="flex items-center space-x-4 flex-wrap gap-2">
+                        <button 
+                            onClick={() => setShowOnlyPendingAddress(!showOnlyPendingAddress)}
+                            className={`flex items-center px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showOnlyPendingAddress ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                        >
+                            <LocationMarkerIcon className="w-4 h-4 mr-2"/>
+                            Pendentes de Endereço
+                        </button>
+
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <input type="checkbox" id="showInactives" checked={showInactives} onChange={e => setShowInactives(e.target.checked)} className="h-4 w-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="showInactives" className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Exibir Inativos</label>
+                        </div>
+
+                        {selectedIds.size > 0 && (
+                            <div className="flex items-center bg-blue-50 dark:bg-blue-950/40 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-800 animate-fade-in shadow-sm">
+                                <span className="text-xs font-bold text-blue-700 dark:text-blue-300 mr-4">{selectedIds.size} selecionados</span>
+                                <div className="flex space-x-2">
+                                     {bulkAction === 'NONE' ? (
+                                        <>
+                                            <button onClick={() => setBulkAction('MOVE')} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-lg hover:bg-blue-100">Mover</button>
+                                            <button onClick={() => { setBulkAction('VEHICLE'); setBulkValue(''); }} className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-xs font-bold rounded-lg hover:bg-blue-100">Veículo</button>
+                                        </>
+                                     ) : (
+                                         <div className="flex items-center space-x-2">
+                                             {bulkAction === 'MOVE' && (
+                                                 <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-36 px-2 py-1 text-xs border rounded-lg bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-medium">
+                                                     <option value="" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Selecione...</option>
+                                                     {DEFAULT_GRUPOS.concat(grupos.map(g => g.Nome).filter(n => n && !DEFAULT_GRUPOS.includes(n))).map(nome => (
+                                                         <option key={nome} value={nome} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                                                             {nome}
+                                                         </option>
+                                                     ))}
+                                                 </select>
+                                             )}
+                                             {bulkAction === 'VEHICLE' && (
+                                                 <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="w-36 px-2 py-1 text-xs border rounded-lg bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-medium">
+                                                     <option value="" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Selecione...</option>
+                                                     <option value="Carro" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Carro</option>
+                                                     <option value="Moto" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Moto</option>
+                                                     <option value="Sem Veículo / VT" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Sem Veículo / VT</option>
+                                                 </select>
+                                             )}
+                                             <button onClick={handleBulkSubmit} className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-sm">{processingBulk ? <SpinnerIcon className="w-3 h-3"/> : "Aplicar"}</button>
+                                             <button onClick={() => { setBulkAction('NONE'); setBulkValue(''); }} className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg">X</button>
+                                         </div>
+                                     )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Tabela de Colaboradores */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                        <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
+                            <tr>
+                                <th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></th>
+                                <th className="p-4">Colaborador</th>
+                                <th className="p-4">Grupo</th>
+                                <th className="p-4 text-center">Veículo</th>
+                                <th className="p-4 text-center">Status</th>
+                                <th className="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {filteredData.map(c => {
+                                const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
+                                return (
+                                    <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
+                                        <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></td>
+                                        <td className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                {c.Foto ? (
+                                                    <img src={c.Foto} alt={c.Nome} className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700 shrink-0">
+                                                        {(c.Nome || 'C')[0]?.toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
+                                                        {c.Nome}
+                                                        {isPendingAddr && c.Ativo && (
+                                                            <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
+                                                                <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
+                                                            </span>
+                                                        )}
+                                                        {c.EnderecoBase && !isPendingAddr && <span className="ml-1" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
                                                 </div>
-                                            )}
-                                            <div>
-                                                <div className="font-bold text-slate-800 dark:text-white flex items-center flex-wrap gap-2">
-                                                    {c.Nome}
-                                                    {isPendingAddr && c.Ativo && (
-                                                        <span className="bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 flex items-center animate-pulse" title="Endereço de partida precisa ser cadastrado ou revisto">
-                                                            <ExclamationIcon className="w-2.5 h-2.5 mr-1"/> REVER ENDEREÇO
-                                                        </span>
-                                                    )}
-                                                    {c.EnderecoBase && !isPendingAddr && <span className="ml-1" title="Ponto de partida cadastrado"><LocationMarkerIcon className="w-3 h-3 text-emerald-500" /></span>}
-                                                </div>
-                                                <div className="text-[11px] text-slate-400 dark:text-slate-400">Setor: {c.CodigoSetor} • Pulsus: {c.ID_Pulsus}</div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-300">{c.Grupo}</td>
-                                    <td className="p-4 text-center">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                            c.TipoVeiculo === 'Carro' 
-                                                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-800' 
-                                                : c.TipoVeiculo === 'Moto' 
-                                                ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' 
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                                        }`}>
-                                            {c.TipoVeiculo}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center font-bold text-xs">{c.Ativo ? <span className="text-emerald-600 dark:text-emerald-400">Ativo</span> : <span className="text-red-400 dark:text-red-400">Inativo</span>}</td>
-                                    <td className="p-4 text-right space-x-2">
-                                        <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${isPendingAddr && c.Ativo ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-sm'}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
-                                        {/* Botões de Status Removidos: Automação via Sincronização */}
+                                        </td>
+                                        <td className="p-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-300">{c.Grupo}</td>
+                                        <td className="p-4 text-center">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                                                c.TipoVeiculo === 'Carro' 
+                                                    ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-sky-300 border-blue-100 dark:border-blue-800' 
+                                                    : c.TipoVeiculo === 'Moto' 
+                                                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-300 border-amber-100 dark:border-amber-800' 
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                            }`}>
+                                                {c.TipoVeiculo}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-center font-bold text-xs">{c.Ativo ? <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">Ativo</span> : <span className="text-red-400 dark:text-red-400 font-extrabold">Inativo</span>}</td>
+                                        <td className="p-4 text-right space-x-2">
+                                            <button onClick={() => handleEdit(c)} className={`p-1.5 rounded-lg transition ${isPendingAddr && c.Ativo ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/60' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-sm'}`} title="Editar"><PencilIcon className="w-4 h-4"/></button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {filteredData.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="p-12 text-center text-slate-400 dark:text-slate-500 italic font-medium">
+                                        Nenhum colaborador encontrado para os filtros aplicados.
                                     </td>
                                 </tr>
-                            );
-                        })}
-                        {filteredData.length === 0 && (
-                            <tr><td colSpan={6} className="p-12 text-center text-slate-400 italic">Nenhum colaborador encontrado para os filtros aplicados.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
