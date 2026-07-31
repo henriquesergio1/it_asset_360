@@ -21,29 +21,58 @@ import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { ZabbixMonitorTab } from './ZabbixMonitorTab';
 
-const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, children }: any) => (
-  <div 
-    className={`bg-white dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
-    onClick={onClick}
-  >
-    <div className="flex items-start justify-between mb-4 z-10">
-      <div className={`p-3 rounded-xl ${color} bg-opacity-20 text-slate-900 dark:text-white shadow-lg group-hover:scale-110 transition-transform`}>
-        <Icon className="w-6 h-6" />
-      </div>
-      {trend && (
-        <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">
-          <TrendingUp size={12} />
-          {trend}
+const colorStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  blue: {
+    bg: 'bg-blue-50 dark:bg-sky-500/20',
+    text: 'text-blue-600 dark:text-sky-400',
+    border: 'border-blue-200 dark:border-sky-800/30',
+    label: 'text-blue-600 dark:text-sky-400/80'
+  },
+  emerald: {
+    bg: 'bg-emerald-50 dark:bg-emerald-500/20',
+    text: 'text-emerald-600 dark:text-emerald-400',
+    border: 'border-emerald-200 dark:border-emerald-800/30',
+    label: 'text-emerald-600 dark:text-emerald-400/80'
+  },
+  indigo: {
+    bg: 'bg-indigo-50 dark:bg-indigo-500/20',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    border: 'border-indigo-200 dark:border-indigo-800/30',
+    label: 'text-indigo-600 dark:text-indigo-400/80'
+  },
+  amber: {
+    bg: 'bg-amber-50 dark:bg-amber-500/20',
+    text: 'text-amber-600 dark:text-amber-400',
+    border: 'border-amber-200 dark:border-amber-800/30',
+    label: 'text-amber-600 dark:text-amber-400/80'
+  }
+};
+
+const StatCard = ({ title, value, icon: Icon, color = 'blue', subtitle, onClick, trend, children }: any) => {
+  const style = colorStyles[color] || colorStyles.blue;
+  return (
+    <div 
+      className={`bg-white dark:bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col justify-between hover:shadow-xl hover:shadow-blue-900/10 transition-all duration-500 group relative overflow-hidden ${onClick ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-4 z-10">
+        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border group-hover:scale-110 transition-transform ${style.bg} ${style.text} ${style.border}`}>
+          <Icon className="w-6 h-6" />
         </div>
-      )}
-    </div>
-    <div className="z-10">
-      <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-500 dark:text-slate-400/80">{title}</p>
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{value}</h3>
+        {trend && (
+          <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold bg-emerald-400/10 px-2 py-1 rounded-full">
+            <TrendingUp size={12} />
+            {trend}
+          </div>
+        )}
       </div>
-      {subtitle && <p className="text-[11px] mt-2 text-slate-600 dark:text-slate-400 font-medium italic">{subtitle}</p>}
-    </div>
+      <div className="z-10">
+        <span className={`text-[11px] font-black uppercase tracking-[0.2em] block mb-1.5 opacity-70 ${style.label}`}>{title}</span>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{value}</h3>
+        </div>
+        {subtitle && <p className="text-[11px] mt-2 text-slate-600 dark:text-slate-400 font-medium italic">{subtitle}</p>}
+      </div>
     
     {children && (
       <div className="absolute inset-0 bg-white dark:bg-slate-800/95 backdrop-blur-md p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-20 flex flex-col">
@@ -58,9 +87,9 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, onClick, trend, c
     )}
     
     {/* Background glow effect */}
-    <div className={`absolute -bottom-10 -right-10 w-32 h-32 ${color.replace('bg-', 'bg-').replace('-600', '-600/10')} rounded-full blur-2xl transition-all duration-500 group-hover:scale-150 opacity-0 group-hover:opacity-100`}></div>
   </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const { 
@@ -699,7 +728,7 @@ const Dashboard = () => {
           title="Dispositivos"
           value={devices.length}
           icon={Smartphone}
-          color="bg-blue-600"
+          color="blue"
           subtitle={`${availableDevices} disponíveis para entrega`}
           onClick={() => navigate('/devices')}
         >
@@ -723,7 +752,7 @@ const Dashboard = () => {
           title="Colaboradores"
           value={users.filter(u => u.active).length}
           icon={Users}
-          color="bg-emerald-600"
+          color="emerald"
           subtitle={`${users.length} cadastrados no total`}
           onClick={() => navigate('/users')}
         >
@@ -741,7 +770,7 @@ const Dashboard = () => {
           title="Licenças & Contas"
           value={accounts.length}
           icon={Lock}
-          color="bg-indigo-600"
+          color="indigo"
           subtitle={`${accounts.filter(a => a.status === 'Ativo').length} contas ativas`}
           onClick={() => navigate('/accounts')}
         >
@@ -759,7 +788,7 @@ const Dashboard = () => {
           title="Em Manutenção"
           value={maintenanceDevices}
           icon={Wrench}
-          color="bg-amber-500"
+          color="amber"
           subtitle="Aguardando retorno técnico"
           onClick={() => navigate('/devices?status=Em Manutenção')}
         />
