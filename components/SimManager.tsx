@@ -363,7 +363,7 @@ const SimManager = () => {
                     )}
                     {visibleColumns.includes('status') && (
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${sim.status === DeviceStatus.AVAILABLE ? 'bg-green-900/30 text-green-400' : 'bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400'}`}>
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${sim.status === DeviceStatus.AVAILABLE ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-800/40' : 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-800/40'}`}>
                           {sim.status}
                         </span>
                       </td>

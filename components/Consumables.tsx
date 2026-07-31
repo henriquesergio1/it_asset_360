@@ -482,7 +482,7 @@ const Consumables = () => {
                                                             {c.CurrentStock}
                                                         </span>
                                                         <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">{c.Unit}</span>
-                                                        {isLowStock && <div className="bg-red-900/20 p-1 rounded border border-red-800/30" title="Estoque Crítico"><AlertTriangle size={14} className="text-red-400 animate-pulse" /></div>}
+                                                        {isLowStock && <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 p-1 rounded border border-rose-200 dark:border-rose-800/30" title="Estoque Crítico"><AlertTriangle size={14} className="animate-pulse" /></div>}
                                                     </div>
                                                 </td>
                                             )}
@@ -498,7 +498,7 @@ const Consumables = () => {
                                             {visibleColumns.includes('EstimatedDaysLeft') && (
                                                 <td className="p-4">
                                                     {c.EstimatedDaysLeft !== null ? (
-                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${c.EstimatedDaysLeft <= 7 ? 'bg-red-900/20 text-red-400 border-red-800/30' : 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-800/30'}`}>
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${c.EstimatedDaysLeft <= 7 ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/30' : 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30'}`}>
                                                             ~ {c.EstimatedDaysLeft} dias
                                                         </span>
                                                     ) : (
@@ -519,7 +519,7 @@ const Consumables = () => {
                                                         onClick={() => toggleConsumableAlert(c.Id, c.Name)}
                                                         className={`p-2 rounded-xl transition-all border shadow-inner ${
                                                             !disabledConsumableAlerts.includes(c.Id)
-                                                                ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-100 dark:bg-amber-500/20'
+                                                                ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30 hover:bg-amber-100 dark:hover:bg-amber-500/30'
                                                                 : 'bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                                                         }`}
                                                         title={!disabledConsumableAlerts.includes(c.Id) ? "Alertas de Insumo Habilitados (clique para desabilitar)" : "Alertas de Insumo Desabilitados (clique para ativar)"}

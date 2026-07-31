@@ -2632,9 +2632,9 @@ const UserManager: React.FC = () => {
                       }
 
                       return userLogs.map(log => {
-                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-950 text-emerald-600 dark:text-emerald-400' :
-                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-950 text-blue-600 dark:text-sky-400' :
-                                           'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
+                        const statusClass = log.action.includes('ENTREGA') ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800/30' :
+                                           log.action.includes('DEVOLUCAO') ? 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950 dark:text-sky-400 dark:border-sky-800/30' :
+                                           'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
                         return (
                           <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-300 dark:border-slate-600 transition-all">
                             <div className="flex justify-between items-start">

@@ -558,14 +558,14 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  {/* Main Info */}
  <div className="flex-1 overflow-y-auto p-4 space-y-6 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
  {task.isRecurring && (
- <div className="bg-indigo-950/20 rounded-3xl border border-indigo-900/40 p-5 space-y-4 shadow-lg shadow-indigo-950/30">
+ <div className="bg-indigo-50/80 dark:bg-indigo-950/40 rounded-3xl border border-indigo-200 dark:border-indigo-800/40 p-5 space-y-4 shadow-sm">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
- <div className="p-1.5 bg-indigo-950 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-900/50">
+ <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 rounded-xl border border-indigo-200 dark:border-indigo-800/50">
  <Repeat size={16} />
  </div>
  <div>
- <h4 className="text-sm font-black uppercase text-indigo-300 tracking-wider">Tarefa Recorrente</h4>
+ <h4 className="text-sm font-black uppercase text-indigo-900 dark:text-indigo-300 tracking-wider">Tarefa Recorrente</h4>
  <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">
  {getRecurrenceDescription(task.recurrenceConfig)}
  </p>
@@ -574,8 +574,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  
  {task.dueDate && (
  <div className="text-right">
- <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest">Execução Pendente</p>
- <div className="text-xs font-black text-indigo-300 bg-indigo-950 border border-indigo-900 px-3 py-1 rounded-full mt-1 inline-flex items-center gap-1.5 animate-pulse">
+ <p className="text-[10px] text-indigo-700 dark:text-indigo-400 font-black uppercase tracking-widest">Execução Pendente</p>
+ <div className="text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 border border-indigo-300 dark:border-indigo-800 px-3 py-1 rounded-full mt-1 inline-flex items-center gap-1.5 animate-pulse">
  <Calendar size={12} />
  {parseLocalDate(task.dueDate).toLocaleDateString('pt-BR')}
  </div>
@@ -584,7 +584,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
  </div>
 
  {task.status !== TaskStatus.CANCELED && (
- <div className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-indigo-900/30 space-y-3">
+ <div className="bg-white dark:bg-slate-800/60 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-800/30 space-y-3">
  <label className="block text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider">
  Anotações para o Histórico de Execução (Opcional):
  </label>

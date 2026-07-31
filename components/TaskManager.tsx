@@ -516,7 +516,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                         {task.title}
                       </span>
                       {task.isRecurring && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-800/20">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800/30">
                           <Repeat size={10} /> {getRecurrenceDescription(task.recurrenceConfig)}
                         </span>
                       )}
@@ -525,7 +525,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                       {task.description}
                     </span>
                     {task.type === TaskType.MAINTENANCE && task.deviceId && (
-                      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400/80 mt-1.5 flex items-center gap-1 bg-indigo-950/30 w-fit px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400/80 mt-1.5 flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/30 w-fit px-2 py-0.5 rounded">
                         <Smartphone size={10} /> {getDeviceName(task.deviceId)}
                       </span>
                     )}
@@ -571,7 +571,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                 <td className="px-6 py-4">
                   {task.hasDueDate ? (
                     <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
-                      task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' bg-red-900/20 text-red-400 border-red-800/30 animate-pulse' :
+                      task.isOverdue && task.status !== TaskStatus.COMPLETED ? ' bg-rose-50 text-rose-600 border-rose-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/30 animate-pulse' :
                       task.isNearDue && task.status !== TaskStatus.COMPLETED ? ' bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-800/30' :
                       ' bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'
                     }`}>
@@ -590,7 +590,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
                         onClick={() => toggleTaskAlert(task.id)}
                         className={`p-2 rounded-xl transition-all border shadow-inner ${
                           !disabledTaskAlerts.includes(task.id)
-                            ? 'bg-amber-950/20 text-amber-500 border-amber-800/30 hover:bg-amber-100 dark:bg-amber-500/20'
+                            ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/30 hover:bg-amber-100 dark:hover:bg-amber-500/30'
                             : 'bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
