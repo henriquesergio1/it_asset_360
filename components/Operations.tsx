@@ -502,72 +502,72 @@ const Operations = () => {
  <div className="p-10 space-y-10">
  <div className="space-y-6">
  <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? '' : 'bg-orange-600'}`}>1</div>
- <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">O que está sendo movimentado?</h3>
- </div>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${activeTab === 'CHECKOUT' ? 'bg-blue-600' : 'bg-orange-600'}`}>1</div>
+  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">O que está sendo movimentado?</h3>
+  </div>
 
- <div className="flex gap-4">
- <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
- <Smartphone size={32}/>
- <span className="font-bold uppercase text-[11px] tracking-wider">Dispositivo / Equipamento</span>
- </button>
- <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : 'border-orange-600 bg-orange-900/30 text-orange-400') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
- <Cpu size={32}/>
- <span className="font-bold uppercase text-[11px] tracking-wider">Chip SIM Card</span>
- </button>
- </div>
+  <div className="flex gap-4">
+  <button onClick={() => { setAssetType('Device'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Device' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-900 dark:text-sky-300 font-bold' : 'border-orange-600 bg-orange-100 dark:bg-orange-950/40 text-orange-900 dark:text-orange-300 font-bold') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
+  <Smartphone size={32}/>
+  <span className="font-bold uppercase text-[11px] tracking-wider">Dispositivo / Equipamento</span>
+  </button>
+  <button onClick={() => { setAssetType('Sim'); setSelectedAssetId(''); }} className={`flex-1 p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${assetType === 'Sim' ? (activeTab === 'CHECKOUT' ? 'border-blue-600 bg-blue-100 dark:bg-sky-500/20 text-blue-900 dark:text-sky-300 font-bold' : 'border-orange-600 bg-orange-100 dark:bg-orange-950/40 text-orange-900 dark:text-orange-300 font-bold') : ' border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300'}`}>
+  <Cpu size={32}/>
+  <span className="font-bold uppercase text-[11px] tracking-wider">Chip SIM Card</span>
+  </button>
+  </div>
 
- <div className="relative group">
- <SearchableDropdown 
- options={assetOptions} 
- value={selectedAssetId} 
- onChange={setSelectedAssetId} 
- placeholder={assetType === 'Device' ?"Selecione o dispositivo pelo IMEI, Patrimônio ou Modelo...":"Selecione a linha pelo Número ou Operadora..."}
- icon={assetType === 'Device' ? <Smartphone size={18}/> : <Cpu size={18}/>}
- />
- </div>
- </div>
+  <div className="relative group">
+  <SearchableDropdown 
+  options={assetOptions} 
+  value={selectedAssetId} 
+  onChange={setSelectedAssetId} 
+  placeholder={assetType === 'Device' ?"Selecione o dispositivo pelo IMEI, Patrimônio ou Modelo...":"Selecione a linha pelo Número ou Operadora..."}
+  icon={assetType === 'Device' ? <Smartphone size={18}/> : <Cpu size={18}/>}
+  />
+  </div>
+  </div>
 
- {activeTab === 'CHECKOUT' && (
- <div className="space-y-8 animate-fade-in">
- <div className="space-y-6">
- <div className="flex items-center gap-4">
- <div className={`h-10 w-10 rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold`}>2</div>
- <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quem está recebendo?</h3>
- </div>
- <SearchableDropdown 
- options={userOptions} 
- value={selectedUserId} 
- onChange={setSelectedUserId} 
- placeholder="Pesquise o colaborador pelo nome ou CPF..."
- icon={<UserIcon size={18}/>}
- />
- <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-sky-500/20 rounded-2xl border border-blue-300 dark:border-sky-700/40">
- <input type="checkbox"id="sync"checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded border-slate-300 dark:border-slate-600"/>
- <label htmlFor="sync"className="text-xs font-bold text-blue-200 cursor-pointer">Sincronizar cargo do colaborador automaticamente com o ativo</label>
- </div>
- </div>
+  {activeTab === 'CHECKOUT' && (
+  <div className="space-y-8 animate-fade-in">
+  <div className="space-y-6">
+  <div className="flex items-center gap-4">
+  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">2</div>
+  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quem está recebendo?</h3>
+  </div>
+  <SearchableDropdown 
+  options={userOptions} 
+  value={selectedUserId} 
+  onChange={setSelectedUserId} 
+  placeholder="Pesquise o colaborador pelo nome ou CPF..."
+  icon={<UserIcon size={18}/>}
+  />
+  <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-sky-500/20 rounded-2xl border border-blue-200 dark:border-sky-700/40">
+  <input type="checkbox"id="sync"checked={syncAssetData} onChange={e => setSyncAssetData(e.target.checked)} className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-blue-600"/>
+  <label htmlFor="sync"className="text-xs font-bold text-blue-900 dark:text-sky-200 cursor-pointer">Sincronizar cargo do colaborador automaticamente com o ativo</label>
+  </div>
+  </div>
 
- {assetType === 'Device' && selectedAssetId && (
- <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-200 dark:border-slate-700">
- <div className="flex items-center gap-4">
- <div className="h-10 w-10 rounded-full flex items-center justify-center text-slate-900 dark:text-white font-bold">3</div>
- <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Acessórios Entregues</h3>
- </div>
- <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
- {accessoryTypes.map(acc => (
- <button 
- key={acc.id} 
- onClick={() => toggleAccessory(acc.id)}
- className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-100 dark:bg-sky-500/20 border-blue-500 text-blue-100 ' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
- >
- <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' text-slate-900 dark:text-white' : ' bg-slate-700 text-slate-700 dark:text-slate-300 '}`}>
- {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
- </div>
- <span className="text-[11px] font-black uppercase truncate">{acc.name}</span>
- </button>
- ))}
- </div>
+  {assetType === 'Device' && selectedAssetId && (
+  <div className="space-y-6 animate-fade-in pt-4 border-t border-slate-200 dark:border-slate-700">
+  <div className="flex items-center gap-4">
+  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">3</div>
+  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Acessórios Entregues</h3>
+  </div>
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+  {accessoryTypes.map(acc => (
+  <button 
+  key={acc.id} 
+  onClick={() => toggleAccessory(acc.id)}
+  className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-100 text-blue-900 dark:bg-sky-500/20 dark:text-sky-200 border-blue-500 font-bold ' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600 text-slate-700 dark:text-slate-300 '}`}
+  >
+  <div className={`h-6 w-6 rounded flex items-center justify-center ${selectedAccessoryTypeIds.includes(acc.id) ? ' bg-blue-600 text-white' : ' bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 '}`}>
+  {selectedAccessoryTypeIds.includes(acc.id) ? <CheckSquare size={16}/> : <Package size={16}/>}
+  </div>
+  <span className="text-[11px] font-black uppercase truncate">{acc.name}</span>
+  </button>
+  ))}
+  </div>
  </div>
  )}
  </div>

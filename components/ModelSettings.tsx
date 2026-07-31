@@ -312,11 +312,11 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {activeTab === 'SECTORS' && (
  <div className="max-w-2xl">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Cargos e Funções</h4>
- <form onSubmit={handleSectorSubmit} className="bg-emerald-50 dark:bg-emerald-500/20 p-6 rounded-2xl border border-emerald-900/40 mb-6 transition-colors">
- <h5 className="font-bold text-emerald-300 mb-4 uppercase text-xs tracking-wider">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
+ <form onSubmit={handleSectorSubmit} className="bg-emerald-50 dark:bg-emerald-500/20 p-6 rounded-2xl border border-emerald-200 dark:border-emerald-800/40 mb-6 transition-colors">
+ <h5 className="font-bold text-emerald-800 dark:text-emerald-300 mb-4 uppercase text-xs tracking-wider">{editingSector.id ? 'Editar Cargo' : 'Adicionar Novo Cargo'}</h5>
  <div className="flex gap-3">
- <input required type="text"placeholder="Ex: Analista de RH, Gerente de Vendas..."className="flex-1 border-2 border-emerald-800/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
- <button type="submit"className="bg-emerald-600 bg-emerald-500 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 hover:bg-emerald-600 font-bold uppercase text-xs tracking-wider transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
+ <input required type="text"placeholder="Ex: Analista de RH, Gerente de Vendas..."className="flex-1 border-2 border-emerald-300 dark:border-emerald-700/60 rounded-xl p-3 focus:ring-4 focus:ring-emerald-100 focus:ring-emerald-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingSector.name || ''} onChange={e => setEditingSector({...editingSector, name: e.target.value.trim()})} />
+ <button type="submit"className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">{editingSector.id ? 'Salvar' : 'Adicionar'}</button>
  {editingSector.id && <button type="button"onClick={() => setEditingSector({})} className="p-3 hover:text-slate-600 hover:text-slate-700 dark:text-slate-300 transition-colors"><X size={20}/></button>}
  </div>
  </form>
@@ -325,12 +325,12 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {sortedSectors.map(s => (
  <div key={s.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-800 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-200 hover:border-emerald-900 transition-all group">
  <div className="flex items-center gap-3">
- <div className="h-8 w-8 bg-emerald-900/40 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-inner"><Briefcase size={16}/></div>
+ <div className="h-8 w-8 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-full flex items-center justify-center text-emerald-700 dark:text-emerald-300 shadow-inner"><Briefcase size={16}/></div>
  <span className="font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
  </div>
  <div className="flex gap-1">
  <button onClick={() => setEditingSector(s)} className="p-2 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-all"><Edit2 size={18}/></button>
- <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-all"><Trash2 size={18}/></button>
+ <button onClick={() => confirmDelete('Cargo', s.id, s.name, deleteSector)} className="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded-lg transition-all"><Trash2 size={18}/></button>
  </div>
  </div>
  ))}
@@ -340,10 +340,10 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {activeTab === 'TYPES' && (
  <div className="max-w-2xl">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Tipos de Equipamento</h4>
- <form onSubmit={handleTypeSubmit} className="bg-blue-50 dark:bg-sky-500/20 p-6 rounded-2xl border border-blue-300 dark:border-sky-700/40 mb-6 transition-colors">
- <h5 className="font-bold text-blue-300 mb-4 uppercase text-xs tracking-wider">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
+ <form onSubmit={handleTypeSubmit} className="bg-blue-50 dark:bg-sky-500/20 p-6 rounded-2xl border border-blue-200 dark:border-sky-800/40 mb-6 transition-colors">
+ <h5 className="font-bold text-blue-900 dark:text-sky-200 mb-4 uppercase text-xs tracking-wider">{editingType.id ? 'Editar Tipo' : 'Novo Tipo'}</h5>
  <div className="flex gap-3 mb-4">
- <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-800/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
+ <input required type="text"placeholder="Ex: Notebook, Smartphone..."className="flex-1 border-2 border-blue-300 dark:border-sky-700/60 rounded-xl p-3 focus:ring-4 focus:ring-blue-100 focus:ring-blue-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingType.name || ''} onChange={e => setEditingType({...editingType, name: e.target.value.trim()})} />
  <button type="submit"className="bg-blue-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Salvar</button>
  </div>
  
@@ -388,8 +388,8 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {(editingType.customFieldIds || []).map((id, index) => {
  const field = customFields.find(f => f.id === id);
  return (
- <div key={id} className="flex items-center justify-between bg-emerald-900/40 p-2 rounded-lg border border-emerald-900/20">
- <span className="text-xs font-bold text-emerald-300">{field?.name}</span>
+ <div key={id} className="flex items-center justify-between bg-emerald-100 dark:bg-emerald-950/40 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40">
+ <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{field?.name}</span>
  <div className="flex gap-1">
  <button type="button"onClick={() => moveField(index, 'UP')} disabled={index === 0} className="p-1 text-emerald-600 dark:text-emerald-400 disabled:opacity-30"><ChevronUp size={14}/></button>
  <button type="button"onClick={() => moveField(index, 'DOWN')} disabled={index === (editingType.customFieldIds || []).length - 1} className="p-1 text-emerald-600 dark:text-emerald-400 disabled:opacity-30"><ChevronDown size={14}/></button>
@@ -407,7 +407,7 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  <span className="font-bold text-slate-700 dark:text-slate-200">{t.name}</span>
  <div className="flex gap-1">
  <button onClick={() => setEditingType(t)} className="p-2 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:bg-sky-500/20 rounded-lg transition-colors"><Edit2 size={16}/></button>
- <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16}/></button>
+ <button onClick={() => confirmDelete('Tipo', t.id, t.name, deleteAssetType)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><Trash2 size={16}/></button>
  </div>
  </div>
  ))}
@@ -417,17 +417,17 @@ const ModelSettings: React.FC<ModelSettingsProps> = ({ onClose }) => {
  {activeTab === 'FIELDS' && (
  <div className="max-w-xl">
  <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Campos Personalizados</h4>
- <form onSubmit={handleFieldSubmit} className="bg-indigo-50 dark:bg-indigo-500/20 p-5 rounded-2xl border border-indigo-900/40 mb-6 transition-colors">
+ <form onSubmit={handleFieldSubmit} className="bg-indigo-50 dark:bg-indigo-500/20 p-5 rounded-2xl border border-indigo-200 dark:border-indigo-800/40 mb-6 transition-colors">
  <div className="flex gap-2">
- <input required type="text"placeholder="Nome do Campo (ex: Memória RAM)"className="flex-1 border-2 border-indigo-800/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
- <button type="submit"className="bg-indigo-600 bg-indigo-500 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Adicionar</button>
+ <input required type="text"placeholder="Nome do Campo (ex: Memória RAM)"className="flex-1 border-2 border-indigo-300 dark:border-indigo-700/60 rounded-xl p-3 text-sm focus:ring-4 focus:ring-indigo-100 focus:ring-indigo-900/20 outline-none font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all"value={editingField.name || ''} onChange={e => setEditingField({...editingField, name: e.target.value.trim()})} />
+ <button type="submit"className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-wider transition-all active:scale-95">Adicionar</button>
  </div>
  </form>
  <div className="space-y-2">
  {sortedCustomFields.map(f => (
  <div key={f.id} className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-300 dark:border-slate-600 transition-colors">
  <span className="font-bold text-slate-700 dark:text-slate-200">{f.name}</span>
- <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="p-2 text-red-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"><Trash2 size={18}/></button>
+ <button onClick={() => confirmDelete('Campo', f.id, f.name, deleteCustomField)} className="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition-colors"><Trash2 size={18}/></button>
  </div>
  ))}
  </div>
