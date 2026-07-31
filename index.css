@@ -280,25 +280,30 @@
   z-index: 0;
 }
 
-/* PADRONIZAÇÃO DE HOVER ANT DESIGN 6 PARA TODAS AS TABELAS */
+/* PADRONIZAÇÃO DE HOVER ANT DESIGN 6 PARA TODAS AS TABELAS DO SISTEMA (T.I., R.H., FUEL360, ADMIN) */
+tbody > tr,
 tr.group {
   position: relative;
   transition: background-color 0.15s ease-in-out;
 }
 
+html:not(.dark) tbody > tr:hover,
 html:not(.dark) tr.group:hover {
   background-color: #f0f7ff !important;
 }
 
-html:not(.dark) tr.group:hover td:first-child {
+html:not(.dark) tbody > tr:hover > td:first-child,
+html:not(.dark) tr.group:hover > td:first-child {
   box-shadow: inset 4px 0 0 0 #1677ff !important;
 }
 
+html.dark tbody > tr:hover,
 html.dark tr.group:hover {
   background-color: rgba(51, 65, 85, 0.6) !important;
 }
 
-html.dark tr.group:hover td:first-child {
+html.dark tbody > tr:hover > td:first-child,
+html.dark tr.group:hover > td:first-child {
   box-shadow: inset 4px 0 0 0 #38bdf8 !important;
 }
 
