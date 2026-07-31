@@ -1553,22 +1553,26 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
 
         const nativeRes = await pool.request().query(`
             SELECT devices.PulsusId as id_pulsus,
-                   Users.FullName  AS nome,
-                   Users.Cpf       AS cpf,
-                   Users.JobTitle  AS cargo,
-                   Users.Address   AS endereco,
-                   Users.Latitude  AS latitude,
-                   Users.Longitude AS longitude,
+                   COALESCE(NULLIF(Users.FullName, ''), Rh.FullName)  AS nome,
+                   COALESCE(NULLIF(Users.Cpf, ''), Rh.Cpf)       AS cpf,
+                   COALESCE(NULLIF(Users.JobTitle, ''), Rh.JobTitle)  AS cargo,
+                   COALESCE(NULLIF(Users.Address, ''), Rh.Address)   AS endereco,
+                   COALESCE(Users.Latitude, Rh.Latitude)  AS latitude,
+                   COALESCE(Users.Longitude, Rh.Longitude) AS longitude,
                    Devices.InternalCode AS codigo_setor,
                    Sectors.Name AS grupo
             FROM Devices devices
             LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
+            LEFT JOIN RhCollaborators Rh ON (
+                (Users.Cpf IS NOT NULL AND Users.Cpf <> '' AND REPLACE(REPLACE(Users.Cpf, '.', ''), '-', '') = REPLACE(REPLACE(Rh.Cpf, '.', ''), '-', '')) 
+                OR (Users.FullName IS NOT NULL AND Users.FullName <> '' AND LOWER(RTRIM(LTRIM(Users.FullName))) = LOWER(RTRIM(LTRIM(Rh.FullName))))
+            )
             LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
             LEFT JOIN Models Models ON devices.ModelId = Models.id
             LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
             WHERE devices.Status = 'Em Uso'
               AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
-              AND Users.FullName IS NOT NULL AND Users.FullName <> ''
+              AND (Users.FullName IS NOT NULL AND Users.FullName <> '' OR Rh.FullName IS NOT NULL AND Rh.FullName <> '')
               AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
               AND AssetTypes.Name = 'Celular'
             ORDER BY 3
@@ -1615,13 +1619,19 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                 const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
                 const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
                 const cpfDiff = Boolean(cleanNCpf && cleanExistCpf !== cleanNCpf);
+                const addressDiff = Boolean(nAddress && (existing.EnderecoBase || '').trim() !== nAddress);
+                const latDiff = Boolean(nLat !== null && Number(existing.LatitudeBase) !== nLat);
+                const lonDiff = Boolean(nLon !== null && Number(existing.LongitudeBase) !== nLon);
 
-                if (nameDiff || sectorDiff || groupDiff || cpfDiff) {
+                if (nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff) {
                     const changes = [];
                     if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
                     if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
                     if (groupDiff) changes.push({ field: 'Grupo', oldValue: existing.Grupo, newValue: nItem.grupo });
                     if (cpfDiff) changes.push({ field: 'CPF', oldValue: cleanExistCpf, newValue: cleanNCpf });
+                    if (addressDiff) changes.push({ field: 'EnderecoBase', oldValue: existing.EnderecoBase, newValue: nAddress });
+                    if (latDiff) changes.push({ field: 'LatitudeBase', oldValue: existing.LatitudeBase, newValue: nLat });
+                    if (lonDiff) changes.push({ field: 'LongitudeBase', oldValue: existing.LongitudeBase, newValue: nLon });
 
                     alterados.push({
                         id_pulsus: idPulsus,
@@ -1629,7 +1639,15 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                         matchType: 'ID_MATCH',
                         id_colaborador: existing.ID_Colaborador,
                         existingColab: existing,
-                        newData: { nome: nItem.nome, codigo_setor: codigoSetorNum, grupo: nItem.grupo || 'Vendedor', cpf: cleanNCpf || cleanExistCpf },
+                        newData: { 
+                            nome: nItem.nome, 
+                            codigo_setor: codigoSetorNum, 
+                            grupo: nItem.grupo || 'Vendedor', 
+                            cpf: cleanNCpf || cleanExistCpf,
+                            endereco_base: nAddress || existing.EnderecoBase,
+                            latitude_base: nLat !== null ? nLat : existing.LatitudeBase,
+                            longitude_base: nLon !== null ? nLon : existing.LongitudeBase
+                        },
                         changes
                     });
                 } else {
@@ -4256,6 +4274,41 @@ async function updateUserPendingStatus(pool, userId) {
             request.input('TargetId', req.params.id);
             await request.query(`UPDATE ${table} SET ${sets.join(',')} WHERE Id=@TargetId`);
             
+            // Réplica automática de endereço e coordenadas GPS para FuelColaboradores caso a tabela seja de colaboradores/usuários
+            if (table === 'Users' || table === 'RhCollaborators') {
+                try {
+                    const uRes = await pool.request().input('TargetId', req.params.id).query(`SELECT * FROM ${table} WHERE Id=@TargetId`);
+                    const uRow = uRes.recordset[0];
+                    if (uRow) {
+                        const cleanCpf = uRow.Cpf ? String(uRow.Cpf).replace(/\D/g, '') : null;
+                        const endVal = uRow.Address || uRow.EnderecoBase || null;
+                        const latVal = uRow.Latitude !== undefined && uRow.Latitude !== null ? Number(uRow.Latitude) : null;
+                        const lonVal = uRow.Longitude !== undefined && uRow.Longitude !== null ? Number(uRow.Longitude) : null;
+                        const fullName = uRow.FullName || uRow.Nome || '';
+
+                        if (endVal || latVal !== null || lonVal !== null) {
+                            await pool.request()
+                                .input('EndVal', sql.NVarChar, endVal)
+                                .input('LatVal', sql.Float, latVal)
+                                .input('LonVal', sql.Float, lonVal)
+                                .input('CleanCpf', sql.NVarChar, cleanCpf)
+                                .input('FullName', sql.NVarChar, fullName)
+                                .query(`
+                                    UPDATE FuelColaboradores
+                                    SET EnderecoBase = COALESCE(@EndVal, EnderecoBase),
+                                        LatitudeBase = COALESCE(@LatVal, LatitudeBase),
+                                        LongitudeBase = COALESCE(@LonVal, LongitudeBase),
+                                        EnderecoPendente = 0
+                                    WHERE (CPF IS NOT NULL AND REPLACE(REPLACE(CPF, '.', ''), '-', '') = @CleanCpf AND @CleanCpf IS NOT NULL AND @CleanCpf <> '')
+                                       OR (LOWER(RTRIM(LTRIM(Nome))) = LOWER(RTRIM(LTRIM(@FullName))) AND @FullName <> '')
+                                `);
+                        }
+                    }
+                } catch (eSync) {
+                    console.warn('[FuelSync WARN] Erro ao replicar endereço para FuelColaboradores:', eSync.message);
+                }
+            }
+            
             const richNotes = (req.body._notes || req.body._reason ? `Motivo: ${req.body._notes || req.body._reason}\n\n` : '') + diffNotes.join('\n');
             const tName = req.body.assetTag || req.body.name || req.body.phoneNumber || req.body.fullName;
             
@@ -5479,6 +5532,39 @@ async function updateUserPendingStatus(pool, userId) {
             if (sets.length > 0) {
                 request.input('TargetId', req.params.id);
                 await request.query(`UPDATE RhCollaborators SET ${sets.join(',')} WHERE Id=@TargetId`);
+
+                // Réplica automática de endereço e coordenadas GPS para o módulo Fuel360
+                try {
+                    const updatedColabRes = await pool.request().input('TargetId', req.params.id).query(`SELECT * FROM RhCollaborators WHERE Id=@TargetId`);
+                    const updatedColab = updatedColabRes.recordset[0];
+                    if (updatedColab) {
+                        const cleanCpf = updatedColab.Cpf ? String(updatedColab.Cpf).replace(/\D/g, '') : null;
+                        const endVal = updatedColab.Address || updatedColab.EnderecoBase || null;
+                        const latVal = updatedColab.Latitude !== undefined && updatedColab.Latitude !== null ? Number(updatedColab.Latitude) : null;
+                        const lonVal = updatedColab.Longitude !== undefined && updatedColab.Longitude !== null ? Number(updatedColab.Longitude) : null;
+                        const fullName = updatedColab.FullName || updatedColab.Nome || '';
+
+                        if (endVal || latVal !== null || lonVal !== null) {
+                            await pool.request()
+                                .input('EndVal', sql.NVarChar, endVal)
+                                .input('LatVal', sql.Float, latVal)
+                                .input('LonVal', sql.Float, lonVal)
+                                .input('CleanCpf', sql.NVarChar, cleanCpf)
+                                .input('FullName', sql.NVarChar, fullName)
+                                .query(`
+                                    UPDATE FuelColaboradores
+                                    SET EnderecoBase = COALESCE(@EndVal, EnderecoBase),
+                                        LatitudeBase = COALESCE(@LatVal, LatitudeBase),
+                                        LongitudeBase = COALESCE(@LonVal, LongitudeBase),
+                                        EnderecoPendente = 0
+                                    WHERE (CPF IS NOT NULL AND REPLACE(REPLACE(CPF, '.', ''), '-', '') = @CleanCpf AND @CleanCpf IS NOT NULL AND @CleanCpf <> '')
+                                       OR (LOWER(RTRIM(LTRIM(Nome))) = LOWER(RTRIM(LTRIM(@FullName))) AND @FullName <> '')
+                                `);
+                        }
+                    }
+                } catch (eSync) {
+                    console.warn('[FuelSync WARN] Erro ao replicar colaborador de RH para FuelColaboradores:', eSync.message);
+                }
             }
 
             const colabName = body.fullName || 'Colaborador';
