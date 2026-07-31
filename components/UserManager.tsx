@@ -1619,7 +1619,7 @@ const UserManager: React.FC = () => {
         </div>
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-sm">
           <div>
-            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block mb-1.5">Termos Pend.</span>
+            <span className="text-[11px] font-black text-amber-600 dark:text-amber-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Termos Pend.</span>
             <p className="text-2xl font-black text-slate-900 dark:text-white">{users.filter(u => (u.terms || []).some(t => !t.fileUrl && !t.hasFile && t.signatureStatus !== 'APPROVED')).length}</p>
           </div>
           <div className="h-12 w-12 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><AlertTriangle size={24}/></div>

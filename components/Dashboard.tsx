@@ -890,7 +890,7 @@ const Dashboard = () => {
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         Alertas de Expediente
-                        <span className="bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
+                        <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase transition-colors">0</span>
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Nenhum colaborador online no ERP divergente do local.</p>
                     </div>

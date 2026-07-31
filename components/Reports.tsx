@@ -903,10 +903,10 @@ const Reports = () => {
             <>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Colaboradores</span>
+                  <span className="text-[11px] font-black text-cyan-600 dark:text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Colaboradores</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{users.length}</p>
                 </div>
-                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><User size={24}/></div>
+                <div className="h-12 w-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 group-hover:scale-110 transition-transform"><User size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
@@ -936,10 +936,10 @@ const Reports = () => {
             <>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
+                  <span className="text-[11px] font-black text-cyan-600 dark:text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Movimentações</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{consumablesReportData.length}</p>
                 </div>
-                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
+                <div className="h-12 w-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 group-hover:scale-110 transition-transform"><History size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>
@@ -969,10 +969,10 @@ const Reports = () => {
             <>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
+                  <span className="text-[11px] font-black text-cyan-600 dark:text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Total Ativos</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{devices.length}</p>
                 </div>
-                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
+                <div className="h-12 w-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 group-hover:scale-110 transition-transform"><Box size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-blue-500/30 group shadow-lg">
                 <div>
@@ -1002,10 +1002,10 @@ const Reports = () => {
             <>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Investimento Total</span>
+                  <span className="text-[11px] font-black text-cyan-600 dark:text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Investimento Total</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(financialSummary.totalPurchase)}</p>
                 </div>
-                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><DollarSign size={24}/></div>
+                <div className="h-12 w-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 group-hover:scale-110 transition-transform"><DollarSign size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-amber-500/30 group shadow-lg">
                 <div>
@@ -1035,10 +1035,10 @@ const Reports = () => {
             <>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-cyan-500/30 group shadow-lg">
                 <div>
-                  <span className="text-[11px] font-black text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Cadastrados</span>
+                  <span className="text-[11px] font-black text-cyan-600 dark:text-cyan-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Ativos Cadastrados</span>
                   <p className="text-2xl font-black text-slate-900 dark:text-white">{auditMetrics.totalDevices}</p>
                 </div>
-                <div className="h-12 w-12 bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-400 border border-cyan-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
+                <div className="h-12 w-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 group-hover:scale-110 transition-transform"><Smartphone size={24}/></div>
               </div>
               <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-emerald-500/30 group shadow-lg">
                 <div>

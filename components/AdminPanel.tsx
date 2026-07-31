@@ -1448,11 +1448,11 @@ ORDER BY a.CODCET;`;
 
  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
  {/* Lado Esquerdo: Status */}
- <div className={`p-8 rounded-3xl border-2 transition-all ${licenseStatus?.status === 'ACTIVE' ? 'bg-emerald-900/10 border-emerald-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
+ <div className={`p-8 rounded-3xl border-2 transition-all ${licenseStatus?.status === 'ACTIVE' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-300 dark:border-emerald-500/30' : 'bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-500/30'}`}>
  <div className="space-y-6">
  <div>
  <p className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-widest mb-1">Situação</p>
- <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-400'}`}>
+ <p className={`text-2xl font-black uppercase tracking-tighter ${licenseStatus?.status === 'ACTIVE' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
  {licenseStatus?.status === 'ACTIVE' ? 'ATIVA' : 'EXPIRADA / INVÁLIDA'}
  </p>
  </div>

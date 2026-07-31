@@ -418,10 +418,10 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ tasks, systemUsers, de
 
         <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all hover:border-red-500/30 group shadow-lg">
           <div>
-            <span className="text-[11px] font-black text-red-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Atrasadas</span>
+            <span className="text-[11px] font-black text-rose-600 dark:text-rose-400/80 uppercase tracking-[0.2em] block mb-1.5 opacity-70">Atrasadas</span>
             <p className="text-2xl font-black text-slate-900 dark:text-white">{tasks.filter(t => t.isOverdue && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELED).length}</p>
           </div>
-          <div className="h-12 w-12 bg-red-900/20 rounded-2xl flex items-center justify-center text-red-400 border border-red-800/30 group-hover:scale-110 transition-transform"><AlertCircle size={24}/></div>
+          <div className="h-12 w-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30 group-hover:scale-110 transition-transform"><AlertCircle size={24}/></div>
         </div>
       </div>
 

@@ -3,10 +3,35 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-scale-up: scaleUp 0.2s ease-out;
+
+  /* Ant Design 6 Tokens */
+  --color-antd-bg-layout: #f5f8ff;
+  --color-antd-bg-container: #ffffff;
+  --color-antd-bg-elevated: #ffffff;
+  --color-antd-bg-hover: #f5f5f5;
+  --color-antd-bg-active: #e6f4ff;
+  --color-antd-bg-spotlight: #f0f5ff;
+
+  --color-antd-primary: #1677ff;
+  --color-antd-primary-hover: #4096ff;
+  --color-antd-primary-active: #0958d9;
+  --color-antd-primary-bg: #e6f4ff;
+
+  --color-antd-success: #52c41a;
+  --color-antd-warning: #faad14;
+  --color-antd-error: #ff4d4f;
+  --color-antd-info: #1677ff;
+
+  --color-antd-text-primary: rgba(0, 0, 0, 0.88);
+  --color-antd-text-secondary: rgba(0, 0, 0, 0.65);
+  --color-antd-text-tertiary: rgba(0, 0, 0, 0.45);
+  --color-antd-text-quaternary: rgba(0, 0, 0, 0.25);
+
+  --color-antd-border: #d9d9d9;
+  --color-antd-border-secondary: #f0f0f0;
 
   @keyframes fadeIn {
     0% { opacity: 0; }
@@ -26,83 +51,117 @@
   }
 
   :root:not(.dark) {
-    --color-slate-100: #f1f5f9;
-    --color-slate-200: #cbd5e1;
-    --color-slate-300: #94a3b8;
-    --color-slate-400: #64748b;
-    --color-slate-500: #475569;
-    --color-slate-600: #334155;
-    --color-slate-700: #1e293b;
-    --color-slate-800: #0f172a;
-    --color-slate-900: #020617;
+    --color-slate-50: #f5f8ff;
+    --color-slate-100: #f0f5ff;
+    --color-slate-200: #d9d9d9;
+    --color-slate-300: #bfbfbf;
+    --color-slate-400: rgba(0, 0, 0, 0.45);
+    --color-slate-500: rgba(0, 0, 0, 0.65);
+    --color-slate-600: rgba(0, 0, 0, 0.75);
+    --color-slate-700: rgba(0, 0, 0, 0.85);
+    --color-slate-800: rgba(0, 0, 0, 0.88);
+    --color-slate-900: rgba(0, 0, 0, 0.95);
   }
 
   body {
     font-family: var(--font-sans);
   }
 
-  /* Refinamento de Alto Contraste e Bordas Definidas para o Tema Claro */
+  /* Padronização Global do Tema Claro (Ant Design 6) */
   html:not(.dark) {
     color-scheme: light;
-    color: #0f172a;
+    color: rgba(0, 0, 0, 0.88);
+    background-color: #f5f8ff;
   }
 
+  html:not(.dark) body {
+    background-color: #f5f8ff;
+  }
+
+  /* Inputs, Selects & Textareas no padrão Ant Design 6 */
   html:not(.dark) input,
   html:not(.dark) select,
   html:not(.dark) textarea {
-    border-color: #cbd5e1;
-    color: #0f172a;
+    background-color: #ffffff;
+    border-color: #d9d9d9;
+    color: rgba(0, 0, 0, 0.88);
+    border-radius: 6px;
+    transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
   }
 
   html:not(.dark) input::placeholder,
   html:not(.dark) textarea::placeholder {
-    color: #64748b;
+    color: rgba(0, 0, 0, 0.25);
   }
 
   html:not(.dark) input:focus,
   html:not(.dark) select:focus,
   html:not(.dark) textarea:focus {
-    border-color: #2563eb;
-    outline: 2px solid rgba(37, 99, 235, 0.2);
+    border-color: #1677ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
   }
 
+  /* Tabelas no padrão Ant Design 6 com Bordas Nítidas e Sem Sombras Exageradas */
   html:not(.dark) table th {
-    color: #0f172a;
-    font-weight: 700;
-    border-bottom-color: #cbd5e1;
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.88);
+    font-weight: 600;
+    border-bottom: 1px solid #d9d9d9 !important;
   }
 
   html:not(.dark) table td {
-    border-bottom-color: #e2e8f0;
+    border-bottom: 1px solid #f0f0f0 !important;
+    color: rgba(0, 0, 0, 0.88);
   }
 
+  html:not(.dark) table tbody tr:hover {
+    background-color: #fafafa;
+  }
+
+  /* Divisores e bordas padronizadas com nitidez Ant Design (#d9d9d9) */
   html:not(.dark) .border-slate-100,
-  html:not(.dark) .border-slate-200 {
-    border-color: #cbd5e1 !important;
+  html:not(.dark) .border-slate-200,
+  html:not(.dark) .border-slate-300 {
+    border-color: #d9d9d9 !important;
   }
 
+  /* Redução de sombras exageradas nas tabelas e containers em tema claro */
+  html:not(.dark) .shadow-2xl,
+  html:not(.dark) .shadow-xl,
+  html:not(.dark) .shadow-lg {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid #d9d9d9 !important;
+  }
+
+  html:not(.dark) .shadow-md {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid #d9d9d9 !important;
+  }
+
+  /* Textos secundários e terciários */
   html:not(.dark) .text-slate-400 {
-    color: #475569 !important;
+    color: rgba(0, 0, 0, 0.45) !important;
   }
 
   html:not(.dark) .text-slate-500 {
-    color: #334155 !important;
+    color: rgba(0, 0, 0, 0.65) !important;
   }
 
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #475569; /* slate-600 */
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #64748b; /* slate-500 */
+    background: rgba(0, 0, 0, 0.4);
   }
 
   /* Hide scrollbar utility */
@@ -110,8 +169,96 @@
     display: none !important;
   }
   .scrollbar-none {
-    -ms-overflow-style: none !important;  /* IE and Edge */
-    scrollbar-width: none !important;  /* Firefox */
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+}
+
+/* Ant Design Component Utility Classes */
+@layer components {
+  /* Botões Ant Design */
+  .antd-btn-primary {
+    background-color: #1677ff;
+    color: #ffffff;
+    border-radius: 6px;
+    font-weight: 400;
+    padding: 6px 16px;
+    box-shadow: 0 2px 0 rgba(5, 145, 255, 0.1);
+    transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+  }
+  .antd-btn-primary:hover {
+    background-color: #4096ff;
+  }
+  .antd-btn-primary:active {
+    background-color: #0958d9;
+  }
+
+  .antd-btn-default {
+    background-color: #ffffff;
+    border: 1px solid #d9d9d9;
+    color: rgba(0, 0, 0, 0.88);
+    border-radius: 6px;
+    padding: 6px 16px;
+    transition: all 0.2s;
+  }
+  .antd-btn-default:hover {
+    border-color: #4096ff;
+    color: #4096ff;
+  }
+
+  .antd-btn-danger {
+    background-color: #ffffff;
+    border: 1px solid #ff4d4f;
+    color: #ff4d4f;
+    border-radius: 6px;
+    padding: 6px 16px;
+    transition: all 0.2s;
+  }
+  .antd-btn-danger:hover {
+    border-color: #ff7875;
+    color: #ff7875;
+  }
+
+  /* Card Ant Design */
+  .antd-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #d9d9d9;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  /* Badges Ant Design */
+  .antd-badge-success {
+    background-color: #f6ffed;
+    color: #52c41a;
+    border: 1px solid #b7eb8f;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+  .antd-badge-warning {
+    background-color: #fffbe6;
+    color: #faad14;
+    border: 1px solid #ffe58f;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+  .antd-badge-error {
+    background-color: #fff2f0;
+    color: #ff4d4f;
+    border: 1px solid #ffccc7;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+  .antd-badge-info {
+    background-color: #e6f4ff;
+    color: #1677ff;
+    border: 1px solid #91caff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
   }
 }
 
