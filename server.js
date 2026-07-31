@@ -1551,32 +1551,59 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
             return 'Vendedor';
         };
 
-        const nativeRes = await pool.request().query(`
-            SELECT devices.PulsusId as id_pulsus,
-                   COALESCE(NULLIF(Users.FullName, ''), Rh.FullName)  AS nome,
-                   COALESCE(NULLIF(Users.Cpf, ''), Rh.Cpf)       AS cpf,
-                   COALESCE(NULLIF(Users.JobTitle, ''), Rh.JobTitle)  AS cargo,
-                   COALESCE(NULLIF(Users.Address, ''), Rh.Address)   AS endereco,
-                   COALESCE(Users.Latitude, Rh.Latitude)  AS latitude,
-                   COALESCE(Users.Longitude, Rh.Longitude) AS longitude,
-                   Devices.InternalCode AS codigo_setor,
-                   Sectors.Name AS grupo
-            FROM Devices devices
-            LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
-            LEFT JOIN RhCollaborators Rh ON (
-                (Users.Cpf IS NOT NULL AND Users.Cpf <> '' AND REPLACE(REPLACE(Users.Cpf, '.', ''), '-', '') = REPLACE(REPLACE(Rh.Cpf, '.', ''), '-', '')) 
-                OR (Users.FullName IS NOT NULL AND Users.FullName <> '' AND LOWER(RTRIM(LTRIM(Users.FullName))) = LOWER(RTRIM(LTRIM(Rh.FullName))))
-            )
-            LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
-            LEFT JOIN Models Models ON devices.ModelId = Models.id
-            LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
-            WHERE devices.Status = 'Em Uso'
-              AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
-              AND (Users.FullName IS NOT NULL AND Users.FullName <> '' OR Rh.FullName IS NOT NULL AND Rh.FullName <> '')
-              AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
-              AND AssetTypes.Name = 'Celular'
-            ORDER BY 3
-        `);
+        let nativeRes;
+        try {
+            nativeRes = await pool.request().query(`
+                SELECT devices.PulsusId as id_pulsus,
+                       COALESCE(NULLIF(CAST(Users.FullName AS NVARCHAR(MAX)), ''), CAST(Rh.FullName AS NVARCHAR(MAX)))  AS nome,
+                       COALESCE(NULLIF(CAST(Users.Cpf AS NVARCHAR(MAX)), ''), CAST(Rh.Cpf AS NVARCHAR(MAX)))       AS cpf,
+                       COALESCE(NULLIF(CAST(Users.JobTitle AS NVARCHAR(MAX)), ''), CAST(Rh.JobTitle AS NVARCHAR(MAX)))  AS cargo,
+                       COALESCE(NULLIF(CAST(Users.Address AS NVARCHAR(MAX)), ''), CAST(Rh.Address AS NVARCHAR(MAX)))   AS endereco,
+                       COALESCE(TRY_CAST(Users.Latitude AS FLOAT), TRY_CAST(Rh.Latitude AS FLOAT))  AS latitude,
+                       COALESCE(TRY_CAST(Users.Longitude AS FLOAT), TRY_CAST(Rh.Longitude AS FLOAT)) AS longitude,
+                       Devices.InternalCode AS codigo_setor,
+                       Sectors.Name AS grupo
+                FROM Devices devices
+                LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
+                LEFT JOIN RhCollaborators Rh ON (
+                    (Users.Cpf IS NOT NULL AND Users.Cpf <> '' AND REPLACE(REPLACE(Users.Cpf, '.', ''), '-', '') = REPLACE(REPLACE(Rh.Cpf, '.', ''), '-', '')) 
+                    OR (Users.FullName IS NOT NULL AND Users.FullName <> '' AND LOWER(RTRIM(LTRIM(Users.FullName))) = LOWER(RTRIM(LTRIM(Rh.FullName))))
+                )
+                LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
+                LEFT JOIN Models Models ON devices.ModelId = Models.id
+                LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
+                WHERE devices.Status = 'Em Uso'
+                  AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
+                  AND (Users.FullName IS NOT NULL AND Users.FullName <> '' OR Rh.FullName IS NOT NULL AND Rh.FullName <> '')
+                  AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
+                  AND AssetTypes.Name = 'Celular'
+                ORDER BY 1
+            `);
+        } catch (eQuery) {
+            console.warn('[ImportPreview WARN] Falha na consulta estendida com RhCollaborators, ativando fallback nativo de Users:', eQuery.message);
+            nativeRes = await pool.request().query(`
+                SELECT devices.PulsusId as id_pulsus,
+                       Users.FullName  AS nome,
+                       Users.Cpf       AS cpf,
+                       Users.JobTitle  AS cargo,
+                       Users.Address   AS endereco,
+                       TRY_CAST(Users.Latitude AS FLOAT)  AS latitude,
+                       TRY_CAST(Users.Longitude AS FLOAT) AS longitude,
+                       Devices.InternalCode AS codigo_setor,
+                       Sectors.Name AS grupo
+                FROM Devices devices
+                LEFT JOIN Users Users ON devices.CurrentUserId = Users.Id
+                LEFT JOIN Sectors Sectors ON devices.SectorId = Sectors.Id
+                LEFT JOIN Models Models ON devices.ModelId = Models.id
+                LEFT JOIN AssetTypes AssetTypes ON models.TypeId = AssetTypes.id
+                WHERE devices.Status = 'Em Uso'
+                  AND devices.InternalCode IS NOT NULL AND devices.InternalCode <> ''
+                  AND Users.FullName IS NOT NULL AND Users.FullName <> ''
+                  AND Devices.SectorId IS NOT NULL AND Devices.SectorId <> ''
+                  AND AssetTypes.Name = 'Celular'
+                ORDER BY 1
+            `);
+        }
         
         let nativeItems = nativeRes.recordset || [];
 
