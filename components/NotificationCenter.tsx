@@ -391,7 +391,7 @@ export const NotificationCenter: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2.5 rounded-xl border transition-all cursor-pointer ${
           allNotifications.length > 0 
-            ? 'bg-blue-900/10 border-blue-500/30 text-blue-600 dark:text-sky-400 hover:bg-blue-50 dark:bg-sky-500/20' 
+            ? 'bg-blue-50 dark:bg-sky-500/20 border-blue-200 dark:border-sky-800/30 text-blue-600 dark:text-sky-400 hover:bg-blue-100 dark:hover:bg-sky-500/30' 
             : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
         }`}
       >
@@ -424,7 +424,7 @@ export const NotificationCenter: React.FC = () => {
                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Sincronizado em tempo real</p>
                 </div>
                 {allNotifications.length > 0 && (
-                  <span className="text-[10px] bg-red-950/50 border border-red-800/30 text-red-400 font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                  <span className="text-[10px] bg-rose-100 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/30 text-rose-700 dark:text-rose-400 font-black px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
                     {allNotifications.length} ativos
                   </span>
                 )}
@@ -469,22 +469,22 @@ export const NotificationCenter: React.FC = () => {
                     <div key={notif.id} className="p-4 hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-all flex gap-3">
                       <div className="shrink-0 mt-0.5">
                         {notif.type === 'expediente' && (
-                          <div className="p-1.5 bg-red-950/40 rounded-lg border border-red-800/30 text-red-400">
+                          <div className="p-1.5 bg-rose-50 dark:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-800/30 text-rose-600 dark:text-rose-400">
                             <Clock size={14} />
                           </div>
                         )}
                         {notif.type === 'stock' && (
-                          <div className="p-1.5 bg-amber-950/40 rounded-lg border border-amber-800/30 text-amber-600 dark:text-amber-400">
+                          <div className="p-1.5 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800/30 text-amber-600 dark:text-amber-400">
                             <Package size={14} />
                           </div>
                         )}
                         {notif.type === 'task' && (
-                          <div className="p-1.5 bg-blue-950/40 rounded-lg border border-blue-800/30 text-blue-600 dark:text-sky-400">
+                          <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 rounded-lg border border-blue-200 dark:border-blue-800/30 text-blue-600 dark:text-sky-400">
                             <AlertCircle size={14} />
                           </div>
                         )}
                         {notif.type === 'rh-alert' && (
-                          <div className="p-1.5 bg-indigo-950/40 rounded-lg border border-indigo-800/30 text-indigo-400">
+                          <div className="p-1.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-lg border border-indigo-200 dark:border-indigo-800/30 text-indigo-600 dark:text-indigo-400">
                             {notif.id.includes('birthday') ? <Cake size={14} /> :
                              notif.id.includes('approval') ? <FileSignature size={14} /> :
                              <Calendar size={14} />}
