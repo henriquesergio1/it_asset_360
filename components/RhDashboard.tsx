@@ -72,6 +72,66 @@ export const RhDashboard: React.FC = () => {
       });
   }, [rhCollaborators]);
 
+  // 3. Aniversariantes de Empresa no Mês (Tempo de Casa)
+  const companyAnniversariesThisMonth = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    return rhCollaborators
+      .filter(c => {
+        if (!c.hireDate || c.status === 'Demitido') return false;
+        const parts = parseLocalDateParts(c.hireDate);
+        return parts ? parts.month === currentMonth : false;
+      })
+      .map(c => {
+        const parts = parseLocalDateParts(c.hireDate)!;
+        const years = currentYear - parts.year;
+        if (years <= 0) return null;
+        return {
+          collaborator: c,
+          years,
+          displayDate: formatBirthdayDisplay(c.hireDate),
+          day: parts.day
+        };
+      })
+      .filter(Boolean) as { collaborator: any; years: number; displayDate: string; day: number }[];
+  }, [rhCollaborators]);
+
+  // 4. Lista Unificada e Ordenada de Comemorações do Mês
+  const allCelebrations = useMemo(() => {
+    const items: {
+      type: 'NASCIMENTO' | 'EMPRESA';
+      collaborator: any;
+      dateStr: string;
+      description: string;
+      day: number;
+    }[] = [];
+
+    birthdaysThisMonth.forEach(b => {
+      const parts = parseLocalDateParts(b.collaborator.birthDate);
+      items.push({
+        type: 'NASCIMENTO',
+        collaborator: b.collaborator,
+        dateStr: b.displayDate,
+        description: b.age > 0 ? `completará ${b.age} anos de idade` : 'Aniversário de nascimento',
+        day: parts ? parts.day : 0
+      });
+    });
+
+    companyAnniversariesThisMonth.forEach(c => {
+      items.push({
+        type: 'EMPRESA',
+        collaborator: c.collaborator,
+        dateStr: c.displayDate,
+        description: `completará ${c.years} ano${c.years > 1 ? 's' : ''} de empresa`,
+        day: c.day
+      });
+    });
+
+    return items.sort((a, b) => a.day - b.day);
+  }, [birthdaysThisMonth, companyAnniversariesThisMonth]);
+
   // 3. Vencimento de Documentos e Contrato de Experiência
   const docExpirations = useMemo(() => {
     const alerts: { collaborator: any; type: string; daysRemaining: number; date: string }[] = [];
@@ -436,31 +496,70 @@ export const RhDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Aniversariantes do Mês */}
+        {/* Comemorações do Mês (Aniversários e Tempo de Casa) */}
         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white flex items-center gap-2">
-              <Cake size={16} className="text-indigo-500" /> Aniversariantes do Mês
+              <Cake size={16} className="text-indigo-500" /> Comemorações do Mês
             </h3>
-            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-full">
-              {birthdaysThisMonth.length}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {birthdaysThisMonth.length > 0 && (
+                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300 text-[10px] font-bold rounded-full flex items-center gap-1" title="Aniversariantes de Nascimento">
+                  <Cake size={10} /> {birthdaysThisMonth.length}
+                </span>
+              )}
+              {companyAnniversariesThisMonth.length > 0 && (
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1" title="Tempo de Casa (Aniversário de Empresa)">
+                  <Award size={10} /> {companyAnniversariesThisMonth.length}
+                </span>
+              )}
+              {allCelebrations.length === 0 && (
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full">
+                  0
+                </span>
+              )}
+            </div>
           </div>
           <div className="space-y-3 max-h-60 overflow-y-auto">
-            {birthdaysThisMonth.length > 0 ? (
-              birthdaysThisMonth.map((item, i) => (
-                <div key={i} className="p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="block font-bold text-xs text-slate-900 dark:text-white">{item.collaborator.fullName}</span>
-                    <span className="text-[10px] opacity-75 block text-indigo-600 dark:text-indigo-400 font-bold">
-                      {item.displayDate} {item.age > 0 ? `(completará ${item.age} anos)` : ''}
-                    </span>
+            {allCelebrations.length > 0 ? (
+              allCelebrations.map((item, i) => {
+                const isBirthday = item.type === 'NASCIMENTO';
+                return (
+                  <div 
+                    key={i} 
+                    className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                      isBirthday 
+                        ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' 
+                        : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">{item.collaborator.fullName}</span>
+                        <span className={`px-1.5 py-0.5 text-[8px] font-black uppercase rounded tracking-wider ${
+                          isBirthday 
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' 
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                        }`}>
+                          {isBirthday ? 'NASCIMENTO' : 'TEMPO DE CASA'}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] opacity-80 block font-bold mt-0.5 ${
+                        isBirthday ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-700 dark:text-amber-400'
+                      }`}>
+                        {item.dateStr} ({item.description})
+                      </span>
+                    </div>
+                    {isBirthday ? (
+                      <Cake size={16} className="text-indigo-400 shrink-0" />
+                    ) : (
+                      <Award size={16} className="text-amber-500 shrink-0" />
+                    )}
                   </div>
-                  <Cake size={16} className="text-indigo-400/80" />
-                </div>
-              ))
+                );
+              })
             ) : (
-              <p className="text-xs text-slate-400 py-4 text-center">Nenhum aniversário este mês.</p>
+              <p className="text-xs text-slate-400 py-4 text-center">Nenhuma comemoração este mês.</p>
             )}
           </div>
         </div>
