@@ -1902,7 +1902,7 @@ const UserManager: React.FC = () => {
           )}
         </div>
       ) : (
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600 dark:border-l-blue-500 overflow-hidden shadow-2xl ring-1 ring-white/5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <DataTable
           columns={columns}
           data={enrichedUsers}
@@ -1920,7 +1920,7 @@ const UserManager: React.FC = () => {
               <tr 
                 key={u.id} 
                 onClick={() => handleOpenModal(u, true)} 
-                className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-all cursor-pointer group bg-white dark:bg-slate-800 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-blue-50/80 dark:bg-sky-500/20 border-l-blue-600' : ''}`}
+                className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/15 transition-all cursor-pointer group bg-white dark:bg-slate-800 ${!u.active ? 'opacity-60' : ''} ${selectedIds.includes(u.id) ? 'bg-blue-50/80 dark:bg-sky-500/20 border-l-blue-600' : ''}`}
               >
                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   <input 

@@ -516,7 +516,7 @@ const AccountManager = () => {
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600 dark:border-l-blue-500 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all">
         <DataTable
           columns={accountColumns}
           data={paginatedAccounts}
@@ -528,7 +528,7 @@ const AccountManager = () => {
             <tr 
               key={acc.id} 
               onClick={() => handleOpenModal(acc)} 
-              className="transition-all cursor-pointer bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 group"
+              className="transition-all cursor-pointer bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/15 group"
             >
               {visibleColumns.includes('name') && (
                 <td className="px-6 py-4">

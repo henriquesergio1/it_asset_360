@@ -330,7 +330,7 @@ const SimManager = () => {
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600 dark:border-l-blue-500 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left table-fixed">
             <thead className="bg-slate-100 dark:bg-slate-800/50">
@@ -347,7 +347,7 @@ const SimManager = () => {
               {filteredSims.map((sim) => {
                 const assignedUser = users.find(u => u.id === sim.currentUserId);
                 return (
-                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-all cursor-pointer group">
+                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/70 dark:hover:bg-blue-500/15 transition-all cursor-pointer group">
                     {visibleColumns.includes('phoneNumber') && (
                       <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-200">{sim.phoneNumber}</td>
                     )}

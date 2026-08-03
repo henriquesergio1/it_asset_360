@@ -677,7 +677,7 @@ export const RhComodatoManager: React.FC = () => {
       </div>
 
       {/* Main DataTable Grid */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 border-l-4 border-l-amber-500 dark:border-l-amber-500 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
         <DataTable
           columns={columns}
           data={paginatedData}
@@ -699,7 +699,7 @@ export const RhComodatoManager: React.FC = () => {
                   setSelectedTerm(t);
                   setIsDetailModalOpen(true);
                 }}
-                className="border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-amber-500 dark:hover:border-l-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
+                className="border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-amber-500 dark:hover:border-l-amber-400 hover:bg-amber-50/70 dark:hover:bg-amber-500/15 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
               >
                 <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{t.id}</td>
                 <td className="px-6 py-4 font-black">{colabName}</td>
