@@ -11,7 +11,7 @@ import {
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
   FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2,
-  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet
+  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet, Paperclip
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
@@ -853,6 +853,64 @@ export const RhCollaboratorManager: React.FC = () => {
     const url = doc.fileUrl || `/api/rh-documents/${doc.id}/raw`;
     setPreviewData({ url, name: doc.fileName || doc.title });
     setIsPreviewOpen(true);
+  };
+
+  const renderDocQuickAction = (categoryKey: string, label: string) => {
+    if (!selectedColab) return null;
+    const catUpper = categoryKey.toUpperCase();
+    const docInColab = (selectedColab.documents || []).find(
+      d => (d.category && d.category.toUpperCase() === catUpper) || (d.fileName && d.fileName.toUpperCase().includes(catUpper))
+    );
+    const docInEntries = (rhDocuments || []).find(
+      d => d.collaboratorId === selectedColab.id && ((d.category && d.category.toUpperCase() === catUpper) || (d.title && d.title.toUpperCase().includes(catUpper)))
+    );
+
+    if (docInColab) {
+      return (
+        <button
+          type="button"
+          onClick={() => handlePreviewColabDoc(docInColab)}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 ml-1 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold rounded-md border border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-all cursor-pointer shadow-xs shrink-0"
+          title={`Visualizar anexo de ${label}`}
+        >
+          <Eye size={10} />
+          <span>Ver Anexo</span>
+        </button>
+      );
+    }
+
+    if (docInEntries) {
+      return (
+        <button
+          type="button"
+          onClick={() => handlePreviewDocEntry(docInEntries)}
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 ml-1 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-bold rounded-md border border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/30 transition-all cursor-pointer shadow-xs shrink-0"
+          title={`Visualizar anexo de ${label}`}
+        >
+          <Eye size={10} />
+          <span>Ver Anexo</span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          let targetCat: 'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros' = 'Outros';
+          if (catUpper.includes('RG')) targetCat = 'RG';
+          else if (catUpper.includes('CPF')) targetCat = 'CPF';
+          setDocCategory(targetCat);
+          setDocFileName(`${label}_${selectedColab.fullName.split(' ')[0]}`);
+          setDetailTab('documentos');
+        }}
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 ml-1 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-[9px] font-bold rounded-md border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shrink-0"
+        title={`Anexar arquivo de ${label}`}
+      >
+        <Paperclip size={10} />
+        <span>Anexar</span>
+      </button>
+    );
   };
 
   const handlePreviewOccurrenceAnexo = async (occ: RhOccurrence) => {
@@ -1814,9 +1872,12 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Possui Veículo?</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {selectedColab.hasVehicle === 'Sim' ? `Sim (${selectedColab.vehicleType || 'Veículo'}${selectedColab.vehiclePlate ? ` - ${selectedColab.vehiclePlate}` : ''})` : 'Não'}
-                        </span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>
+                            {selectedColab.hasVehicle === 'Sim' ? `Sim (${selectedColab.vehicleType || 'Veículo'}${selectedColab.vehiclePlate ? ` - ${selectedColab.vehiclePlate}` : ''})` : 'Não'}
+                          </span>
+                          {selectedColab.hasVehicle === 'Sim' && renderDocQuickAction('VEICULO', 'Doc. Veículo')}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1830,29 +1891,47 @@ export const RhCollaboratorManager: React.FC = () => {
                     <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CPF</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{formatCPF(selectedColab.cpf)}</span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>{formatCPF(selectedColab.cpf)}</span>
+                          {renderDocQuickAction('CPF', 'CPF')}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">RG</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.rg || '---'}</span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>{selectedColab.rg || '---'}</span>
+                          {renderDocQuickAction('RG', 'RG')}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">PIS / PASEP</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.pis || '---'}</span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>{selectedColab.pis || '---'}</span>
+                          {renderDocQuickAction('PIS', 'PIS/PASEP')}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CTPS</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.ctps || '---'}</span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>{selectedColab.ctps || '---'}</span>
+                          {renderDocQuickAction('CTPS', 'CTPS')}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Título de Eleitor</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.electorTitle || '---'}</span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span>{selectedColab.electorTitle || '---'}</span>
+                          {renderDocQuickAction('TITULO', 'Título de Eleitor')}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans truncate block" title={selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}>
-                          {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}
-                        </span>
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-sans truncate block" title={selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}>
+                            {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}
+                          </span>
+                          {renderDocQuickAction('CNH', 'CNH')}
+                        </div>
                       </div>
 
                       <div>
