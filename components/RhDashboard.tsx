@@ -11,37 +11,65 @@ export const RhDashboard: React.FC = () => {
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isValidationExpanded, setIsValidationExpanded] = useState(false);
 
-  // 1. Alertas de Férias (11 meses de admissão ou múltiplos de 12 + 11)
+  // 1. Alertas de Férias com antecedência e data exata de vencimento
   const holidayAlerts = useMemo(() => {
-    const alerts: { collaborator: any; months: number; status: string }[] = [];
+    const alerts: { collaborator: any; months: number; dueDate: string; daysRemaining: number; status: string }[] = [];
+    const now = new Date();
+    now.setHours(0,0,0,0);
+
     rhCollaborators.forEach(c => {
       if (!c.hireDate || c.status === 'Demitido') return;
-      const hire = new Date(c.hireDate);
-      const now = new Date();
-      const diffTime = Math.abs(now.getTime() - hire.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const totalMonths = Math.floor(diffDays / 30.4);
+      const parts = parseLocalDateParts(c.hireDate);
+      if (!parts) return;
+
+      // Calcular o próximo vencimento do período aquisitivo de 12 meses
+      let nextPeriodEnd = new Date(parts.year, parts.month - 1, parts.day);
+      while (nextPeriodEnd < now) {
+        nextPeriodEnd.setFullYear(nextPeriodEnd.getFullYear() + 1);
+      }
+
+      const diffTime = nextPeriodEnd.getTime() - now.getTime();
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const totalMonths = Math.floor(Math.abs(now.getTime() - new Date(parts.year, parts.month - 1, parts.day).getTime()) / (1000 * 60 * 60 * 24 * 30.4));
       
       const reminder = totalMonths % 12;
-      if (reminder === 11) {
+      if (reminder === 11 || (daysRemaining >= 0 && daysRemaining <= 60)) {
+        const dueDateStr = formatDateBR(nextPeriodEnd.toISOString().split('T')[0]);
+        const daysText = daysRemaining === 0 ? 'Vence Hoje!' : `antecedência: ${daysRemaining} dia${daysRemaining > 1 ? 's' : ''}`;
+
         alerts.push({
           collaborator: c,
           months: totalMonths,
-          status: `Período Aquisitivo Próximo ao Vencimento (${totalMonths} meses de empresa)`
+          dueDate: dueDateStr,
+          daysRemaining,
+          status: `Vencimento do Período: ${dueDateStr} (${daysText})`
         });
       }
     });
-    return alerts;
+    return alerts.sort((a, b) => a.daysRemaining - b.daysRemaining);
   }, [rhCollaborators]);
 
-  // 2. Aniversariantes do Mês
+  // 2. Aniversariantes do Mês com Idade
   const birthdaysThisMonth = useMemo(() => {
-    const currentMonth = new Date().getMonth() + 1; // 1-12
-    return rhCollaborators.filter(c => {
-      if (!c.birthDate || c.status === 'Demitido') return false;
-      const parts = parseLocalDateParts(c.birthDate);
-      return parts ? parts.month === currentMonth : false;
-    });
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+
+    return rhCollaborators
+      .filter(c => {
+        if (!c.birthDate || c.status === 'Demitido') return false;
+        const parts = parseLocalDateParts(c.birthDate);
+        return parts ? parts.month === currentMonth : false;
+      })
+      .map(c => {
+        const parts = parseLocalDateParts(c.birthDate)!;
+        const age = currentYear - parts.year;
+        return {
+          collaborator: c,
+          age,
+          displayDate: formatBirthdayDisplay(c.birthDate)
+        };
+      });
   }, [rhCollaborators]);
 
   // 3. Vencimento de Documentos e Contrato de Experiência
@@ -420,12 +448,12 @@ export const RhDashboard: React.FC = () => {
           </div>
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {birthdaysThisMonth.length > 0 ? (
-              birthdaysThisMonth.map((c, i) => (
+              birthdaysThisMonth.map((item, i) => (
                 <div key={i} className="p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="block font-bold text-xs text-slate-900 dark:text-white">{c.fullName}</span>
+                    <span className="block font-bold text-xs text-slate-900 dark:text-white">{item.collaborator.fullName}</span>
                     <span className="text-[10px] opacity-75 block text-indigo-600 dark:text-indigo-400 font-bold">
-                      {formatBirthdayDisplay(c.birthDate)}
+                      {item.displayDate} {item.age > 0 ? `(completará ${item.age} anos)` : ''}
                     </span>
                   </div>
                   <Cake size={16} className="text-indigo-400/80" />
