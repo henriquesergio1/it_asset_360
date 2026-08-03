@@ -1420,8 +1420,8 @@ export const RoteirizadorPromotores: React.FC = () => {
 
                                 return (
                                     <React.Fragment key={seller.id}>
-                                        <tr onClick={() => { const s = new Set(expandedSellers); isExp ? s.delete(seller.id) : s.add(seller.id); setExpandedSellers(s); }} className={`cursor-pointer transition-all ${isExp ? 'bg-blue-50/20 dark:bg-slate-800/40' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
-                                            <td className="p-6 text-center">{isExp ? <ChevronDownIcon className="w-5 h-5 text-blue-600 dark:text-sky-400"/> : <ChevronRightIcon className="w-5 h-5 text-slate-200 dark:text-slate-700"/>}</td>
+                                        <tr onClick={() => { const s = new Set(expandedSellers); isExp ? s.delete(seller.id) : s.add(seller.id); setExpandedSellers(s); }} className={`border-b border-slate-200 dark:border-slate-800 border-l-4 border-l-transparent hover:border-l-emerald-600 dark:hover:border-l-emerald-400 hover:bg-emerald-50/70 dark:hover:bg-emerald-500/15 cursor-pointer transition-all ${isExp ? 'bg-emerald-50/30 dark:bg-emerald-500/15 border-l-emerald-600' : ''} ${!isSelected ? 'opacity-50 grayscale' : ''}`}>
+                                            <td className="p-6 text-center">{isExp ? <ChevronDownIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400"/> : <ChevronRightIcon className="w-5 h-5 text-slate-200 dark:text-slate-700"/>}</td>
                                             <td className="p-6 font-black text-slate-800 dark:text-white text-base flex items-center">
                                                 {seller.id} - {seller.name}
                                                 <span className={`ml-2 text-[10px] px-2 py-0.5 rounded border uppercase ${isUnregistered ? 'bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-300 border-red-200 dark:border-red-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>

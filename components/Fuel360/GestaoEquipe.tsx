@@ -748,9 +748,9 @@ export const GestaoEquipe: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div><h2 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1 tracking-tight">Equipe & Setores</h2><p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Gestão operacional com sincronização inteligente.</p></div>
                 <div className="flex space-x-3">
-                     <button onClick={() => setIsSyncModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-lg shadow-indigo-600/20"><RefreshIcon className="w-5 h-5 mr-2" /> Sincronizar</button>
+                     <button onClick={() => setIsSyncModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-lg shadow-emerald-600/20"><RefreshIcon className="w-5 h-5 mr-2" /> Sincronizar</button>
                      <button onClick={() => setIsImportModalOpen(true)} className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold py-2.5 px-4 rounded-xl flex items-center transition shadow-sm"><UploadIcon className="w-5 h-5 mr-2 text-slate-500 dark:text-slate-400" /> Endereços</button>
-                     <button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center shadow-lg transition"><PlusCircleIcon className="w-5 h-5 mr-2" /> Novo Cadastro</button>
+                     <button onClick={handleAddNew} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl flex items-center shadow-lg transition"><PlusCircleIcon className="w-5 h-5 mr-2" /> Novo Cadastro</button>
                 </div>
             </div>
 
@@ -758,9 +758,9 @@ export const GestaoEquipe: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
                 {/* Aba de Seleção por Grupo */}
                 <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto flex items-center scrollbar-hide px-4 pt-2 bg-slate-50/50 dark:bg-slate-800/30 transition-colors">
-                    <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Todos</button>
+                    <button onClick={() => setActiveTab('Todos')} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'Todos' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Todos</button>
                     {grupos.map(group => (
-                        <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-blue-600 text-blue-600 dark:text-sky-400 dark:border-sky-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{group.Nome}</button>
+                        <button key={group.ID_Grupo} onClick={() => setActiveTab(group.Nome)} className={`px-5 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === group.Nome ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>{group.Nome}</button>
                     ))}
                 </div>
 
@@ -772,8 +772,8 @@ export const GestaoEquipe: React.FC = () => {
                             <div className="absolute left-3 top-2.5 text-slate-400"><SearchIcon className="w-4 h-4" /></div>
                         </div>
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
-                            <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'Nome' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nome</button>
-                            <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'CodigoSetor' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-sky-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Setor</button>
+                            <button onClick={() => setSortBy('Nome')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'Nome' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nome</button>
+                            <button onClick={() => setSortBy('CodigoSetor')} className={`px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg transition-all ${sortBy === 'CodigoSetor' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Setor</button>
                         </div>
                     </div>
 
@@ -787,7 +787,7 @@ export const GestaoEquipe: React.FC = () => {
                         </button>
 
                         <div className="flex items-center bg-slate-100 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <input type="checkbox" id="showInactives" checked={showInactives} onChange={e => setShowInactives(e.target.checked)} className="h-4 w-4 text-blue-600 rounded cursor-pointer" />
+                            <input type="checkbox" id="showInactives" checked={showInactives} onChange={e => setShowInactives(e.target.checked)} className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 rounded cursor-pointer" />
                             <label htmlFor="showInactives" className="ml-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer">Exibir Inativos</label>
                         </div>
 
@@ -835,7 +835,7 @@ export const GestaoEquipe: React.FC = () => {
                     <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
                         <thead className="bg-slate-50/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.1em] border-b border-slate-200 dark:border-slate-800">
                             <tr>
-                                <th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></th>
+                                <th className="p-4 w-10"><input type="checkbox" onChange={handleSelectAll} checked={filteredData.length > 0 && selectedIds.size === filteredData.length} className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"/></th>
                                 <th className="p-4">Colaborador</th>
                                 <th className="p-4">Grupo</th>
                                 <th className="p-4 text-center">Veículo</th>
@@ -847,8 +847,8 @@ export const GestaoEquipe: React.FC = () => {
                             {filteredData.map(c => {
                                 const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
                                 return (
-                                    <tr key={c.ID_Colaborador} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
-                                        <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"/></td>
+                                    <tr key={c.ID_Colaborador} className={`border-b border-slate-200 dark:border-slate-800 border-l-4 border-l-transparent hover:border-l-emerald-600 dark:hover:border-l-emerald-400 hover:bg-emerald-50/70 dark:hover:bg-emerald-500/15 cursor-pointer transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''} ${selectedIds.has(c.ID_Colaborador) ? 'bg-emerald-50/80 dark:bg-emerald-500/20 border-l-emerald-600' : ''}`}>
+                                        <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"/></td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
                                                 {c.Foto ? (
