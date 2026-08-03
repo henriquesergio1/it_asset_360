@@ -700,7 +700,8 @@ export const GestaoEquipe: React.FC = () => {
     const filteredData = useMemo(() => {
         return colaboradores.filter(c => {
             const searchLower = searchTerm.toLowerCase();
-            const matchesSearch = c.Nome.toLowerCase().includes(searchLower) || String(c.ID_Pulsus).includes(searchTerm) || String(c.CodigoSetor).includes(searchTerm);
+            const colabNome = c && c.Nome ? String(c.Nome) : '';
+            const matchesSearch = colabNome.toLowerCase().includes(searchLower) || String(c.ID_Pulsus || '').includes(searchTerm) || String(c.CodigoSetor || '').includes(searchTerm);
             const matchesGroup = activeTab === 'Todos' ? true : c.Grupo === activeTab;
             const matchesActive = showInactives ? true : c.Ativo;
             
@@ -711,7 +712,9 @@ export const GestaoEquipe: React.FC = () => {
             
             return matchesSearch && matchesGroup && matchesActive && matchesPending;
         }).sort((a, b) => {
-            if (sortBy === 'Nome') return a.Nome.localeCompare(b.Nome);
+            const nameA = a && a.Nome ? String(a.Nome) : '';
+            const nameB = b && b.Nome ? String(b.Nome) : '';
+            if (sortBy === 'Nome') return nameA.localeCompare(nameB);
             else return (a.CodigoSetor || 0) - (b.CodigoSetor || 0);
         });
     }, [colaboradores, searchTerm, activeTab, sortBy, showInactives, showOnlyPendingAddress]);

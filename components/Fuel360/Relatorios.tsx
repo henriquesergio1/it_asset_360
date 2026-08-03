@@ -38,9 +38,9 @@ const SearchableSelect: React.FC<{
     const filteredOptions = useMemo(() => {
         const lowerTerm = searchTerm.toLowerCase();
         return options.filter(opt => 
-            opt.Nome.toLowerCase().includes(lowerTerm) || 
-            String(opt.CodigoSetor).includes(lowerTerm) ||
-            String(opt.ID_Pulsus).includes(lowerTerm)
+            (opt.Nome || '').toLowerCase().includes(lowerTerm) || 
+            String(opt.CodigoSetor || '').includes(lowerTerm) ||
+            String(opt.ID_Pulsus || '').includes(lowerTerm)
         ).sort((a,b) => (a.Nome || '').localeCompare(b.Nome || ''));
     }, [options, searchTerm]);
 
