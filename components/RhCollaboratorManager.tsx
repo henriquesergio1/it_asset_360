@@ -1025,14 +1025,59 @@ export const RhCollaboratorManager: React.FC = () => {
       return;
     }
     
-    // Validações básicas
-    if (!form.fullName || !form.cpf || !form.sectorId) {
-      alert('Nome Completo, CPF e Setor são obrigatórios.');
+    // Validações obrigatórias estritas
+    if (!form.fullName || !form.fullName.trim()) {
+      alert('O campo Nome Completo é obrigatório.');
+      return;
+    }
+
+    if (!form.cpf || !form.cpf.trim()) {
+      alert('O campo CPF é obrigatório.');
       return;
     }
 
     if (!validateCPF(form.cpf)) {
       alert('CPF inválido. Por favor, verifique o número informado.');
+      return;
+    }
+
+    if (!form.pis || !form.pis.trim()) {
+      alert('O campo PIS/PASEP é obrigatório.');
+      return;
+    }
+
+    if (!form.sectorId) {
+      alert('O campo Setor é obrigatório.');
+      return;
+    }
+
+    if (!form.role || !form.role.trim()) {
+      alert('O campo Cargo / Função é obrigatório.');
+      return;
+    }
+
+    if (!form.hireDate) {
+      alert('A Data de Admissão é obrigatória.');
+      return;
+    }
+
+    if (!form.street || !form.street.trim()) {
+      alert('O campo Endereço (Rua) é obrigatório.');
+      return;
+    }
+
+    if (!form.hasVehicle) {
+      alert('A opção "Possui Veículo?" é obrigatória.');
+      return;
+    }
+
+    if (!form.transportOption) {
+      alert('A Opção de Transporte é obrigatória.');
+      return;
+    }
+
+    if (form.hasVehicle === 'Sim' && (!form.vehicleType || !form.vehicleType.trim())) {
+      alert('Ao selecionar que possui veículo, o Tipo de Veículo é obrigatório.');
       return;
     }
 
@@ -3405,7 +3450,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">PIS/PASEP</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">PIS/PASEP *</label>
                         <input
                           type="text"
                           value={form.pis || ''}
@@ -3430,7 +3475,15 @@ export const RhCollaboratorManager: React.FC = () => {
                         <input
                           type="text"
                           value={form.cnhNumber || ''}
-                          onChange={e => setForm(p => ({ ...p, cnhNumber: e.target.value }))}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setForm(p => ({
+                              ...p,
+                              cnhNumber: val,
+                              cnhCategory: !val.trim() ? '' : p.cnhCategory,
+                              cnhExpiration: !val.trim() ? '' : p.cnhExpiration
+                            }));
+                          }}
                           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                         />
                       </div>
@@ -3439,9 +3492,10 @@ export const RhCollaboratorManager: React.FC = () => {
                         <input
                           type="text"
                           placeholder="AB"
+                          disabled={!form.cnhNumber || !form.cnhNumber.trim()}
                           value={form.cnhCategory || ''}
-                          onChange={e => setForm(p => ({ ...p, cnhCategory: e.target.value }))}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                          onChange={e => setForm(p => ({ ...p, cnhCategory: e.target.value.toUpperCase() }))}
+                          className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white ${(!form.cnhNumber || !form.cnhNumber.trim()) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         />
                       </div>
                     </div>
@@ -3450,9 +3504,10 @@ export const RhCollaboratorManager: React.FC = () => {
                       <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Vencimento CNH</label>
                       <input
                         type="date"
+                        disabled={!form.cnhNumber || !form.cnhNumber.trim()}
                         value={formatDateForInput(form.cnhExpiration)}
                         onChange={e => setForm(p => ({ ...p, cnhExpiration: e.target.value }))}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
+                        className={`w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white ${(!form.cnhNumber || !form.cnhNumber.trim()) ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
                     </div>
 
@@ -3551,7 +3606,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Setor</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Setor *</label>
                         <select
                           value={form.sectorId || ''}
                           onChange={e => setForm(p => ({ ...p, sectorId: e.target.value }))}
@@ -3564,7 +3619,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / Função</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Cargo / Função *</label>
                         <input
                           type="text"
                           value={form.role || ''}
@@ -3601,7 +3656,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Admissão</label>
+                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Data de Admissão *</label>
                         <input
                           type="date"
                           value={formatDateForInput(form.hireDate)}
@@ -3625,10 +3680,19 @@ export const RhCollaboratorManager: React.FC = () => {
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Possui Veículo?</label>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Possui Veículo? *</label>
                           <select
                             value={form.hasVehicle || 'Não'}
-                            onChange={e => setForm(p => ({ ...p, hasVehicle: e.target.value as any }))}
+                            onChange={e => {
+                              const val = e.target.value as 'Sim' | 'Não';
+                              setForm(p => ({
+                                ...p,
+                                hasVehicle: val,
+                                transportOption: val === 'Não' && p.transportOption === 'Auxílio Combustível' ? 'Vale Transporte' : p.transportOption,
+                                vehicleType: val === 'Não' ? '' : (p.vehicleType || 'Carro'),
+                                vehiclePlate: val === 'Não' ? '' : p.vehiclePlate
+                              }));
+                            }}
                             className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-slate-900 dark:text-white"
                           >
                             <option value="Não">Não</option>
@@ -3637,7 +3701,7 @@ export const RhCollaboratorManager: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Opção de Transporte</label>
+                          <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Opção de Transporte *</label>
                           <select
                             value={form.transportOption || 'Não Optante'}
                             onChange={e => setForm(p => ({ ...p, transportOption: e.target.value as any }))}
@@ -3645,20 +3709,23 @@ export const RhCollaboratorManager: React.FC = () => {
                           >
                             <option value="Não Optante">Não Optante</option>
                             <option value="Vale Transporte">Vale Transporte</option>
-                            <option value="Auxílio Combustível">Auxílio Combustível</option>
+                            {form.hasVehicle === 'Sim' && (
+                              <option value="Auxílio Combustível">Auxílio Combustível</option>
+                            )}
                           </select>
                         </div>
                       </div>
 
                       {form.hasVehicle === 'Sim' && (
-                        <div className="grid grid-cols-2 gap-3 p-3 bg-slate-100/60 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <div className="grid grid-cols-2 gap-3 mt-3 p-3 bg-slate-100/60 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700">
                           <div>
-                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Veículo</label>
+                            <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Tipo de Veículo *</label>
                             <select
-                              value={form.vehicleType || 'Carro'}
+                              value={form.vehicleType || ''}
                               onChange={e => setForm(p => ({ ...p, vehicleType: e.target.value }))}
                               className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white"
                             >
+                              <option value="">Selecione o veículo...</option>
                               <option value="Carro">Carro</option>
                               <option value="Moto">Moto</option>
                               <option value="Van">Van</option>
