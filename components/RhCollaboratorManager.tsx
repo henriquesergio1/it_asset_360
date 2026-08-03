@@ -12,14 +12,14 @@ import {
   Check, X, Loader2, Download, ChevronLeft, ChevronRight, Briefcase,
   SlidersHorizontal, AlertTriangle, Copy, Printer, ExternalLink, Map,
   FileSignature, RefreshCw, Share2, Camera, CheckSquare, History, User as UserIcon, Users as UsersIcon, Building2,
-  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet, Paperclip
+  GraduationCap, DollarSign, Award, BookOpen, FileSpreadsheet, Paperclip, Cake
 } from 'lucide-react';
 import FilePreviewModal from './FilePreviewModal';
 import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { hasPermission } from '../utils/rbac';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
-  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR, formatVehiclePlate
+  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR, formatVehiclePlate, parseLocalDateParts
 } from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
@@ -1788,6 +1788,92 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                     );
                   })()}
+
+                  {/* Badges de Alertas Ativos no Cabeçalho (Aniversário, Tempo de Casa, Férias, CNH) */}
+                  {(() => {
+                    const today = new Date();
+                    const currentMonth = today.getMonth() + 1;
+                    const currentYear = today.getFullYear();
+                    const headerAlerts: { key: string; label: string; badgeClass: string; icon: React.ReactNode }[] = [];
+
+                    // Aniversário Natalício
+                    if (selectedColab.birthDate) {
+                      const parts = parseLocalDateParts(selectedColab.birthDate);
+                      if (parts && parts.month === currentMonth) {
+                        const age = currentYear - parts.year;
+                        headerAlerts.push({
+                          key: 'bday',
+                          label: `Aniversariante (${age} anos)`,
+                          badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800',
+                          icon: <Cake size={11} />
+                        });
+                      }
+                    }
+
+                    // Aniversário de Empresa / Tempo de Casa
+                    if (selectedColab.hireDate) {
+                      const parts = parseLocalDateParts(selectedColab.hireDate);
+                      if (parts) {
+                        const years = currentYear - parts.year;
+                        if (years > 0 && parts.month === currentMonth) {
+                          headerAlerts.push({
+                            key: 'company_bday',
+                            label: `Tempo de Casa (${years} ano${years > 1 ? 's' : ''})`,
+                            badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+                            icon: <Award size={11} />
+                          });
+                        }
+
+                        // Alerta de Férias (Período aquisitivo de 12 meses)
+                        let nextPeriodEnd = new Date(parts.year, parts.month - 1, parts.day);
+                        const nowZero = new Date();
+                        nowZero.setHours(0,0,0,0);
+                        while (nextPeriodEnd < nowZero) {
+                          nextPeriodEnd.setFullYear(nextPeriodEnd.getFullYear() + 1);
+                        }
+                        const diffTime = nextPeriodEnd.getTime() - nowZero.getTime();
+                        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        const totalMonths = Math.floor(Math.abs(nowZero.getTime() - new Date(parts.year, parts.month - 1, parts.day).getTime()) / (1000 * 60 * 60 * 24 * 30.4));
+                        
+                        const reminder = totalMonths % 12;
+                        if (reminder === 11 || (daysRemaining >= 0 && daysRemaining <= 60)) {
+                          const dueDateStr = formatDateBR(nextPeriodEnd.toISOString().split('T')[0]);
+                          const daysText = daysRemaining === 0 ? 'Vence Hoje!' : `${daysRemaining}d restantes`;
+                          headerAlerts.push({
+                            key: 'ferias',
+                            label: `Férias: Vence em ${dueDateStr} (${daysText})`,
+                            badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+                            icon: <Calendar size={11} />
+                          });
+                        }
+                      }
+                    }
+
+                    // Vencimento de CNH
+                    if (selectedColab.cnhExpiration) {
+                      const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
+                      if (cnhStatus) {
+                        headerAlerts.push({
+                          key: 'cnh',
+                          label: `CNH: ${cnhStatus.label}`,
+                          badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+                          icon: <AlertTriangle size={11} />
+                        });
+                      }
+                    }
+
+                    if (headerAlerts.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {headerAlerts.map(a => (
+                          <span key={a.key} className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full tracking-wider flex items-center gap-1 shadow-xs ${a.badgeClass}`}>
+                            {a.icon}
+                            {a.label}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -1948,7 +2034,26 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Data de Admissão</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? formatDateBR(selectedColab.hireDate) : '---'}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? formatDateBR(selectedColab.hireDate) : '---'}</span>
+                          {(() => {
+                            if (!selectedColab.hireDate) return null;
+                            const parts = parseLocalDateParts(selectedColab.hireDate);
+                            if (!parts) return null;
+                            const today = new Date();
+                            const currentMonth = today.getMonth() + 1;
+                            const currentYear = today.getFullYear();
+                            const years = currentYear - parts.year;
+                            if (years > 0 && parts.month === currentMonth) {
+                              return (
+                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                  <Award size={9} /> TEMPO DE CASA ESTE MÊS ({years} ANOS)
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-bold uppercase text-slate-400 block">Jornada Semanal</span>
@@ -2057,7 +2162,26 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Data de Nascimento</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? formatDateBR(selectedColab.birthDate) : '---'}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? formatDateBR(selectedColab.birthDate) : '---'}</span>
+                          {(() => {
+                            if (!selectedColab.birthDate) return null;
+                            const parts = parseLocalDateParts(selectedColab.birthDate);
+                            if (!parts) return null;
+                            const today = new Date();
+                            const currentMonth = today.getMonth() + 1;
+                            const currentYear = today.getFullYear();
+                            const age = currentYear - parts.year;
+                            if (parts.month === currentMonth) {
+                              return (
+                                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                  <Cake size={9} /> ANIVERSARIANTE DO MÊS ({age} ANOS)
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">Gênero</span>
