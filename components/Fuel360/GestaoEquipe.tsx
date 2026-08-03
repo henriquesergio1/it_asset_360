@@ -847,7 +847,7 @@ export const GestaoEquipe: React.FC = () => {
                             {filteredData.map(c => {
                                 const isPendingAddr = (c.EnderecoPendente === true || Number(c.EnderecoPendente) === 1) || (!c.EnderecoBase || c.EnderecoBase.trim().length <= 3);
                                 return (
-                                    <tr key={c.ID_Colaborador} className={`border-b border-slate-200 dark:border-slate-800 border-l-4 border-l-transparent hover:border-l-emerald-600 dark:hover:border-l-emerald-400 hover:bg-emerald-50/70 dark:hover:bg-emerald-500/15 cursor-pointer transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''} ${selectedIds.has(c.ID_Colaborador) ? 'bg-emerald-50/80 dark:bg-emerald-500/20 border-l-emerald-600' : ''}`}>
+                                    <tr key={c.ID_Colaborador} className={`border-b border-slate-200 dark:border-slate-800 cursor-pointer transition-colors ${!c.Ativo ? 'opacity-60 bg-slate-50 dark:bg-slate-800/60' : ''}`}>
                                         <td className="p-4"><input type="checkbox" checked={selectedIds.has(c.ID_Colaborador)} onChange={() => handleSelectOne(c.ID_Colaborador)} className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"/></td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">

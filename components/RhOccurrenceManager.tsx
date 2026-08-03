@@ -380,7 +380,7 @@ export const RhOccurrenceManager: React.FC = () => {
                   setSelectedOccurrence(o);
                   setIsDetailModalOpen(true);
                 }}
-                className="border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-amber-500 dark:hover:border-l-amber-400 hover:bg-amber-50/70 dark:hover:bg-amber-500/15 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
+                className="border-b border-slate-200 dark:border-slate-700/40 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
               >
                 <td className="px-6 py-4 font-black">{colabName}</td>
                 <td className="px-6 py-4">
