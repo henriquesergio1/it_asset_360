@@ -3237,10 +3237,10 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* CREATE & EDIT MODAL (Full page overlay/90vh centered same as IT module, split into tabs) */}
       {(isCreating || isEditing) && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[95vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[110] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[580px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
             {/* Form Header */}
-            <div className="px-8 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
               <div>
                 <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider">
                   {isCreating ? 'Novo Colaborador R.H.' : `Editando ${selectedColab?.fullName}`}

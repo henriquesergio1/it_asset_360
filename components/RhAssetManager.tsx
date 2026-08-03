@@ -407,10 +407,10 @@ export const RhAssetManager: React.FC = () => {
 
       {/* DETALHES DO RECURSO MODAL (Popup de visualização polida) */}
       {isDetailModalOpen && selectedItem && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[500px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
             {/* Header */}
-            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <div className="flex items-center gap-3">
                 <span className={`px-2 py-1 text-[10px] font-black rounded uppercase tracking-wider ${
                   selectedItem.type === 'ATIVO' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
@@ -495,10 +495,10 @@ export const RhAssetManager: React.FC = () => {
 
       {/* CADASTRO & EDIÇÃO MODAL (Popup de formulário) */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[110] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[500px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
             {/* Header */}
-            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
               <h2 className="text-sm font-black uppercase text-indigo-600 tracking-wider">
                 {editingItem ? 'Editar Recurso de R.H.' : 'Cadastrar Novo Recurso'}
               </h2>

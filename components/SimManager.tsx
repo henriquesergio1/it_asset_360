@@ -393,44 +393,46 @@ const SimManager = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg border border-slate-200 dark:border-slate-700 shadow-2xl relative my-8">
-            <div className="bg-white dark:bg-slate-800 p-6 flex justify-between items-center border-b border-slate-200 dark:border-slate-700 rounded-t-3xl">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">{editingId ? (isViewOnly ? 'Detalhes do Chip' : 'Editar Chip') : 'Novo Chip / SIM'}</h3>
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-50 flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[500px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
+            <div className="bg-slate-100 dark:bg-slate-900 px-6 py-3.5 flex justify-between items-center shrink-0 border-b border-slate-200 dark:border-slate-800 gap-4">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">{editingId ? (isViewOnly ? 'Detalhes do Chip' : 'Editar Chip') : 'Novo Chip / SIM'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl"><X size={20}/></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[11px] font-black uppercase mb-2 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Número da Linha</label>
-                  <input readOnly={isViewOnly} required type="text" placeholder="(00) 0 0000-0000" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold transition-all shadow-inner" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})}/>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-black uppercase mb-2 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Operadora</label>
-                  <select disabled={isViewOnly} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold transition-all shadow-inner appearance-none" value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
-                    <option value="Vivo">Vivo</option>
-                    <option value="Claro">Claro</option>
-                    <option value="Tim">Tim</option>
-                    <option value="Oi">Oi</option>
-                    <option value="Arquia">Arquia</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black uppercase mb-2 ml-1 tracking-widest text-slate-500 dark:text-slate-400">ICCID (20 dígitos)</label>
-                  <input readOnly={isViewOnly} required type="text" placeholder="Ex: 895510..." className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-mono transition-all shadow-inner" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value})}/>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black uppercase mb-2 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Detalhes do Plano</label>
-                  <input readOnly={isViewOnly} type="text" placeholder="Ex: 50GB Mensal Corporativo" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all shadow-inner" value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase mb-1.5 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Número da Linha</label>
+                    <input readOnly={isViewOnly} required type="text" placeholder="(00) 0 0000-0000" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold transition-all shadow-inner" value={formData.phoneNumber || ''} onChange={e => setFormData({...formData, phoneNumber: e.target.value})}/>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black uppercase mb-1.5 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Operadora</label>
+                    <select disabled={isViewOnly} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-bold transition-all shadow-inner appearance-none" value={formData.operator || ''} onChange={e => setFormData({...formData, operator: e.target.value})}>
+                      <option value="Vivo">Vivo</option>
+                      <option value="Claro">Claro</option>
+                      <option value="Tim">Tim</option>
+                      <option value="Oi">Oi</option>
+                      <option value="Arquia">Arquia</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-black uppercase mb-1.5 ml-1 tracking-widest text-slate-500 dark:text-slate-400">ICCID (20 dígitos)</label>
+                    <input readOnly={isViewOnly} required type="text" placeholder="Ex: 895510..." className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white font-mono transition-all shadow-inner" value={formData.iccid || ''} onChange={e => setFormData({...formData, iccid: e.target.value})}/>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[11px] font-black uppercase mb-1.5 ml-1 tracking-widest text-slate-500 dark:text-slate-400">Detalhes do Plano</label>
+                    <input readOnly={isViewOnly} type="text" placeholder="Ex: 50GB Mensal Corporativo" className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 dark:text-white transition-all shadow-inner" value={formData.planDetails || ''} onChange={e => setFormData({...formData, planDetails: e.target.value})}/>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancelar</button>
+              <div className="flex justify-end gap-3 px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 shrink-0">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all">Cancelar</button>
                 {!isViewOnly ? (
-                  <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40">Confirmar</button>
+                  <button type="submit" className="px-8 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40">Confirmar</button>
                 ) : (
-                  <button type="button" onClick={() => setIsViewOnly(false)} disabled={isReadOnly} className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 disabled:opacity-50">Habilitar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(false)} disabled={isReadOnly} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-blue-900/40 disabled:opacity-50">Habilitar Edição</button>
                 )}
               </div>
             </form>
