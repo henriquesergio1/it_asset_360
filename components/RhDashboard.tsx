@@ -541,7 +541,7 @@ export const RhDashboard: React.FC = () => {
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' 
                             : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
                         }`}>
-                          {isBirthday ? 'NASCIMENTO' : 'TEMPO DE CASA'}
+                          {isBirthday ? 'ANIVERSÁRIO' : 'TEMPO DE CASA'}
                         </span>
                       </div>
                       <span className={`text-[10px] opacity-80 block font-bold mt-0.5 ${
