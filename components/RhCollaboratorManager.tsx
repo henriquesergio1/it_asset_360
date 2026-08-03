@@ -48,6 +48,44 @@ const normalizeColabDates = (c: any) => c ? ({
   terminationDate: formatDateForInput(c.terminationDate)
 }) : c;
 
+const getCnhExpirationStatus = (cnhExpiration?: string) => {
+  if (!cnhExpiration) return null;
+  const cleanExp = cnhExpiration.includes('T') ? cnhExpiration.split('T')[0] : cnhExpiration.substring(0, 10);
+  if (!cleanExp || cleanExp.length < 10) return null;
+
+  const parts = cleanExp.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [year, month, day] = parts;
+
+  const expDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = expDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    const expiredDays = Math.abs(diffDays);
+    return {
+      type: 'EXPIRED' as const,
+      days: expiredDays,
+      label: expiredDays === 0 ? 'CNH Vence Hoje' : `CNH Vencida há ${expiredDays}d`,
+      badgeClass: 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-700/50 font-bold'
+    };
+  }
+
+  if (diffDays <= 30) {
+    return {
+      type: 'WARNING' as const,
+      days: diffDays,
+      label: `CNH Vence em ${diffDays}d`,
+      badgeClass: 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 font-bold'
+    };
+  }
+
+  return null;
+};
+
 export const RhCollaboratorManager: React.FC = () => {
   const { 
     rhCollaborators, 
@@ -1540,6 +1578,15 @@ export const RhCollaboratorManager: React.FC = () => {
                       )}
                       <div className="flex flex-col">
                         <span className={isColabDemitido ? "text-slate-400 line-through" : ""}>{c.fullName}</span>
+                        {(() => {
+                          const cnhStatus = getCnhExpirationStatus(c.cnhExpiration);
+                          if (!cnhStatus) return null;
+                          return (
+                            <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded mt-0.5 inline-flex items-center gap-1 w-fit ${cnhStatus.badgeClass}`}>
+                              <AlertTriangle size={10} /> {cnhStatus.label}
+                            </span>
+                          );
+                        })()}
                         {isColabDemitido && (
                           <span className="text-[9px] font-black tracking-wider uppercase text-rose-500 mt-1 flex items-center gap-1">
                             <AlertTriangle size={10} /> Demitido em {c.terminationDate ? formatDateBR(c.terminationDate) : '---'}
@@ -1926,11 +1973,25 @@ export const RhCollaboratorManager: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] font-sans font-bold uppercase text-slate-400 block">CNH</span>
-                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                        <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200 flex-wrap">
                           <span className="font-sans truncate block" title={selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}>
                             {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}
                           </span>
+                          {selectedColab.cnhExpiration && (
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-medium">
+                              (Val: {formatDateBR(selectedColab.cnhExpiration)})
+                            </span>
+                          )}
                           {renderDocQuickAction('CNH', 'CNH')}
+                          {(() => {
+                            const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
+                            if (!cnhStatus) return null;
+                            return (
+                              <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded inline-flex items-center gap-1 shrink-0 ${cnhStatus.badgeClass}`}>
+                                <AlertTriangle size={10} /> {cnhStatus.label}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
 
