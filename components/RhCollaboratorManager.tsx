@@ -19,7 +19,7 @@ import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { hasPermission } from '../utils/rbac';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
-  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR, formatVehiclePlate, parseLocalDateParts
+  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR, formatVehiclePlate, parseLocalDateParts, calculateExactDuration
 } from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
@@ -2115,16 +2115,41 @@ export const RhCollaboratorManager: React.FC = () => {
                           <span className="font-bold text-slate-800 dark:text-slate-200">{selectedColab.hireDate ? formatDateBR(selectedColab.hireDate) : '---'}</span>
                           {(() => {
                             if (!selectedColab.hireDate) return null;
+                            const duration = calculateExactDuration(selectedColab.hireDate);
+                            if (!duration) return null;
+                            return (
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">({duration} de empresa)</span>
+                            );
+                          })()}
+                          {(() => {
+                            if (!selectedColab.hireDate) return null;
                             const parts = parseLocalDateParts(selectedColab.hireDate);
                             if (!parts) return null;
                             const today = new Date();
                             const currentMonth = today.getMonth() + 1;
                             const currentYear = today.getFullYear();
                             const years = currentYear - parts.year;
+                            // Tag TEMPO DE CASA (aniversário de empresa no mês)
                             if (years > 0 && parts.month === currentMonth) {
                               return (
                                 <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
                                   <Award size={9} /> TEMPO DE CASA ESTE MÊS ({years} ANOS)
+                                </span>
+                              );
+                            }
+                            // Tag FÉRIAS PRÓXIMAS (vencimento do período aquisitivo a 60 dias ou menos)
+                            let nextPeriodEnd = new Date(parts.year, parts.month - 1, parts.day);
+                            const nowZero = new Date(); nowZero.setHours(0,0,0,0);
+                            while (nextPeriodEnd <= nowZero) {
+                              nextPeriodEnd.setFullYear(nextPeriodEnd.getFullYear() + 1);
+                            }
+                            const daysToExpiry = Math.ceil((nextPeriodEnd.getTime() - nowZero.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysToExpiry <= 60) {
+                              const expiryStr = formatDateBR(nextPeriodEnd.toISOString().split('T')[0]);
+                              const daysLabel = daysToExpiry === 0 ? 'Vence Hoje!' : `${daysToExpiry}d`;
+                              return (
+                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                  <Calendar size={9} /> FÉRIAS PRÓXIMAS (VENCE {expiryStr} – {daysLabel})
                                 </span>
                               );
                             }
@@ -2243,16 +2268,41 @@ export const RhCollaboratorManager: React.FC = () => {
                           <span className="font-bold text-slate-800 dark:text-slate-200 font-sans">{selectedColab.birthDate ? formatDateBR(selectedColab.birthDate) : '---'}</span>
                           {(() => {
                             if (!selectedColab.birthDate) return null;
+                            const age = calculateExactDuration(selectedColab.birthDate);
+                            if (!age) return null;
+                            return (
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">({age})</span>
+                            );
+                          })()}
+                          {(() => {
+                            if (!selectedColab.birthDate) return null;
                             const parts = parseLocalDateParts(selectedColab.birthDate);
                             if (!parts) return null;
                             const today = new Date();
-                            const currentMonth = today.getMonth() + 1;
-                            const currentYear = today.getFullYear();
-                            const age = currentYear - parts.year;
-                            if (parts.month === currentMonth) {
+                            const todayYear = today.getFullYear();
+                            const todayMonth = today.getMonth() + 1;
+                            const todayDay = today.getDate();
+                            const age = todayYear - parts.year;
+                            // Calcular próximo aniversário
+                            let nextBday = new Date(todayYear, parts.month - 1, parts.day);
+                            if (nextBday < new Date(todayYear, todayMonth - 1, todayDay)) {
+                              nextBday = new Date(todayYear + 1, parts.month - 1, parts.day);
+                            }
+                            const nowZero = new Date(); nowZero.setHours(0,0,0,0);
+                            const daysToNext = Math.ceil((nextBday.getTime() - nowZero.getTime()) / (1000 * 60 * 60 * 24));
+                            // ANIVERSARIANTE DO MÊS (dia do aniversário = hoje ou no mês vigente)
+                            if (parts.month === todayMonth) {
                               return (
                                 <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
                                   <Cake size={9} /> ANIVERSARIANTE DO MÊS ({age} ANOS)
+                                </span>
+                              );
+                            }
+                            // ANIVERSÁRIO PRÓXIMO (até 30 dias)
+                            if (daysToNext <= 30) {
+                              return (
+                                <span className="px-1.5 py-0.5 bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 text-[8px] font-black rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                  <Cake size={9} /> ANIVERSÁRIO PRÓXIMO ({daysToNext === 0 ? 'Hoje!' : `em ${daysToNext}d`})
                                 </span>
                               );
                             }

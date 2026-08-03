@@ -201,3 +201,41 @@ export const formatVehiclePlate = (val: string): string => {
     return `${clean.slice(0, 3)}-${clean.slice(3)}`;
   }
 };
+
+/**
+ * Calcula com precisão matemática a duração exata decorrida entre uma data inicial e a data atual (anos, meses e dias)
+ * Imune a fuso horário.
+ */
+export const calculateExactDuration = (startDateStr: string | null | undefined): string => {
+  if (!startDateStr) return '';
+  const parts = parseLocalDateParts(startDateStr);
+  if (!parts) return '';
+
+  const today = new Date();
+  const start = new Date(parts.year, parts.month - 1, parts.day);
+  if (isNaN(start.getTime()) || start > today) return '';
+
+  let years = today.getFullYear() - start.getFullYear();
+  let months = today.getMonth() - start.getMonth();
+  let days = today.getDate() - start.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonthLastDay = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    days += prevMonthLastDay;
+  }
+
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const partsText: string[] = [];
+  if (years > 0) partsText.push(`${years} ano${years > 1 ? 's' : ''}`);
+  if (months > 0) partsText.push(`${months} mên${months > 1 ? 'ses' : 's'}`);
+  if (days > 0 || partsText.length === 0) partsText.push(`${days} dia${days !== 1 ? 's' : ''}`);
+
+  if (partsText.length === 1) return partsText[0];
+  if (partsText.length === 2) return `${partsText[0]} e ${partsText[1]}`;
+  return `${partsText[0]}, ${partsText[1]} e ${partsText[2]}`;
+};
