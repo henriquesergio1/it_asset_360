@@ -176,6 +176,7 @@ export const RhCollaboratorManager: React.FC = () => {
   const [cepLoading, setCepLoading] = useState(false);
   const [bancoHorasMap, setBancoHorasMap] = useState<Record<string, string>>({});
   const location = useLocation();
+  const tabsNavRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (location.state && (location.state as any).selectedCollaboratorId) {
@@ -1906,107 +1907,153 @@ export const RhCollaboratorManager: React.FC = () => {
               </div>
             </div>
 
-            {/* Tabs Control com Suporte a Rolagem via Mouse Wheel */}
-            <div 
-              onWheel={(e) => {
-                if (e.deltaY !== 0) {
-                  e.currentTarget.scrollLeft += e.deltaY;
-                }
-              }}
-              className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 px-6 shrink-0 overflow-x-auto scroll-smooth py-1 scrollbar-thin scrollbar-thumb-indigo-400/40 dark:scrollbar-thumb-slate-600"
-            >
+            {/* Tabs Control com Suporte a Rolagem via Roda do Mouse, Setas de Atalho e Auto-Scroll no Hover */}
+            <div className="relative border-b border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-900/40 px-2 py-1 shrink-0 group/tabs">
+              {/* Seta de Rolagem para Esquerda */}
               <button
                 type="button"
-                onClick={() => setDetailTab('cadastro')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  detailTab === 'cadastro'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
+                onClick={() => {
+                  if (tabsNavRef.current) {
+                    tabsNavRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+                  }
+                }}
+                className="absolute left-1 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-200 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 hover:bg-indigo-600 hover:text-white transition-all opacity-80 hover:opacity-100 cursor-pointer"
+                title="Rolar para esquerda"
               >
-                1. Cadastro
+                <ChevronLeft size={16} />
               </button>
+
+              {/* Seta de Rolagem para Direita */}
               <button
                 type="button"
-                onClick={() => setDetailTab('dependentes')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'dependentes'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
+                onClick={() => {
+                  if (tabsNavRef.current) {
+                    tabsNavRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+                  }
+                }}
+                className="absolute right-1 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-200 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 hover:bg-indigo-600 hover:text-white transition-all opacity-80 hover:opacity-100 cursor-pointer"
+                title="Rolar para direita"
               >
-                2. Dependentes ({selectedColab ? rhDependents.filter(d => d.collaboratorId === selectedColab.id).length : 0})
+                <ChevronRight size={16} />
               </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('documentos')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  detailTab === 'documentos'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
+
+              <div 
+                ref={tabsNavRef}
+                onWheel={(e) => {
+                  if (e.deltaY !== 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+                onMouseMove={(e) => {
+                  const container = e.currentTarget;
+                  const rect = container.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const width = rect.width;
+                  const edgeDistance = 80;
+
+                  if (x > width - edgeDistance) {
+                    const speed = Math.min(15, (x - (width - edgeDistance)) / 4);
+                    container.scrollLeft += speed;
+                  } else if (x < edgeDistance) {
+                    const speed = Math.min(15, (edgeDistance - x) / 4);
+                    container.scrollLeft -= speed;
+                  }
+                }}
+                className="flex items-center gap-1.5 overflow-x-auto scroll-smooth px-8 py-1.5 custom-tabs-scrollbar"
               >
-                3. Documentos & Termos
-              </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('holerites')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'holerites'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                <FileSpreadsheet size={12} />
-                4. Holerites ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'HOLERITE').length : 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('academico')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'academico'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                <GraduationCap size={12} />
-                5. Formação & Cursos ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'ACADEMICO_CERTIFICADO').length : 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('cargos-salarios')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'cargos-salarios'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                <DollarSign size={12} />
-                6. Cargos & Salários ({selectedColab ? rhCareerHistory.filter(h => h.collaboratorId === selectedColab.id).length : 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('ocorrencias')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap ${
-                  detailTab === 'ocorrencias'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                7. Faltas / Férias / Atestados
-              </button>
-              <button
-                type="button"
-                onClick={() => setDetailTab('historico')}
-                className={`py-3 px-4 text-[10px] font-black uppercase tracking-widest border-b-4 transition-all -mb-[1px] whitespace-nowrap flex items-center gap-1.5 ${
-                  detailTab === 'historico'
-                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}
-              >
-                <History size={12} />
-                8. Auditoria de Eventos
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('cadastro')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                    detailTab === 'cadastro'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  1. Cadastro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('dependentes')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    detailTab === 'dependentes'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  2. Dependentes ({selectedColab ? rhDependents.filter(d => d.collaboratorId === selectedColab.id).length : 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('documentos')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                    detailTab === 'documentos'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  3. Documentos & Termos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('holerites')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    detailTab === 'holerites'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <FileSpreadsheet size={12} />
+                  4. Holerites ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'HOLERITE').length : 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('academico')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    detailTab === 'academico'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <GraduationCap size={12} />
+                  5. Formação & Cursos ({selectedColab ? rhDocuments.filter(d => d.collaboratorId === selectedColab.id && d.documentType === 'ACADEMICO_CERTIFICADO').length : 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('cargos-salarios')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    detailTab === 'cargos-salarios'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <DollarSign size={12} />
+                  6. Cargos & Salários ({selectedColab ? rhCareerHistory.filter(h => h.collaboratorId === selectedColab.id).length : 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('ocorrencias')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${
+                    detailTab === 'ocorrencias'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  7. Faltas / Férias / Atestados
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab('historico')}
+                  className={`py-2 px-3.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    detailTab === 'historico'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <History size={12} />
+                  8. Auditoria de Eventos
+                </button>
+              </div>
             </div>
 
             {/* Modal Content */}
