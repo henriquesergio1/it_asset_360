@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil, RhTermTemplate } from '../types';
+import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil, RhTermTemplate, RhCollaborator } from '../types';
 import { hasPermission, resolveUserPermissions } from '../utils/rbac';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor, MapPin } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor, MapPin, Users, RefreshCw } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -630,11 +630,109 @@ ORDER BY a.CODCET;`;
 
  const { 
  systemUsers, addSystemUser, updateSystemUser, deleteSystemUser, settings, updateSettings, rhTemplates = [], addRhTemplate, updateRhTemplate, deleteRhTemplate,
+ users = [], rhCollaborators = [], addRhCollaborator, updateRhCollaborator,
  clearLogs, restoreItem, 
  externalDbConfig, updateExternalDbConfig, testExternalDbConnection, fetchData,
  getLicenseStatus, updateLicense
  } = useData();
  const [licenseStatus, setLicenseStatus] = useState<{ status: string; client: string; expiresAt: string | null } | null>(null);
+ const [isSyncingRh, setIsSyncingRh] = useState(false);
+
+  const handleSyncTiToRhCollaborators = async () => {
+    if (!users || users.length === 0) {
+      showToast('Nenhum colaborador cadastrado no módulo de T.I.', 'info');
+      return;
+    }
+
+    setIsSyncingRh(true);
+    let createdCount = 0;
+    let updatedCount = 0;
+    const adminName = currentUser?.name || 'Administrador';
+
+    try {
+      for (const u of users) {
+        const cleanUserCpf = u.cpf ? u.cpf.replace(/\D/g, '') : '';
+        const cleanUserEmail = u.email ? u.email.trim().toLowerCase() : '';
+
+        // Tentar parear com o RH por CPF limpo, E-mail ou ID
+        let rhMatch: RhCollaborator | undefined;
+        if (cleanUserCpf) {
+          rhMatch = (rhCollaborators || []).find(rc => rc.cpf && rc.cpf.replace(/\D/g, '') === cleanUserCpf);
+        }
+        if (!rhMatch && cleanUserEmail) {
+          rhMatch = (rhCollaborators || []).find(rc => (rc.emailCorporate && rc.emailCorporate.trim().toLowerCase() === cleanUserEmail) || (rc.emailPersonal && rc.emailPersonal.trim().toLowerCase() === cleanUserEmail));
+        }
+        if (!rhMatch) {
+          rhMatch = (rhCollaborators || []).find(rc => rc.id === u.id);
+        }
+
+        if (rhMatch) {
+          // Atualizar dados cadastrais de TI preservando os dados exclusivos do RH
+          const updatedRh: RhCollaborator = {
+            ...rhMatch,
+            fullName: u.fullName || rhMatch.fullName,
+            cpf: u.cpf || rhMatch.cpf,
+            rg: u.rg || rhMatch.rg,
+            pis: u.pis || rhMatch.pis,
+            emailCorporate: u.email || rhMatch.emailCorporate,
+            sectorId: u.sectorId || rhMatch.sectorId,
+            photo: u.photo || rhMatch.photo,
+            cep: u.zipCode || rhMatch.cep,
+            street: u.street || rhMatch.street,
+            number: u.number || rhMatch.number,
+            complement: u.complement || rhMatch.complement,
+            neighborhood: u.neighborhood || rhMatch.neighborhood,
+            city: u.city || rhMatch.city,
+            state: u.state || rhMatch.state,
+            status: u.active ? 'Ativo' : 'Demitido'
+          };
+          updateRhCollaborator(updatedRh, adminName);
+          updatedCount++;
+        } else {
+          // Criar novo colaborador no RH
+          const newRh: RhCollaborator = {
+            id: u.id || `rhcolab-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            fullName: u.fullName,
+            cpf: u.cpf || '',
+            rg: u.rg || '',
+            pis: u.pis || '',
+            birthDate: '',
+            gender: 'Outro',
+            maritalStatus: 'Solteiro',
+            motherName: '',
+            personalPhone: '',
+            corporatePhone: '',
+            emailPersonal: '',
+            emailCorporate: u.email || '',
+            cep: u.zipCode || '',
+            street: u.street || '',
+            number: u.number || '',
+            complement: u.complement || '',
+            neighborhood: u.neighborhood || '',
+            city: u.city || '',
+            state: u.state || '',
+            role: 'Colaborador',
+            sectorId: u.sectorId || '',
+            contractType: 'CLT',
+            hireDate: new Date().toISOString().substring(0, 10),
+            status: u.active ? 'Ativo' : 'Demitido',
+            salary: 0,
+            weeklyHours: 44,
+            documents: [],
+            photo: u.photo || ''
+          };
+          addRhCollaborator(newRh, adminName);
+          createdCount++;
+        }
+      }
+
+      showToast(`Replicação T.I. → R.H. concluída com sucesso! ${createdCount} novos cadastros criados e ${updatedCount} atualizados.`, 'success');
+    } catch (err: any) {
+      showToast(`Erro na replicação T.I. → R.H.: ${err.message || 'Falha inesperada'}`, 'error');
+    } finally {
+      setIsSyncingRh(false);
+    }
+  };
 
 	const handleEditTemplateClick = (t: any) => {
 		setIsEditingTemplate(t);
@@ -1201,6 +1299,51 @@ ORDER BY a.CODCET;`;
           </button>
         </div>
       </form>
+
+      {/* CARD DE REPLICAÇÃO INCREMENTAL DE COLABORADORES T.I. -> R.H. */}
+      <div className="mt-8 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border-2 border-indigo-200 dark:border-indigo-900/40 p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/30 shrink-0">
+                <Users size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  Replicação de Colaboradores (T.I. → R.H.)
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5 leading-relaxed">
+                  Replica incrementalmente os cadastros do módulo de T.I. para o módulo de R.H. para servir como carga inicial. Em execuções futuras, importa novos cadastros e atualiza apenas campos compartilhados sem afetar dados exclusivos do R.H. (admissão, salários, documentos).
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 pt-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
+              <span className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                <Users size={14} className="text-blue-500" /> Cadastrados em T.I.: <strong className="text-slate-900 dark:text-white">{users.length}</strong>
+              </span>
+              <span className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                <Users size={14} className="text-indigo-500" /> Cadastrados em R.H.: <strong className="text-slate-900 dark:text-white">{rhCollaborators.length}</strong>
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSyncTiToRhCollaborators}
+            disabled={isSyncingRh || !users || users.length === 0}
+            className="px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+          >
+            {isSyncingRh ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" /> Sincronizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw size={16} /> Replicar T.I. → R.H.
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
  )}
 
