@@ -1729,8 +1729,8 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* DETAIL MODAL (Sophisticated popup style same as IT module details) */}
       {isDetailModalOpen && selectedColab && !isEditing && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col h-[85vh] min-h-[550px] max-h-[820px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
             <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
               <div className="flex items-center gap-3">
                 {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
