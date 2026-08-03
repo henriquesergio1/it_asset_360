@@ -2087,7 +2087,7 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-tabs-scrollbar">
               {detailTab === 'cadastro' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Cartão 1: Dados Contratuais e Profissionais */}

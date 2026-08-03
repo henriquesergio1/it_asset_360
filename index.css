@@ -336,13 +336,14 @@ html.dark tr.group:hover > td:first-child {
   box-shadow: inset 4px 0 0 0 var(--module-hover-border-dark, #38bdf8) !important;
 }
 
-/* BARRA DE ROLAGEM ELEGANTE E RESPONSIVA PARA MENUS DE ABAS */
+/* BARRA DE ROLAGEM ELEGANTE E RESPONSIVA PARA MENUS DE ABAS E MODAIS */
 .custom-tabs-scrollbar {
-  scrollbar-width: auto;
+  scrollbar-width: thin;
   scrollbar-color: rgba(99, 102, 241, 0.5) transparent;
 }
 
 .custom-tabs-scrollbar::-webkit-scrollbar {
+  width: 6px;
   height: 6px;
 }
 
