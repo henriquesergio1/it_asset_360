@@ -135,9 +135,16 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
     }
   };
 
-  // Sincronização por Navegação (On-Demand Sync)
+  // Sincronização por Navegação (On-Demand Sync & Auto Module Detection)
   useEffect(() => {
-      fetchData(true); // Sincroniza silenciosamente ao mudar de tela
+    fetchData(true); // Sincroniza silenciosamente ao mudar de tela
+    if (location.pathname.startsWith('/rh')) {
+      if (currentModule !== 'RH') setCurrentModule('RH');
+    } else if (location.pathname.startsWith('/fuel')) {
+      if (currentModule !== 'FUEL') setCurrentModule('FUEL');
+    } else if (!location.pathname.startsWith('/rh') && !location.pathname.startsWith('/fuel') && location.pathname !== '/login') {
+      if (currentModule !== 'TI') setCurrentModule('TI');
+    }
   }, [location.pathname]);
 
   useEffect(() => {
@@ -158,14 +165,18 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   }, [user]);
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-hidden">
+    <div data-module={currentModule} className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-hidden">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 bg-white dark:bg-slate-800 shadow-2xl transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col border-r border-slate-200 dark:border-slate-700`}>
         
         {/* Toggle Button (Desktop Only) */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
-          className="hidden lg:flex absolute -right-3 top-24 bg-blue-600 text-white rounded-full p-1 border-2 border-white hover:bg-blue-700 transition-all z-[60] shadow-lg active:scale-90"
+          className={`hidden lg:flex absolute -right-3 top-24 text-white rounded-full p-1 border-2 border-white transition-all z-[60] shadow-lg active:scale-90 ${
+            currentModule === 'TI' ? 'bg-blue-600 hover:bg-blue-700' :
+            currentModule === 'RH' ? 'bg-amber-500 hover:bg-amber-600' :
+            'bg-emerald-600 hover:bg-emerald-700'
+          }`}
         >
           {isSidebarCollapsed ? <ChevronRight size={14}/> : <ChevronLeft size={14}/>}
         </button>
