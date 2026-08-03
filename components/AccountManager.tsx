@@ -689,51 +689,54 @@ const AccountManager = () => {
       </div>
 
       {isModalOpen && editingAccount && (
-        <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-2xl overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700 flex flex-col max-h-[95vh] shadow-2xl transition-all ring-1 ring-white/10">
-            <div className="bg-slate-100 dark:bg-slate-900 px-10 py-6 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner ${editingAccount.id ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
-                   {editingAccount.id ? <ShieldCheck size={24}/> : <Plus size={24}/>}
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[200] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-5xl overflow-hidden animate-scale-up border border-slate-200 dark:border-slate-700 flex flex-col h-[92vh] max-h-[92vh] min-h-[580px] shadow-2xl transition-all duration-300 ease-in-out my-auto">
+            <div className="bg-slate-100 dark:bg-slate-900 px-6 py-3.5 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 shrink-0 gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-inner ${editingAccount.id ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
+                   {editingAccount.id ? <ShieldCheck size={20}/> : <Plus size={20}/>}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
                     {editingAccount.id ? 'Editar Credencial' : 'Nova Credencial'}
                   </h3>
-                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400/80 uppercase tracking-wider">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400/80 uppercase tracking-wider">{editingAccount.id ? `ID: ${editingAccount.id}` : 'Cadastro no Sistema'}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-all hover:rotate-90"><X size={20}/></button>
+              <button onClick={() => setIsModalOpen(false)} className="h-9 w-9 flex items-center justify-center rounded-full bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all hover:rotate-90"><X size={18}/></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="md:col-span-2 bg-slate-100 dark:bg-slate-800/30 p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
-                  <label className="block text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400 mb-2 ml-1 tracking-wider">Identificação da Licença / Conta</label>
-                  <input 
-                    required 
-                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-base font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-inner"
-                    value={editingAccount.name} 
-                    onChange={e => setEditingAccount({...editingAccount, name: e.target.value})} 
-                    placeholder="Ex: Google Workspace, AWS Production..."
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-white dark:bg-slate-800">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {/* Linha 1: Identificacao em destaque no topo */}
+                  <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <label className="block text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400 mb-1.5 ml-1 tracking-wider">Identificação da Licença / Conta</label>
+                    <input 
+                      required 
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-base font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-inner"
+                      value={editingAccount.name} 
+                      onChange={e => setEditingAccount({...editingAccount, name: e.target.value})} 
+                      placeholder="Ex: Google Workspace, AWS Production..."
+                    />
+                  </div>
 
-                <div className="space-y-6">
+                  {/* Linha 2 (3 colunas horizontais em desktop): Tipo, Status, Login */}
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400/80 mb-2 ml-1 tracking-wider">Tipo de Serviço</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400/80 mb-1.5 ml-1 tracking-wider">Tipo de Serviço</label>
                     <select 
-                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all cursor-pointer"
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all cursor-pointer"
                       value={editingAccount.type} 
                       onChange={e => setEditingAccount({...editingAccount, type: e.target.value as AccountType})}
                     >
                       {Object.values(AccountType).map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
+
                   <div>
-                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400/80 mb-2 ml-1 tracking-wider">Status Atual</label>
+                    <label className="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400/80 mb-1.5 ml-1 tracking-wider">Status Atual</label>
                     <select 
-                      className={`w-full border-2 rounded-2xl p-4 text-sm font-bold outline-none transition-all cursor-pointer ${editingAccount.status === 'Ativo' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-900/30 focus:border-emerald-500' : 'bg-rose-50 dark:bg-red-500/20 text-rose-600 dark:text-red-400 border-rose-900/30 focus:border-rose-500'}`}
+                      className={`w-full border rounded-xl p-3.5 text-sm font-bold outline-none transition-all cursor-pointer ${editingAccount.status === 'Ativo' ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-900/30 focus:border-emerald-500' : 'bg-rose-50 dark:bg-red-500/20 text-rose-600 dark:text-red-400 border-rose-900/30 focus:border-rose-500'}`}
                       value={editingAccount.status} 
                       onChange={e => setEditingAccount({...editingAccount, status: e.target.value as any})}
                     >
@@ -741,25 +744,25 @@ const AccountManager = () => {
                       <option value="Inativo">Inativo / Suspenso</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="space-y-6">
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 ml-1 tracking-widest">Login / Credencial Primary</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1.5 ml-1 tracking-widest">Login / Credencial Primary</label>
                     <input 
                       required 
-                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm font-bold bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
                       value={editingAccount.login} 
                       onChange={e => setEditingAccount({...editingAccount, login: e.target.value})} 
                       placeholder="e-mail ou usuário"
                     />
                   </div>
+
+                  {/* Linha 3: Master Key & URL de Gestao dispostos lado a lado */}
                   <div>
-                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 ml-1 tracking-widest">Master Key / Senha</label>
+                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1.5 ml-1 tracking-widest">Master Key / Senha</label>
                     <div className="relative">
                       <input 
                         type={showPasswords['modal'] ? 'text' : 'password'}
-                        className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 pr-12 text-sm font-mono bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 pr-12 text-sm font-mono bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all"
                         value={editingAccount.password || ''} 
                         onChange={e => setEditingAccount({...editingAccount, password: e.target.value})} 
                         placeholder="••••••••"
@@ -767,114 +770,115 @@ const AccountManager = () => {
                       <button 
                         type="button"
                         onClick={() => setShowPasswords(p => ({...p, modal: !p.modal}))}
-                        className="absolute right-4 top-3.5 p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors"
+                        className="absolute right-3.5 top-3 p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white transition-colors"
                       >
                         {showPasswords['modal'] ? <EyeOff size={18}/> : <Eye size={18}/>}
                       </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 ml-1 tracking-widest">URL de Gestão / Acesso Web</label>
-                  <div className="relative group">
-                    <Globe className="absolute left-4 top-4 text-slate-500 dark:text-slate-400 group-focus-within:text-blue-600 dark:text-sky-400 transition-colors" size={18}/>
-                    <input 
-                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 pl-12 text-sm font-mono bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all"
-                      value={editingAccount.accessUrl || ''} 
-                      onChange={e => setEditingAccount({...editingAccount, accessUrl: e.target.value})} 
-                      placeholder="https://dashboard.service.com"
+                  <div className="lg:col-span-2">
+                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1.5 ml-1 tracking-widest">URL de Gestão / Acesso Web</label>
+                    <div className="relative group">
+                      <Globe className="absolute left-3.5 top-3.5 text-slate-500 dark:text-slate-400 group-focus-within:text-blue-600 dark:text-sky-400 transition-colors" size={18}/>
+                      <input 
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 pl-11 text-sm font-mono bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-blue-500 outline-none transition-all"
+                        value={editingAccount.accessUrl || ''} 
+                        onChange={e => setEditingAccount({...editingAccount, accessUrl: e.target.value})} 
+                        placeholder="https://dashboard.service.com"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Vinculos e Dependencias em 2 colunas bem distribuídas */}
+                  <div className="lg:col-span-3 space-y-4 pt-2">
+                    <h4 className="text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2">
+                      <Info size={16}/> Vínculos e Dependências
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider ml-1">Colaboradores Associados</label>
+                        <SearchableDropdown 
+                          options={userOptions.filter(o => !(editingAccount.userIds || []).includes(o.value))} 
+                          value=""
+                          onChange={val => {
+                            if (val) setEditingAccount({...editingAccount, userIds: [...(editingAccount.userIds || []), val]});
+                          }} 
+                          placeholder="Vincular Pessoa..."
+                          icon={<UserCheck size={18} className="text-indigo-600 dark:text-indigo-400"/>}
+                        />
+                        
+                        <div className="flex flex-wrap gap-2 min-h-[48px] bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                          {(editingAccount.userIds || []).length > 0 ? (editingAccount.userIds || []).map(uid => {
+                            const u = users.find(user => user.id === uid);
+                            return u ? (
+                              <div key={uid} className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-800 hover:border-red-500 transition-all animate-scale-up">
+                                <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">{u.fullName}</span>
+                                <button type="button" onClick={() => setEditingAccount({...editingAccount, userIds: (editingAccount.userIds || []).filter(id => id !== uid)})} className="text-indigo-500 group-hover:text-red-500">
+                                  <X size={12}/>
+                                </button>
+                              </div>
+                            ) : null;
+                          }) : <span className="text-[11px] font-bold italic text-slate-400 dark:text-slate-500 self-center mx-auto uppercase">Nenhum Vínculo Humano</span>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider ml-1">Dispositivos Associados</label>
+                        <SearchableDropdown 
+                          options={deviceOptions.filter(o => !(editingAccount.deviceIds || []).includes(o.value))} 
+                          value=""
+                          onChange={val => {
+                            if (val) setEditingAccount({...editingAccount, deviceIds: [...(editingAccount.deviceIds || []), val]});
+                          }} 
+                          placeholder="Vincular Ativo..."
+                          icon={<DeviceIcon size={18} className="text-emerald-600 dark:text-emerald-400"/>}
+                        />
+
+                        <div className="flex flex-wrap gap-2 min-h-[48px] bg-slate-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                          {(editingAccount.deviceIds || []).length > 0 ? (editingAccount.deviceIds || []).map(did => {
+                            const d = devices.find(dev => dev.id === did);
+                            return d ? (
+                              <div key={did} className="group flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-800 hover:border-red-500 transition-all animate-scale-up">
+                                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{getDeviceLabel(d)}</span>
+                                <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-500 group-hover:text-red-500">
+                                  <X size={12}/>
+                                </button>
+                              </div>
+                            ) : null;
+                          }) : <span className="text-[11px] font-bold italic text-slate-400 dark:text-slate-500 self-center mx-auto uppercase">Nenhum Vínculo de Hardware</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Historico / Notas Internas */}
+                  <div className="lg:col-span-3 pt-2">
+                    <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1.5 ml-1 tracking-widest">Histórico / Notas Internas</label>
+                    <textarea 
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all min-h-[90px] resize-none"
+                      rows={3} 
+                      value={editingAccount.notes || ''} 
+                      onChange={e => setEditingAccount({...editingAccount, notes: e.target.value})} 
+                      placeholder="Logs de alteração, motivos de suspensão, finalidade da conta..."
                     />
                   </div>
                 </div>
-
-                <div className="md:col-span-2 space-y-6 pt-4">
-                  <h4 className="text-[11px] font-black uppercase text-indigo-600 dark:text-indigo-400 border-b border-slate-200 dark:border-slate-700 pb-2 flex items-center gap-2 mb-2">
-                    <Info size={16}/> Vínculos e Dependências
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1 tracking-[0.2em] ml-1">Colaboradores Associados</label>
-                      <SearchableDropdown 
-                        options={userOptions.filter(o => !(editingAccount.userIds || []).includes(o.value))} 
-                        value=""
-                        onChange={val => {
-                          if (val) setEditingAccount({...editingAccount, userIds: [...(editingAccount.userIds || []), val]});
-                        }} 
-                        placeholder="Vincular Pessoa..."
-                        icon={<UserCheck size={18} className="text-indigo-600 dark:text-indigo-400"/>}
-                      />
-                      
-                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-100 dark:bg-slate-800/20 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-                        {(editingAccount.userIds || []).length > 0 ? (editingAccount.userIds || []).map(uid => {
-                          const u = users.find(user => user.id === uid);
-                          return u ? (
-                            <div key={uid} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-800 hover:border-red-500 transition-all animate-scale-up">
-                              <span className="text-[11px] font-bold text-indigo-300">{u.fullName}</span>
-                              <button type="button" onClick={() => setEditingAccount({...editingAccount, userIds: (editingAccount.userIds || []).filter(id => id !== uid)})} className="text-indigo-500 group-hover:text-red-500">
-                                <X size={12}/>
-                              </button>
-                            </div>
-                          ) : null;
-                        }) : <span className="text-[11px] font-bold italic text-slate-600 self-center mx-auto uppercase">Nenhum Vínculo Humano</span>}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1 tracking-[0.2em] ml-1">Dispositivos Associados</label>
-                      <SearchableDropdown 
-                        options={deviceOptions.filter(o => !(editingAccount.deviceIds || []).includes(o.value))} 
-                        value=""
-                        onChange={val => {
-                          if (val) setEditingAccount({...editingAccount, deviceIds: [...(editingAccount.deviceIds || []), val]});
-                        }} 
-                        placeholder="Vincular Ativo..."
-                        icon={<DeviceIcon size={18} className="text-emerald-600 dark:text-emerald-400"/>}
-                      />
-
-                      <div className="flex flex-wrap gap-2 min-h-12 bg-slate-100 dark:bg-slate-800/20 p-2 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-                        {(editingAccount.deviceIds || []).length > 0 ? (editingAccount.deviceIds || []).map(did => {
-                          const d = devices.find(dev => dev.id === did);
-                          return d ? (
-                            <div key={did} className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-800 hover:border-red-500 transition-all animate-scale-up">
-                              <span className="text-[11px] font-bold text-emerald-300">{getDeviceLabel(d)}</span>
-                              <button type="button" onClick={() => setEditingAccount({...editingAccount, deviceIds: (editingAccount.deviceIds || []).filter(id => id !== did)})} className="text-emerald-500 group-hover:text-red-500">
-                                <X size={12}/>
-                              </button>
-                            </div>
-                          ) : null;
-                        }) : <span className="text-[11px] font-bold italic text-slate-600 self-center mx-auto uppercase">Nenhum Vínculo de Hardware</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2 pt-4">
-                  <label className="block text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 mb-2 ml-1 tracking-widest">Histórico / Notas Internas</label>
-                  <textarea 
-                    className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-5 text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all min-h-[120px] resize-none"
-                    rows={4} 
-                    value={editingAccount.notes || ''} 
-                    onChange={e => setEditingAccount({...editingAccount, notes: e.target.value})} 
-                    placeholder="Logs de alteração, motivos de suspensão, finalidade da conta..."
-                  />
-                </div>
               </div>
               
-              <div className="flex justify-end gap-3 pt-4 shrink-0">
+              <div className="flex justify-end gap-3 px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 shrink-0">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)} 
-                  className="px-8 py-4 text-[11px] font-black uppercase hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition-all tracking-[0.2em] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-white"
+                  className="px-6 py-2.5 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all"
                 >
                   Descartar
                 </button>
                 <button 
                   type="submit" 
-                  disabled={isReadOnly}
-                  className={`px-12 py-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 font-black text-[11px] uppercase tracking-[0.2em] transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-900/30 ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-black text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-indigo-900/40 flex items-center gap-2"
                 >
-                  Confirmar Registro
+                  <Save size={16}/> Salvar Credencial
                 </button>
               </div>
             </form>
