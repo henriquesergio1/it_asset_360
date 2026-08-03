@@ -9,6 +9,68 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.119.0',
+    date: 'Hoje',
+    title: 'Navegação Direta dos Alertas do RH para Ficha do Colaborador',
+    changes: [
+      'Navegação Automática: Ao clicar em qualquer item dos cards de Alertas de Férias, Vencimento de Documentos e Comemorações do Mês, o sistema redireciona automaticamente para o módulo de Colaboradores.',
+      'Abertura de Ficha: A modal de cadastro completo do colaborador selecionado é aberta instantaneamente na tela.'
+    ]
+  },
+  {
+    version: '3.118.1',
+    date: 'Hoje',
+    title: 'Ajuste de Rótulo no Card de Comemorações do RH',
+    changes: [
+      'Padronização Visual: Atualizado o rótulo do badge de aniversário natalício no card de comemorações de NASCIMENTO para ANIVERSÁRIO.'
+    ]
+  },
+  {
+    version: '3.118.0',
+    date: 'Hoje',
+    title: 'Alerta de Aniversário de Empresa (Tempo de Casa) no RH',
+    changes: [
+      'Novo Alerta: Integrado o acompanhamento de tempo de casa (aniversário de contratação) dos colaboradores no card de comemorações do mês.',
+      'Diferenciação por Cores e Ícones: Aniversários natalícios exibidos em roxo/índigo com ícone de bolo (Cake) e Aniversários de Empresa em amarelo/dourado com ícone de medalha (Award).'
+    ]
+  },
+  {
+    version: '3.117.0',
+    date: 'Hoje',
+    title: 'Detalhamento de Férias com Antecedência e Idade nos Aniversariantes',
+    changes: [
+      'Férias: Exibição da data exata de vencimento do próximo período aquisitivo de 12 meses (DD/MM/YYYY) com alerta de antecedência em dias restantes.',
+      'Aniversários: Exibição da idade que o colaborador completará no mês vigente.'
+    ]
+  },
+  {
+    version: '3.116.0',
+    date: 'Hoje',
+    title: 'Padronização Uniforme de Barra Lateral Simples (4px) nas Tabelas',
+    changes: [
+      'Layout de Tabelas: Padronizada a barra lateral de destaque em 4px no hover para todas as tabelas do sistema nos 3 módulos (T.I., R.H. e Fuel 360).',
+      'Remoção de Borda Dupla: Eliminadas bordas concorrentes nos elementos tr, garantindo a mesma espessura nos temas Claro e Escuro.'
+    ]
+  },
+  {
+    version: '3.115.0',
+    date: 'Hoje',
+    title: 'Variáveis CSS Reativas de Tema por Módulo',
+    changes: [
+      'Design System: Substituídas cores fixas por variáveis CSS (--module-hover-border) configuradas por módulo em index.css.',
+      'Multi-módulo: Módulo T.I. em Azul/Ciano, R.H. em Amarelo Âmbar e Fuel 360 em Verde Esmeralda.'
+    ]
+  },
+  {
+    version: '3.114.0',
+    date: 'Hoje',
+    title: 'Módulo Fuel 360 em Verde Esmeralda e Auto-Sync de Módulo por Rota',
+    changes: [
+      'Fuel 360: Transição visual de tabelas, botões e formulários do Fuel 360 para a paleta Verde Esmeralda (Emerald).',
+      'App.tsx: Sincronização automática do atributo data-module na raiz do sistema conforme navegação por rota.'
+    ]
+  },
+  {
     version: '3.84.1',
     date: 'Hoje',
     title: 'Otimização Real do Bootstrap (Truncamento de Dumps de Auditoria)',
