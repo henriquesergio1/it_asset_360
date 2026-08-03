@@ -148,6 +148,10 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
   }, [location.pathname]);
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-module', currentModule);
+  }, [currentModule]);
+
+  useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
 

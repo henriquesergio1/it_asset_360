@@ -280,7 +280,36 @@
   z-index: 0;
 }
 
-/* PADRONIZAÇÃO DE HOVER ANT DESIGN 6 PARA TODAS AS TABELAS DO SISTEMA (T.I., R.H., FUEL360, ADMIN) */
+/* SISTEMA DE TEMAS DINÂMICOS POR MÓDULO (T.I., R.H. E FUEL 360) PARA TABELAS E COMPONENTES */
+
+/* Módulo T.I. (Padrão Azul) */
+[data-module="TI"],
+html[data-module="TI"] {
+  --module-hover-border: #2563eb;
+  --module-hover-border-dark: #38bdf8;
+  --module-hover-bg: rgba(239, 246, 255, 0.7);
+  --module-hover-bg-dark: rgba(30, 58, 138, 0.25);
+}
+
+/* Módulo R.H. (Padrão Amarelo / Âmbar) */
+[data-module="RH"],
+html[data-module="RH"] {
+  --module-hover-border: #f59e0b;
+  --module-hover-border-dark: #fbbf24;
+  --module-hover-bg: rgba(254, 243, 199, 0.7);
+  --module-hover-bg-dark: rgba(245, 158, 11, 0.2);
+}
+
+/* Módulo Fuel 360 (Padrão Verde Esmeralda) */
+[data-module="FUEL"],
+html[data-module="FUEL"] {
+  --module-hover-border: #059669;
+  --module-hover-border-dark: #34d399;
+  --module-hover-bg: rgba(209, 250, 229, 0.7);
+  --module-hover-bg-dark: rgba(16, 185, 129, 0.2);
+}
+
+/* PADRONIZAÇÃO DE HOVER ANT DESIGN 6 PARA TODAS AS TABELAS DO SISTEMA COM COR DINÂMICA DO MÓDULO */
 tbody > tr,
 tr.group {
   position: relative;
@@ -289,21 +318,21 @@ tr.group {
 
 html:not(.dark) tbody > tr:hover,
 html:not(.dark) tr.group:hover {
-  background-color: #f0f7ff !important;
+  background-color: var(--module-hover-bg, rgba(239, 246, 255, 0.7)) !important;
 }
 
 html:not(.dark) tbody > tr:hover > td:first-child,
 html:not(.dark) tr.group:hover > td:first-child {
-  box-shadow: inset 4px 0 0 0 #1677ff !important;
+  box-shadow: inset 4px 0 0 0 var(--module-hover-border, #2563eb) !important;
 }
 
 html.dark tbody > tr:hover,
 html.dark tr.group:hover {
-  background-color: rgba(51, 65, 85, 0.6) !important;
+  background-color: var(--module-hover-bg-dark, rgba(30, 58, 138, 0.25)) !important;
 }
 
 html.dark tbody > tr:hover > td:first-child,
 html.dark tr.group:hover > td:first-child {
-  box-shadow: inset 4px 0 0 0 #38bdf8 !important;
+  box-shadow: inset 4px 0 0 0 var(--module-hover-border-dark, #38bdf8) !important;
 }
 
