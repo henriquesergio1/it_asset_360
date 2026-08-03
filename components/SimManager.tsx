@@ -330,7 +330,7 @@ const SimManager = () => {
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600 dark:border-l-blue-500 overflow-hidden shadow-2xl ring-1 ring-white/5 transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left table-fixed">
             <thead className="bg-slate-100 dark:bg-slate-800/50">

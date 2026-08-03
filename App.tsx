@@ -49,14 +49,29 @@ const getDefaultTiPath = (user: any, isAdmin?: boolean): string => {
   return '/reports';
 };
 
-const SidebarLink = ({ to, icon: Icon, label, collapsed }: { to: string; icon: any; label: string; collapsed: boolean }) => {
+const SidebarLink = ({ to, icon: Icon, label, collapsed, module = 'TI' }: { to: string; icon: any; label: string; collapsed: boolean; module?: 'TI' | 'RH' | 'FUEL' }) => {
   const location = useLocation();
   const isActive = location.pathname === to;
   
+  const themeClasses = {
+    TI: {
+      active: 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-l-4 border-blue-600 font-black',
+      hover: 'text-slate-600 dark:text-slate-400 hover:bg-blue-50/60 dark:hover:bg-blue-900/25 hover:text-blue-600 dark:hover:text-sky-400'
+    },
+    RH: {
+      active: 'bg-purple-50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-l-4 border-purple-600 font-black',
+      hover: 'text-slate-600 dark:text-slate-400 hover:bg-purple-50/60 dark:hover:bg-purple-900/25 hover:text-purple-600 dark:hover:text-purple-400'
+    },
+    FUEL: {
+      active: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-l-4 border-emerald-600 font-black',
+      hover: 'text-slate-600 dark:text-slate-400 hover:bg-emerald-50/60 dark:hover:bg-emerald-900/25 hover:text-emerald-600 dark:hover:text-emerald-400'
+    }
+  }[module];
+
   return (
     <NavLink 
       to={to} 
-      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:text-white'} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
+      className={`flex items-center space-x-3 px-6 py-3 transition-all duration-200 ${isActive ? themeClasses.active : themeClasses.hover} ${collapsed ? 'justify-center px-0 space-x-0' : ''}`}
       title={label}
     >
       <Icon size={20} className="shrink-0" />
@@ -158,7 +173,11 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         {/* Logo Section */}
         <div className={`border-b border-slate-200 dark:border-slate-700 shrink-0 relative transition-all duration-300 ${isSidebarCollapsed ? 'p-4' : 'p-8'}`}>
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className={`bg-blue-600 shadow-xl shadow-blue-900/20 transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'}`}>
+            <div className={`shadow-xl transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'} ${
+              currentModule === 'TI' ? 'bg-blue-600 shadow-blue-900/20' :
+              currentModule === 'RH' ? 'bg-purple-600 shadow-purple-900/20' :
+              'bg-emerald-600 shadow-emerald-900/20'
+            }`}>
               {settings.logoUrl ? (
                   <img src={settings.logoUrl} alt="Logo" className={`${isSidebarCollapsed ? 'h-8' : 'h-14'} w-auto object-contain transition-all duration-300`} />
               ) : (
@@ -235,35 +254,35 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
         <nav className="mt-4 flex-1 overflow-y-auto custom-scrollbar">
           {currentModule === 'TI' ? (
             <>
-              {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} />}
-              {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} />}
+              {hasPermission(user, 'dashboard_leitura') && <SidebarLink to="/" icon={LayoutDashboard} label="Dashboard" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'dispositivos_leitura') && <SidebarLink to="/devices" icon={Smartphone} label="Dispositivos" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'colaboradores_leitura') && <SidebarLink to="/users" icon={Users} label="Colaboradores" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'chips_leitura') && <SidebarLink to="/sims" icon={Cpu} label="Chips / SIMs" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'licencas_leitura') && <SidebarLink to="/accounts" icon={Globe} label="Licenças / Contas" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'consumiveis_leitura') && <SidebarLink to="/consumables" icon={Package} label="Consumíveis" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'tarefas_leitura') && <SidebarLink to="/tasks" icon={CheckSquare} label="Gestão de Tarefas" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'relatorios_leitura') && <SidebarLink to="/reports" icon={FileText} label="Relatórios" collapsed={isSidebarCollapsed} module="TI" />}
+              {hasPermission(user, 'entrega_leitura') && <SidebarLink to="/operations" icon={Repeat} label="Entrega / Devolução" collapsed={isSidebarCollapsed} module="TI" />}
             </>
           ) : currentModule === 'RH' ? (
             <>
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} />}
-              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura')) && <SidebarLink to="/rh/dashboard" icon={LayoutDashboard} label="Dashboard R.H." collapsed={isSidebarCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura')) && <SidebarLink to="/rh/collaborators" icon={Users} label="Colaboradores R.H." collapsed={isSidebarCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura')) && <SidebarLink to="/rh/comodato" icon={FileText} label="Termos de Comodato" collapsed={isSidebarCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura')) && <SidebarLink to="/rh/occurrences" icon={Calendar} label="Faltas e Ocorrências" collapsed={isSidebarCollapsed} module="RH" />}
+              {(isAdmin || hasPermission(user, 'admin') || hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura')) && <SidebarLink to="/rh/assets" icon={Package} label="Ativos e Consumíveis" collapsed={isSidebarCollapsed} module="RH" />}
             </>
           ) : (
             <>
-              <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} />
-              <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isSidebarCollapsed} />
+              <SidebarLink to="/fuel360/calculo" icon={Calculator} label="Cálculo Reembolso" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/roteirizador" icon={MapPin} label="Roteirizador" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/ajuste-rota" icon={Navigation} label="Ajuste de Rota" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/comparativo" icon={TrendingUp} label="Previsto x Realizado" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/simulacoes" icon={ClipboardList} label="Simulações e Cálculos" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/equipe" icon={Users} label="Equipe & Setores" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/ausencias" icon={Calendar} label="Ausências" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/relatorios" icon={BarChart3} label="Relatórios BI" collapsed={isSidebarCollapsed} module="FUEL" />
+              <SidebarLink to="/fuel360/config" icon={Sliders} label="Parâmetros KM/L" collapsed={isSidebarCollapsed} module="FUEL" />
             </>
           )}
           
@@ -316,7 +335,11 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.name}</p>
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{user?.Nome_Perfil || (user?.role === 'ADMIN' ? 'Administrador TI' : 'Operador Suporte')}</p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-sky-500/20 flex items-center justify-center text-blue-600 dark:text-sky-400 font-bold border border-blue-200 dark:border-sky-500/30 shadow-inner">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold border shadow-inner transition-colors ${
+              currentModule === 'TI' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-sky-500/30' :
+              currentModule === 'RH' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' :
+              'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+            }`}>
               {user?.name.charAt(0)}
             </div>
           </div>

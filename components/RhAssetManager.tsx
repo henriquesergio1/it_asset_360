@@ -218,7 +218,7 @@ export const RhAssetManager: React.FC = () => {
         </div>
         <button
           onClick={openAddForm}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
         >
           <Plus size={16} /> Cadastrar Novo Item
         </button>
@@ -310,7 +310,7 @@ export const RhAssetManager: React.FC = () => {
       </div>
 
       {/* Main DataTable Grid */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 border-l-4 border-l-purple-600 dark:border-l-purple-500 shadow-sm overflow-hidden">
         <DataTable
           columns={columns}
           data={paginatedData}

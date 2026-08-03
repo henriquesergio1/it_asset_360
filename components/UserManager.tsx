@@ -1902,7 +1902,7 @@ const UserManager: React.FC = () => {
           )}
         </div>
       ) : (
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-2xl ring-1 ring-white/5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 border-l-4 border-l-blue-600 dark:border-l-blue-500 overflow-hidden shadow-2xl ring-1 ring-white/5">
         <DataTable
           columns={columns}
           data={enrichedUsers}
