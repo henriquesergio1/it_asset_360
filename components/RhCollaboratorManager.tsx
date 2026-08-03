@@ -177,6 +177,29 @@ export const RhCollaboratorManager: React.FC = () => {
   const [bancoHorasMap, setBancoHorasMap] = useState<Record<string, string>>({});
   const location = useLocation();
   const tabsNavRef = React.useRef<HTMLDivElement>(null);
+  const scrollSpeedRef = React.useRef(0);
+  const animFrameRef = React.useRef<number | null>(null);
+
+  const startAutoScroll = React.useCallback(() => {
+    if (animFrameRef.current !== null) return;
+    const loop = () => {
+      if (tabsNavRef.current && scrollSpeedRef.current !== 0) {
+        tabsNavRef.current.scrollLeft += scrollSpeedRef.current;
+        animFrameRef.current = requestAnimationFrame(loop);
+      } else {
+        animFrameRef.current = null;
+      }
+    };
+    animFrameRef.current = requestAnimationFrame(loop);
+  }, []);
+
+  const stopAutoScroll = React.useCallback(() => {
+    scrollSpeedRef.current = 0;
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+  }, []);
 
   React.useEffect(() => {
     if (location.state && (location.state as any).selectedCollaboratorId) {
@@ -1747,164 +1770,166 @@ export const RhCollaboratorManager: React.FC = () => {
       {isDetailModalOpen && selectedColab && !isEditing && (
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[580px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
-            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
-              <div className="flex items-center gap-3">
-                {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
-                  <img 
-                    src={selectedColab.photo} 
-                    alt={selectedColab.fullName} 
-                    onError={() => setFailedPhotoIds(prev => new Set(prev).add(selectedColab.id))}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
-                    onClick={() => setIsExpandedPhotoOpen(true)}
-                    title="Clique para expandir foto"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-200 dark:border-indigo-800">
-                    {selectedColab.fullName.charAt(0)}
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
-                    <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black rounded uppercase tracking-wider">{selectedColab.contractType}</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{selectedColab.role || 'Sem Cargo'}</span>
-                  
-                  {/* Badge Banco de Horas vinculado por PIS */}
-                  {(() => {
-                    const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
-                    if (!cleanPis) return null;
-                    const saldo = bancoHorasMap[cleanPis];
-                    if (!saldo) return null;
-                    const isNegative = saldo.startsWith('-');
-                    const isZero = saldo === '0:00';
-                    return (
-                      <div className="flex items-center gap-1.5 mt-1" title="Atualizado sob demanda do ERP Ponto (Secullum)">
-                        <RefreshCw size={10} className={isNegative ? 'text-rose-400' : isZero ? 'text-slate-400' : 'text-emerald-400'} />
-                        <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Banco de Horas:</span>
-                        <span className={`text-[10px] font-black font-mono ${
-                          isNegative ? 'text-rose-500 dark:text-rose-400' : isZero ? 'text-slate-500' : 'text-emerald-600 dark:text-emerald-400'
-                        }`}>{saldo}</span>
-                        <span className="text-[9px] text-slate-400">{isNegative ? '(deve horas)' : isZero ? '(zerado)' : '(saldo positivo)'}</span>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Badges de Alertas Ativos no Cabeçalho (Aniversário, Tempo de Casa, Férias, CNH) */}
-                  {(() => {
-                    const today = new Date();
-                    const currentMonth = today.getMonth() + 1;
-                    const currentYear = today.getFullYear();
-                    const headerAlerts: { key: string; label: string; badgeClass: string; icon: React.ReactNode }[] = [];
-
-                    // Aniversário Natalício
-                    if (selectedColab.birthDate) {
-                      const parts = parseLocalDateParts(selectedColab.birthDate);
-                      if (parts && parts.month === currentMonth) {
-                        const age = currentYear - parts.year;
-                        headerAlerts.push({
-                          key: 'bday',
-                          label: `Aniversariante (${age} anos)`,
-                          badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800',
-                          icon: <Cake size={11} />
-                        });
-                      }
-                    }
-
-                    // Aniversário de Empresa / Tempo de Casa
-                    if (selectedColab.hireDate) {
-                      const parts = parseLocalDateParts(selectedColab.hireDate);
-                      if (parts) {
-                        const years = currentYear - parts.year;
-                        if (years > 0 && parts.month === currentMonth) {
-                          headerAlerts.push({
-                            key: 'company_bday',
-                            label: `Tempo de Casa (${years} ano${years > 1 ? 's' : ''})`,
-                            badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
-                            icon: <Award size={11} />
-                          });
-                        }
-
-                        // Alerta de Férias (Período aquisitivo de 12 meses)
-                        let nextPeriodEnd = new Date(parts.year, parts.month - 1, parts.day);
-                        const nowZero = new Date();
-                        nowZero.setHours(0,0,0,0);
-                        while (nextPeriodEnd < nowZero) {
-                          nextPeriodEnd.setFullYear(nextPeriodEnd.getFullYear() + 1);
-                        }
-                        const diffTime = nextPeriodEnd.getTime() - nowZero.getTime();
-                        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        const totalMonths = Math.floor(Math.abs(nowZero.getTime() - new Date(parts.year, parts.month - 1, parts.day).getTime()) / (1000 * 60 * 60 * 24 * 30.4));
-                        
-                        const reminder = totalMonths % 12;
-                        if (reminder === 11 || (daysRemaining >= 0 && daysRemaining <= 60)) {
-                          const dueDateStr = formatDateBR(nextPeriodEnd.toISOString().split('T')[0]);
-                          const daysText = daysRemaining === 0 ? 'Vence Hoje!' : `${daysRemaining}d restantes`;
-                          headerAlerts.push({
-                            key: 'ferias',
-                            label: `Férias: Vence em ${dueDateStr} (${daysText})`,
-                            badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
-                            icon: <Calendar size={11} />
-                          });
-                        }
-                      }
-                    }
-
-                    // Vencimento de CNH
-                    if (selectedColab.cnhExpiration) {
-                      const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
-                      if (cnhStatus) {
-                        headerAlerts.push({
-                          key: 'cnh',
-                          label: `CNH: ${cnhStatus.label}`,
-                          badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
-                          icon: <AlertTriangle size={11} />
-                        });
-                      }
-                    }
-
-                    if (headerAlerts.length === 0) return null;
-                    return (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                        {headerAlerts.map(a => (
-                          <span key={a.key} className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full tracking-wider flex items-center gap-1 shadow-xs ${a.badgeClass}`}>
-                            {a.icon}
-                            {a.label}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* Empresa de Registro (CNPJ) no lado direito do cabeçalho */}
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-1.5 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-2.5 max-w-[260px] sm:max-w-[340px] shrink-0">
-                  <div className="p-1.5 bg-indigo-600 text-white rounded-xl shrink-0">
-                    <Building2 size={15} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 block tracking-wider leading-none">Empresa de Registro</span>
-                    <span 
-                      className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate block mt-0.5" 
-                      title={(() => {
-                        const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
-                        return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
-                      })()}
-                    >
-                      {(() => {
-                        const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
-                        return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
-                      })()}
-                    </span>
+            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 space-y-2">
+              <div className="flex flex-wrap justify-between items-start gap-4">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
+                    <img 
+                      src={selectedColab.photo} 
+                      alt={selectedColab.fullName} 
+                      onError={() => setFailedPhotoIds(prev => new Set(prev).add(selectedColab.id))}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-indigo-200 dark:border-indigo-800 hover:scale-105 transition-all shadow-md shrink-0 cursor-pointer"
+                      onClick={() => setIsExpandedPhotoOpen(true)}
+                      title="Clique para expandir foto"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-200 dark:border-indigo-800">
+                      {selectedColab.fullName.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-md font-black text-slate-900 dark:text-white leading-none">{selectedColab.fullName}</h2>
+                      <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[10px] font-black rounded uppercase tracking-wider">{selectedColab.contractType}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{selectedColab.role || 'Sem Cargo'}</span>
+                    
+                    {/* Badge Banco de Horas vinculado por PIS */}
+                    {(() => {
+                      const cleanPis = (selectedColab.pis || '').replace(/\D/g, '');
+                      if (!cleanPis) return null;
+                      const saldo = bancoHorasMap[cleanPis];
+                      if (!saldo) return null;
+                      const isNegative = saldo.startsWith('-');
+                      const isZero = saldo === '0:00';
+                      return (
+                        <div className="flex items-center gap-1.5 mt-1" title="Atualizado sob demanda do ERP Ponto (Secullum)">
+                          <RefreshCw size={10} className={isNegative ? 'text-rose-400' : isZero ? 'text-slate-400' : 'text-emerald-400'} />
+                          <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Banco de Horas:</span>
+                          <span className={`text-[10px] font-black font-mono ${
+                            isNegative ? 'text-rose-500 dark:text-rose-400' : isZero ? 'text-slate-500' : 'text-emerald-600 dark:text-emerald-400'
+                          }`}>{saldo}</span>
+                          <span className="text-[9px] text-slate-400">{isNegative ? '(deve horas)' : isZero ? '(zerado)' : '(saldo positivo)'}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
-                <button onClick={() => setIsDetailModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all shrink-0">
-                  <X size={20} />
-                </button>
+                {/* Empresa de Registro (CNPJ) no lado direito do cabeçalho */}
+                <div className="flex items-center gap-3 shrink-0 ml-auto">
+                  <div className="bg-indigo-50 dark:bg-indigo-950/50 px-3.5 py-1.5 rounded-2xl border border-indigo-200 dark:border-indigo-800/60 flex items-center gap-2.5 max-w-[260px] sm:max-w-[340px] shrink-0">
+                    <div className="p-1.5 bg-indigo-600 text-white rounded-xl shrink-0">
+                      <Building2 size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 block tracking-wider leading-none">Empresa de Registro</span>
+                      <span 
+                        className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate block mt-0.5" 
+                        title={(() => {
+                          const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
+                          return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
+                        })()}
+                      >
+                        {(() => {
+                          const comp = rhCompanies.find(c => c.cnpj === selectedColab.companyCnpj || c.id === selectedColab.companyCnpj || c.companyName === selectedColab.companyCnpj);
+                          return comp ? `${comp.companyName} (${comp.cnpj})` : (selectedColab.companyCnpj || 'Não informada');
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button onClick={() => setIsDetailModalOpen(false)} className="h-10 w-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all shrink-0">
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
+
+              {/* Badges de Alertas Ativos no Cabeçalho (Aniversário, Tempo de Casa, Férias, CNH) */}
+              {(() => {
+                const today = new Date();
+                const currentMonth = today.getMonth() + 1;
+                const currentYear = today.getFullYear();
+                const headerAlerts: { key: string; label: string; badgeClass: string; icon: React.ReactNode }[] = [];
+
+                // Aniversário Natalício
+                if (selectedColab.birthDate) {
+                  const parts = parseLocalDateParts(selectedColab.birthDate);
+                  if (parts && parts.month === currentMonth) {
+                    const age = currentYear - parts.year;
+                    headerAlerts.push({
+                      key: 'bday',
+                      label: `Aniversariante (${age} anos)`,
+                      badgeClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800',
+                      icon: <Cake size={11} />
+                    });
+                  }
+                }
+
+                // Aniversário de Empresa / Tempo de Casa
+                if (selectedColab.hireDate) {
+                  const parts = parseLocalDateParts(selectedColab.hireDate);
+                  if (parts) {
+                    const years = currentYear - parts.year;
+                    if (years > 0 && parts.month === currentMonth) {
+                      headerAlerts.push({
+                        key: 'company_bday',
+                        label: `Tempo de Casa (${years} ano${years > 1 ? 's' : ''})`,
+                        badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+                        icon: <Award size={11} />
+                      });
+                    }
+
+                    // Alerta de Férias (Período aquisitivo de 12 meses)
+                    let nextPeriodEnd = new Date(parts.year, parts.month - 1, parts.day);
+                    const nowZero = new Date();
+                    nowZero.setHours(0,0,0,0);
+                    while (nextPeriodEnd < nowZero) {
+                      nextPeriodEnd.setFullYear(nextPeriodEnd.getFullYear() + 1);
+                    }
+                    const diffTime = nextPeriodEnd.getTime() - nowZero.getTime();
+                    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const totalMonths = Math.floor(Math.abs(nowZero.getTime() - new Date(parts.year, parts.month - 1, parts.day).getTime()) / (1000 * 60 * 60 * 24 * 30.4));
+                    
+                    const reminder = totalMonths % 12;
+                    if (reminder === 11 || (daysRemaining >= 0 && daysRemaining <= 60)) {
+                      const dueDateStr = formatDateBR(nextPeriodEnd.toISOString().split('T')[0]);
+                      const daysText = daysRemaining === 0 ? 'Vence Hoje!' : `${daysRemaining}d restantes`;
+                      headerAlerts.push({
+                        key: 'ferias',
+                        label: `Férias: Vence em ${dueDateStr} (${daysText})`,
+                        badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+                        icon: <Calendar size={11} />
+                      });
+                    }
+                  }
+                }
+
+                // Vencimento de CNH
+                if (selectedColab.cnhExpiration) {
+                  const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
+                  if (cnhStatus) {
+                    headerAlerts.push({
+                      key: 'cnh',
+                      label: `CNH: ${cnhStatus.label}`,
+                      badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800',
+                      icon: <AlertTriangle size={11} />
+                    });
+                  }
+                }
+
+                if (headerAlerts.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    {headerAlerts.map(a => (
+                      <span key={a.key} className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full tracking-wider flex items-center gap-1 shadow-xs ${a.badgeClass}`}>
+                        {a.icon}
+                        {a.label}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Tabs Control com Suporte a Rolagem via Roda do Mouse, Setas de Atalho e Auto-Scroll no Hover */}
@@ -1952,12 +1977,17 @@ export const RhCollaboratorManager: React.FC = () => {
                   const edgeDistance = 80;
 
                   if (x > width - edgeDistance) {
-                    const speed = Math.min(15, (x - (width - edgeDistance)) / 4);
-                    container.scrollLeft += speed;
+                    scrollSpeedRef.current = Math.min(12, ((x - (width - edgeDistance)) / 8) + 2);
+                    startAutoScroll();
                   } else if (x < edgeDistance) {
-                    const speed = Math.min(15, (edgeDistance - x) / 4);
-                    container.scrollLeft -= speed;
+                    scrollSpeedRef.current = -Math.min(12, ((edgeDistance - x) / 8) + 2);
+                    startAutoScroll();
+                  } else {
+                    stopAutoScroll();
                   }
+                }}
+                onMouseLeave={() => {
+                  stopAutoScroll();
                 }}
                 className="flex items-center gap-1.5 overflow-x-auto scroll-smooth px-8 py-1.5 custom-tabs-scrollbar"
               >
