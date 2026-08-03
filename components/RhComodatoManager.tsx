@@ -599,7 +599,7 @@ export const RhComodatoManager: React.FC = () => {
         {canWrite && (
           <button
             onClick={() => setShowCreateTerm(true)}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-5 py-3 rounded-xl shadow-md transition-all uppercase tracking-wider"
           >
             <Plus size={16} /> Emitir Novo Termo
           </button>
@@ -677,7 +677,7 @@ export const RhComodatoManager: React.FC = () => {
       </div>
 
       {/* Main DataTable Grid */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 border-l-4 border-l-purple-600 dark:border-l-purple-500 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700/60 border-l-4 border-l-amber-500 dark:border-l-amber-500 shadow-sm overflow-hidden">
         <DataTable
           columns={columns}
           data={paginatedData}
@@ -699,7 +699,7 @@ export const RhComodatoManager: React.FC = () => {
                   setSelectedTerm(t);
                   setIsDetailModalOpen(true);
                 }}
-                className="border-b border-slate-200 dark:border-slate-700/40 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
+                className="border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-amber-500 dark:hover:border-l-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
               >
                 <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{t.id}</td>
                 <td className="px-6 py-4 font-black">{colabName}</td>

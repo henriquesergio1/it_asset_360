@@ -347,7 +347,7 @@ const SimManager = () => {
               {filteredSims.map((sim) => {
                 const assignedUser = users.find(u => u.id === sim.currentUserId);
                 return (
-                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer group">
+                  <tr key={sim.id} onClick={() => handleOpenModal(sim, true)} className="border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-all cursor-pointer group">
                     {visibleColumns.includes('phoneNumber') && (
                       <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-200">{sim.phoneNumber}</td>
                     )}

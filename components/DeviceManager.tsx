@@ -1158,7 +1158,7 @@ const DeviceManager = () => {
           <tr 
             key={d.id} 
             onClick={() => handleOpenModal(d, true)} 
-            className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-slate-700/60 transition-all cursor-pointer group bg-white dark:bg-slate-800 ${isRet ? 'opacity-60 grayscale' : ''} ${selectedIds.includes(d.id) ? 'bg-blue-50/80 dark:bg-sky-500/20 border-l-blue-600' : ''}`}
+            className={`border-b border-slate-200 dark:border-slate-700/50 border-l-4 border-l-transparent hover:border-l-blue-600 dark:hover:border-l-sky-400 hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-all cursor-pointer group bg-white dark:bg-slate-800 ${isRet ? 'opacity-60 grayscale' : ''} ${selectedIds.includes(d.id) ? 'bg-blue-50/80 dark:bg-sky-500/20 border-l-blue-600' : ''}`}
           >
             <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
               <input 

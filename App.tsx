@@ -59,8 +59,8 @@ const SidebarLink = ({ to, icon: Icon, label, collapsed, module = 'TI' }: { to: 
       hover: 'text-slate-600 dark:text-slate-400 hover:bg-blue-50/60 dark:hover:bg-blue-900/25 hover:text-blue-600 dark:hover:text-sky-400'
     },
     RH: {
-      active: 'bg-purple-50 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-l-4 border-purple-600 font-black',
-      hover: 'text-slate-600 dark:text-slate-400 hover:bg-purple-50/60 dark:hover:bg-purple-900/25 hover:text-purple-600 dark:hover:text-purple-400'
+      active: 'bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-l-4 border-amber-500 font-black',
+      hover: 'text-slate-600 dark:text-slate-400 hover:bg-amber-50/60 dark:hover:bg-amber-900/25 hover:text-amber-600 dark:hover:text-amber-400'
     },
     FUEL: {
       active: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-l-4 border-emerald-600 font-black',
@@ -175,7 +175,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
           <div className="flex flex-col items-center text-center space-y-4">
             <div className={`shadow-xl transition-all duration-300 ${isSidebarCollapsed ? 'p-3 rounded-xl' : 'p-4 rounded-2xl'} ${
               currentModule === 'TI' ? 'bg-blue-600 shadow-blue-900/20' :
-              currentModule === 'RH' ? 'bg-purple-600 shadow-purple-900/20' :
+              currentModule === 'RH' ? 'bg-amber-500 shadow-amber-900/20' :
               'bg-emerald-600 shadow-emerald-900/20'
             }`}>
               {settings.logoUrl ? (
@@ -214,7 +214,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               {hasRhAccess && (
                 <button
                   onClick={() => handleModuleSwitch('RH')}
-                  className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'RH' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${currentModule === 'RH' ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   R.H.
                 </button>
@@ -337,7 +337,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
             </div>
             <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold border shadow-inner transition-colors ${
               currentModule === 'TI' ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-sky-500/30' :
-              currentModule === 'RH' ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' :
+              currentModule === 'RH' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' :
               'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
             }`}>
               {user?.name.charAt(0)}
