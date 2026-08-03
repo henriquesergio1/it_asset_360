@@ -495,6 +495,7 @@ const AppRoutes = () => {
             {/* Módulo R.H. Routes */}
             <Route path="/rh/dashboard" element={<ProtectedRoute module="RH"><RhDashboard /></ProtectedRoute>} />
             <Route path="/rh/collaborators" element={<ProtectedRoute module="RH"><RhCollaboratorManager /></ProtectedRoute>} />
+            <Route path="/rh/colaboradores" element={<ProtectedRoute module="RH"><RhCollaboratorManager /></ProtectedRoute>} />
             <Route path="/rh/comodato" element={<ProtectedRoute module="RH"><RhComodatoManager /></ProtectedRoute>} />
             <Route path="/rh/occurrences" element={<ProtectedRoute module="RH"><RhOccurrenceManager /></ProtectedRoute>} />
             <Route path="/rh/assets" element={<ProtectedRoute module="RH"><RhAssetManager /></ProtectedRoute>} />

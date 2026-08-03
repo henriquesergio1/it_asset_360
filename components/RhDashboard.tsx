@@ -11,7 +11,7 @@ export const RhDashboard: React.FC = () => {
 
   const handleOpenCollaborator = (collaboratorId: string) => {
     if (!collaboratorId) return;
-    navigate('/rh/colaboradores', { state: { selectedCollaboratorId: collaboratorId } });
+    navigate('/rh/collaborators', { state: { selectedCollaboratorId: collaboratorId } });
   };
 
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
