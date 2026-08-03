@@ -118,20 +118,27 @@ const ColaboradorModal: React.FC<{
         if (!formData.Nome || !formData.ID_Pulsus || !formData.CodigoSetor) { setError("Campos obrigatórios ausentes."); return; }
         if (colaborador && !motivo.trim()) { setError("Motivo da alteração é obrigatório."); return; }
 
-        const data: Colaborador = {
+        const data: any = {
             ID_Colaborador: colaborador ? colaborador.ID_Colaborador : 0,
             ID_Pulsus: Number(formData.ID_Pulsus),
+            id_pulsus: Number(formData.ID_Pulsus),
             CodigoSetor: Number(formData.CodigoSetor),
-            Nome: formData.Nome || '',
+            codigo_setor: Number(formData.CodigoSetor),
+            Nome: formData.Nome || (colaborador ? colaborador.Nome : ''),
+            nome: formData.Nome || (colaborador ? colaborador.Nome : ''),
             Grupo: formData.Grupo || 'Vendedor',
+            grupo: formData.Grupo || 'Vendedor',
             TipoVeiculo: formData.TipoVeiculo as TipoVeiculoReembolso,
+            tipoVeiculo: formData.TipoVeiculo as TipoVeiculoReembolso,
             Ativo: formData.Ativo !== undefined ? formData.Ativo : true,
+            ativo: formData.Ativo !== undefined ? formData.Ativo : true,
             CPF: formData.CPF || undefined,
+            cpf: formData.CPF || undefined,
             MotivoAlteracao: colaborador ? motivo : undefined,
             LatitudeBase: formData.LatitudeBase || 0,
             LongitudeBase: formData.LongitudeBase || 0,
             EnderecoBase: formData.EnderecoBase || '',
-            EnderecoPendente: false // Reset automático ao salvar manualmente
+            EnderecoPendente: false
         };
 
         setSaving(true);

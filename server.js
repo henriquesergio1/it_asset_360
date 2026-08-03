@@ -2268,17 +2268,23 @@ app.get('/api/fuel360/colaboradores', async (req, res) => {
 });
 
 app.post('/api/fuel360/colaboradores', async (req, res) => {
-    const { id_pulsus, codigo_setor, nome, grupo, tipoVeiculo, cpf } = req.body;
+    const nome = req.body.Nome || req.body.nome || '';
+    const grupo = req.body.Grupo || req.body.grupo || 'Vendedor';
+    const tipoVeiculo = req.body.TipoVeiculo || req.body.tipoVeiculo || 'Carro';
+    const codigo_setor = req.body.CodigoSetor !== undefined ? req.body.CodigoSetor : (req.body.codigo_setor || 0);
+    const id_pulsus = req.body.ID_Pulsus !== undefined ? req.body.ID_Pulsus : (req.body.id_pulsus || null);
+    const cpf = req.body.CPF !== undefined ? req.body.CPF : (req.body.cpf || null);
+
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
         const result = await pool.request()
-            .input('ID_Pulsus', sql.Int, id_pulsus || null)
-            .input('CodigoSetor', sql.Int, codigo_setor || 0)
-            .input('Nome', sql.NVarChar, nome || '')
-            .input('Grupo', sql.NVarChar, grupo || 'Outros')
-            .input('TipoVeiculo', sql.NVarChar, tipoVeiculo || 'Carro')
-            .input('CPF', sql.NVarChar, cpf || null)
+            .input('ID_Pulsus', sql.Int, id_pulsus)
+            .input('CodigoSetor', sql.Int, codigo_setor)
+            .input('Nome', sql.NVarChar, nome)
+            .input('Grupo', sql.NVarChar, grupo)
+            .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
+            .input('CPF', sql.NVarChar, cpf ? String(cpf) : null)
             .query(`
                 INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, Ativo)
                 OUTPUT INSERTED.*
@@ -2291,21 +2297,46 @@ app.post('/api/fuel360/colaboradores', async (req, res) => {
 });
 
 app.put('/api/fuel360/colaboradores/:id', async (req, res) => {
-    const { nome, grupo, tipoVeiculo, codigo_setor, ativo, cpf } = req.body;
+    let nome = req.body.Nome || req.body.nome;
+    const grupo = req.body.Grupo || req.body.grupo || 'Vendedor';
+    const tipoVeiculo = req.body.TipoVeiculo || req.body.tipoVeiculo || 'Carro';
+    const codigo_setor = req.body.CodigoSetor !== undefined ? req.body.CodigoSetor : (req.body.codigo_setor || 0);
+    const cpf = req.body.CPF !== undefined ? req.body.CPF : (req.body.cpf || null);
+    const ativo = req.body.Ativo !== undefined ? req.body.Ativo : (req.body.ativo !== undefined ? req.body.ativo : true);
+    const latitude = req.body.LatitudeBase !== undefined ? req.body.LatitudeBase : (req.body.latitudeBase || 0);
+    const longitude = req.body.LongitudeBase !== undefined ? req.body.LongitudeBase : (req.body.longitudeBase || 0);
+    const endereco = req.body.EnderecoBase !== undefined ? req.body.EnderecoBase : (req.body.enderecoBase || '');
+
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
+
+        // Se o nome vier nulo/vazio no payload de atualização, buscar o nome existente no banco para proteger contra falhas
+        if (!nome || !String(nome).trim()) {
+            const existingRes = await pool.request()
+                .input('ID', sql.Int, req.params.id)
+                .query(`SELECT Nome FROM FuelColaboradores WHERE ID_Colaborador=@ID`);
+            if (existingRes.recordset && existingRes.recordset[0] && existingRes.recordset[0].Nome) {
+                nome = existingRes.recordset[0].Nome;
+            } else {
+                nome = 'Colaborador';
+            }
+        }
+
         await pool.request()
             .input('ID', sql.Int, req.params.id)
             .input('Nome', sql.NVarChar, nome)
             .input('Grupo', sql.NVarChar, grupo)
             .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
             .input('CodigoSetor', sql.Int, codigo_setor)
-            .input('CPF', sql.NVarChar, cpf !== undefined ? cpf : null)
-            .input('Ativo', sql.Bit, ativo !== undefined ? (ativo ? 1 : 0) : 1)
+            .input('CPF', sql.NVarChar, cpf ? String(cpf) : null)
+            .input('Ativo', sql.Bit, ativo ? 1 : 0)
+            .input('LatitudeBase', sql.Float, latitude)
+            .input('LongitudeBase', sql.Float, longitude)
+            .input('EnderecoBase', sql.NVarChar, endereco)
             .query(`
                 UPDATE FuelColaboradores
-                SET Nome=@Nome, Grupo=@Grupo, TipoVeiculo=@TipoVeiculo, CodigoSetor=@CodigoSetor, CPF=@CPF, Ativo=@Ativo
+                SET Nome=@Nome, Grupo=@Grupo, TipoVeiculo=@TipoVeiculo, CodigoSetor=@CodigoSetor, CPF=@CPF, Ativo=@Ativo, LatitudeBase=@LatitudeBase, LongitudeBase=@LongitudeBase, EnderecoBase=@EnderecoBase
                 WHERE ID_Colaborador=@ID
             `);
         res.json({ success: true });
