@@ -1,12 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, AlertTriangle, FileText, Users, Cake, Shield, ChevronRight, Award, FileSignature, ChevronDown, ChevronUp, ArrowRight, AlertCircle } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { parseLocalDateParts, formatDateBR, formatBirthdayDisplay } from '../utils/rhValidation';
 
 export const RhDashboard: React.FC = () => {
   const { rhCollaborators, rhOccurrences, rhTerms, sectors } = useData();
+  const navigate = useNavigate();
+
+  const handleOpenCollaborator = (collaboratorId: string) => {
+    if (!collaboratorId) return;
+    navigate('/rh/colaboradores', { state: { selectedCollaboratorId: collaboratorId } });
+  };
 
   const [isTermsExpanded, setIsTermsExpanded] = useState(false);
   const [isValidationExpanded, setIsValidationExpanded] = useState(false);
@@ -454,12 +460,17 @@ export const RhDashboard: React.FC = () => {
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {holidayAlerts.length > 0 ? (
               holidayAlerts.map((alert, i) => (
-                <div key={i} className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl flex items-center justify-between">
+                <div 
+                  key={i} 
+                  onClick={() => handleOpenCollaborator(alert.collaborator.id)}
+                  className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.01] hover:shadow-sm transition-all group"
+                  title="Clique para abrir o cadastro do colaborador"
+                >
                   <div>
-                    <span className="block font-bold text-xs text-slate-900 dark:text-white">{alert.collaborator.fullName}</span>
-                    <span className="text-[10px] opacity-75 block text-emerald-600 dark:text-emerald-400 font-bold">{alert.status}</span>
+                    <span className="block font-bold text-xs text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{alert.collaborator.fullName}</span>
+                    <span className="text-[10px] opacity-90 block text-emerald-600 dark:text-emerald-400 font-bold">{alert.status}</span>
                   </div>
-                  <ChevronRight size={16} className="opacity-55 text-emerald-500" />
+                  <ChevronRight size={16} className="opacity-55 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               ))
             ) : (
@@ -481,13 +492,18 @@ export const RhDashboard: React.FC = () => {
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {docExpirations.length > 0 ? (
               docExpirations.map((doc, i) => (
-                <div key={i} className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl flex items-center justify-between">
+                <div 
+                  key={i} 
+                  onClick={() => handleOpenCollaborator(doc.collaborator.id)}
+                  className="p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl flex items-center justify-between cursor-pointer hover:scale-[1.01] hover:shadow-sm transition-all group"
+                  title="Clique para abrir o cadastro do colaborador"
+                >
                   <div>
-                    <span className="block font-bold text-xs text-slate-900 dark:text-white">{doc.collaborator.fullName}</span>
+                    <span className="block font-bold text-xs text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{doc.collaborator.fullName}</span>
                     <span className="text-[10px] block font-bold text-amber-600 dark:text-amber-400">{doc.type}</span>
                     <span className="text-[9px] opacity-60 block">Vence em {formatDateBR(doc.date)} ({doc.daysRemaining} dias restantes)</span>
                   </div>
-                  <ChevronRight size={16} className="opacity-55 text-amber-500" />
+                  <ChevronRight size={16} className="opacity-55 text-amber-500 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               ))
             ) : (
@@ -527,15 +543,19 @@ export const RhDashboard: React.FC = () => {
                 return (
                   <div 
                     key={i} 
-                    className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    onClick={() => handleOpenCollaborator(item.collaborator.id)}
+                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer hover:scale-[1.01] hover:shadow-sm transition-all group ${
                       isBirthday 
                         ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' 
                         : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
                     }`}
+                    title="Clique para abrir o cadastro do colaborador"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900 dark:text-white">{item.collaborator.fullName}</span>
+                        <span className={`font-bold text-xs text-slate-900 dark:text-white transition-colors ${
+                          isBirthday ? 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400' : 'group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                        }`}>{item.collaborator.fullName}</span>
                         <span className={`px-1.5 py-0.5 text-[8px] font-black uppercase rounded tracking-wider ${
                           isBirthday 
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' 
@@ -551,9 +571,9 @@ export const RhDashboard: React.FC = () => {
                       </span>
                     </div>
                     {isBirthday ? (
-                      <Cake size={16} className="text-indigo-400 shrink-0" />
+                      <Cake size={16} className="text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
                     ) : (
-                      <Award size={16} className="text-amber-500 shrink-0" />
+                      <Award size={16} className="text-amber-500 shrink-0 group-hover:scale-110 transition-transform" />
                     )}
                   </div>
                 );

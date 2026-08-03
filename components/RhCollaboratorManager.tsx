@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -174,6 +175,20 @@ export const RhCollaboratorManager: React.FC = () => {
   const [revealSalaries, setRevealSalaries] = useState<Record<string, boolean>>({});
   const [cepLoading, setCepLoading] = useState(false);
   const [bancoHorasMap, setBancoHorasMap] = useState<Record<string, string>>({});
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (location.state && (location.state as any).selectedCollaboratorId) {
+      const colabId = (location.state as any).selectedCollaboratorId;
+      const target = rhCollaborators.find(c => c.id === colabId);
+      if (target) {
+        setSelectedColab(target);
+        setForm(normalizeColabDates(target));
+        setDetailTab('cadastro');
+        setIsDetailModalOpen(true);
+      }
+    }
+  }, [location.state, rhCollaborators]);
 
   React.useEffect(() => {
     fetch('/api/erp/rh-ponto/data')
