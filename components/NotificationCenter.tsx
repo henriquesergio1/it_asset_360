@@ -260,56 +260,74 @@ export const NotificationCenter: React.FC = () => {
     });
   }, [rhTerms, rhCollaborators]);
 
-  const hasRhAccess = useMemo(() => {
-    if (!user) return false;
-    return isAdmin || hasPermission(user, 'admin') || 
-      hasPermission(user, 'rh_dashboard') || hasPermission(user, 'rh_dashboard_leitura') || 
-      hasPermission(user, 'rh_colaboradores') || hasPermission(user, 'rh_colaboradores_leitura') || 
-      hasPermission(user, 'rh_comodato') || hasPermission(user, 'rh_comodatos') || hasPermission(user, 'rh_comodato_leitura') || 
-      hasPermission(user, 'rh_ocorrencias') || hasPermission(user, 'rh_atestados') || hasPermission(user, 'rh_ocorrencias_leitura') || 
-      hasPermission(user, 'rh_modelos') || hasPermission(user, 'rh_modelos_leitura') || 
-      hasPermission(user, 'rh_estoque') || hasPermission(user, 'rh_ativos') || hasPermission(user, 'rh_estoque_leitura') || 
-      hasPermission(user, 'rh_relatorios') || hasPermission(user, 'rh_relatorios_leitura');
-  }, [user, isAdmin]);
-
-  const hasTiAccess = useMemo(() => {
-    if (!user) return false;
-    return isAdmin || hasPermission(user, 'admin') || 
-      hasPermission(user, 'dashboard_leitura') || hasPermission(user, 'dispositivos_leitura') || 
-      hasPermission(user, 'colaboradores_leitura') || hasPermission(user, 'chips_leitura') || 
-      hasPermission(user, 'licencas_leitura') || hasPermission(user, 'consumiveis_leitura') || 
-      hasPermission(user, 'tarefas_leitura') || hasPermission(user, 'relatorios_leitura') || 
-      hasPermission(user, 'entrega_leitura') || hasPermission(user, 'sistema_leitura');
-  }, [user, isAdmin]);
-
   const isRhActive = useMemo(() => {
     if (location.pathname.startsWith('/rh')) return true;
     const stored = localStorage.getItem('current_module');
-    if (stored === 'RH' && hasRhAccess) return true;
-    if (stored === 'TI' && hasTiAccess) return false;
-    return !hasTiAccess && hasRhAccess;
-  }, [location.pathname, hasRhAccess, hasTiAccess]);
+    return stored === 'RH';
+  }, [location.pathname]);
 
-  // Juntar todas as notificações ativas (com independência de módulo e estrita verificação de permissão)
+  const canReceiveRhNotifications = useMemo(() => {
+    if (!user) return false;
+    if (isAdmin || hasPermission(user, 'admin')) return true;
+    
+    // Checagem do objeto de permissões do usuário
+    const permissoesObj = user.Permissoes || user.permissoes || ((user as any).perfil && ((user as any).perfil.Permissoes || (user as any).perfil.permissoes));
+    if (permissoesObj && permissoesObj.notificacoes_rh !== undefined) {
+      return !!permissoesObj.notificacoes_rh;
+    }
+
+    // Fallback inteligente: apenas usuários com permissões de gestão/escrita no RH recebem notificações por padrão
+    return hasPermission(user, 'rh_dashboard_escrita') || 
+           hasPermission(user, 'rh_colaboradores_escrita') || 
+           hasPermission(user, 'rh_comodato_escrita') || 
+           hasPermission(user, 'rh_ocorrencias_escrita') ||
+           hasPermission(user, 'rh_dashboard') ||
+           hasPermission(user, 'rh_colaboradores');
+  }, [user, isAdmin]);
+
+  const canReceiveTiNotifications = useMemo(() => {
+    if (!user) return false;
+    if (isAdmin || hasPermission(user, 'admin')) return true;
+
+    const permissoesObj = user.Permissoes || user.permissoes || ((user as any).perfil && ((user as any).perfil.Permissoes || (user as any).perfil.permissoes));
+    if (permissoesObj && permissoesObj.notificacoes_ti !== undefined) {
+      return !!permissoesObj.notificacoes_ti;
+    }
+
+    // Fallback inteligente: apenas usuários com permissões operacionais/escrita em TI recebem notificações por padrão
+    // Usuários com Apenas Leitura de relatórios (para ver setores) NÃO recebem alertas por padrão!
+    return hasPermission(user, 'dashboard_escrita') || 
+           hasPermission(user, 'dispositivos_escrita') || 
+           hasPermission(user, 'colaboradores_escrita') || 
+           hasPermission(user, 'tarefas_escrita') || 
+           hasPermission(user, 'consumiveis_escrita');
+  }, [user, isAdmin]);
+
+  // Juntar todas as notificações ativas respeitando estritamente o perfil RBAC do usuário
   const allNotifications = useMemo(() => {
-    if (isRhActive) {
-      return [
+    const list: Array<any> = [];
+
+    if (canReceiveRhNotifications) {
+      list.push(
         ...activeRhBirthdayNotifications,
         ...activeRhHolidayNotifications,
         ...activeRhDocNotifications,
         ...activeRhTermsNotifications
-      ];
-    } else if (hasTiAccess) {
-      return [
+      );
+    }
+
+    if (canReceiveTiNotifications) {
+      list.push(
         ...activeExpedienteNotifications,
         ...activeStockNotifications,
         ...activeTaskNotifications
-      ];
+      );
     }
-    return [];
+
+    return list;
   }, [
-    isRhActive,
-    hasTiAccess,
+    canReceiveRhNotifications,
+    canReceiveTiNotifications,
     activeRhBirthdayNotifications,
     activeRhHolidayNotifications,
     activeRhDocNotifications,

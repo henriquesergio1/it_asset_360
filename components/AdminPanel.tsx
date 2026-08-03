@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { SystemUser, SystemRole, ActionType, AuditLog, SystemSettings, Perfil, RhTermTemplate, RhCollaborator } from '../types';
 import { hasPermission, resolveUserPermissions } from '../utils/rbac';
-import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor, MapPin, Users, RefreshCw } from 'lucide-react';
+import { Shield, Settings, Activity, Trash2, Plus, X, Edit2, Save, Database, Server, FileCode, FileText, Bold, Italic, Heading1, List, Eye, ArrowLeftRight, UploadCloud, Info, AlertTriangle, RotateCcw, ChevronRight, Search, Loader2, Mail, Lock, UserCheck, Layout, Globe, Zap, ShieldCheck, Monitor, MapPin, Users, RefreshCw, Bell } from 'lucide-react';
 import DataImporter from './DataImporter';
 import { normalizeString } from '../utils/stringUtils';
 import { UI_LABEL_SMALL, UI_ICON_SIZE_SMALL, UI_ICON_SIZE_BASE, UI_BUTTON_PRIMARY, UI_BUTTON_SECONDARY, UI_BUTTON_SUCCESS, UI_BUTTON_DANGER } from '../constants';
@@ -2366,7 +2366,27 @@ ORDER BY a.CODCET;`;
 
     {/* Seção Módulo T.I. */}
     <div className="space-y-1">
-      <span className="text-[10px] font-black uppercase text-blue-600 dark:text-sky-400 tracking-wider block px-2 pb-1 border-b border-blue-500/20">Módulo T.I. (Ativos e Tecnologia)</span>
+      <div className="flex items-center justify-between px-2 pb-1 border-b border-blue-500/20">
+        <span className="text-[10px] font-black uppercase text-blue-600 dark:text-sky-400 tracking-wider">Módulo T.I. (Ativos e Tecnologia)</span>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input 
+            type="checkbox"
+            disabled={profileForm.Permissoes?.admin}
+            checked={!!profileForm.Permissoes?.admin || profileForm.Permissoes?.notificacoes_ti !== false}
+            onChange={e => {
+              const val = e.target.checked;
+              setProfileForm({
+                ...profileForm,
+                Permissoes: { ...profileForm.Permissoes, notificacoes_ti: val }
+              });
+            }}
+            className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+          />
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+            <Bell size={11} className="text-amber-500" /> Receber Notificações T.I.
+          </span>
+        </label>
+      </div>
       {[
         { label: '📊 Dashboard T.I.', readKey: 'dashboard_leitura', writeKey: 'dashboard_escrita' },
         { label: '📱 Dispositivos', readKey: 'dispositivos_leitura', writeKey: 'dispositivos_escrita' },
@@ -2426,7 +2446,27 @@ ORDER BY a.CODCET;`;
 
     {/* Seção Módulo R.H. */}
     <div className="space-y-1 pt-3 border-t border-slate-200 dark:border-slate-700/60">
-      <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider block px-2 pb-1 border-b border-indigo-500/20">Módulo R.H. (Recursos Humanos)</span>
+      <div className="flex items-center justify-between px-2 pb-1 border-b border-indigo-500/20">
+        <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Módulo R.H. (Recursos Humanos)</span>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input 
+            type="checkbox"
+            disabled={profileForm.Permissoes?.admin}
+            checked={!!profileForm.Permissoes?.admin || profileForm.Permissoes?.notificacoes_rh !== false}
+            onChange={e => {
+              const val = e.target.checked;
+              setProfileForm({
+                ...profileForm,
+                Permissoes: { ...profileForm.Permissoes, notificacoes_rh: val }
+              });
+            }}
+            className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5"
+          />
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+            <Bell size={11} className="text-amber-500" /> Receber Notificações R.H.
+          </span>
+        </label>
+      </div>
       {[
         { label: '📈 Dashboard R.H.', readKey: 'rh_dashboard_leitura', writeKey: 'rh_dashboard_escrita', aliases: ['rh_dashboard'] },
         { label: '👨‍💼 Colaboradores R.H.', readKey: 'rh_colaboradores_leitura', writeKey: 'rh_colaboradores_escrita', aliases: ['rh_colaboradores'] },
@@ -2485,7 +2525,27 @@ ORDER BY a.CODCET;`;
 
     {/* Seção Módulo Fuel360 */}
     <div className="space-y-1 pt-3 border-t border-slate-200 dark:border-slate-700/60">
-      <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block px-2 pb-1 border-b border-emerald-500/20">Módulo Fuel360 (Reembolso & Telemetria)</span>
+      <div className="flex items-center justify-between px-2 pb-1 border-b border-emerald-500/20">
+        <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Módulo Fuel360 (Reembolso & Telemetria)</span>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input 
+            type="checkbox"
+            disabled={profileForm.Permissoes?.admin}
+            checked={!!profileForm.Permissoes?.admin || profileForm.Permissoes?.notificacoes_fuel !== false}
+            onChange={e => {
+              const val = e.target.checked;
+              setProfileForm({
+                ...profileForm,
+                Permissoes: { ...profileForm.Permissoes, notificacoes_fuel: val }
+              });
+            }}
+            className="rounded border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+          />
+          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+            <Bell size={11} className="text-amber-500" /> Receber Notificações Fuel360
+          </span>
+        </label>
+      </div>
       {[
         { label: '⛽ Módulo Fuel360 (Acesso Geral)', readKey: 'fuel360_leitura', writeKey: 'fuel360_escrita', aliases: ['moduloFuel360', 'fuel360'] },
         { label: '🧮 Cálculo de Reembolso', readKey: 'fuel_calculo_leitura', writeKey: 'fuel_calculo_escrita', aliases: ['fuel_calculo'] },
