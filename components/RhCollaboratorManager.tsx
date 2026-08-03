@@ -1729,9 +1729,9 @@ export const RhCollaboratorManager: React.FC = () => {
 
       {/* DETAIL MODAL (Sophisticated popup style same as IT module details) */}
       {isDetailModalOpen && selectedColab && !isEditing && (
-        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col h-[85vh] min-h-[550px] max-h-[820px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
-            <div className="px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
+        <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-950/65 z-[100] flex items-center justify-center p-2 sm:p-3 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-6xl overflow-hidden flex flex-col h-[94vh] max-h-[94vh] min-h-[580px] border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl transition-all duration-300 ease-in-out my-auto">
+            <div className="px-6 py-3.5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap justify-between items-center bg-slate-50 dark:bg-slate-900/40 gap-4">
               <div className="flex items-center gap-3">
                 {selectedColab.photo && !failedPhotoIds.has(selectedColab.id) ? (
                   <img 
@@ -1909,7 +1909,7 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {detailTab === 'cadastro' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                   {/* Cartão 1: Dados Contratuais e Profissionais */}
@@ -3187,7 +3187,7 @@ export const RhCollaboratorManager: React.FC = () => {
             </div>
 
             {/* Modal Actions */}
-            <div className="px-8 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
+            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-between items-center">
               <div>
                 {canWrite && (!checkIsColabDemitido(selectedColab) ? (
                   <button
