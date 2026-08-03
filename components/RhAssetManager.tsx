@@ -333,7 +333,7 @@ export const RhAssetManager: React.FC = () => {
                 <td className="px-6 py-4 font-black">{item.name}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-0.5 rounded font-black text-[10px] uppercase tracking-wide ${
-                    item.type === 'ATIVO' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                    item.type === 'ATIVO' ? 'bg-amber-100 text-amber-900 dark:bg-amber-500/30 dark:text-amber-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
                   }`}>
                     {item.type}
                   </span>

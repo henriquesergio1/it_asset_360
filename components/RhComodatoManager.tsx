@@ -701,12 +701,12 @@ export const RhComodatoManager: React.FC = () => {
                 }}
                 className="border-b border-slate-200 dark:border-slate-700/40 border-l-4 border-l-transparent hover:border-l-amber-500 dark:hover:border-l-amber-400 hover:bg-amber-50/70 dark:hover:bg-amber-500/15 cursor-pointer transition-all text-xs text-slate-900 dark:text-slate-200 group"
               >
-                <td className="px-6 py-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">{t.id}</td>
+                <td className="px-6 py-4 font-mono font-bold text-amber-600 dark:text-amber-400">{t.id}</td>
                 <td className="px-6 py-4 font-black">{colabName}</td>
                 <td className="px-6 py-4 font-bold">
                   <div className="flex items-center gap-2">
                     <span>{tmplName}</span>
-                    <span className={`px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${type === 'DEVOLUCAO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-indigo-100 text-indigo-850 dark:bg-indigo-500/20 dark:text-indigo-400'}`}>
+                    <span className={`px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider ${type === 'DEVOLUCAO' ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-amber-100 text-amber-900 dark:bg-amber-500/30 dark:text-amber-300'}`}>
                       {type}
                     </span>
                   </div>
