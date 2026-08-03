@@ -18,7 +18,7 @@ import { renderFriendlyAuditLog } from '../utils/auditFormatUtils';
 import { hasPermission } from '../utils/rbac';
 import { 
   normalizeName, validateCPF, validateEmail, validatePhone, validateCEP,
-  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR 
+  formatCPF, formatPhone, formatCEP, cleanDocument, formatDateBR, formatVehiclePlate
 } from '../utils/rhValidation';
 
 const COLUMN_OPTIONS = [
@@ -3736,9 +3736,10 @@ export const RhCollaboratorManager: React.FC = () => {
                             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Placa do Veículo</label>
                             <input
                               type="text"
-                              placeholder="ABC-1234"
+                              placeholder="ABC-1234 ou ABC1D23"
+                              maxLength={8}
                               value={form.vehiclePlate || ''}
-                              onChange={e => setForm(p => ({ ...p, vehiclePlate: e.target.value.toUpperCase() }))}
+                              onChange={e => setForm(p => ({ ...p, vehiclePlate: formatVehiclePlate(e.target.value) }))}
                               className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium uppercase font-mono text-slate-900 dark:text-white"
                             />
                           </div>

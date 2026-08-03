@@ -178,3 +178,26 @@ export const formatBirthdayDisplay = (dateStr: string | null | undefined): strin
   const monthName = monthNames[parts.month - 1] || 'mês';
   return `Dia ${parts.dayStr} de ${monthName}`;
 };
+
+/**
+ * Formata Placa de Veículo no padrão Mercosul (ABC1D23) ou Tradicional (ABC-1234)
+ */
+export const formatVehiclePlate = (val: string): string => {
+  if (!val) return '';
+  // Remove caracteres que não são letras ou números e converte para maiúsculas (máximo 7 alfanuméricos)
+  const clean = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 7);
+  if (clean.length <= 3) {
+    return clean;
+  }
+
+  // Verifica se o 5º caractere (índice 4) é uma letra (Padrão Mercosul: 3 letras, 1 número, 1 letra, 2 números)
+  const isMercosul = clean.length >= 5 && /[A-Z]/.test(clean[4]);
+
+  if (isMercosul) {
+    // Padrão Mercosul sem hífen (ex: ABC1D23)
+    return clean;
+  } else {
+    // Padrão Tradicional com hífen (ex: ABC-1234)
+    return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+  }
+};
