@@ -448,7 +448,22 @@ export interface Usuario {
 // Módulo R.H. - Novas Interfaces
 export interface RhDocument {
   id: string;
-  category: 'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros';
+  category: 
+    | 'RG' 
+    | 'CPF' 
+    | 'CNH' 
+    | 'CRLV (Doc. do Veículo)' 
+    | 'PIS / PASEP' 
+    | 'CTPS (Carteira de Trabalho)' 
+    | 'Título de Eleitor' 
+    | 'Comprovante de Residência' 
+    | 'Contrato de Trabalho' 
+    | 'Exame Admissional / ASO' 
+    | 'Comprovante de Escolaridade / Diploma' 
+    | 'Certidão Pessoal (Nasc./Casam.)' 
+    | 'Certificado de Reservista' 
+    | 'Outros' 
+    | string;
   fileName: string;
   fileUrl: string;
   uploadDate: string;

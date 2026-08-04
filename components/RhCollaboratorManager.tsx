@@ -738,7 +738,7 @@ export const RhCollaboratorManager: React.FC = () => {
   });
 
   // Attachments temp state
-  const [docCategory, setDocCategory] = useState<'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros'>('RG');
+  const [docCategory, setDocCategory] = useState<string>('RG');
   const [docFileName, setDocFileName] = useState('');
   const [docFileBase64, setDocFileBase64] = useState<string>('');
 
@@ -971,9 +971,14 @@ export const RhCollaboratorManager: React.FC = () => {
       <button
         type="button"
         onClick={() => {
-          let targetCat: 'RG' | 'CPF' | 'Comprovante de Residência' | 'Contrato de Trabalho' | 'Outros' = 'Outros';
+          let targetCat = 'Outros';
           if (catUpper.includes('RG')) targetCat = 'RG';
           else if (catUpper.includes('CPF')) targetCat = 'CPF';
+          else if (catUpper.includes('CNH')) targetCat = 'CNH';
+          else if (catUpper.includes('VEICULO') || catUpper.includes('CRLV')) targetCat = 'CRLV (Doc. do Veículo)';
+          else if (catUpper.includes('PIS')) targetCat = 'PIS / PASEP';
+          else if (catUpper.includes('CTPS')) targetCat = 'CTPS (Carteira de Trabalho)';
+          else if (catUpper.includes('TITULO')) targetCat = 'Título de Eleitor';
           setDocCategory(targetCat);
           setDocFileName('');
           setDetailTab('documentos');
@@ -2463,8 +2468,17 @@ export const RhCollaboratorManager: React.FC = () => {
                       >
                         <option value="RG">RG</option>
                         <option value="CPF">CPF</option>
+                        <option value="CNH">CNH</option>
+                        <option value="CRLV (Doc. do Veículo)">CRLV (Doc. do Veículo)</option>
+                        <option value="PIS / PASEP">PIS / PASEP</option>
+                        <option value="CTPS (Carteira de Trabalho)">CTPS (Carteira de Trabalho)</option>
+                        <option value="Título de Eleitor">Título de Eleitor</option>
                         <option value="Comprovante de Residência">Comprovante de Residência</option>
                         <option value="Contrato de Trabalho">Contrato de Trabalho</option>
+                        <option value="Exame Admissional / ASO">Exame Admissional / ASO</option>
+                        <option value="Comprovante de Escolaridade / Diploma">Comprovante de Escolaridade / Diploma</option>
+                        <option value="Certidão Pessoal (Nasc./Casam.)">Certidão Pessoal (Nasc./Casam.)</option>
+                        <option value="Certificado de Reservista">Certificado de Reservista</option>
                         <option value="Outros">Outros</option>
                       </select>
 
@@ -4166,8 +4180,17 @@ export const RhCollaboratorManager: React.FC = () => {
                           >
                             <option value="RG">RG</option>
                             <option value="CPF">CPF</option>
+                            <option value="CNH">CNH</option>
+                            <option value="CRLV (Doc. do Veículo)">CRLV (Doc. do Veículo)</option>
+                            <option value="PIS / PASEP">PIS / PASEP</option>
+                            <option value="CTPS (Carteira de Trabalho)">CTPS (Carteira de Trabalho)</option>
+                            <option value="Título de Eleitor">Título de Eleitor</option>
                             <option value="Comprovante de Residência">Comprovante de Residência</option>
                             <option value="Contrato de Trabalho">Contrato de Trabalho</option>
+                            <option value="Exame Admissional / ASO">Exame Admissional / ASO</option>
+                            <option value="Comprovante de Escolaridade / Diploma">Comprovante de Escolaridade / Diploma</option>
+                            <option value="Certidão Pessoal (Nasc./Casam.)">Certidão Pessoal (Nasc./Casam.)</option>
+                            <option value="Certificado de Reservista">Certificado de Reservista</option>
                             <option value="Outros">Outros</option>
                           </select>
                           <label className="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-all flex items-center gap-2 shrink-0 border border-slate-300 dark:border-slate-600">
