@@ -795,15 +795,12 @@ export const RhCollaboratorManager: React.FC = () => {
 
   const handleAddDocumentDirect = () => {
     if (!selectedColab) return;
-    if (!docFileName.trim()) {
-      showToast('Por favor, informe o nome do arquivo.', 'error');
-      return;
-    }
+    const finalFileName = docFileName.trim() || docCategory || 'Documento';
 
     const newDoc: RhDocument = {
       id: `doc-${Date.now()}`,
       category: docCategory,
-      fileName: docFileName.trim(),
+      fileName: finalFileName,
       fileUrl: docFileBase64 || `mock_doc_${Date.now()}.pdf`,
       uploadDate: new Date().toISOString().split('T')[0]
     };
@@ -978,7 +975,7 @@ export const RhCollaboratorManager: React.FC = () => {
           if (catUpper.includes('RG')) targetCat = 'RG';
           else if (catUpper.includes('CPF')) targetCat = 'CPF';
           setDocCategory(targetCat);
-          setDocFileName(`${label}_${selectedColab.fullName.split(' ')[0]}`);
+          setDocFileName('');
           setDetailTab('documentos');
         }}
         className="inline-flex items-center gap-1 px-1.5 py-0.5 ml-1 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 text-[9px] font-bold rounded-md border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all cursor-pointer shrink-0"
@@ -2484,7 +2481,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       <input
                         type="text"
-                        placeholder="Nome amigável do arquivo (ex: RG_Frente)..."
+                        placeholder="Nome amigável opcional (ex: RG_Frente)..."
                         value={docFileName}
                         onChange={e => setDocFileName(e.target.value)}
                         className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 dark:text-white font-medium"
@@ -2532,8 +2529,12 @@ export const RhCollaboratorManager: React.FC = () => {
                                   className="min-w-0 cursor-pointer" 
                                   onClick={() => handlePreviewColabDoc(doc)}
                                 >
-                                  <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
-                                  <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}</span>
+                                  <span className="block font-black text-xs text-slate-900 dark:text-white uppercase tracking-wide leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.category || 'DOCUMENTO'}>
+                                    {doc.category || 'DOCUMENTO'}
+                                  </span>
+                                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mt-0.5 truncate" title={doc.fileName}>
+                                    {doc.fileName} • {new Date(doc.uploadDate).toLocaleDateString('pt-BR')}
+                                  </span>
                                 </div>
                               </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -4230,8 +4231,12 @@ export const RhCollaboratorManager: React.FC = () => {
                                       className="min-w-0 cursor-pointer" 
                                       onClick={() => handlePreviewColabDoc(doc)}
                                     >
-                                      <span className="block font-bold text-xs text-slate-800 dark:text-white leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.fileName}>{doc.fileName}</span>
-                                      <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block mt-0.5">{doc.category} • {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('pt-BR') : '---'}</span>
+                                      <span className="block font-black text-xs text-slate-900 dark:text-white uppercase tracking-wide leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.category || 'DOCUMENTO'}>
+                                        {doc.category || 'DOCUMENTO'}
+                                      </span>
+                                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mt-0.5 truncate" title={doc.fileName}>
+                                        {doc.fileName} • {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('pt-BR') : '---'}
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0 ml-2">
