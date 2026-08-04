@@ -899,10 +899,12 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   const handlePreviewColabDoc = async (doc: RhDocument) => {
-    if (doc.fileUrl && doc.fileUrl.startsWith('data:')) {
-      setPreviewData({ url: doc.fileUrl, name: doc.fileName });
-      setIsPreviewOpen(true);
-      return;
+    if (doc.fileUrl) {
+      if (doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('/api/')) {
+        setPreviewData({ url: doc.fileUrl, name: doc.fileName });
+        setIsPreviewOpen(true);
+        return;
+      }
     }
     if ((doc.hasFile || doc.fileUrl) && selectedColab) {
       try {
@@ -914,6 +916,10 @@ export const RhCollaboratorManager: React.FC = () => {
           return;
         }
       } catch (e) { console.error('Erro ao carregar documento:', e); }
+      const fallbackUrl = `/api/rh-collaborators/${selectedColab.id}/document/${doc.id}/raw`;
+      setPreviewData({ url: fallbackUrl, name: doc.fileName });
+      setIsPreviewOpen(true);
+      return;
     }
     showToast('Arquivo não disponível.', 'error');
   };
