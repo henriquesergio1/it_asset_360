@@ -5486,7 +5486,8 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
                 { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
-                { name: 'HasPhoto', type: 'INT DEFAULT 0' }
+                { name: 'HasPhoto', type: 'INT DEFAULT 0' },
+                { name: 'Documents', type: 'NVARCHAR(MAX) NULL' }
             ];
             for (const col of colsToAdd) {
                 try {
@@ -5526,6 +5527,13 @@ async function updateUserPendingStatus(pool, userId) {
                 }
             }
 
+            // Tratamento explícito de documentos no POST
+            if (Array.isArray(body.documents) && body.documents.length > 0) {
+                request.input('Documents', sql.NVarChar(sql.MAX), JSON.stringify(body.documents));
+                columns.push('Documents');
+                values.push('@Documents');
+            }
+
             await request.query(`INSERT INTO RhCollaborators (${columns.join(',')}) VALUES (${values.join(',')})`);
             
             const colabName = body.fullName || 'Colaborador';
@@ -5551,7 +5559,8 @@ async function updateUserPendingStatus(pool, userId) {
                 { name: 'VehiclePlate', type: 'NVARCHAR(50) NULL' },
                 { name: 'TransportOption', type: 'NVARCHAR(100) NULL' },
                 { name: 'Photo', type: 'NVARCHAR(MAX) NULL' },
-                { name: 'HasPhoto', type: 'INT DEFAULT 0' }
+                { name: 'HasPhoto', type: 'INT DEFAULT 0' },
+                { name: 'Documents', type: 'NVARCHAR(MAX) NULL' }
             ];
             for (const col of colsToAdd) {
                 try {
@@ -5596,6 +5605,31 @@ async function updateUserPendingStatus(pool, userId) {
                     request.input('HasPhoto', sql.Int, 0);
                     sets.push('Photo=@Photo', 'HasPhoto=@HasPhoto');
                 }
+            }
+
+            // Tratamento explícito de documentos no PUT (preservação de anexos existentes)
+            if (body.documents !== undefined && Array.isArray(body.documents)) {
+                let existingDocs = [];
+                try {
+                    const existingRes = await pool.request().input('ColabId', req.params.id).query('SELECT Documents FROM RhCollaborators WHERE Id=@ColabId');
+                    if (existingRes.recordset?.[0]?.Documents) {
+                        existingDocs = JSON.parse(existingRes.recordset[0].Documents);
+                    }
+                } catch (e) {}
+
+                const docsToSave = body.documents.map(d => {
+                    if (d.fileUrl && typeof d.fileUrl === 'string' && d.fileUrl.startsWith('/api/')) {
+                        const oldDoc = existingDocs.find(oldD => oldD.id === d.id);
+                        return {
+                            ...d,
+                            fileUrl: oldDoc?.fileUrl || ''
+                        };
+                    }
+                    return d;
+                });
+
+                request.input('Documents', sql.NVarChar(sql.MAX), JSON.stringify(docsToSave));
+                sets.push('Documents=@Documents');
             }
 
             if (sets.length > 0) {
