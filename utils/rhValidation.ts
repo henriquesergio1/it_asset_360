@@ -232,7 +232,7 @@ export const calculateExactDuration = (startDateStr: string | null | undefined):
 
   const partsText: string[] = [];
   if (years > 0) partsText.push(`${years} ano${years > 1 ? 's' : ''}`);
-  if (months > 0) partsText.push(`${months} mên${months > 1 ? 'ses' : 's'}`);
+  if (months > 0) partsText.push(`${months} ${months > 1 ? 'meses' : 'mês'}`);
   if (days > 0 || partsText.length === 0) partsText.push(`${days} dia${days !== 1 ? 's' : ''}`);
 
   if (partsText.length === 1) return partsText[0];
