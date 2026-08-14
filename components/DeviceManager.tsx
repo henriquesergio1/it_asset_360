@@ -519,34 +519,50 @@ const DeviceManager = () => {
  };
 
  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
- const exportData = filteredDevices.map(d => {
- const { model, brand } = getModelDetails(d.modelId);
- const user = users.find(u => u.id === d.currentUserId);
- const sector = sectors.find(s => s.id === d.sectorId);
- return {
- 'Patrimônio': d.assetTag || '---',
- 'Modelo': model?.name || '---',
- 'Marca': brand?.name || '---',
- 'IMEI': d.imei || '---',
- 'S/N': d.serialNumber || '---',
- 'Status': d.status,
- 'Responsável': user?.fullName || 'Livre',
- 'Setor': sector?.name || '---',
- 'Custo': d.purchaseCost || 0,
- 'Data Compra': d.purchaseDate ? formatDateBR(d.purchaseDate) : '---'
- };
- });
+    if (filteredDevices.length === 0) {
+      showToast('Nenhum ativo para exportação.', 'error');
+      return;
+    }
 
- const fileName =`inventario_ativos_${new Date().toISOString().split('T')[0]}`;
+    const exportData = filteredDevices.map(d => {
+      const { model, brand, type } = getModelDetails(d.modelId);
+      const user = users.find(u => u.id === d.currentUserId);
+      const sector = sectors.find(s => s.id === d.sectorId);
+      const linkedSim = sims.find(s => s.id === d.linkedSimId);
 
- if (format === 'csv') exportToCSV(exportData, fileName);
- if (format === 'excel') exportToExcel(exportData, fileName);
- if (format === 'pdf') {
- const headers = ['Patrimônio', 'Modelo', 'Status', 'Responsável', 'Setor'];
- const rows = exportData.map(d => [d.Patrimônio, d.Modelo, d.Status, d.Responsável, d.Setor]);
- exportToPDF(headers, rows, fileName, 'Relatório de Inventário de Ativos');
- }
- };
+      const rowObj: Record<string, any> = {
+        'Dispositivo': `${brand?.name || ''} ${model?.name || ''}`.trim() || '---',
+        'Tipo': type?.name || '---',
+      };
+
+      if (visibleColumns.includes('assetTag')) rowObj['Patrimônio'] = d.assetTag || '---';
+      if (visibleColumns.includes('imei')) rowObj['IMEI'] = d.imei || '---';
+      if (visibleColumns.includes('serial')) rowObj['S/N Fabricante'] = d.serialNumber || '---';
+      if (visibleColumns.includes('sectorCode')) rowObj['Cód. Setor'] = d.internalCode || '---';
+      if (visibleColumns.includes('sectorName')) rowObj['Cargo / Função'] = sector?.name || '---';
+      if (visibleColumns.includes('pulsusId')) rowObj['Pulsus ID'] = d.pulsusId || '---';
+      if (visibleColumns.includes('linkedSim')) rowObj['Chip Vinculado'] = linkedSim?.phoneNumber || '---';
+      if (visibleColumns.includes('purchaseInfo')) {
+        rowObj['Valor Compra'] = d.purchaseCost ? `R$ ${formatCurrencyBR(d.purchaseCost)}` : 'R$ 0,00';
+        rowObj['Data Compra'] = d.purchaseDate ? formatDateBR(d.purchaseDate) : '---';
+      }
+
+      rowObj['Status'] = d.status;
+      rowObj['Responsável'] = user?.fullName || 'Livre no Estoque';
+
+      return rowObj;
+    });
+
+    const fileName = `inventario_ativos_${new Date().toISOString().split('T')[0]}`;
+
+    if (format === 'csv') exportToCSV(exportData, fileName);
+    if (format === 'excel') exportToExcel(exportData, fileName);
+    if (format === 'pdf') {
+      const headers = Object.keys(exportData[0]);
+      const rows = exportData.map(d => Object.values(d));
+      exportToPDF(headers, rows, fileName, 'Relatório de Inventário de Ativos');
+    }
+  };
 
  const clearFilters = () => {
  setSearchTerm('');
