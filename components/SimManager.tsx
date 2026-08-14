@@ -68,15 +68,26 @@ const SimManager = () => {
   };
 
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (filteredSims.length === 0) {
+      showToast('Nenhum chip para exportação.', 'error');
+      return;
+    }
+
     const exportData = filteredSims.map(s => {
       const user = users.find(u => u.id === s.currentUserId);
-      return {
-        'Número': s.phoneNumber,
-        'Operadora': s.operator,
-        'ICCID': s.iccid,
-        'Status': s.status,
-        'Responsável': user?.fullName || 'Estoque'
-      };
+      const rowObj: Record<string, any> = {};
+
+      if (visibleColumns.includes('phoneNumber')) rowObj['Número'] = s.phoneNumber;
+      if (visibleColumns.includes('operator')) rowObj['Operadora'] = s.operator;
+      if (visibleColumns.includes('iccid')) rowObj['ICCID'] = s.iccid;
+      if (visibleColumns.includes('status')) rowObj['Status'] = s.status;
+      if (visibleColumns.includes('currentUserId')) rowObj['Responsável'] = user?.fullName || 'Estoque';
+
+      if (Object.keys(rowObj).length === 0) {
+        rowObj['Número'] = s.phoneNumber;
+      }
+
+      return rowObj;
     });
 
     const fileName = `simcards_${new Date().toISOString().split('T')[0]}`;
@@ -84,8 +95,8 @@ const SimManager = () => {
     if (format === 'csv') exportToCSV(exportData, fileName);
     if (format === 'excel') exportToExcel(exportData, fileName);
     if (format === 'pdf') {
-      const headers = ['Número', 'Operadora', 'Status', 'Responsável'];
-      const rows = exportData.map(d => [d.Número.toString(), d.Operadora, d.Status, d.Responsável]);
+      const headers = Object.keys(exportData[0]);
+      const rows = exportData.map(d => Object.values(d));
       exportToPDF(headers, rows, fileName, 'Relatório de Chips SIM');
     }
   };

@@ -276,20 +276,14 @@ const Consumables = () => {
             return row;
         });
 
+        if (dataToExport.length === 0) return;
         const filename = `relatorio_consumiveis_${new Date().toISOString().split('T')[0]}`;
 
         if (format === 'csv') exportToCSV(dataToExport, filename);
         else if (format === 'excel') exportToExcel(dataToExport, filename);
         else if (format === 'pdf') {
-            const headers = ['Item', 'Categoria', 'Estoque Atual', 'Mínimo', 'Consumo Médio', 'Duração Estimada'];
-            const rows = dataToExport.map(r => [
-                r['Item'] || '---',
-                r['Categoria'] || '---',
-                r['Estoque Atual'] || '---',
-                r['Mínimo'] || '---',
-                r['Consumo Médio'] || '---',
-                r['Duração Estimada'] || '---'
-            ]);
+            const headers = Object.keys(dataToExport[0]);
+            const rows = dataToExport.map(r => Object.values(r));
             exportToPDF(headers, rows, filename, 'Relatório de Consumíveis');
         }
     };

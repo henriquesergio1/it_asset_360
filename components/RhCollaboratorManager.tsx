@@ -1408,59 +1408,45 @@ export const RhCollaboratorManager: React.FC = () => {
     : sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Export functions
+  const getExportData = () => {
+    return filtered.map(c => {
+      const sectorName = sectors.find(s => s.id === c.sectorId)?.name || 'Sem Setor';
+      const rowObj: Record<string, any> = {};
+
+      if (visibleColumns.includes('fullName')) rowObj['Nome Completo'] = c.fullName;
+      if (visibleColumns.includes('cpf')) rowObj['CPF'] = formatCPF(c.cpf);
+      if (visibleColumns.includes('role')) rowObj['Cargo / Função'] = c.role || '---';
+      if (visibleColumns.includes('sectorId')) rowObj['Setor'] = sectorName;
+      if (visibleColumns.includes('contractType')) rowObj['Contrato'] = c.contractType || '---';
+      if (visibleColumns.includes('hireDate')) rowObj['Admissão'] = c.hireDate ? new Date(c.hireDate).toLocaleDateString('pt-BR') : '---';
+      if (visibleColumns.includes('salary')) rowObj['Salário'] = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.salary || 0);
+
+      if (Object.keys(rowObj).length === 0) {
+        rowObj['Nome Completo'] = c.fullName;
+      }
+
+      return rowObj;
+    });
+  };
+
   const handleExportCSV = () => {
-    const exportData = filtered.map(c => ({
-      'Nome Completo': c.fullName,
-      'Data de Nascimento': c.birthDate || '',
-      'Gênero': c.gender || '',
-      'Estado Civil': c.maritalStatus || '',
-      'Telefone Pessoal': c.personalPhone || '',
-      'Telefone Corporativo': c.corporatePhone || '',
-      'E-mail Pessoal': c.emailPersonal || '',
-      'E-mail Corporativo': c.emailCorporate || '',
-      'CPF': c.cpf,
-      'RG': c.rg || '',
-      'Cargo': c.role || '',
-      'Tipo de Contrato': c.contractType,
-      'Data de Admissão': c.hireDate || '',
-      'Salário Mensal': c.salary || 0,
-      'Carga Horária Semanal': c.weeklyHours || 44
-    }));
+    const exportData = getExportData();
+    if (exportData.length === 0) return;
     exportToCSV(exportData, 'colaboradores_rh');
   };
 
   const handleExportExcel = () => {
-    const exportData = filtered.map(c => ({
-      'Nome Completo': c.fullName,
-      'Data de Nascimento': c.birthDate || '',
-      'Gênero': c.gender || '',
-      'Estado Civil': c.maritalStatus || '',
-      'Telefone Pessoal': c.personalPhone || '',
-      'Telefone Corporativo': c.corporatePhone || '',
-      'E-mail Pessoal': c.emailPersonal || '',
-      'E-mail Corporativo': c.emailCorporate || '',
-      'CPF': c.cpf,
-      'RG': c.rg || '',
-      'Cargo': c.role || '',
-      'Tipo de Contrato': c.contractType,
-      'Data de Admissão': c.hireDate || '',
-      'Salário Mensal': c.salary || 0,
-      'Carga Horária Semanal': c.weeklyHours || 44
-    }));
+    const exportData = getExportData();
+    if (exportData.length === 0) return;
     exportToExcel(exportData, 'colaboradores_rh');
   };
 
   const handleExportPDF = () => {
-    const headers = ['Nome Completo', 'CPF', 'Cargo', 'Contrato', 'Admissão', 'Salário'];
-    const exportData = filtered.map(c => [
-      c.fullName,
-      c.cpf,
-      c.role || 'S/ Cargo',
-      c.contractType,
-      c.hireDate ? new Date(c.hireDate).toLocaleDateString('pt-BR') : '',
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.salary || 0)
-    ]);
-    exportToPDF(headers, exportData, 'colaboradores_rh', 'Relatório de Colaboradores de R.H.');
+    const exportData = getExportData();
+    if (exportData.length === 0) return;
+    const headers = Object.keys(exportData[0]);
+    const rows = exportData.map(c => Object.values(c));
+    exportToPDF(headers, rows, 'colaboradores_rh', 'Relatório de Colaboradores de R.H.');
   };
 
   return (

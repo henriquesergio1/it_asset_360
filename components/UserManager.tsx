@@ -198,18 +198,35 @@ const UserManager: React.FC = () => {
   };
 
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (filteredUsers.length === 0) {
+      showToast('Nenhum colaborador para exportação.', 'error');
+      return;
+    }
+
     const exportData = filteredUsers.map(u => {
       const sector = sectors.find(s => s.id === u.sectorId);
       const { userDevices, allUserSims } = getUserAssetsEnrich(u.id);
-      return {
-        'Nome': u.fullName,
-        'E-mail': u.email || '---',
-        'CPF': u.cpf || '---',
-        'Setor': sector?.name || '---',
-        'Status': u.active ? (u.status || 'Ativo') : 'Inativo',
-        'Ativos': userDevices.length + allUserSims.length,
-        'Chips': allUserSims.map(s => s.phoneNumber).join(', ') || '---'
+
+      const rowObj: Record<string, any> = {
+        'Nome Completo': u.fullName,
       };
+
+      if (visibleColumns.includes('email')) rowObj['E-mail'] = u.email || '---';
+      if (visibleColumns.includes('cpf')) rowObj['CPF'] = u.cpf ? formatCPF(u.cpf) : '---';
+      if (visibleColumns.includes('rg')) rowObj['RG'] = u.rg || '---';
+      if (visibleColumns.includes('sector')) rowObj['Setor / Função'] = sector?.name || '---';
+      if (visibleColumns.includes('assetsCount')) rowObj['Total Ativos'] = userDevices.length + allUserSims.length;
+      if (visibleColumns.includes('activeSims')) rowObj['Chips SIM'] = allUserSims.map(s => s.phoneNumber).join(', ') || '---';
+      if (visibleColumns.includes('devicesInfo')) {
+        rowObj['Detalhes de Aparelho'] = userDevices.map(d => {
+          const m = models.find(mod => mod.id === d.modelId);
+          return `${m?.name || 'Device'} (${d.assetTag || d.serialNumber || 'S/N'})`;
+        }).join(', ') || '---';
+      }
+
+      rowObj['Status'] = u.active ? (u.status || 'Ativo') : 'Inativo';
+
+      return rowObj;
     });
 
     const fileName = `colaboradores_${new Date().toISOString().split('T')[0]}`;
@@ -217,8 +234,8 @@ const UserManager: React.FC = () => {
     if (format === 'csv') exportToCSV(exportData, fileName);
     if (format === 'excel') exportToExcel(exportData, fileName);
     if (format === 'pdf') {
-      const headers = ['Nome', 'E-mail', 'Setor', 'Status', 'Ativos'];
-      const rows = exportData.map(d => [d.Nome, d['E-mail'], d.Setor, d.Status, d.Ativos.toString()]);
+      const headers = Object.keys(exportData[0]);
+      const rows = exportData.map(d => Object.values(d));
       exportToPDF(headers, rows, fileName, 'Relatório de Colaboradores');
     }
   };

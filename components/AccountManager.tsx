@@ -222,16 +222,27 @@ const AccountManager = () => {
   };
 
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (filteredAccounts.length === 0) {
+      showToast('Nenhuma conta ou licença para exportação.', 'error');
+      return;
+    }
+
     const exportData = filteredAccounts.map(acc => {
       const respUsers = (acc.userIds || []).map(id => users.find(u => u.id === id)?.fullName || '').join(', ');
       const respDevices = (acc.deviceIds || []).map(id => getDeviceLabel(devices.find(d => d.id === id))).filter(Boolean).join(', ');
-      return {
-        'Nome': acc.name,
-        'Tipo': acc.type,
-        'Login': acc.login,
-        'Vínculo': `${respUsers} ${respDevices}`.trim() || '---',
-        'Status': acc.status
+
+      const rowObj: Record<string, any> = {
+        'Tipo': acc.type
       };
+
+      if (visibleColumns.includes('name')) rowObj['Nome / Adicional'] = acc.name;
+      if (visibleColumns.includes('login')) rowObj['Login / E-mail'] = acc.login;
+      if (visibleColumns.includes('password')) rowObj['Senha'] = acc.password || '---';
+      if (visibleColumns.includes('accessUrl')) rowObj['Acesso / URL'] = acc.accessUrl || '---';
+      if (visibleColumns.includes('link')) rowObj['Vínculo'] = `${respUsers} ${respDevices}`.trim() || '---';
+      if (visibleColumns.includes('status')) rowObj['Status'] = acc.status;
+
+      return rowObj;
     });
 
     const fileName = `licencas_${new Date().toISOString().split('T')[0]}`;
@@ -239,8 +250,8 @@ const AccountManager = () => {
     if (format === 'csv') exportToCSV(exportData, fileName);
     if (format === 'excel') exportToExcel(exportData, fileName);
     if (format === 'pdf') {
-      const headers = ['Nome', 'Tipo', 'Login', 'Status'];
-      const rows = exportData.map(d => [d.Nome, d.Tipo, d.Login, d.Status]);
+      const headers = Object.keys(exportData[0]);
+      const rows = exportData.map(d => Object.values(d));
       exportToPDF(headers, rows, fileName, 'Relatório de Licenças e Contas');
     }
   };
