@@ -13,12 +13,43 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const [pageHistory, setPageHistory] = useState<{ Date: string, PageCount: number }[]>([]);
   const [backfilling, setBackfilling] = useState(false);
   const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   useEffect(() => {
     if (zabbixHostId) {
       fetchData();
     }
   }, [zabbixHostId, deviceId]);
+
+  // Identifica meses disponíveis no histórico
+  const availableMonths = React.useMemo(() => {
+    const monthsMap = new Map<string, string>();
+    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    
+    (pageHistory || []).forEach(p => {
+      const d = p.Date.split('T')[0];
+      const parts = d.split('-');
+      if (parts.length === 3) {
+        const ym = `${parts[0]}-${parts[1]}`;
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const label = `${monthNames[mIdx] || parts[1]} / ${parts[0]}`;
+        monthsMap.set(ym, label);
+      }
+    });
+
+    return Array.from(monthsMap.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, label]) => ({ key, label }));
+  }, [pageHistory]);
+
+  // Define mês padrão (mês atual se existir, ou o mais recente)
+  useEffect(() => {
+    if (availableMonths.length > 0 && !selectedMonth) {
+      const currentYm = new Date().toISOString().substring(0, 7);
+      const exists = availableMonths.some(m => m.key === currentYm);
+      setSelectedMonth(exists ? currentYm : availableMonths[0].key);
+    }
+  }, [availableMonths]);
 
   const handleBackfillZabbixHistory = async () => {
     if (!deviceId) return;
@@ -52,7 +83,7 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const consumptionData = React.useMemo(() => {
     if (!pageHistory || pageHistory.length < 2) return [];
     
-    const list: { label: string; value: number; rawDate: string; daysDiff: number; prevDisplayDate: string }[] = [];
+    const list: { label: string; value: number; rawDate: string; daysDiff: number; prevDisplayDate: string; monthKey: string }[] = [];
     for (let i = 1; i < pageHistory.length; i++) {
       const prev = pageHistory[i-1];
       const curr = pageHistory[i];
@@ -61,12 +92,14 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
       let displayDate = curr.Date;
       let prevDisplayDate = prev.Date;
       let daysDiff = 1;
+      let monthKey = '';
 
       try {
         const dateOnly = curr.Date.split('T')[0];
         const parts = dateOnly.split('-');
         if (parts.length === 3) {
           displayDate = `${parts[2]}/${parts[1]}`;
+          monthKey = `${parts[0]}-${parts[1]}`;
         }
         const prevOnly = prev.Date.split('T')[0];
         const prevParts = prevOnly.split('-');
@@ -85,17 +118,30 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
         value: diff >= 0 ? diff : 0,
         rawDate: curr.Date,
         daysDiff,
-        prevDisplayDate
+        prevDisplayDate,
+        monthKey
       });
     }
+
+    if (selectedMonth && selectedMonth !== 'ALL') {
+      return list.filter(item => item.monthKey === selectedMonth);
+    }
     return list;
-  }, [pageHistory]);
+  }, [pageHistory, selectedMonth]);
 
   const maxConsumption = React.useMemo(() => {
     if (consumptionData.length === 0) return 1;
     const vals = consumptionData.map(d => d.value);
     const max = Math.max(...vals);
     return max > 0 ? max : 1;
+  }, [consumptionData]);
+
+  const periodMetrics = React.useMemo(() => {
+    if (consumptionData.length === 0) return { total: 0, avg: 0, daysCount: 0 };
+    const total = consumptionData.reduce((acc, d) => acc + d.value, 0);
+    const daysCount = consumptionData.length;
+    const avg = daysCount > 0 ? Math.round(total / daysCount) : 0;
+    return { total, avg, daysCount };
   }, [consumptionData]);
 
   const fetchData = async () => {
@@ -484,14 +530,33 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
 
       {/* Seção de Histórico de Consumo de Páginas */}
       <div className="bg-white dark:bg-slate-950/20 p-5 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm mt-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <Printer size={16} className="text-blue-500" /> Consumo de Páginas Diário
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Visualização de impressão acumulada por dia</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Seletor de Mês */}
+            {availableMonths.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs shadow-inner">
+                <Calendar size={13} className="text-blue-500 shrink-0" />
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
+                >
+                  <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Todo o Período</option>
+                  {availableMonths.map((m) => (
+                    <option key={m.key} value={m.key} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {deviceId && (
               <button
                 type="button"
@@ -526,21 +591,42 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
           </div>
         )}
 
+        {/* Resumo do Período Selecionado */}
+        {consumptionData.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Total no Período</span>
+              <span className="text-sm font-black text-slate-900 dark:text-white font-mono">{periodMetrics.total.toLocaleString('pt-BR')} págs</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Média Diária</span>
+              <span className="text-sm font-black text-blue-600 dark:text-sky-400 font-mono">{periodMetrics.avg.toLocaleString('pt-BR')} págs/dia</span>
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Dias Monitorados</span>
+              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">{periodMetrics.daysCount} dias</span>
+            </div>
+          </div>
+        )}
+
         {consumptionData.length === 0 ? (
           <div className="h-40 flex flex-col items-center justify-center text-center text-slate-400 dark:text-slate-500 text-xs italic p-6">
             <Activity size={28} className="mb-2 animate-pulse text-slate-300 dark:text-slate-700" />
-            <p className="font-bold text-slate-600 dark:text-slate-400">Coletando leituras diárias...</p>
+            <p className="font-bold text-slate-600 dark:text-slate-400">Nenhum dado encontrado para o período selecionado.</p>
             <p className="text-[10px] mt-1 text-slate-500 max-w-sm">
-              Os dados de contagem de páginas são registrados localmente no banco toda vez que este ativo é monitorado ou atualizado no dashboard. O gráfico aparecerá quando tivermos leituras em dias diferentes.
+              Alterne o mês acima ou clique em "Importar do Zabbix" para puxar as leituras anteriores.
             </p>
           </div>
         ) : (
-          <div className="pt-4">
-            <div className="h-36 flex items-end gap-3 pt-6 px-2 border-b border-slate-200 dark:border-slate-800">
+          <div className="pt-2 overflow-x-auto pb-1">
+            <div 
+              className="h-36 flex items-end gap-2 sm:gap-3 pt-6 px-2 border-b border-slate-200 dark:border-slate-800 min-w-full"
+              style={{ width: consumptionData.length > 15 ? `${consumptionData.length * 40}px` : '100%' }}
+            >
               {consumptionData.map((d, idx) => {
                 const heightPercent = (d.value / maxConsumption) * 100;
                 return (
-                  <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                  <div key={idx} className="flex-1 min-w-[28px] flex flex-col items-center group relative h-full justify-end">
                     {/* Tooltip do valor */}
                     <div className="absolute bottom-full mb-2 bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-20 border border-slate-700">
                       <div className="font-black text-blue-400 text-xs">{d.value.toLocaleString('pt-BR')} páginas</div>
