@@ -7008,6 +7008,129 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
+    // Função de sincronização de contagem de páginas de todas as impressoras
+    async function syncZabbixPrintersPageCounts() {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const sys = await pool.request().query("SELECT TOP 1 ZabbixUrl, ZabbixToken FROM SystemSettings");
+            if (!sys.recordset[0] || !sys.recordset[0].ZabbixUrl || !sys.recordset[0].ZabbixToken) {
+                return { success: false, message: 'Zabbix não configurado em SystemSettings' };
+            }
+
+            const zabbixUrl = sys.recordset[0].ZabbixUrl.trim().replace(/\/$/, '') + '/api_jsonrpc.php';
+            const zabbixToken = sys.recordset[0].ZabbixToken.trim();
+
+            const printersQuery = await pool.request().query(`
+                SELECT Id, ZabbixHostId 
+                FROM Devices 
+                WHERE ZabbixHostId IS NOT NULL AND RTRIM(LTRIM(ZabbixHostId)) <> ''
+            `);
+
+            if (!printersQuery.recordset || printersQuery.recordset.length === 0) {
+                return { success: true, count: 0, message: 'Nenhuma impressora com ZabbixHostId cadastrado' };
+            }
+
+            const hostMap = new Map();
+            printersQuery.recordset.forEach(p => {
+                const hid = String(p.ZabbixHostId).trim();
+                if (!hostMap.has(hid)) hostMap.set(hid, []);
+                hostMap.get(hid).push(p.Id);
+            });
+
+            const hostIds = Array.from(hostMap.keys());
+            if (hostIds.length === 0) return { success: true, count: 0 };
+
+            const payload = {
+                jsonrpc: "2.0",
+                method: "item.get",
+                params: {
+                    output: ["name", "key_", "lastvalue", "units", "hostid"],
+                    hostids: hostIds
+                },
+                id: 1
+            };
+
+            let response = await fetch(zabbixUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...payload, auth: zabbixToken })
+            });
+            let data = await response.json();
+
+            if (data && data.error && (
+                (data.error.message && data.error.message.includes('unexpected parameter "auth"')) ||
+                (data.error.data && data.error.data.includes('unexpected parameter "auth"'))
+            )) {
+                response = await fetch(zabbixUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${zabbixToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                data = await response.json();
+            }
+
+            if (!data || !data.result || !Array.isArray(data.result)) {
+                return { success: false, message: 'Resposta do Zabbix sem itens' };
+            }
+
+            let updatedCount = 0;
+            for (const item of data.result) {
+                const nameLower = (item.name || '').toLowerCase();
+                const keyLower = (item.key_ || '').toLowerCase();
+                const isPageCounter = nameLower.includes('page counter') || 
+                                     (nameLower.includes('page') && nameLower.includes('count')) ||
+                                     nameLower === 'total.print' || keyLower === 'total.print';
+
+                if (isPageCounter && item.lastvalue !== undefined) {
+                    const pageVal = parseInt(item.lastvalue);
+                    if (!isNaN(pageVal) && pageVal >= 0) {
+                        const devIds = hostMap.get(String(item.hostid)) || [];
+                        for (const devId of devIds) {
+                            const check = await pool.request()
+                                .input('deviceId', sql.NVarChar, devId)
+                                .query(`SELECT Id FROM PrinterPageHistory WHERE DeviceId = @deviceId AND Date = CAST(GETDATE() AS DATE)`);
+
+                            if (check.recordset.length > 0) {
+                                await pool.request()
+                                    .input('deviceId', sql.NVarChar, devId)
+                                    .input('pageCount', sql.Int, pageVal)
+                                    .query(`UPDATE PrinterPageHistory SET PageCount = @pageCount, Timestamp = GETDATE() WHERE DeviceId = @deviceId AND Date = CAST(GETDATE() AS DATE)`);
+                            } else {
+                                const id = 'PPH-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                                await pool.request()
+                                    .input('id', sql.NVarChar, id)
+                                    .input('deviceId', sql.NVarChar, devId)
+                                    .input('zabbixHostId', sql.NVarChar, String(item.hostid))
+                                    .input('pageCount', sql.Int, pageVal)
+                                    .query(`INSERT INTO PrinterPageHistory (Id, DeviceId, ZabbixHostId, PageCount, Date) VALUES (@id, @deviceId, @zabbixHostId, @pageCount, CAST(GETDATE() AS DATE))`);
+                            }
+                            updatedCount++;
+                        }
+                    }
+                }
+            }
+
+            console.log(`[Zabbix Page Counter Sync] Sincronização concluída: ${updatedCount} registros salvos.`);
+            return { success: true, count: updatedCount };
+        } catch (err) {
+            console.error('[Zabbix Page Counter Sync] Erro na sincronização:', err.message);
+            return { success: false, error: err.message };
+        }
+    }
+
+    // Endpoint para forçar sincronização sob demanda
+    app.post('/api/zabbix/sync-pages', async (req, res) => {
+        try {
+            const result = await syncZabbixPrintersPageCounts();
+            res.json(result);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // --- LICENSING SYSTEM ---
     app.post('/api/license/update', async (req, res) => {
         try {
@@ -7467,6 +7590,19 @@ async function updateUserPendingStatus(pool, userId) {
         }, 60 * 60 * 1000);
     }
     setTimeout(initErpPontoDailyScheduler, 20000);
+
+    // === AGENDADOR AUTOMÁTICO PERIÓDICO PARA CONTAGEM DE PÁGINAS ZABBIX ===
+    function initZabbixPrintersDailyScheduler() {
+        setInterval(async () => {
+            try {
+                await syncZabbixPrintersPageCounts();
+            } catch (err) {
+                console.error('[Zabbix Page Counter Scheduler] Erro no agendador:', err.message);
+            }
+        }, 60 * 60 * 1000); // Executa a cada 1 hora
+        syncZabbixPrintersPageCounts(); // Execução inicial ao subir
+    }
+    setTimeout(initZabbixPrintersDailyScheduler, 25000);
 
     // Vite middleware para desenvolvimento ou produção
     if (process.env.NODE_ENV !== "production") {

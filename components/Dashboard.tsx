@@ -161,6 +161,9 @@ const Dashboard = () => {
           grouped[item.hostid].push(item);
         });
         setPrintersData(grouped);
+
+        // Dispara sincronização silenciosa de histórico diário no banco
+        fetch('/api/zabbix/sync-pages', { method: 'POST' }).catch(() => {});
       }
     } catch (err) {
       console.error("Erro ao buscar dados das impressoras no Zabbix:", err);

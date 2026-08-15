@@ -22,25 +22,40 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const consumptionData = React.useMemo(() => {
     if (!pageHistory || pageHistory.length < 2) return [];
     
-    const list: { label: string; value: number; rawDate: string }[] = [];
+    const list: { label: string; value: number; rawDate: string; daysDiff: number; prevDisplayDate: string }[] = [];
     for (let i = 1; i < pageHistory.length; i++) {
       const prev = pageHistory[i-1];
       const curr = pageHistory[i];
       const diff = curr.PageCount - prev.PageCount;
       
       let displayDate = curr.Date;
+      let prevDisplayDate = prev.Date;
+      let daysDiff = 1;
+
       try {
         const dateOnly = curr.Date.split('T')[0];
         const parts = dateOnly.split('-');
         if (parts.length === 3) {
           displayDate = `${parts[2]}/${parts[1]}`;
         }
+        const prevOnly = prev.Date.split('T')[0];
+        const prevParts = prevOnly.split('-');
+        if (prevParts.length === 3) {
+          prevDisplayDate = `${prevParts[2]}/${prevParts[1]}`;
+        }
+
+        const d1 = new Date(prevOnly);
+        const d2 = new Date(dateOnly);
+        const diffTime = Math.abs(d2.getTime() - d1.getTime());
+        daysDiff = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
       } catch (e) {}
 
       list.push({
         label: displayDate,
         value: diff >= 0 ? diff : 0,
-        rawDate: curr.Date
+        rawDate: curr.Date,
+        daysDiff,
+        prevDisplayDate
       });
     }
     return list;
@@ -467,9 +482,18 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                     {/* Tooltip do valor */}
-                    <div className="absolute bottom-full mb-2 bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-15 border border-slate-800 dark:border-slate-700">
-                      <div className="font-black text-blue-400">{d.value} páginas</div>
-                      <div className="text-[9px] text-slate-400 font-medium">{d.rawDate.split('T')[0]}</div>
+                    <div className="absolute bottom-full mb-2 bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-20 border border-slate-700">
+                      <div className="font-black text-blue-400 text-xs">{d.value.toLocaleString('pt-BR')} páginas</div>
+                      <div className="text-[9px] text-slate-300 font-medium mt-0.5">Leitura: {d.label}</div>
+                      {d.daysDiff > 1 ? (
+                        <div className="text-[9px] text-amber-300 font-semibold mt-0.5">
+                          Acumulado ({d.daysDiff} dias sem leitura)
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-emerald-400 font-semibold mt-0.5">
+                          Consumo do dia (24h)
+                        </div>
+                      )}
                     </div>
                     
                     {/* Barra */}
