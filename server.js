@@ -7131,6 +7131,208 @@ async function updateUserPendingStatus(pool, userId) {
         }
     });
 
+    // Função para importar histórico retroativo nativo do Zabbix (history.get)
+    async function backfillZabbixPrinterHistory(deviceId, days = 60) {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const sys = await pool.request().query("SELECT TOP 1 ZabbixUrl, ZabbixToken FROM SystemSettings");
+            if (!sys.recordset[0] || !sys.recordset[0].ZabbixUrl || !sys.recordset[0].ZabbixToken) {
+                return { success: false, message: 'Zabbix não configurado em SystemSettings' };
+            }
+
+            const zabbixUrl = sys.recordset[0].ZabbixUrl.trim().replace(/\/$/, '') + '/api_jsonrpc.php';
+            const zabbixToken = sys.recordset[0].ZabbixToken.trim();
+
+            // Buscar dispositivo
+            const devRes = await pool.request()
+                .input('deviceId', sql.NVarChar, deviceId)
+                .query("SELECT Id, ZabbixHostId FROM Devices WHERE Id = @deviceId");
+
+            if (devRes.recordset.length === 0 || !devRes.recordset[0].ZabbixHostId) {
+                return { success: false, message: 'Dispositivo não encontrado ou sem ZabbixHostId' };
+            }
+
+            const zabbixHostId = devRes.recordset[0].ZabbixHostId.trim();
+
+            // Buscar itens do host no Zabbix
+            const itemPayload = {
+                jsonrpc: "2.0",
+                method: "item.get",
+                params: {
+                    output: ["itemid", "name", "key_", "value_type"],
+                    hostids: [zabbixHostId]
+                },
+                id: 1
+            };
+
+            let itemRes = await fetch(zabbixUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...itemPayload, auth: zabbixToken })
+            });
+            let itemData = await itemRes.json();
+
+            if (itemData && itemData.error && (
+                (itemData.error.message && itemData.error.message.includes('unexpected parameter "auth"')) ||
+                (itemData.error.data && itemData.error.data.includes('unexpected parameter "auth"'))
+            )) {
+                itemRes = await fetch(zabbixUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${zabbixToken}` },
+                    body: JSON.stringify(itemPayload)
+                });
+                itemData = await itemRes.json();
+            }
+
+            if (!itemData || !itemData.result || itemData.result.length === 0) {
+                return { success: false, message: 'Nenhum item encontrado no Zabbix para este host' };
+            }
+
+            const pageItem = itemData.result.find(i => {
+                const nameLower = (i.name || '').toLowerCase();
+                const keyLower = (i.key_ || '').toLowerCase();
+                return nameLower.includes('page counter') || 
+                       (nameLower.includes('page') && nameLower.includes('count')) ||
+                       nameLower === 'total.print' || keyLower === 'total.print';
+            });
+
+            if (!pageItem) {
+                return { success: false, message: 'Item de contador de páginas não encontrado no host Zabbix' };
+            }
+
+            const timeFrom = Math.floor(Date.now() / 1000) - (parseInt(days, 10) * 86400);
+
+            // Consulta histórico nativo no Zabbix
+            const histPayload = {
+                jsonrpc: "2.0",
+                method: "history.get",
+                params: {
+                    output: "extend",
+                    history: parseInt(pageItem.value_type, 10) || 3,
+                    itemids: [pageItem.itemid],
+                    time_from: timeFrom,
+                    sortfield: "clock",
+                    sortorder: "ASC",
+                    limit: 5000
+                },
+                id: 2
+            };
+
+            let histRes = await fetch(zabbixUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...histPayload, auth: zabbixToken })
+            });
+            let histData = await histRes.json();
+
+            if (histData && histData.error && (
+                (histData.error.message && histData.error.message.includes('unexpected parameter "auth"')) ||
+                (histData.error.data && histData.error.data.includes('unexpected parameter "auth"'))
+            )) {
+                histRes = await fetch(zabbixUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${zabbixToken}` },
+                    body: JSON.stringify(histPayload)
+                });
+                histData = await histRes.json();
+            }
+
+            if (!histData || !histData.result || !Array.isArray(histData.result) || histData.result.length === 0) {
+                return { success: false, message: 'Nenhum histórico retornado pelo Zabbix para este período' };
+            }
+
+            // Agrupa por data local (YYYY-MM-DD), mantendo a leitura máxima do dia
+            const dailyMap = new Map();
+            for (const h of histData.result) {
+                const ts = parseInt(h.clock, 10);
+                if (isNaN(ts)) continue;
+                const d = new Date(ts * 1000);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+
+                const val = parseInt(h.value, 10);
+                if (!isNaN(val) && val >= 0) {
+                    if (!dailyMap.has(dateStr) || val > dailyMap.get(dateStr)) {
+                        dailyMap.set(dateStr, val);
+                    }
+                }
+            }
+
+            let insertedCount = 0;
+            let updatedCount = 0;
+
+            for (const [dateStr, pageVal] of dailyMap.entries()) {
+                const check = await pool.request()
+                    .input('deviceId', sql.NVarChar, deviceId)
+                    .input('dateStr', sql.Date, dateStr)
+                    .query(`SELECT Id, PageCount FROM PrinterPageHistory WHERE DeviceId = @deviceId AND Date = @dateStr`);
+
+                if (check.recordset.length > 0) {
+                    if (check.recordset[0].PageCount !== pageVal) {
+                        await pool.request()
+                            .input('deviceId', sql.NVarChar, deviceId)
+                            .input('dateStr', sql.Date, dateStr)
+                            .input('pageCount', sql.Int, pageVal)
+                            .query(`UPDATE PrinterPageHistory SET PageCount = @pageCount, Timestamp = GETDATE() WHERE DeviceId = @deviceId AND Date = @dateStr`);
+                        updatedCount++;
+                    }
+                } else {
+                    const id = 'PPH-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+                    await pool.request()
+                        .input('id', sql.NVarChar, id)
+                        .input('deviceId', sql.NVarChar, deviceId)
+                        .input('zabbixHostId', sql.NVarChar, zabbixHostId)
+                        .input('pageCount', sql.Int, pageVal)
+                        .input('dateStr', sql.Date, dateStr)
+                        .query(`INSERT INTO PrinterPageHistory (Id, DeviceId, ZabbixHostId, PageCount, Date) VALUES (@id, @deviceId, @zabbixHostId, @pageCount, @dateStr)`);
+                    insertedCount++;
+                }
+            }
+
+            return {
+                success: true,
+                daysFoundInZabbix: dailyMap.size,
+                insertedRecords: insertedCount,
+                updatedRecords: updatedCount
+            };
+        } catch (err) {
+            console.error('[Zabbix Backfill] Erro ao reconstituir histórico:', err);
+            return { success: false, error: err.message };
+        }
+    }
+
+    // Endpoint para reconstituir histórico retroativo de uma impressora
+    app.post('/api/zabbix/backfill-history/:deviceId', async (req, res) => {
+        try {
+            const { deviceId } = req.params;
+            const days = parseInt(req.query.days || req.body.days || 60, 10);
+            const result = await backfillZabbixPrinterHistory(deviceId, days);
+            res.json(result);
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // Endpoint para reconstituir histórico de todas as impressoras
+    app.post('/api/zabbix/backfill-all', async (req, res) => {
+        try {
+            const days = parseInt(req.query.days || req.body.days || 60, 10);
+            const pool = await sql.connect(dbConfig);
+            const printers = await pool.request().query("SELECT Id FROM Devices WHERE ZabbixHostId IS NOT NULL AND RTRIM(LTRIM(ZabbixHostId)) <> ''");
+            
+            const results = [];
+            for (const p of printers.recordset) {
+                const r = await backfillZabbixPrinterHistory(p.Id, days);
+                results.push({ deviceId: p.Id, result: r });
+            }
+            res.json({ success: true, count: results.length, details: results });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // --- LICENSING SYSTEM ---
     app.post('/api/license/update', async (req, res) => {
         try {

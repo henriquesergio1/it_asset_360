@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Droplet, Activity, Printer, Calendar, Clock } from 'lucide-react';
+import { Loader2, Droplet, Activity, Printer, Calendar, Clock, DownloadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface ZabbixMonitorTabProps {
   zabbixHostId: string;
@@ -11,12 +11,42 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pageHistory, setPageHistory] = useState<{ Date: string, PageCount: number }[]>([]);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (zabbixHostId) {
       fetchData();
     }
   }, [zabbixHostId, deviceId]);
+
+  const handleBackfillZabbixHistory = async () => {
+    if (!deviceId) return;
+    try {
+      setBackfilling(true);
+      setBackfillStatus(null);
+      const res = await fetch(`/api/zabbix/backfill-history/${deviceId}?days=60`, {
+        method: 'POST'
+      });
+      const json = await res.json();
+      if (json.success) {
+        setBackfillStatus(`Sucesso: ${json.daysFoundInZabbix} dias importados do Zabbix.`);
+        // Recarregar histórico
+        const histRes = await fetch(`/api/zabbix/page-history/${deviceId}`);
+        if (histRes.ok) {
+          const histJson = await histRes.json();
+          setPageHistory(histJson || []);
+        }
+      } else {
+        setBackfillStatus(`Aviso: ${json.message || json.error || 'Nenhum histórico retornado'}`);
+      }
+    } catch (e: any) {
+      setBackfillStatus(`Erro ao importar: ${e.message}`);
+    } finally {
+      setBackfilling(false);
+      setTimeout(() => setBackfillStatus(null), 5000);
+    }
+  };
 
   // Processa o histórico de contagem de páginas para calcular consumo diário
   const consumptionData = React.useMemo(() => {
@@ -454,17 +484,47 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
 
       {/* Seção de Histórico de Consumo de Páginas */}
       <div className="bg-white dark:bg-slate-950/20 p-5 rounded-xl border border-slate-200 dark:border-slate-800/60 shadow-sm mt-6">
-        <div className="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div>
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-2">
               <Printer size={16} className="text-blue-500" /> Consumo de Páginas Diário
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Visualização de impressão acumulada por dia</p>
           </div>
-          <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-sky-400 bg-blue-50 dark:bg-sky-500/10 px-2.5 py-1 rounded-lg">
-            Histórico Local DB
-          </span>
+          <div className="flex items-center gap-2">
+            {deviceId && (
+              <button
+                type="button"
+                onClick={handleBackfillZabbixHistory}
+                disabled={backfilling}
+                title="Buscar e importar coletas diárias passadas diretamente do Zabbix (últimos 60 dias)"
+                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-sky-500/20 text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {backfilling ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin text-blue-500" />
+                    <span>Importando...</span>
+                  </>
+                ) : (
+                  <>
+                    <DownloadCloud size={12} className="text-blue-500" />
+                    <span>Importar do Zabbix</span>
+                  </>
+                )}
+              </button>
+            )}
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-sky-400 bg-blue-50 dark:bg-sky-500/10 px-2.5 py-1.5 rounded-lg border border-blue-100 dark:border-sky-500/20">
+              Histórico Local DB
+            </span>
+          </div>
         </div>
+
+        {backfillStatus && (
+          <div className="mb-4 p-2.5 rounded-lg bg-blue-50 dark:bg-sky-950/40 border border-blue-200 dark:border-sky-800/40 text-xs font-semibold text-blue-700 dark:text-sky-300 flex items-center gap-2 animate-fade-in">
+            <Activity size={14} />
+            <span>{backfillStatus}</span>
+          </div>
+        )}
 
         {consumptionData.length === 0 ? (
           <div className="h-40 flex flex-col items-center justify-center text-center text-slate-400 dark:text-slate-500 text-xs italic p-6">
