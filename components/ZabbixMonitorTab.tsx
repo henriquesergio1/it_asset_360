@@ -620,17 +620,20 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
         ) : (
           <div className="pt-2 overflow-x-auto pb-1">
             <div 
-              className="h-36 flex items-end gap-2 sm:gap-3 pt-6 px-2 border-b border-slate-200 dark:border-slate-800 min-w-full"
-              style={{ width: consumptionData.length > 15 ? `${consumptionData.length * 40}px` : '100%' }}
+              className="h-48 flex items-end gap-2 sm:gap-3 pt-14 px-2 border-b border-slate-200 dark:border-slate-800 min-w-full"
+              style={{ width: consumptionData.length > 15 ? `${consumptionData.length * 42}px` : '100%' }}
             >
               {consumptionData.map((d, idx) => {
                 const heightPercent = (d.value / maxConsumption) * 100;
                 return (
-                  <div key={idx} className="flex-1 min-w-[28px] flex flex-col items-center group relative h-full justify-end">
-                    {/* Tooltip do valor */}
-                    <div className="absolute bottom-full mb-2 bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-bold px-3 py-2 rounded-xl shadow-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-20 border border-slate-700">
-                      <div className="font-black text-blue-400 text-xs">{d.value.toLocaleString('pt-BR')} páginas</div>
-                      <div className="text-[9px] text-slate-300 font-medium mt-0.5">Leitura: {d.label}</div>
+                  <div key={idx} className="flex-1 min-w-[30px] flex flex-col items-center group relative h-full justify-end">
+                    {/* Tooltip do valor flutuante */}
+                    <div className="absolute bottom-[calc(100%+8px)] bg-slate-950/95 dark:bg-slate-900 text-white text-[10px] font-bold px-3 py-2 rounded-xl shadow-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap z-30 border border-slate-700 backdrop-blur-md">
+                      <div className="font-black text-sky-400 text-xs flex items-center gap-1.5">
+                        <Printer size={12} />
+                        <span>{d.value.toLocaleString('pt-BR')} páginas</span>
+                      </div>
+                      <div className="text-[9px] text-slate-300 font-medium mt-1">Data: {d.label}</div>
                       {d.daysDiff > 1 ? (
                         <div className="text-[9px] text-amber-300 font-semibold mt-0.5">
                           Acumulado ({d.daysDiff} dias sem leitura)
@@ -641,6 +644,11 @@ export function ZabbixMonitorTab({ zabbixHostId, deviceId }: ZabbixMonitorTabPro
                         </div>
                       )}
                     </div>
+
+                    {/* Rótulo Numérico Fixo acima da barra */}
+                    <span className="text-[9px] font-mono font-bold text-slate-600 dark:text-slate-300 mb-1 leading-none text-center">
+                      {d.value > 0 ? (d.value >= 1000 ? `${(d.value / 1000).toFixed(1)}k` : d.value) : '0'}
+                    </span>
                     
                     {/* Barra */}
                     <div 
