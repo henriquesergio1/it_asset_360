@@ -147,6 +147,49 @@ const DigitalSignature = () => {
         reader.readAsDataURL(file);
     };
 
+    const validateSignatureQuality = (): { valid: boolean; reason?: string } => {
+        if (!sigCanvas.current || sigCanvas.current.isEmpty()) {
+            return { valid: false, reason: 'A assinatura eletrônica é obrigatória.' };
+        }
+        
+        try {
+            const strokes: any = sigCanvas.current.toData();
+            if (!strokes || !Array.isArray(strokes) || strokes.length === 0) {
+                return { valid: false, reason: 'Nenhum traço de assinatura detectado.' };
+            }
+
+            let totalPoints = 0;
+            let totalLength = 0;
+
+            for (const stroke of strokes) {
+                const points = stroke.points || (Array.isArray(stroke) ? stroke : []);
+                totalPoints += points.length;
+                for (let i = 1; i < points.length; i++) {
+                    const p1 = points[i - 1];
+                    const p2 = points[i];
+                    if (p1 && p2 && typeof p1.x === 'number' && typeof p2.x === 'number') {
+                        totalLength += Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                    }
+                }
+            }
+
+            const trimmed = sigCanvas.current.getTrimmedCanvas();
+            const width = trimmed?.width || 0;
+            const height = trimmed?.height || 0;
+
+            if (totalPoints < 12 || totalLength < 70 || width < 45 || height < 15) {
+                return { 
+                    valid: false, 
+                    reason: 'Assinatura inválida ou muito curta. Por favor, desenhe sua assinatura ou rubrica legível na tela (não são aceitos apenas pontos ou riscos isolados).' 
+                };
+            }
+        } catch (e) {
+            console.warn('[Validação de Assinatura] Erro no cálculo geométrico:', e);
+        }
+
+        return { valid: true };
+    };
+
     const handleSubmit = async () => {
         if (geoStatus !== 'granted' || !location || location.startsWith('Capturando') || location.includes('não') || location.includes('Erro') || location.includes('suportado') || location.includes('negado') || location.includes('Indisponível')) {
             alert('A coleta da sua geolocalização exata é um requisito de segurança obrigatório para assinar o termo com validade jurídica.');
@@ -156,9 +199,11 @@ const DigitalSignature = () => {
             alert('Fotos de evidência (Documento e Selfie) são obrigatórias para validade jurídica.'); 
             return; 
         }
-        if (sigCanvas.current?.isEmpty()) { 
-            alert('A assinatura eletrônica é obrigatória.'); 
-            return; 
+        
+        const sigValidation = validateSignatureQuality();
+        if (!sigValidation.valid) {
+            alert(sigValidation.reason || 'Assinatura inválida.');
+            return;
         }
 
         setSubmitting(true);

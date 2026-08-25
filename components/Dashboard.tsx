@@ -1855,7 +1855,7 @@ const Dashboard = () => {
                              )}
 
                              {/* Evidências Jurídicas Avançadas */}
-                             {!!(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto) && (
+                             {!!(term.hasSignaturePhoto || term.hasSignatureSelfiePhoto || term.hasSignatureCanvas) && (
                                <div className="flex gap-2">
                                  <button 
                                    onClick={async (e) => {
@@ -1864,6 +1864,7 @@ const Dashboard = () => {
                                        const res = await fetch(`/api/terms/${term.id}/signature-data`);
                                         const data = await res.json();
                                         const evidenceUrls = [];
+                                        if(data.signatureCanvas) evidenceUrls.push(data.signatureCanvas);
                                         if(data.documentPhoto) evidenceUrls.push(data.documentPhoto);
                                         if(data.selfiePhoto) evidenceUrls.push(data.selfiePhoto);
                                         
@@ -1874,7 +1875,7 @@ const Dashboard = () => {
                                      } catch(err) { console.error(err); }
                                    }}
                                    className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600/50 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
-                                   title="Ver Evidências de Identidade (Doc + Selfie)"
+                                   title="Ver Evidências e Assinatura Digital"
                                  >
                                    <Camera size={14} className="text-blue-600 dark:text-sky-400" />
                                    <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>

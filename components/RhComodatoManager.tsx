@@ -900,25 +900,39 @@ export const RhComodatoManager: React.FC = () => {
                         {!signatureData ? (
                           <button
                             onClick={() => handleViewSignatureEvidences(selectedTerm.id)}
-                            className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                            className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-755 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
                           >
-                            <Eye size={14} /> Carregar Evidências Fotográficas (Selfie + Documento)
+                            <Eye size={14} /> Carregar Evidências (Assinatura + Selfie + Documento)
                           </button>
                         ) : (
                           <div className="space-y-4 animate-fade-in">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center flex flex-col justify-between">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Assinatura Digital Coletada</span>
+                                {signatureData.signatureCanvas ? (
+                                  <div className="bg-white rounded-lg p-2 border border-slate-200 dark:border-slate-700 flex items-center justify-center min-h-[140px]">
+                                    <img src={signatureData.signatureCanvas} alt="Assinatura Digital" className="mx-auto max-h-32 object-contain" />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-450 block py-8">Assinatura não coletada</span>
+                                )}
+                              </div>
+                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center flex flex-col justify-between">
                                 <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Selfie do Colaborador</span>
                                 {signatureData.selfiePhoto ? (
-                                  <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-48 object-contain border border-slate-200 dark:border-slate-700" />
+                                  <div className="bg-slate-950 rounded-lg p-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center min-h-[140px]">
+                                    <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-36 object-contain" />
+                                  </div>
                                 ) : (
                                   <span className="text-xs text-slate-450 block py-8">Selfie não enviada</span>
                                 )}
                               </div>
-                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Foto do Documento (Frente/Verso)</span>
+                              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center flex flex-col justify-between">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Foto do Documento</span>
                                 {signatureData.documentPhoto ? (
-                                  <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-48 object-contain border border-slate-200 dark:border-slate-700" />
+                                  <div className="bg-slate-950 rounded-lg p-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center min-h-[140px]">
+                                    <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-36 object-contain" />
+                                  </div>
                                 ) : (
                                   <span className="text-xs text-slate-450 block py-8">Documento não enviado</span>
                                 )}
@@ -993,18 +1007,34 @@ export const RhComodatoManager: React.FC = () => {
                                 onClick={() => handleViewSignatureEvidences(selectedTerm.id)}
                                 className="py-2 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase rounded-lg transition-all flex items-center gap-1.5"
                               >
-                                <Eye size={12} /> Exibir Evidências Fotográficas
+                                <Eye size={12} /> Exibir Evidências e Assinatura
                               </button>
                             ) : (
                               <div className="space-y-3 pt-2">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="text-center">
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Selfie</span>
-                                    {signatureData.selfiePhoto && <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-32 object-contain border border-slate-200 dark:border-slate-800" />}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                  <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Assinatura</span>
+                                    {signatureData.signatureCanvas ? (
+                                      <img src={signatureData.signatureCanvas} alt="Assinatura" className="mx-auto rounded max-h-24 object-contain" />
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400">Não disponível</span>
+                                    )}
                                   </div>
-                                  <div className="text-center">
+                                  <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Selfie</span>
+                                    {signatureData.selfiePhoto ? (
+                                      <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-24 object-contain border border-slate-200 dark:border-slate-800" />
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400">Não enviada</span>
+                                    )}
+                                  </div>
+                                  <div className="text-center bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Documento</span>
-                                    {signatureData.documentPhoto && <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-32 object-contain border border-slate-200 dark:border-slate-800" />}
+                                    {signatureData.documentPhoto ? (
+                                      <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-24 object-contain border border-slate-200 dark:border-slate-800" />
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400">Não enviado</span>
+                                    )}
                                   </div>
                                 </div>
                                 <button

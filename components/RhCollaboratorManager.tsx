@@ -4939,7 +4939,7 @@ export const RhCollaboratorManager: React.FC = () => {
             <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-4 shrink-0">
               <h3 className="text-xs font-black uppercase text-indigo-500 tracking-wider flex items-center gap-2">
                 <Camera size={16} />
-                <span>Evidências de Assinatura Digital (Doc + Selfie)</span>
+                <span>Evidências e Assinatura Digital</span>
               </h3>
               <button 
                 onClick={() => setSignatureData(null)} 
@@ -4948,7 +4948,17 @@ export const RhCollaboratorManager: React.FC = () => {
                 <X size={16} />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+            <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Assinatura Digital</span>
+                {signatureData.signatureCanvas ? (
+                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-white flex items-center justify-center min-h-[220px] p-2">
+                    <img src={signatureData.signatureCanvas} className="max-h-52 object-contain" alt="Assinatura Digital" />
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                )}
+              </div>
               <div className="space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Foto do Documento</span>
                 {signatureData.documentPhoto ? (
