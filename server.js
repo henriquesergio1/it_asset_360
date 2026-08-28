@@ -5674,6 +5674,16 @@ async function updateUserPendingStatus(pool, userId) {
                 sets.push(`${dbKey}=@${dbKey}`);
             }
 
+            // Tratamento explícito de reativação ou limpeza de demissão
+            if (body.status === 'Ativo' || body.terminationDate === null || body.terminationDate === '') {
+                if (!sets.some(s => s.startsWith('TerminationDate='))) {
+                    sets.push('TerminationDate=NULL');
+                }
+                if (!sets.some(s => s.startsWith('TerminationReason='))) {
+                    sets.push('TerminationReason=NULL');
+                }
+            }
+
             // Tratamento explícito da foto no PUT (atualização, preservação de URL interna ou remoção)
             if (body.photo !== undefined) {
                 if (body.photo && typeof body.photo === 'string' && body.photo.length > 0) {
@@ -5758,7 +5768,8 @@ async function updateUserPendingStatus(pool, userId) {
             }
 
             const colabName = body.fullName || 'Colaborador';
-            await logAction(req.params.id, 'RhCollaborator', 'Atualização', body._adminUser || 'Gestor R.H.', colabName, body._notes || 'Dados cadastrais do colaborador atualizados');
+            const actionType = body._action || (body._notes?.toLowerCase().includes('reativa') ? 'Reativação de Colaborador' : (body._notes?.toLowerCase().includes('demis') ? 'Demissão de Colaborador' : 'Atualização'));
+            await logAction(req.params.id, 'RhCollaborator', actionType, body._adminUser || 'Gestor R.H.', colabName, body._notes || 'Dados cadastrais do colaborador atualizados');
 
             res.json({ success: true });
         } catch (err) {

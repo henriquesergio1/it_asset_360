@@ -169,6 +169,12 @@ export const RhCollaboratorManager: React.FC = () => {
   const [editReasonText, setEditReasonText] = useState('');
   const [pendingSaveData, setPendingSaveData] = useState<RhCollaborator | null>(null);
 
+  // Estados para Modal de Reativação de Colaborador com Motivo de Auditoria
+  const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
+  const [reactivateColabTarget, setReactivateColabTarget] = useState<RhCollaborator | null>(null);
+  const [reactivateReasonType, setReactivateReasonType] = useState('Recontratação');
+  const [reactivateCustomNote, setReactivateCustomNote] = useState('');
+
   // Search/Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSector, setFilterSector] = useState('');
@@ -1309,18 +1315,37 @@ export const RhCollaboratorManager: React.FC = () => {
     return !isNaN(d.getTime()) && d.getFullYear() > 1900;
   };
 
-  const handleReactivateColab = (colab: RhCollaborator) => {
-    if (window.confirm(`Deseja reativar o colaborador ${colab.fullName}?`)) {
-      const updatedColab: RhCollaborator = {
-        ...colab,
-        status: 'Ativo',
-        terminationDate: undefined,
-        terminationReason: undefined
-      };
-      updateRhCollaborator(updatedColab, adminName);
-      setSelectedColab(updatedColab);
-      setForm(normalizeColabDates(updatedColab));
-    }
+  const handleOpenReactivateModal = (colab: RhCollaborator) => {
+    setReactivateColabTarget(colab);
+    setReactivateReasonType('Recontratação');
+    setReactivateCustomNote('');
+    setIsReactivateModalOpen(true);
+  };
+
+  const handleConfirmReactivateColab = () => {
+    if (!reactivateColabTarget) return;
+    
+    const fullReason = reactivateReasonType === 'Outro' 
+      ? (reactivateCustomNote.trim() || 'Outro motivo')
+      : `${reactivateReasonType}${reactivateCustomNote.trim() ? ` - ${reactivateCustomNote.trim()}` : ''}`;
+
+    const updatedColab: RhCollaborator = {
+      ...reactivateColabTarget,
+      status: 'Ativo',
+      terminationDate: null as any,
+      terminationReason: null as any,
+      _notes: `Reativação de colaborador: ${fullReason}`,
+      _reason: fullReason,
+      _action: 'Reativação de Colaborador'
+    };
+
+    updateRhCollaborator(updatedColab, adminName);
+    setSelectedColab(updatedColab);
+    setForm(normalizeColabDates(updatedColab));
+    setIsReactivateModalOpen(false);
+    setReactivateColabTarget(null);
+    setReactivateCustomNote('');
+    showToast(`Colaborador ${reactivateColabTarget.fullName} reativado com sucesso!`, 'success');
   };
 
   // Filter Logic
@@ -3497,8 +3522,8 @@ export const RhCollaboratorManager: React.FC = () => {
                       <AlertTriangle size={14} /> Colaborador Demitido
                     </div>
                     <button
-                      onClick={() => handleReactivateColab(selectedColab)}
-                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all"
+                      onClick={() => handleOpenReactivateModal(selectedColab)}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider shadow-sm transition-all cursor-pointer"
                     >
                       <UserCheck size={14} /> Reativar Colaborador
                     </button>
@@ -4813,6 +4838,100 @@ export const RhCollaboratorManager: React.FC = () => {
                   </button>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REACTIVATE COLLABORATOR MODAL COM AUDITORIA */}
+      {isReactivateModalOpen && reactivateColabTarget && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[130] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-lg overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 animate-scale-up shadow-2xl">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/40">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <UserCheck size={20} />
+                <h3 className="text-sm font-black uppercase tracking-wider">Reativar Colaborador</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsReactivateModalOpen(false);
+                  setReactivateColabTarget(null);
+                  setReactivateCustomNote('');
+                }}
+                className="h-8 w-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-700/60 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-700 dark:text-white transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/50">
+                <p className="font-bold text-slate-700 dark:text-slate-300">Você está reativando o cadastro de:</p>
+                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1">{reactivateColabTarget.fullName}</p>
+                <p className="text-slate-400 mt-1 uppercase text-[10px] font-bold">
+                  CPF: {reactivateColabTarget.cpf || '---'} • Cargo: {reactivateColabTarget.role || 'Sem Cargo'} • Admissão: {reactivateColabTarget.hireDate ? new Date(reactivateColabTarget.hireDate).toLocaleDateString('pt-BR') : '---'}
+                </p>
+                {reactivateColabTarget.terminationDate && (
+                  <p className="text-rose-500 mt-1 text-[10px] font-bold">
+                    Demissão anterior em: {new Date(reactivateColabTarget.terminationDate).toLocaleDateString('pt-BR')}{reactivateColabTarget.terminationReason ? ` (${reactivateColabTarget.terminationReason})` : ''}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1 ml-1">Motivo da Reativação *</label>
+                <select
+                  value={reactivateReasonType}
+                  onChange={e => setReactivateReasonType(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-white font-bold outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                >
+                  <option value="Recontratação">Recontratação / Novo Contrato</option>
+                  <option value="Cancelamento de Demissão / Erro Operacional">Cancelamento de Demissão / Erro Operacional</option>
+                  <option value="Retorno de Afastamento / Licença">Retorno de Afastamento / Licença</option>
+                  <option value="Reintegração Administrativa / Judicial">Reintegração Administrativa / Judicial</option>
+                  <option value="Outro">Outro (Digitar Justificativa)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1 ml-1">
+                  Justificativa / Observações da Auditoria {reactivateReasonType === 'Outro' ? '*' : '(Opcional)'}
+                </label>
+                <textarea
+                  value={reactivateCustomNote}
+                  onChange={e => setReactivateCustomNote(e.target.value)}
+                  placeholder="Informe detalhes adicionais ou a justificativa que ficará gravada no log de auditoria..."
+                  rows={3}
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-800 dark:text-white font-medium outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed italic bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                Ao reativar, o status do colaborador voltará para <strong>Ativo</strong>, a data/motivo de desligamento serão zerados e o evento será registrado na aba de auditoria com seu usuário e data/hora.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsReactivateModalOpen(false);
+                  setReactivateColabTarget(null);
+                  setReactivateCustomNote('');
+                }}
+                className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={reactivateReasonType === 'Outro' && !reactivateCustomNote.trim()}
+                onClick={handleConfirmReactivateColab}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white font-black text-xs rounded-xl uppercase tracking-wider shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <UserCheck size={14} /> Confirmar Reativação
+              </button>
             </div>
           </div>
         </div>
