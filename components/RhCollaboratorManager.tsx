@@ -802,23 +802,30 @@ export const RhCollaboratorManager: React.FC = () => {
   };
 
   const handleAddDocumentDirect = () => {
-    if (!selectedColab) return;
+    if (!docFileBase64 || !docFileBase64.trim()) {
+      showToast('Por favor, selecione um arquivo (PDF ou Imagem) antes de clicar em adicionar anexo.', 'error');
+      return;
+    }
     const finalFileName = docFileName.trim() || docCategory || 'Documento';
 
     const newDoc: RhDocument = {
       id: `doc-${Date.now()}`,
       category: docCategory,
       fileName: finalFileName,
-      fileUrl: docFileBase64 || `mock_doc_${Date.now()}.pdf`,
+      fileUrl: docFileBase64,
       uploadDate: new Date().toISOString().split('T')[0]
     };
 
-    const updatedDocs = [...(selectedColab.documents || []), newDoc];
-    const updatedColab = { ...selectedColab, documents: updatedDocs };
-    const noteMsg = `Anexado documento regulamentar: ${newDoc.fileName} (${newDoc.category})`;
-    updateRhCollaborator({ ...updatedColab, _notes: noteMsg }, adminName);
-    setSelectedColab(updatedColab);
-    setForm(normalizeColabDates(updatedColab));
+    if (selectedColab) {
+      const updatedDocs = [...(selectedColab.documents || []).filter(d => !d.fileUrl?.startsWith('mock_doc_')), newDoc];
+      const updatedColab = { ...selectedColab, documents: updatedDocs };
+      const noteMsg = `Anexado documento regulamentar: ${newDoc.fileName} (${newDoc.category})`;
+      updateRhCollaborator({ ...updatedColab, _notes: noteMsg }, adminName);
+      setSelectedColab(updatedColab);
+      setForm(normalizeColabDates(updatedColab));
+    } else {
+      setForm(p => ({ ...p, documents: [...(p.documents || []).filter((d: any) => !d.fileUrl?.startsWith('mock_doc_')), newDoc] }));
+    }
 
     setDocFileName('');
     setDocFileBase64('');
@@ -2512,10 +2519,14 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Bloco 5: Lista de Documentos */}
                   <div className="space-y-3">
-                    <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({selectedColab.documents?.length || 0})</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {selectedColab.documents && selectedColab.documents.length > 0 ? (
-                        selectedColab.documents.map((doc, i) => {
+                    {(() => {
+                      const validDocs = (selectedColab.documents || []).filter(d => d.hasFile || (d.fileUrl && !d.fileUrl.startsWith('mock_doc_')));
+                      return (
+                        <>
+                          <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({validDocs.length})</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {validDocs.length > 0 ? (
+                              validDocs.map((doc, i) => {
                           const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
                           return (
                             <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
@@ -2577,7 +2588,10 @@ export const RhCollaboratorManager: React.FC = () => {
                       ) : (
                         <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
                       )}
-                    </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Termos de Comodato vinculados */}
@@ -4223,72 +4237,80 @@ export const RhCollaboratorManager: React.FC = () => {
 
                       {/* Lista de Documentos */}
                       <div className="space-y-3">
-                        <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({selectedColab?.documents?.length || form.documents?.length || 0})</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {(selectedColab?.documents || form.documents) && (selectedColab?.documents || form.documents).length > 0 ? (
-                            (selectedColab?.documents || form.documents).map((doc: any, i: number) => {
-                              const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
-                              return (
-                                <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    {isImage ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handlePreviewColabDoc(doc)}
-                                        className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 shadow-sm hover:scale-105 hover:border-indigo-500 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-800"
-                                        title="Clique para visualizar o documento"
-                                      >
-                                        <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => handlePreviewColabDoc(doc)}
-                                        className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-all cursor-pointer"
-                                        title="Clique para visualizar o documento"
-                                      >
-                                        <FileText size={18} />
-                                      </button>
-                                    )}
-                                    <div 
-                                      className="min-w-0 cursor-pointer" 
-                                      onClick={() => handlePreviewColabDoc(doc)}
-                                    >
-                                      <span className="block font-black text-xs text-slate-900 dark:text-white uppercase tracking-wide leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.category || 'DOCUMENTO'}>
-                                        {doc.category || 'DOCUMENTO'}
-                                      </span>
-                                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mt-0.5 truncate" title={doc.fileName}>
-                                        {doc.fileName} • {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('pt-BR') : '---'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                                    {(doc.fileUrl || doc.hasFile) && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handlePreviewColabDoc(doc)}
-                                        className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
-                                        title="Visualizar Documento"
-                                      >
-                                        <Eye size={15} />
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenDeleteDocModal(doc)}
-                                      className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
-                                      title="Excluir Anexo"
-                                    >
-                                      <Trash2 size={15} />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
-                          )}
-                        </div>
+                        {(() => {
+                          const allDocs = selectedColab?.documents || form.documents || [];
+                          const validDocs = allDocs.filter((d: any) => d.hasFile || (d.fileUrl && !d.fileUrl.startsWith('mock_doc_')));
+                          return (
+                            <>
+                              <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-700/40 pb-2">Documentos Anexados ({validDocs.length})</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {validDocs.length > 0 ? (
+                                  validDocs.map((doc: any, i: number) => {
+                                    const isImage = doc.fileUrl && (doc.fileUrl.startsWith('data:image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.fileName || doc.fileUrl));
+                                    return (
+                                      <div key={doc.id || i} className="p-3.5 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl flex items-center justify-between">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          {isImage ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => handlePreviewColabDoc(doc)}
+                                              className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-indigo-200 dark:border-indigo-500/30 shadow-sm hover:scale-105 hover:border-indigo-500 transition-all cursor-pointer group bg-slate-100 dark:bg-slate-800"
+                                              title="Clique para visualizar o documento"
+                                            >
+                                              <img src={doc.fileUrl} alt={doc.fileName} className="w-full h-full object-cover group-hover:opacity-90" />
+                                            </button>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={() => handlePreviewColabDoc(doc)}
+                                              className="p-2.5 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 transition-all cursor-pointer"
+                                              title="Clique para visualizar o documento"
+                                            >
+                                              <FileText size={18} />
+                                            </button>
+                                          )}
+                                          <div 
+                                            className="min-w-0 cursor-pointer" 
+                                            onClick={() => handlePreviewColabDoc(doc)}
+                                          >
+                                            <span className="block font-black text-xs text-slate-900 dark:text-white uppercase tracking-wide leading-tight truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title={doc.category || 'DOCUMENTO'}>
+                                              {doc.category || 'DOCUMENTO'}
+                                            </span>
+                                            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mt-0.5 truncate" title={doc.fileName}>
+                                              {doc.fileName} • {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('pt-BR') : '---'}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                                          {(doc.fileUrl || doc.hasFile) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => handlePreviewColabDoc(doc)}
+                                              className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                              title="Visualizar Documento"
+                                            >
+                                              <Eye size={15} />
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenDeleteDocModal(doc)}
+                                            className="p-1.5 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors"
+                                            title="Excluir Anexo"
+                                          >
+                                            <Trash2 size={15} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <p className="text-xs text-slate-400 py-4 col-span-2 text-center">Nenhum documento regulamentar anexado.</p>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {/* Termos de Comodato vinculados */}
