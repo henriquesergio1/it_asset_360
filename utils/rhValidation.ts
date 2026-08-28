@@ -164,7 +164,7 @@ export const parseLocalDateParts = (dateStr: string | null | undefined): { day: 
  */
 export const formatDateBR = (dateStr: string | null | undefined): string => {
   const parts = parseLocalDateParts(dateStr);
-  if (!parts) return dateStr || '---';
+  if (!parts || parts.year <= 1900) return '---';
   return `${parts.dayStr}/${parts.monthStr}/${parts.yearStr}`;
 };
 

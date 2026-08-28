@@ -196,18 +196,20 @@ export const NotificationCenter: React.FC = () => {
       if (c.status === 'Demitido') return;
       
       // CNH
-      if (c.cnhExpiration) {
+      if (c.cnhExpiration && c.cnhNumber && !c.cnhExpiration.startsWith('1900-')) {
         const exp = new Date(c.cnhExpiration);
-        const diff = exp.getTime() - now.getTime();
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        if (days >= 0 && days <= 90) {
-          alerts.push({
-            id: `rh-cnh-${c.id}`,
-            title: 'CNH Próxima do Vencimento ⚠️',
-            message: `A CNH do colaborador ${c.fullName} vence em ${days} dias (${new Date(c.cnhExpiration).toLocaleDateString('pt-BR')}).`,
-            type: 'rh-alert' as any,
-            timestamp: new Date()
-          });
+        if (exp.getFullYear() > 1900) {
+          const diff = exp.getTime() - now.getTime();
+          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          if (days >= 0 && days <= 90) {
+            alerts.push({
+              id: `rh-cnh-${c.id}`,
+              title: 'CNH Próxima do Vencimento ⚠️',
+              message: `A CNH do colaborador ${c.fullName} vence em ${days} dias (${new Date(c.cnhExpiration).toLocaleDateString('pt-BR')}).`,
+              type: 'rh-alert' as any,
+              timestamp: new Date()
+            });
+          }
         }
       }
 

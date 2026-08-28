@@ -1004,6 +1004,16 @@ async function initializeDatabase() {
             console.error('Erro ao verificar/adicionar coluna Permissoes em SystemUsers:', pErr.message);
         }
 
+        // Sanitização de dados legados: CnhExpiration vazia/ano 1900
+        try {
+            await pool.request().query(`
+                UPDATE RhCollaborators 
+                SET CnhExpiration = NULL 
+                WHERE CnhExpiration IS NOT NULL 
+                  AND (YEAR(CnhExpiration) <= 1900 OR CnhNumber IS NULL OR RTRIM(LTRIM(CnhNumber)) = '')
+            `);
+        } catch (cnhCleanErr) {}
+
         // Tabela RhDependents
         const checkRhDependents = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'RhDependents'");
         if (checkRhDependents.recordset.length === 0) {
@@ -1423,8 +1433,14 @@ app.get('/api/bootstrap', async (req, res) => {
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
                 const rawP = c.photo || c.Photo;
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
+                const hasCnh = c.cnhNumber && String(c.cnhNumber).trim().length > 0;
+                let cnhExp = c.cnhExpiration;
+                if (!hasCnh || (cnhExp && (String(cnhExp).startsWith('1900-') || new Date(cnhExp).getFullYear() <= 1900))) {
+                    cnhExp = null;
+                }
                 return {
                     ...c,
+                    cnhExpiration: cnhExp,
                     photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
@@ -3454,8 +3470,14 @@ app.get('/api/sync', async (req, res) => {
             rhCollaborators: format(rhCollaboratorsRes, ['Documents']).map(c => {
                 const rawP = c.photo || c.Photo;
                 const hasRealPhoto = rawP !== null && rawP !== undefined && (Buffer.isBuffer(rawP) ? rawP.length > 0 : String(rawP).trim().length > 0);
+                const hasCnh = c.cnhNumber && String(c.cnhNumber).trim().length > 0;
+                let cnhExp = c.cnhExpiration;
+                if (!hasCnh || (cnhExp && (String(cnhExp).startsWith('1900-') || new Date(cnhExp).getFullYear() <= 1900))) {
+                    cnhExp = null;
+                }
                 return {
                     ...c,
+                    cnhExpiration: cnhExp,
                     photo: hasRealPhoto ? `/api/rh-collaborators/${c.id}/photo/raw?t=${Date.now()}` : undefined,
                     hasPhoto: hasRealPhoto,
                     documents: (c.documents || []).map(d => ({
@@ -5512,6 +5534,15 @@ async function updateUserPendingStatus(pool, userId) {
                 if (typeof val === 'object' && val !== null) {
                     val = JSON.stringify(val);
                 }
+                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration'];
+                if (dateCols.includes(dbKey)) {
+                    if (val === null || val === undefined || String(val).trim() === '' || String(val).startsWith('1900-')) {
+                        val = null;
+                    }
+                    if (dbKey === 'CnhExpiration' && (!body.cnhNumber || !String(body.cnhNumber).trim())) {
+                        val = null;
+                    }
+                }
                 request.input(dbKey, val !== null ? String(val) : null);
                 columns.push(dbKey);
                 values.push('@' + dbKey);
@@ -5584,6 +5615,15 @@ async function updateUserPendingStatus(pool, userId) {
                 let val = body[key];
                 if (typeof val === 'object' && val !== null) {
                     val = JSON.stringify(val);
+                }
+                const dateCols = ['BirthDate', 'HireDate', 'TerminationDate', 'CnhExpiration'];
+                if (dateCols.includes(dbKey)) {
+                    if (val === null || val === undefined || String(val).trim() === '' || String(val).startsWith('1900-')) {
+                        val = null;
+                    }
+                    if (dbKey === 'CnhExpiration' && (!body.cnhNumber || !String(body.cnhNumber).trim())) {
+                        val = null;
+                    }
                 }
                 request.input(dbKey, val !== null ? String(val) : null);
                 sets.push(`${dbKey}=@${dbKey}`);

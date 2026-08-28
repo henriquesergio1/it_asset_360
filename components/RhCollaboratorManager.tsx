@@ -32,7 +32,12 @@ const COLUMN_OPTIONS = [
   { id: 'salary', label: 'Salário' },
 ];
 
-const formatDateForInput = (val?: string) => val ? (val.includes('T') ? val.split('T')[0] : val.substring(0, 10)) : '';
+const formatDateForInput = (val?: string) => {
+  if (!val) return '';
+  const clean = val.includes('T') ? val.split('T')[0] : val.substring(0, 10);
+  if (clean.startsWith('1900-') || clean.startsWith('1900/')) return '';
+  return clean;
+};
 const formatCNPJ = (v: string) => {
   const digits = v.replace(/\D/g, '').slice(0, 14);
   return digits
@@ -49,14 +54,17 @@ const normalizeColabDates = (c: any) => c ? ({
   terminationDate: formatDateForInput(c.terminationDate)
 }) : c;
 
-const getCnhExpirationStatus = (cnhExpiration?: string) => {
+const getCnhExpirationStatus = (cnhExpiration?: string, cnhNumber?: string) => {
   if (!cnhExpiration) return null;
+  // Se cnhNumber foi informado/passado e está vazio, não há CNH
+  if (cnhNumber !== undefined && (!cnhNumber || !cnhNumber.trim())) return null;
   const cleanExp = cnhExpiration.includes('T') ? cnhExpiration.split('T')[0] : cnhExpiration.substring(0, 10);
-  if (!cleanExp || cleanExp.length < 10) return null;
+  if (!cleanExp || cleanExp.length < 10 || cleanExp.startsWith('1900-')) return null;
 
   const parts = cleanExp.split('-').map(Number);
   if (parts.length !== 3 || parts.some(isNaN)) return null;
   const [year, month, day] = parts;
+  if (year <= 1900) return null;
 
   const expDate = new Date(year, month - 1, day);
   const today = new Date();
@@ -1657,7 +1665,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       <div className="flex flex-col">
                         <span className={isColabDemitido ? "text-slate-400 line-through" : ""}>{c.fullName}</span>
                         {(() => {
-                          const cnhStatus = getCnhExpirationStatus(c.cnhExpiration);
+                          const cnhStatus = getCnhExpirationStatus(c.cnhExpiration, c.cnhNumber);
                           if (!cnhStatus) return null;
                           return (
                             <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded mt-0.5 inline-flex items-center gap-1 w-fit ${cnhStatus.badgeClass}`}>
@@ -1900,8 +1908,8 @@ export const RhCollaboratorManager: React.FC = () => {
                 }
 
                 // Vencimento de CNH
-                if (selectedColab.cnhExpiration) {
-                  const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
+                if (selectedColab.cnhExpiration && selectedColab.cnhNumber) {
+                  const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration, selectedColab.cnhNumber);
                   if (cnhStatus) {
                     headerAlerts.push({
                       key: 'cnh',
@@ -2238,14 +2246,14 @@ export const RhCollaboratorManager: React.FC = () => {
                           <span className="font-sans truncate block" title={selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}>
                             {selectedColab.cnhNumber ? `${selectedColab.cnhNumber} (Cat: ${selectedColab.cnhCategory || ''})` : 'Não cadastrada'}
                           </span>
-                          {selectedColab.cnhExpiration && (
+                          {selectedColab.cnhNumber && selectedColab.cnhExpiration && formatDateBR(selectedColab.cnhExpiration) !== '---' && (
                             <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-medium">
                               (Val: {formatDateBR(selectedColab.cnhExpiration)})
                             </span>
                           )}
                           {renderDocQuickAction('CNH', 'CNH')}
                           {(() => {
-                            const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration);
+                            const cnhStatus = getCnhExpirationStatus(selectedColab.cnhExpiration, selectedColab.cnhNumber);
                             if (!cnhStatus) return null;
                             return (
                               <span className={`text-[9px] uppercase px-1.5 py-0.5 rounded inline-flex items-center gap-1 shrink-0 ${cnhStatus.badgeClass}`}>

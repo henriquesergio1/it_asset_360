@@ -148,17 +148,19 @@ export const RhDashboard: React.FC = () => {
       if (c.status === 'Demitido') return;
       
       // CNH
-      if (c.cnhExpiration) {
+      if (c.cnhExpiration && c.cnhNumber && !c.cnhExpiration.startsWith('1900-')) {
         const exp = new Date(c.cnhExpiration);
-        const diff = exp.getTime() - now.getTime();
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        if (days >= 0 && days <= 90) {
-          alerts.push({
-            collaborator: c,
-            type: `CNH (Cat. ${c.cnhCategory || 'N/A'})`,
-            daysRemaining: days,
-            date: c.cnhExpiration
-          });
+        if (exp.getFullYear() > 1900) {
+          const diff = exp.getTime() - now.getTime();
+          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          if (days >= 0 && days <= 90) {
+            alerts.push({
+              collaborator: c,
+              type: `CNH (Cat. ${c.cnhCategory || 'N/A'})`,
+              daysRemaining: days,
+              date: c.cnhExpiration
+            });
+          }
         }
       }
 
