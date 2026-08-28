@@ -1366,7 +1366,8 @@ app.get('/api/bootstrap', async (req, res) => {
             devicesRes, simsRes, usersRes, sysUsersRes, settingsRes,
             modelsRes, brandsRes, typesRes, maintRes, sectorsRes, termsRes,
             accTypesRes, customFieldsRes, accountsRes, logsRes, tasksRes, taskLogsRes,
-            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes
+            consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes,
+            rhDocumentsRes, rhCareerHistoryRes
         ] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
@@ -1400,7 +1401,13 @@ app.get('/api/bootstrap', async (req, res) => {
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             safeQuery(pool, "SELECT * FROM RhAssetItems"),
             safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC"),
-            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC")
+            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC"),
+            safeQuery(pool, `
+                SELECT Id, CollaboratorId, DocumentType, Category, Title, FileName, UploadDate, ReferencePeriod, Institution, AcademicStatus, Notes,
+                (CASE WHEN FileBinary IS NOT NULL AND FileBinary != '' THEN 1 ELSE 0 END) as hasFile
+                FROM RhDocuments
+            `),
+            safeQuery(pool, "SELECT * FROM RhCareerHistory ORDER BY ChangeDate DESC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -1459,6 +1466,22 @@ app.get('/api/bootstrap', async (req, res) => {
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes),
+            rhDocuments: (rhDocumentsRes?.recordset || []).map(r => ({
+                id: r.Id,
+                collaboratorId: r.CollaboratorId,
+                documentType: r.DocumentType,
+                category: r.Category,
+                title: r.Title,
+                fileName: r.FileName,
+                uploadDate: r.UploadDate,
+                referencePeriod: r.ReferencePeriod,
+                institution: r.Institution,
+                academicStatus: r.AcademicStatus,
+                notes: r.Notes,
+                hasFile: r.hasFile === 1,
+                fileUrl: r.hasFile === 1 ? `/api/rh-documents/${r.Id}/raw?t=${Date.now()}` : undefined
+            })),
+            rhCareerHistory: format(rhCareerHistoryRes),
             profiles: (profilesRes?.recordset || []).map(r => ({
                 ID_Perfil: r.ID_Perfil,
                 Nome: r.Nome,
@@ -3415,7 +3438,7 @@ app.put('/api/fuel360/roteiro/diario/:id', async (req, res) => {
 app.get('/api/sync', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
-        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes] = await Promise.all([
+        const [devicesRes, simsRes, usersRes, maintRes, termsRes, accountsRes, tasksRes, logsRes, consumablesRes, auditsRes, rhCollaboratorsRes, rhDependentsRes, rhOccurrencesRes, rhTemplatesRes, rhTermsRes, rhAssetItemsRes, rhCompaniesRes, profilesRes, rhDocumentsRes, rhCareerHistoryRes] = await Promise.all([
             safeQuery(pool, "SELECT Id, AssetTag, Status, ModelId, SerialNumber, InternalCode, Imei, PulsusId, ZabbixHostId, CurrentUserId, AdditionalUserIds, SectorId, CostCenter, LinkedSimId, PurchaseDate, PurchaseCost, InvoiceNumber, Supplier, CustomData, (CASE WHEN PurchaseInvoiceBinary IS NOT NULL THEN 1 ELSE 0 END) as hasInvoice FROM Devices"),
             safeQuery(pool, `
                 SELECT 
@@ -3439,7 +3462,13 @@ app.get('/api/sync', async (req, res) => {
             safeQuery(pool, "SELECT Id, CollaboratorId, TemplateId, AssetDetails, Date, Status, IsManual as isManual, ResolutionReason as resolutionReason, (CASE WHEN (FileBinary IS NOT NULL) OR (IsManual = 1) THEN 1 ELSE 0 END) as hasFile, Notes as notes, Type as type, DeliveredItems as deliveredItems, SignatureToken as signatureToken, SignatureIp as signatureIp, SignatureDate as signatureDate, SignatureLocation as signatureLocation, SignatureHash as signatureHash, SignatureStatus as signatureStatus, (CASE WHEN SignatureCanvasBinary IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureCanvas, (CASE WHEN SignatureDocumentPhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignaturePhoto, (CASE WHEN SignatureSelfiePhoto IS NOT NULL THEN 1 ELSE 0 END) as hasSignatureSelfiePhoto, (CASE WHEN (SnapshotDeclaration IS NOT NULL AND SnapshotDeclaration != '') OR (SnapshotClauses IS NOT NULL AND SnapshotClauses != '') THEN 1 ELSE 0 END) as hasSnapshot FROM RhTerms"),
             safeQuery(pool, "SELECT * FROM RhAssetItems"),
             safeQuery(pool, "SELECT * FROM RhCompanies ORDER BY CompanyName ASC"),
-            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC")
+            safeQuery(pool, "SELECT * FROM RbacProfiles ORDER BY ID_Perfil ASC"),
+            safeQuery(pool, `
+                SELECT Id, CollaboratorId, DocumentType, Category, Title, FileName, UploadDate, ReferencePeriod, Institution, AcademicStatus, Notes,
+                (CASE WHEN FileBinary IS NOT NULL AND FileBinary != '' THEN 1 ELSE 0 END) as hasFile
+                FROM RhDocuments
+            `),
+            safeQuery(pool, "SELECT * FROM RhCareerHistory ORDER BY ChangeDate DESC")
         ]);
 
         const devices = await Promise.all((devicesRes.recordset || []).map(async d => {
@@ -3496,6 +3525,22 @@ app.get('/api/sync', async (req, res) => {
             rhTemplates: format(rhTemplatesRes),
             rhTerms: format(rhTermsRes, ['DeliveredItems']).map(t => ({ ...t, hasFile: t.hasFile === 1, hasSnapshot: t.hasSnapshot === 1 })),
             rhAssetItems: format(rhAssetItemsRes),
+            rhDocuments: (rhDocumentsRes?.recordset || []).map(r => ({
+                id: r.Id,
+                collaboratorId: r.CollaboratorId,
+                documentType: r.DocumentType,
+                category: r.Category,
+                title: r.Title,
+                fileName: r.FileName,
+                uploadDate: r.UploadDate,
+                referencePeriod: r.ReferencePeriod,
+                institution: r.Institution,
+                academicStatus: r.AcademicStatus,
+                notes: r.Notes,
+                hasFile: r.hasFile === 1,
+                fileUrl: r.hasFile === 1 ? `/api/rh-documents/${r.Id}/raw?t=${Date.now()}` : undefined
+            })),
+            rhCareerHistory: format(rhCareerHistoryRes),
             profiles: (profilesRes?.recordset || []).map(r => ({
                 ID_Perfil: r.ID_Perfil,
                 Nome: r.Nome,
@@ -5805,6 +5850,72 @@ async function updateUserPendingStatus(pool, userId) {
             res.json({ success: true });
         } catch (err) {
             console.error('ERRO DELETE /api/rh-documents/:id:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.get('/api/rh-documents/:id/file', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileBinary, FileName FROM RhDocuments WHERE Id=@Id");
+            const row = result.recordset[0];
+            if (!row || !row.FileBinary) return res.status(404).json({ error: 'Arquivo não encontrado' });
+            res.json({ fileUrl: row.FileBinary, fileName: row.FileName });
+        } catch (err) {
+            console.error('ERRO GET /api/rh-documents/:id/file:', err);
+            res.status(500).send(err.message);
+        }
+    });
+
+    app.get('/api/rh-documents/:id/raw', async (req, res) => {
+        try {
+            const pool = await sql.connect(dbConfig);
+            const result = await pool.request().input('Id', sql.NVarChar, req.params.id).query("SELECT FileBinary, FileName FROM RhDocuments WHERE Id=@Id");
+            const row = result.recordset[0];
+            if (!row || !row.FileBinary) return res.status(404).send('Arquivo não encontrado');
+
+            let rawData = row.FileBinary;
+            let fileName = row.FileName || 'documento.pdf';
+
+            // 1. Buffer direto
+            if (Buffer.isBuffer(rawData)) {
+                let mime = 'application/pdf';
+                if (fileName.endsWith('.png')) mime = 'image/png';
+                else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) mime = 'image/jpeg';
+                else if (fileName.endsWith('.webp')) mime = 'image/webp';
+                res.setHeader('Content-Type', mime);
+                res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+                return res.send(rawData);
+            }
+
+            // 2. String base64
+            let docStr = String(rawData).trim();
+            let mime = 'application/pdf';
+            if (docStr.startsWith('data:')) {
+                const commaIdx = docStr.indexOf(',');
+                if (commaIdx !== -1) {
+                    const header = docStr.substring(0, commaIdx);
+                    const mimeMatch = header.match(/^data:([a-zA-Z0-9\+\-\.\/]+);/);
+                    if (mimeMatch) {
+                        mime = mimeMatch[1];
+                    }
+                    docStr = docStr.substring(commaIdx + 1);
+                }
+            } else {
+                if (fileName.endsWith('.png') || docStr.startsWith('iVBORw0KG')) mime = 'image/png';
+                else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || docStr.startsWith('/9j/')) mime = 'image/jpeg';
+                else if (fileName.endsWith('.webp')) mime = 'image/webp';
+                else if (fileName.endsWith('.pdf') || docStr.startsWith('JVBERi0')) mime = 'application/pdf';
+            }
+
+            const cleanBase64 = docStr.replace(/[\r\n\s]/g, '');
+            const buffer = Buffer.from(cleanBase64, 'base64');
+            res.setHeader('Content-Type', mime);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            return res.send(buffer);
+        } catch (err) {
+            console.error('ERRO GET /api/rh-documents/:id/raw:', err);
             res.status(500).send(err.message);
         }
     });
