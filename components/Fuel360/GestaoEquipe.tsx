@@ -197,8 +197,8 @@ const ColaboradorModal: React.FC<{
                         </div>
                     </div>
 
-                    {/* Linha 2: Nome Completo, CPF, Veículo */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Linha 2: Nome Completo, CPF, Veículo, Status */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-1 md:col-span-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={formData.Nome || ''} onChange={e => setFormData({...formData, Nome: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 text-sm shadow-sm outline-none font-medium" required /></div>
                         <div className="space-y-1"><label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">CPF</label><input type="text" value={formData.CPF || ''} onChange={e => { const raw = e.target.value.replace(/\D/g, '').substring(0, 11); const masked = raw.length > 9 ? raw.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4') : raw.length > 6 ? raw.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3') : raw.length > 3 ? raw.replace(/(\d{3})(\d{1,3})/, '$1.$2') : raw; setFormData({...formData, CPF: masked}); }} placeholder="000.000.000-00" className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 font-mono text-sm focus:ring-2 focus:ring-blue-600 shadow-sm outline-none" /></div>
                         <div className="space-y-1">
@@ -211,6 +211,17 @@ const ColaboradorModal: React.FC<{
                                 <option value="Carro" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Carro</option>
                                 <option value="Moto" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Moto</option>
                                 <option value="Sem Veículo / VT" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Sem Veículo / VT</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase ml-1">Status</label>
+                            <select 
+                                value={formData.Ativo !== false ? 'true' : 'false'} 
+                                onChange={e => setFormData({...formData, Ativo: e.target.value === 'true'})} 
+                                className="w-full bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 shadow-sm outline-none font-medium"
+                            >
+                                <option value="true" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Ativo</option>
+                                <option value="false" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium">Inativo</option>
                             </select>
                         </div>
                     </div>

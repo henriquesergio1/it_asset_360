@@ -1698,8 +1698,11 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                 const latDiff = Boolean(hasValidCoords && (existing.LatitudeBase === null || Number(existing.LatitudeBase) !== nLat));
                 const lonDiff = Boolean(hasValidCoords && (existing.LongitudeBase === null || Number(existing.LongitudeBase) !== nLon));
 
-                if (nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff) {
+                const statusDiff = !existing.Ativo;
+
+                if (nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff || statusDiff) {
                     const changes = [];
+                    if (statusDiff) changes.push({ field: 'Status', oldValue: 'Inativo', newValue: 'Ativo' });
                     if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
                     if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
                     if (groupDiff) changes.push({ field: 'Grupo', oldValue: existing.Grupo, newValue: nItem.grupo });
@@ -1880,7 +1883,8 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                             SET CPF = COALESCE(@CPF, CPF),
                                 EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
                                 LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
-                                LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase)
+                                LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase),
+                                Ativo = 1
                             WHERE ID_Pulsus = @ID_Pulsus
                         END
                     `);
@@ -1905,7 +1909,8 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                             CPF = COALESCE(@CPF, CPF),
                             EnderecoBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) AND @EnderecoBase IS NOT NULL AND @EnderecoBase <> '' THEN @EnderecoBase ELSE EnderecoBase END,
                             LatitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LatitudeBase ELSE LatitudeBase END,
-                            LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END
+                            LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END,
+                            Ativo = 1
                         WHERE ID_Pulsus = @ID_Pulsus
                     `);
                 processedCount++;
