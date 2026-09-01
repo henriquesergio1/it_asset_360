@@ -1661,13 +1661,41 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         const alterados = [];
         const iguais = [];
         const activePulsusIds = new Set();
+        const activeSectorCodes = new Set();
 
         nativeItems.forEach(nItem => {
             const idPulsus = Number(nItem.id_pulsus);
             if (!idPulsus) return;
-            activePulsusIds.add(idPulsus);
-            const existing = fuelMap.get(idPulsus);
             const codigoSetorNum = Number(nItem.codigo_setor) || 0;
+            if (codigoSetorNum > 0) activeSectorCodes.add(codigoSetorNum);
+
+            let existing = fuelMap.get(idPulsus);
+            let isPulsusSwap = false;
+
+            // Se não encontrou pelo ID_Pulsus, tenta encontrar por Código de Setor ou CPF
+            if (!existing && codigoSetorNum > 0) {
+                const matchBySector = fuelItems.find(f => Number(f.CodigoSetor) === codigoSetorNum);
+                if (matchBySector) {
+                    existing = matchBySector;
+                    isPulsusSwap = true;
+                }
+            }
+            if (!existing && nItem.cpf) {
+                const cleanNCpf = String(nItem.cpf).replace(/\D/g, '');
+                if (cleanNCpf) {
+                    const matchByCpf = fuelItems.find(f => f.CPF && String(f.CPF).replace(/\D/g, '') === cleanNCpf);
+                    if (matchByCpf) {
+                        existing = matchByCpf;
+                        isPulsusSwap = true;
+                    }
+                }
+            }
+
+            activePulsusIds.add(idPulsus);
+            if (existing && existing.ID_Pulsus) {
+                activePulsusIds.add(Number(existing.ID_Pulsus));
+            }
+
             const cleanNCpf = nItem.cpf ? String(nItem.cpf).replace(/\D/g, '') : '';
             const cleanExistCpf = existing?.CPF ? String(existing.CPF).replace(/\D/g, '') : '';
             const nAddress = nItem.endereco ? String(nItem.endereco).trim() : null;
@@ -1690,6 +1718,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                     }
                 });
             } else {
+                const pulsusDiff = Number(existing.ID_Pulsus) !== idPulsus;
                 const nameDiff = (existing.Nome || '').trim().toLowerCase() !== (nItem.nome || '').trim().toLowerCase();
                 const sectorDiff = Number(existing.CodigoSetor) !== codigoSetorNum;
                 const groupDiff = (existing.Grupo || '').trim().toLowerCase() !== (nItem.grupo || '').trim().toLowerCase();
@@ -1700,8 +1729,9 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
 
                 const statusDiff = !existing.Ativo;
 
-                if (nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff || statusDiff) {
+                if (pulsusDiff || nameDiff || sectorDiff || groupDiff || cpfDiff || addressDiff || latDiff || lonDiff || statusDiff) {
                     const changes = [];
+                    if (pulsusDiff) changes.push({ field: 'ID Pulsus', oldValue: existing.ID_Pulsus, newValue: idPulsus });
                     if (statusDiff) changes.push({ field: 'Status', oldValue: 'Inativo', newValue: 'Ativo' });
                     if (nameDiff) changes.push({ field: 'Nome', oldValue: existing.Nome, newValue: nItem.nome });
                     if (sectorDiff) changes.push({ field: 'CodigoSetor', oldValue: existing.CodigoSetor, newValue: codigoSetorNum });
@@ -1714,10 +1744,11 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
                     alterados.push({
                         id_pulsus: idPulsus,
                         nome: nItem.nome,
-                        matchType: 'ID_MATCH',
+                        matchType: pulsusDiff ? 'PHONE_CHANGE' : 'ID_MATCH',
                         id_colaborador: existing.ID_Colaborador,
                         existingColab: existing,
                         newData: { 
+                            id_pulsus: idPulsus,
                             nome: nItem.nome, 
                             codigo_setor: codigoSetorNum, 
                             grupo: nItem.grupo || 'Vendedor', 
@@ -1735,7 +1766,7 @@ app.get('/api/fuel360/colaboradores/import-preview', async (req, res) => {
         });
 
         const inativar = fuelItems
-            .filter(f => f.Ativo && !activePulsusIds.has(Number(f.ID_Pulsus)))
+            .filter(f => f.Ativo && !activePulsusIds.has(Number(f.ID_Pulsus)) && (!f.CodigoSetor || !activeSectorCodes.has(Number(f.CodigoSetor))))
             .map(f => ({
                 id_pulsus: Number(f.ID_Pulsus),
                 nome: f.Nome,
@@ -1861,9 +1892,10 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                 const endVal = item.newData?.endereco_base || null;
                 const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
                 const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;
+                const codSetor = item.newData?.codigo_setor || 0;
                 await pool.request()
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
-                    .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
+                    .input('CodigoSetor', sql.Int, codSetor)
                     .input('Nome', sql.NVarChar, item.nome || '')
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
                     .input('TipoVeiculo', sql.NVarChar, tipoVeiculo)
@@ -1872,52 +1904,110 @@ app.post('/api/fuel360/colaboradores/sync', async (req, res) => {
                     .input('LatitudeBase', sql.Float, latVal)
                     .input('LongitudeBase', sql.Float, lonVal)
                     .query(`
-                        IF NOT EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
-                        BEGIN
-                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, EnderecoBase, LatitudeBase, LongitudeBase, Ativo)
-                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, @EnderecoBase, @LatitudeBase, @LongitudeBase, 1)
-                        END
-                        ELSE
+                        IF EXISTS (SELECT 1 FROM FuelColaboradores WHERE CodigoSetor = @CodigoSetor AND @CodigoSetor > 0)
                         BEGIN
                             UPDATE FuelColaboradores
-                            SET CPF = COALESCE(@CPF, CPF),
+                            SET ID_Pulsus = @ID_Pulsus,
+                                Nome = @Nome,
+                                Grupo = @Grupo,
+                                CPF = COALESCE(@CPF, CPF),
                                 EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
                                 LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
                                 LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase),
                                 Ativo = 1
-                            WHERE ID_Pulsus = @ID_Pulsus
+                            WHERE CodigoSetor = @CodigoSetor;
+
+                            UPDATE FuelColaboradores
+                            SET Ativo = 0
+                            WHERE ID_Pulsus = @ID_Pulsus AND CodigoSetor <> @CodigoSetor;
+                        END
+                        ELSE IF EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Pulsus = @ID_Pulsus)
+                        BEGIN
+                            UPDATE FuelColaboradores
+                            SET CodigoSetor = @CodigoSetor,
+                                Nome = @Nome,
+                                Grupo = @Grupo,
+                                CPF = COALESCE(@CPF, CPF),
+                                EnderecoBase = COALESCE(@EnderecoBase, EnderecoBase),
+                                LatitudeBase = COALESCE(@LatitudeBase, LatitudeBase),
+                                LongitudeBase = COALESCE(@LongitudeBase, LongitudeBase),
+                                Ativo = 1
+                            WHERE ID_Pulsus = @ID_Pulsus;
+                        END
+                        ELSE
+                        BEGIN
+                            INSERT INTO FuelColaboradores (ID_Pulsus, CodigoSetor, Nome, Grupo, TipoVeiculo, CPF, EnderecoBase, LatitudeBase, LongitudeBase, Ativo)
+                            VALUES (@ID_Pulsus, @CodigoSetor, @Nome, @Grupo, @TipoVeiculo, @CPF, @EnderecoBase, @LatitudeBase, @LongitudeBase, 1);
                         END
                     `);
                 processedCount++;
-            } else if (item.syncAction === 'UPDATE_DATA') {
+            } else if (item.syncAction === 'UPDATE_DATA' || item.syncAction === 'UPDATE_ID') {
                 const cpfVal = item.newData?.cpf ? String(item.newData.cpf).replace(/\D/g, '') : null;
                 const endVal = item.newData?.endereco_base || null;
                 const latVal = item.newData?.latitude_base !== undefined ? item.newData.latitude_base : null;
                 const lonVal = item.newData?.longitude_base !== undefined ? item.newData.longitude_base : null;
+                const targetIdColab = item.id_colaborador ? parseInt(item.id_colaborador) : null;
+                const targetIdPulsus = item.newData?.id_pulsus || item.id_pulsus;
+                const codSetor = item.newData?.codigo_setor || 0;
+
                 await pool.request()
-                    .input('ID_Pulsus', sql.Int, item.id_pulsus)
+                    .input('ID_Colaborador', sql.Int, targetIdColab)
+                    .input('ID_Pulsus', sql.Int, targetIdPulsus)
                     .input('Nome', sql.NVarChar, item.nome || item.newData?.nome || '')
-                    .input('CodigoSetor', sql.Int, item.newData?.codigo_setor || 0)
+                    .input('CodigoSetor', sql.Int, codSetor)
                     .input('Grupo', sql.NVarChar, item.newData?.grupo || 'Outros')
                     .input('CPF', sql.NVarChar, cpfVal)
                     .input('EnderecoBase', sql.NVarChar, endVal)
                     .input('LatitudeBase', sql.Float, latVal)
                     .input('LongitudeBase', sql.Float, lonVal)
                     .query(`
-                        UPDATE FuelColaboradores 
-                        SET Nome = @Nome, CodigoSetor = @CodigoSetor, Grupo = @Grupo,
-                            CPF = COALESCE(@CPF, CPF),
-                            EnderecoBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) AND @EnderecoBase IS NOT NULL AND @EnderecoBase <> '' THEN @EnderecoBase ELSE EnderecoBase END,
-                            LatitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LatitudeBase ELSE LatitudeBase END,
-                            LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END,
-                            Ativo = 1
-                        WHERE ID_Pulsus = @ID_Pulsus
+                        IF @ID_Colaborador IS NOT NULL AND EXISTS (SELECT 1 FROM FuelColaboradores WHERE ID_Colaborador = @ID_Colaborador)
+                        BEGIN
+                            UPDATE FuelColaboradores 
+                            SET ID_Pulsus = @ID_Pulsus,
+                                Nome = @Nome, 
+                                CodigoSetor = @CodigoSetor, 
+                                Grupo = @Grupo,
+                                CPF = COALESCE(@CPF, CPF),
+                                EnderecoBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) AND @EnderecoBase IS NOT NULL AND @EnderecoBase <> '' THEN @EnderecoBase ELSE EnderecoBase END,
+                                LatitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LatitudeBase ELSE LatitudeBase END,
+                                LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END,
+                                Ativo = 1
+                            WHERE ID_Colaborador = @ID_Colaborador;
+                        END
+                        ELSE
+                        BEGIN
+                            UPDATE FuelColaboradores 
+                            SET Nome = @Nome, 
+                                CodigoSetor = @CodigoSetor, 
+                                Grupo = @Grupo,
+                                CPF = COALESCE(@CPF, CPF),
+                                EnderecoBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) AND @EnderecoBase IS NOT NULL AND @EnderecoBase <> '' THEN @EnderecoBase ELSE EnderecoBase END,
+                                LatitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LatitudeBase ELSE LatitudeBase END,
+                                LongitudeBase = CASE WHEN @LatitudeBase IS NOT NULL AND @LongitudeBase IS NOT NULL AND (@LatitudeBase <> 0 OR @LongitudeBase <> 0) THEN @LongitudeBase ELSE LongitudeBase END,
+                                Ativo = 1
+                            WHERE ID_Pulsus = @ID_Pulsus;
+                        END
+
+                        IF @CodigoSetor > 0
+                        BEGIN
+                            UPDATE FuelColaboradores
+                            SET Ativo = 0
+                            WHERE CodigoSetor = @CodigoSetor AND ID_Pulsus <> @ID_Pulsus;
+                        END
                     `);
                 processedCount++;
             } else if (item.syncAction === 'DEACTIVATE') {
+                const targetIdColab = item.id_colaborador ? parseInt(item.id_colaborador) : null;
                 await pool.request()
+                    .input('ID_Colaborador', sql.Int, targetIdColab)
                     .input('ID_Pulsus', sql.Int, item.id_pulsus)
-                    .query(`UPDATE FuelColaboradores SET Ativo = 0 WHERE ID_Pulsus = @ID_Pulsus`);
+                    .query(`
+                        IF @ID_Colaborador IS NOT NULL
+                            UPDATE FuelColaboradores SET Ativo = 0 WHERE ID_Colaborador = @ID_Colaborador;
+                        ELSE
+                            UPDATE FuelColaboradores SET Ativo = 0 WHERE ID_Pulsus = @ID_Pulsus;
+                    `);
                 processedCount++;
             }
         }
@@ -2269,7 +2359,7 @@ app.get('/api/fuel360/colaboradores', async (req, res) => {
     try {
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
-        const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Nome ASC');
+        const result = await pool.request().query('SELECT * FROM FuelColaboradores ORDER BY Ativo DESC, Nome ASC');
         const items = result.recordset || [];
 
         const cleanCpf = (c) => c ? String(c).replace(/\D/g, '') : '';

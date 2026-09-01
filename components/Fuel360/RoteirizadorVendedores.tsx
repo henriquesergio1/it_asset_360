@@ -607,17 +607,29 @@ export const RoteirizadorVendedores: React.FC = () => {
             // Filtro de Supervisor
             if (selectedSupervisor && String(v.Cod_Supervisor) !== selectedSupervisor) return;
 
-            // v1.16.7: LÓGICA DE MATCH BLINDADA (Prioridade ao grupo Vendedor)
+            // v1.16.7 / v3.127.6: LÓGICA DE MATCH BLINDADA (Prioridade a ATIVOS e ao grupo Vendedor)
             let colab = colaboradores.find(c => 
                 Number(c.CodigoSetor) === Number(v.Cod_Vend) && 
-                String(c.Grupo).trim().toUpperCase() === 'VENDEDOR'
+                String(c.Grupo).trim().toUpperCase() === 'VENDEDOR' &&
+                c.Ativo !== false
             );
+            if (!colab) {
+                // Se não houver match ativo por grupo Vendedor, tenta qualquer ativo pelo setor
+                colab = colaboradores.find(c => Number(c.CodigoSetor) === Number(v.Cod_Vend) && c.Ativo !== false);
+            }
+            if (!colab) {
+                // Se não houver ativo, tenta match por grupo Vendedor (inativo)
+                colab = colaboradores.find(c => 
+                    Number(c.CodigoSetor) === Number(v.Cod_Vend) && 
+                    String(c.Grupo).trim().toUpperCase() === 'VENDEDOR'
+                );
+            }
             if (!colab) {
                 // Se não houver match exato por grupo, pegamos o primeiro match por setor (fallback)
                 colab = colaboradores.find(c => Number(c.CodigoSetor) === Number(v.Cod_Vend));
             }
             
-            // FILTRO CRÍTICO: Se o colaborador existir no banco e estiver inativo, ignoramos ele completamente neste roteirizador
+            // FILTRO CRÍTICO: Se o colaborador existir no banco e estiver inativo (sem nenhum registro ativo correspondente), ignoramos ele completamente neste roteirizador
             if (colab && colab.Ativo === false) return;
 
             const colabRef = colab || {

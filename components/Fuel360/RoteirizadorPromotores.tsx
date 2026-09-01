@@ -831,11 +831,12 @@ export const RoteirizadorPromotores: React.FC = () => {
                 // Filtro de Supervisor
                 if (selectedSupervisor && String(v.Cod_Supervisor) !== selectedSupervisor) return;
 
-                // Primeiro, tenta encontrar o colaborador na base de dados ignorando o status ativo para poder barrar se estiver inativo
-                let rawColab = colaboradores.find(c => Number(c.CodigoSetor) === Number(v.Cod_Vend));
+                // Verifica se há algum registro ativo para o setor
+                const hasActiveColab = colaboradores.some(c => Number(c.CodigoSetor) === Number(v.Cod_Vend) && c.Ativo);
+                const hasAnyColab = colaboradores.some(c => Number(c.CodigoSetor) === Number(v.Cod_Vend));
                 
-                if (rawColab && !rawColab.Ativo) {
-                    // FILTRO CRÍTICO: Colaborador existe e está inativo -> IGNORAR COMPLETAMENTE
+                if (hasAnyColab && !hasActiveColab) {
+                    // FILTRO CRÍTICO: Colaborador existe e TODOS os registros estão inativos -> IGNORAR COMPLETAMENTE
                     return;
                 }
 
