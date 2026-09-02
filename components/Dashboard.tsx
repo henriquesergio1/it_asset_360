@@ -622,13 +622,15 @@ const Dashboard = () => {
 
   // Filtra alertas de expediente
   const filteredExpedienteAlerts = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString('en-CA');
     return expedienteAlerts.filter(alert => {
       const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
       return localUser && localUser.active;
     }).sort((a, b) => {
-      const now = new Date();
-      const aHasActiveOverride = a.reactivationDate && new Date(a.reactivationDate) > now;
-      const bHasActiveOverride = b.reactivationDate && new Date(b.reactivationDate) > now;
+      const aCleanDate = a.reactivationDate ? String(a.reactivationDate).split('T')[0] : null;
+      const bCleanDate = b.reactivationDate ? String(b.reactivationDate).split('T')[0] : null;
+      const aHasActiveOverride = (aCleanDate && aCleanDate >= todayStr) || (!aCleanDate && !!a.observation);
+      const bHasActiveOverride = (bCleanDate && bCleanDate >= todayStr) || (!bCleanDate && !!b.observation);
       if (aHasActiveOverride && !bHasActiveOverride) return 1;
       if (!aHasActiveOverride && bHasActiveOverride) return -1;
       return a.nome.localeCompare(b.nome);
@@ -840,20 +842,39 @@ const Dashboard = () => {
                       <div className={`space-y-3 transition-all duration-300 ${isExpedienteExpanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : 'max-h-[0px] overflow-hidden'}`}>
                         {filteredExpedienteAlerts.map(alert => {
                           const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
-                          const now = new Date();
-                          const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
+                          const todayStr = new Date().toLocaleDateString('en-CA');
+                          const cleanDate = alert.reactivationDate ? String(alert.reactivationDate).split('T')[0] : null;
+                          const isOverrideActive = (cleanDate && cleanDate >= todayStr) || (!cleanDate && !!alert.observation);
+                          const isExpired = cleanDate && cleanDate < todayStr;
+                          const hasAnyOverride = !!alert.observation || !!cleanDate;
+
+                          const formatDisplayDate = (dStr: string | null) => {
+                            if (!dStr) return '';
+                            const parts = dStr.split('-');
+                            if (parts.length === 3) {
+                              return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            }
+                            return dStr;
+                          };
+
                           return (
-                            <div key={alert.codigo} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${hasActiveOverride ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : ' border-rose-200 dark:border-rose-900/30 hover:border-rose-500'}`}>
+                            <div key={alert.codigo} className={`bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg border flex flex-col gap-2 group transition-all ${isOverrideActive ? ' border-amber-200 dark:border-amber-500/30 hover:border-amber-700' : isExpired ? ' border-rose-300 dark:border-rose-900/50 hover:border-rose-600' : ' border-rose-200 dark:border-rose-900/30 hover:border-rose-500'}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${hasActiveOverride ? ' bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400' : ' bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'}`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isOverrideActive ? ' bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400' : isExpired ? ' bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' : ' bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'}`}>
                                     {alert.nome.charAt(0)}
                                   </div>
                                   <div className="flex-1 flex items-center justify-between min-w-0">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                       <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={alert.nome}>{alert.nome}</p>
-                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${hasActiveOverride ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-                                        {hasActiveOverride ? 'Desativado' : 'Expediente Falso'}
+                                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest shrink-0 ${
+                                        isOverrideActive 
+                                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400' 
+                                          : isExpired 
+                                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300' 
+                                            : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400'
+                                      }`}>
+                                        {isOverrideActive ? 'Desativado' : isExpired ? 'Expediente Falso (Reativação Vencida)' : 'Expediente Falso'}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
@@ -862,7 +883,7 @@ const Dashboard = () => {
                                           codigo: alert.codigo,
                                           nome: alert.nome,
                                           observation: alert.observation || '',
-                                          reactivationDate: alert.reactivationDate ? new Date(alert.reactivationDate).toISOString().split('T')[0] : ''
+                                          reactivationDate: alert.reactivationDate ? String(alert.reactivationDate).split('T')[0] : ''
                                         })}
                                         className="p-1.5 hover:bg-blue-900/40 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:text-sky-400 rounded-lg transition-colors"
                                         title="Adicionar Observação/Reativação"
@@ -900,10 +921,21 @@ const Dashboard = () => {
                                 <span className="text-slate-600 shrink-0">|</span>
                                 <span className="uppercase tracking-tighter shrink-0">CPF: {alert.cpf}</span>
                               </div>
-                              {hasActiveOverride && (
-                                <div className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/20 p-2 rounded border border-amber-900/30 ml-11">
-                                  <span className="font-bold">Motivo:</span> {alert.observation} <br/>
-                                  <span className="font-bold">Reativação:</span> {new Date(alert.reactivationDate!).toLocaleDateString('pt-BR')}
+                              {hasAnyOverride && (
+                                <div className={`mt-1 text-[11px] p-2 rounded border ml-11 ${
+                                  isExpired
+                                    ? 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 border-rose-300 dark:border-rose-900/40'
+                                    : 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/20 border-amber-200 dark:border-amber-900/30'
+                                }`}>
+                                  {alert.observation && (
+                                    <div><span className="font-bold">Motivo:</span> {alert.observation}</div>
+                                  )}
+                                  {cleanDate && (
+                                    <div className="mt-0.5">
+                                      <span className="font-bold">Reativação:</span> {formatDisplayDate(cleanDate)}
+                                      {isExpired && <span className="ml-1.5 font-bold uppercase text-[10px] text-rose-600 dark:text-rose-400">(Vencida)</span>}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

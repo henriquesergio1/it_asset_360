@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.127.7',
+    date: 'Hoje',
+    title: 'Correção na Gravação e Exibição de Alertas de Expediente (Fuso Horário e Justificativas)',
+    changes: [
+      'Exibição de Justificativas: O bloco de observações/motivo agora permanece sempre visível na lista de colaboradores com ajuste, mesmo sem data de reativação ou após a expiração.',
+      'Correção de Fuso Horário: Blindagem contra perda de dias nas datas de reativação salvas e exibidas no formato brasileiro.',
+      'Sincronização e Status: Distinção precisa entre status Desativado (vigente), Reativação Vencida e Expediente Falso sem override.'
+    ]
+  },
+  {
     version: '3.119.0',
     date: 'Hoje',
     title: 'Navegação Direta dos Alertas do RH para Ficha do Colaborador',

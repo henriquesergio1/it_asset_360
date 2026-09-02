@@ -29,9 +29,17 @@ router.get('/expediente-alerts', async (req, res) => {
         const overridesRes = await pool.request().query("SELECT * FROM ExpedienteOverrides");
         const overridesMap = new Map();
         overridesRes.recordset.forEach(row => {
-            overridesMap.set(String(row.Codigo), {
+            let dateStr = null;
+            if (row.ReactivationDate) {
+                if (row.ReactivationDate instanceof Date) {
+                    dateStr = row.ReactivationDate.toISOString().split('T')[0];
+                } else {
+                    dateStr = String(row.ReactivationDate).split('T')[0];
+                }
+            }
+            overridesMap.set(String(row.Codigo || '').trim(), {
                 observation: row.Observation,
-                reactivationDate: row.ReactivationDate
+                reactivationDate: dateStr
             });
         });
 
@@ -42,10 +50,10 @@ router.get('/expediente-alerts', async (req, res) => {
             const val = row.ValidaExpediente;
             return val === 0 || val === '0' || val === false || val === 'F' || val === 'N';
         }).map(row => {
-            const codigoStr = String(row.Codigo);
-            const override = overridesMap.get(codigoStr);
+            const rawCodigo = String(row.Codigo !== undefined && row.Codigo !== null ? row.Codigo : '').trim();
+            const override = overridesMap.get(rawCodigo);
             return {
-                codigo: codigoStr,
+                codigo: rawCodigo,
                 nome: row.Nome,
                 cpf: row.CPF,
                 rg: row.RG,
@@ -66,8 +74,23 @@ router.get('/expediente-alerts', async (req, res) => {
 router.post('/expediente-alerts/override', async (req, res) => {
     try {
         const { codigo, observation, reactivationDate } = req.body;
-        const codigoStr = String(codigo);
+        const codigoStr = String(codigo !== undefined && codigo !== null ? codigo : '').trim();
+        if (!codigoStr) {
+            return res.status(400).send('Código do colaborador não fornecido');
+        }
+
         const pool = await sql.connect(dbConfig);
+        
+        // Tratar data de reativação para evitar deslocamento de fuso horário
+        let dateVal = null;
+        if (reactivationDate) {
+            const datePart = String(reactivationDate).split('T')[0];
+            if (datePart && datePart.includes('-')) {
+                dateVal = new Date(`${datePart}T12:00:00Z`);
+            } else {
+                dateVal = new Date(reactivationDate);
+            }
+        }
         
         // Verifica se já existe
         const check = await pool.request()
@@ -78,14 +101,14 @@ router.post('/expediente-alerts/override', async (req, res) => {
             await pool.request()
                 .input('Codigo', sql.NVarChar, codigoStr)
                 .input('Observation', sql.NVarChar, observation || null)
-                .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
+                .input('ReactivationDate', sql.DateTime, dateVal)
                 .query("UPDATE ExpedienteOverrides SET Observation = @Observation, ReactivationDate = @ReactivationDate WHERE Codigo = @Codigo");
         } else {
             await pool.request()
                 .input('Id', sql.NVarChar, Math.random().toString(36).substr(2, 9))
                 .input('Codigo', sql.NVarChar, codigoStr)
                 .input('Observation', sql.NVarChar, observation || null)
-                .input('ReactivationDate', sql.DateTime, reactivationDate ? new Date(reactivationDate) : null)
+                .input('ReactivationDate', sql.DateTime, dateVal)
                 .query("INSERT INTO ExpedienteOverrides (Id, Codigo, Observation, ReactivationDate) VALUES (@Id, @Codigo, @Observation, @ReactivationDate)");
         }
         res.json({ success: true });

@@ -90,10 +90,11 @@ export const NotificationCenter: React.FC = () => {
 
   // 1. Filtrar alertas de expediente ativos
   const activeExpedienteNotifications = useMemo(() => {
+    const todayStr = new Date().toLocaleDateString('en-CA');
     return expedienteAlerts.filter(alert => {
       const localUser = users.find(u => u.cpf?.replace(/\D/g, '') === alert.cpf?.replace(/\D/g, ''));
-      const now = new Date();
-      const hasActiveOverride = alert.reactivationDate && new Date(alert.reactivationDate) > now;
+      const cleanDate = alert.reactivationDate ? String(alert.reactivationDate).split('T')[0] : null;
+      const hasActiveOverride = (cleanDate && cleanDate >= todayStr) || (!cleanDate && !!alert.observation);
       return localUser && localUser.active && !hasActiveOverride;
     }).map(alert => ({
       id: `expediente-${alert.codigo}`,
