@@ -273,6 +273,19 @@ export const AjusteRota: React.FC = () => {
         return sellerIds.filter(id => getSellerQuinzenaStats(id, scopedAdjustedRoutes).isImbalanced).length;
     }, [scopedAdjustedRoutes]);
 
+    // Resumo de visitas distribuídas por dia da semana no escopo ativo
+    const visitsByDay = useMemo(() => {
+        const routes = scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
+        const counts: Record<string, number> = {};
+        WEEKDAYS.forEach(day => { counts[day] = 0; });
+        routes.forEach(v => {
+            if (counts[v.Dia_Semana] !== undefined) {
+                counts[v.Dia_Semana]++;
+            }
+        });
+        return counts;
+    }, [scopedAdjustedRoutes, selectedPromoter]);
+
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
         const map = new Map<string, string>();
@@ -1677,11 +1690,32 @@ export const AjusteRota: React.FC = () => {
                     {/* TABELA DE AJUSTE MANUAL E EDICAO DE ROTAS */}
                     {adjustedRoutes.length > 0 && (
                         <div className="flex-1 bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col min-h-0 shadow-sm p-4">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center">
-                                    <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
-                                </h3>
-                                <div className="flex items-center space-x-2">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 mb-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center shrink-0">
+                                        <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
+                                    </h3>
+
+                                    {/* RESUMO DE VISITAS POR DIA DA SEMANA */}
+                                    <div className="flex flex-wrap items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        {WEEKDAYS.map(day => {
+                                            const shortName = day.split('-')[0].slice(0, 3);
+                                            const count = visitsByDay[day] || 0;
+                                            return (
+                                                <div 
+                                                    key={day} 
+                                                    className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-[10px] font-bold shadow-2xs"
+                                                    title={`${day}: ${count} atendimentos programados`}
+                                                >
+                                                    <span className="text-slate-500 uppercase font-semibold">{shortName}:</span>
+                                                    <span className="text-indigo-600 dark:text-indigo-400 font-black">{count}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2 shrink-0">
                                     <button
                                         onClick={handleExportExcel}
                                         className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow transition h-[32px]"

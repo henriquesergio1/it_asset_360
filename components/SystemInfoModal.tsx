@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.130.0',
+    date: 'Hoje',
+    title: 'Fuel360: Resumo de Carga de Visitas por Dia da Semana',
+    changes: [
+      'Indicador Semanal no Cabeçalho da Grade: Chips dinâmicos exibindo a quantidade de atendimentos distribuídos em cada dia (Seg a Sáb) para a equipe ou colaborador em foco.',
+      'Atualização Reativa: Os totais por dia recalculam instantaneamente ao realizar qualquer ajuste manual ou otimização de rotas.',
+      'Monitoramento de Balanceamento: Visão rápida da concentração de visitas para evitar sobrecarga em dias específicos.'
+    ]
+  },
+  {
     version: '3.129.2',
     date: 'Hoje',
     title: 'Fuel360: Ajuste da Janela Recursiva do ERP e Mapeamento Preciso de Dias',
