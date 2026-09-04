@@ -199,6 +199,19 @@ export const AjusteRota: React.FC = () => {
     const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
     const [selectedSeller, setSelectedSeller] = useState<string>('');
 
+    // Ordenação dinâmica da Grade de Ajuste Fino
+    const [sortField, setSortField] = useState<'Cod_Cliente' | 'Razao_Social' | 'Endereco' | 'Nome_Vendedor' | 'Dia_Semana' | 'Periodicidade'>('Cod_Cliente');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+    const handleSort = (field: typeof sortField) => {
+        if (sortField === field) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
     const teamColaboradores = useMemo(() => {
         return colaboradores.filter(c => {
             const grupo = String(c.Grupo).trim().toUpperCase();
@@ -285,6 +298,30 @@ export const AjusteRota: React.FC = () => {
         });
         return counts;
     }, [scopedAdjustedRoutes, selectedPromoter]);
+
+    // Rotas do escopo ordenadas conforme a coluna selecionada
+    const sortedRoutes = useMemo(() => {
+        const list = scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
+        return [...list].sort((a, b) => {
+            let res = 0;
+            if (sortField === 'Cod_Cliente') {
+                res = Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
+            } else if (sortField === 'Razao_Social') {
+                res = (a.Razao_Social || '').localeCompare(b.Razao_Social || '');
+            } else if (sortField === 'Endereco') {
+                res = (a.Endereco || '').localeCompare(b.Endereco || '');
+            } else if (sortField === 'Nome_Vendedor') {
+                res = (a.Nome_Vendedor || '').localeCompare(b.Nome_Vendedor || '');
+            } else if (sortField === 'Dia_Semana') {
+                const idxA = WEEKDAYS.indexOf(a.Dia_Semana);
+                const idxB = WEEKDAYS.indexOf(b.Dia_Semana);
+                res = (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+            } else if (sortField === 'Periodicidade') {
+                res = (a.Periodicidade || '').localeCompare(b.Periodicidade || '');
+            }
+            return sortDirection === 'asc' ? res : -res;
+        });
+    }, [scopedAdjustedRoutes, selectedPromoter, sortField, sortDirection]);
 
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
@@ -1738,18 +1775,83 @@ export const AjusteRota: React.FC = () => {
                                 <table className="w-full text-left text-[11px] font-bold text-slate-700">
                                     <thead className="bg-slate-50 text-slate-500 uppercase text-[9px] sticky top-0 z-10 border-b border-slate-100">
                                         <tr>
-                                            <th className="p-3">Código/PDV</th>
-                                            <th className="p-3">Razão Social</th>
-                                            <th className="p-3">Endereço</th>
-                                            <th className="p-3">Colaborador Atual</th>
-                                            <th className="p-3">Dia de Visita</th>
-                                            <th className="p-3">Periodicidade</th>
+                                            <th 
+                                                onClick={() => handleSort('Cod_Cliente')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Código"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Código/PDV</span>
+                                                    <span className={sortField === 'Cod_Cliente' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Cod_Cliente' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th 
+                                                onClick={() => handleSort('Razao_Social')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Razão Social"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Razão Social</span>
+                                                    <span className={sortField === 'Razao_Social' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Razao_Social' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th 
+                                                onClick={() => handleSort('Endereco')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Endereço"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Endereço</span>
+                                                    <span className={sortField === 'Endereco' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Endereco' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th 
+                                                onClick={() => handleSort('Nome_Vendedor')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Colaborador"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Colaborador Atual</span>
+                                                    <span className={sortField === 'Nome_Vendedor' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Nome_Vendedor' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th 
+                                                onClick={() => handleSort('Dia_Semana')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Dia de Visita"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Dia de Visita</span>
+                                                    <span className={sortField === 'Dia_Semana' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Dia_Semana' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th 
+                                                onClick={() => handleSort('Periodicidade')}
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                title="Clique para ordenar por Periodicidade"
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Periodicidade</span>
+                                                    <span className={sortField === 'Periodicidade' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                        {sortField === 'Periodicidade' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
                                             <th className="p-3 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {scopedAdjustedRoutes
-                                            .filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter)
+                                        {sortedRoutes
                                             .slice(0, 100) // Limita renderização para manter ultra-fluidez
                                             .map((v, i) => (
                                                 <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 transition">
@@ -1815,9 +1917,9 @@ export const AjusteRota: React.FC = () => {
                                             ))}
                                     </tbody>
                                 </table>
-                                {scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length > 100 && (
+                                {sortedRoutes.length > 100 && (
                                     <div className="p-3 text-center text-slate-400 text-[10px] bg-slate-50 font-medium">
-                                        Exibindo os primeiros 100 PDVs de {scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length}. Use filtros de colaborador para refinar a busca.
+                                        Exibindo os primeiros 100 PDVs de {sortedRoutes.length}. Use filtros de colaborador para refinar a busca.
                                     </div>
                                 )}
                             </div>

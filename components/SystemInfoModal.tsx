@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.131.0',
+    date: 'Hoje',
+    title: 'Fuel360: Ordenação Interativa de Colunas na Grade de Ajuste Fino',
+    changes: [
+      'Ordenação Dinâmica: Clique em qualquer cabeçalho de coluna (Código/PDV, Razão Social, Endereço, Colaborador, Dia de Visita, Periodicidade) para alternar entre ordem crescente e decrescente.',
+      'Mapeamento Cronológico de Dias: Ordenação por dia da semana segue a sequência real da semana (Segunda a Sábado).',
+      'Feedback Visual: Indicadores direcionais no cabeçalho destacando a coluna ativa e a direção da ordenação.'
+    ]
+  },
+  {
     version: '3.130.0',
     date: 'Hoje',
     title: 'Fuel360: Resumo de Carga de Visitas por Dia da Semana',
