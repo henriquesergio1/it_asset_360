@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.129.0',
+    date: 'Hoje',
+    title: 'Fuel360: Exportação em Abas no Excel e Alerta de Desbalanceamento de Quinzena',
+    changes: [
+      'Exportação Consolidada em Abas no Excel: Geração de arquivo XLSX estruturado com abas dinâmicas por equipe de supervisão, visão consolidada e detalhamento por vendedor conforme o escopo selecionado.',
+      'Indicador Analítico de Quinzena: Alerta visual inteligente na lista lateral de colaboradores destacando vendedores com variação de visitas superior a 30% entre semanas ímpares (1 e 3) e pares (2 e 4).',
+      'Detalhamento de Carga Quinzenal: Tooltip informativo com a distribuição exata de PDVs por quinzena para rápida tomada de decisão pelo gestor de rotas.'
+    ]
+  },
+  {
     version: '3.128.0',
     date: 'Hoje',
     title: 'Fuel360: Ajuste de Rota por Vendedor Individual, Equipe de Supervisão ou Geral',

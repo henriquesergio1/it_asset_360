@@ -125,6 +125,41 @@ const getWeekNumberInMonth = (dateStr: string): number => {
     return Math.min(5, Math.floor((day - 1) / 7) + 1);
 };
 
+export interface QuinzenaStats {
+    v13: number;
+    v24: number;
+    variationPct: number;
+    isImbalanced: boolean;
+    hasQuinzenal: boolean;
+}
+
+const getSellerQuinzenaStats = (sellerId: number, routes: VisitaPrevista[]): QuinzenaStats => {
+    let v13 = 0;
+    let v24 = 0;
+    let hasQuinzenal = false;
+    for (let i = 0; i < routes.length; i++) {
+        const v = routes[i];
+        if (v.Cod_Vend === sellerId) {
+            const p = parsePeriodicidade(v.Periodicidade).tipo;
+            if (p === 'SEMANAL') {
+                v13++;
+                v24++;
+            } else if (p === 'QUINZENAL_1_3') {
+                v13++;
+                hasQuinzenal = true;
+            } else if (p === 'QUINZENAL_2_4') {
+                v24++;
+                hasQuinzenal = true;
+            }
+        }
+    }
+    const diff = Math.abs(v13 - v24);
+    const max = Math.max(v13, v24);
+    const variationPct = max > 0 ? Math.round((diff / max) * 100) : 0;
+    const isImbalanced = hasQuinzenal && variationPct > 30;
+    return { v13, v24, variationPct, isImbalanced, hasQuinzenal };
+};
+
 export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
     const { user: authUser } = useAuth();
@@ -228,6 +263,12 @@ export const AjusteRota: React.FC = () => {
         }
         return originalRoutes;
     }, [originalRoutes, scopeMode, selectedSupervisor, selectedSeller]);
+
+    // Contagem de colaboradores com desbalanceamento quinzenal superior a 30% no escopo ativo
+    const imbalancedSellersCount = useMemo(() => {
+        const sellerIds = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
+        return sellerIds.filter(id => getSellerQuinzenaStats(id, scopedAdjustedRoutes).isImbalanced).length;
+    }, [scopedAdjustedRoutes]);
 
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
@@ -871,35 +912,122 @@ export const AjusteRota: React.FC = () => {
         setAdjustedRoutes(prev => prev.filter(v => v.Cod_Cliente !== clientCode));
     };
 
-    // Exportar Roteiro Otimizado separado por Colaborador e Dia da Semana
+    // Exportar Roteiro Otimizado em Múltiplas Abas no Excel (Consolidado e por Equipe/Vendedor)
     const handleExportExcel = () => {
         if (scopedAdjustedRoutes.length === 0) {
             alert("Nenhum dado para exportar no escopo atual.");
             return;
         }
 
-        const dataRows = scopedAdjustedRoutes.map((v, idx) => ({
-            'CARGO': teamType === 'vendedores' ? 'VENDEDOR' : 'PROMOTOR',
-            'CODIGO': v.Cod_Vend,
-            'NOME DO COLABORADOR': v.Nome_Vendedor,
-            'SUPERVISOR': v.Nome_Supervisor || '',
-            'FREQUENCIA': v.Periodicidade || 'SEMANAL',
-            'SEMANA': (v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? 2 : 1,
-            'DIA SEMANA': v.Dia_Semana,
-            'NOME DIA': v.Dia_Semana,
-            'ORDEM VISITA': idx + 1,
-            'CODIGO PDV': v.Cod_Cliente,
-            'RAZAO SOCIAL': v.Razao_Social,
-            'ENDERECO': v.Endereco,
-            'BAIRRO': v.Bairro,
-            'CIDADE': v.Cidade,
-            'CEP': v.CEP
-        }));
+        // Sanitização de nome da aba conforme limites estritos do Excel (máx 31 chars e sem caracteres inválidos)
+        const sanitizeSheetName = (name: string, fallback: string) => {
+            const cleaned = (name || fallback).replace(/[\\/?*\[\]:]/g, ' ').trim();
+            return cleaned.slice(0, 30) || fallback;
+        };
 
-        const tag = scopeMode === 'equipe' ? `_Equipe_${selectedSupervisor}` : (scopeMode === 'vendedor' ? `_Vend_${selectedSeller}` : '_Geral');
-        const ws = XLSX.utils.json_to_sheet(dataRows);
+        const usedSheetNames = new Set<string>();
+        const getUniqueSheetName = (rawName: string, fallback: string) => {
+            let base = sanitizeSheetName(rawName, fallback);
+            let candidate = base;
+            let counter = 1;
+            while (usedSheetNames.has(candidate.toLowerCase())) {
+                const suffix = `_${counter}`;
+                candidate = base.slice(0, 31 - suffix.length) + suffix;
+                counter++;
+            }
+            usedSheetNames.add(candidate.toLowerCase());
+            return candidate;
+        };
+
+        const mapRow = (v: VisitaPrevista, idx: number) => {
+            const parsed = parsePeriodicidade(v.Periodicidade);
+            let semanaDesc = 'Semanal (Todas as Semanas)';
+            if (parsed.tipo === 'QUINZENAL_1_3') semanaDesc = '1 e 3 (Ímpares)';
+            else if (parsed.tipo === 'QUINZENAL_2_4') semanaDesc = '2 e 4 (Pares)';
+
+            return {
+                'CARGO': teamType === 'vendedores' ? 'VENDEDOR' : 'PROMOTOR',
+                'CODIGO': v.Cod_Vend,
+                'NOME DO COLABORADOR': v.Nome_Vendedor,
+                'SUPERVISOR': v.Nome_Supervisor || 'Não informado',
+                'FREQUENCIA': v.Periodicidade || 'SEMANAL',
+                'QUINZENA / SEMANA': semanaDesc,
+                'DIA SEMANA': v.Dia_Semana,
+                'ORDEM VISITA': idx + 1,
+                'CODIGO PDV': v.Cod_Cliente,
+                'RAZAO SOCIAL': v.Razao_Social,
+                'ENDERECO': v.Endereco,
+                'BAIRRO': v.Bairro,
+                'CIDADE': v.Cidade,
+                'CEP': v.CEP
+            };
+        };
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Rotas Otimizadas");
+
+        if (scopeMode === 'geral') {
+            // 1. Aba Consolidada Geral
+            const wsGeral = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            XLSX.utils.book_append_sheet(wb, wsGeral, getUniqueSheetName("Geral Consolidado", "Geral"));
+
+            // 2. Abas individuais para cada Equipe de Supervisão
+            const supMap = new Map<string, VisitaPrevista[]>();
+            scopedAdjustedRoutes.forEach(v => {
+                const supKey = v.Nome_Supervisor ? `Sup. ${v.Nome_Supervisor}` : (v.Cod_Supervisor ? `Supervisão ${v.Cod_Supervisor}` : 'Outros');
+                if (!supMap.has(supKey)) supMap.set(supKey, []);
+                supMap.get(supKey)?.push(v);
+            });
+
+            supMap.forEach((visits, supName) => {
+                const ws = XLSX.utils.json_to_sheet(visits.map(mapRow));
+                XLSX.utils.book_append_sheet(wb, ws, getUniqueSheetName(supName, "Equipe"));
+            });
+        } else if (scopeMode === 'equipe') {
+            const currentSup = supervisors.find(s => s.id === selectedSupervisor);
+            const supTitle = currentSup?.name ? `Sup. ${currentSup.name}` : `Equipe ${selectedSupervisor || 'Geral'}`;
+
+            // 1. Aba Consolidada da Equipe Selecionada
+            const wsTeam = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            XLSX.utils.book_append_sheet(wb, wsTeam, getUniqueSheetName(supTitle, "Equipe"));
+
+            // 2. Abas individuais para cada Vendedor da equipe
+            const sellerMap = new Map<number, VisitaPrevista[]>();
+            scopedAdjustedRoutes.forEach(v => {
+                if (!sellerMap.has(v.Cod_Vend)) sellerMap.set(v.Cod_Vend, []);
+                sellerMap.get(v.Cod_Vend)?.push(v);
+            });
+
+            sellerMap.forEach((visits, vendId) => {
+                const sellerName = visits[0]?.Nome_Vendedor || `Vend ${vendId}`;
+                const wsSeller = XLSX.utils.json_to_sheet(visits.map(mapRow));
+                XLSX.utils.book_append_sheet(wb, wsSeller, getUniqueSheetName(sellerName, `Vend_${vendId}`));
+            });
+        } else {
+            // scopeMode === 'vendedor'
+            const currentSeller = availableSellers.find(s => String(s.id) === selectedSeller);
+            const sellerTitle = currentSeller?.name || `Vendedor ${selectedSeller || 'Individual'}`;
+
+            // 1. Aba Consolidada do Vendedor
+            const wsSeller = XLSX.utils.json_to_sheet(scopedAdjustedRoutes.map(mapRow));
+            XLSX.utils.book_append_sheet(wb, wsSeller, getUniqueSheetName(sellerTitle, "Vendedor"));
+
+            // 2. Abas por Dia da Semana do Vendedor
+            const dayMap = new Map<string, VisitaPrevista[]>();
+            scopedAdjustedRoutes.forEach(v => {
+                if (!dayMap.has(v.Dia_Semana)) dayMap.set(v.Dia_Semana, []);
+                dayMap.get(v.Dia_Semana)?.push(v);
+            });
+
+            WEEKDAYS.forEach(day => {
+                const dayVisits = dayMap.get(day);
+                if (dayVisits && dayVisits.length > 0) {
+                    const wsDay = XLSX.utils.json_to_sheet(dayVisits.map(mapRow));
+                    XLSX.utils.book_append_sheet(wb, wsDay, getUniqueSheetName(day.split('-')[0], day));
+                }
+            });
+        }
+
+        const tag = scopeMode === 'equipe' ? `_Equipe_${selectedSupervisor}` : (scopeMode === 'vendedor' ? `_Vend_${selectedSeller}` : '_Geral_Abas');
         XLSX.writeFile(wb, `Ajuste_Rota_${teamType}${tag}_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
@@ -1343,12 +1471,22 @@ export const AjusteRota: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* LISTA DE COLABORADORES PARA SELEÇÃO NO MAPA */}
+                    {/* LISTA DE COLABORADORES PARA SELEÇÃO NO MAPA COM ALERTA DE DESBALANCEAMENTO QUINZENAL */}
                     {scopedAdjustedRoutes.length > 0 && (
                         <div className="flex-1 flex flex-col min-h-0">
-                            <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2 flex items-center">
-                                <UserGroupIcon className="w-4 h-4 mr-1 text-slate-500"/> Rotas por Colaborador
-                            </h4>
+                            <div className="mb-2 flex items-center justify-between">
+                                <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
+                                    <UserGroupIcon className="w-4 h-4 mr-1 text-slate-500"/> Rotas por Colaborador
+                                </h4>
+                                {imbalancedSellersCount > 0 && (
+                                    <span 
+                                        className="text-[9px] font-black bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center shadow-xs"
+                                        title={`${imbalancedSellersCount} colaborador(es) com desbalanceamento quinzenal superior a 30%`}
+                                    >
+                                        ⚠️ {imbalancedSellersCount} com desbalanço
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                                 <div 
                                     className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
@@ -1360,18 +1498,35 @@ export const AjusteRota: React.FC = () => {
                                     const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
                                     const count = scopedAdjustedRoutes.filter(v => v.Cod_Vend === sellerId).length;
                                     const color = promoterColorMap.get(String(sellerId)) || '#64748b';
+                                    const qStats = getSellerQuinzenaStats(sellerId, scopedAdjustedRoutes);
 
                                     return (
                                         <div 
                                             key={sellerId}
-                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
+                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200')}`}
                                             onClick={() => setSelectedPromoter(String(sellerId))}
                                         >
-                                            <div className="flex items-center space-x-2 truncate">
+                                            <div className="flex items-center space-x-2 truncate min-w-0">
                                                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
-                                                <span className="truncate">{colab?.Nome || `Colaborador ${sellerId}`}</span>
+                                                <span className="truncate" title={colab?.Nome || `Colaborador ${sellerId}`}>{colab?.Nome || `Colaborador ${sellerId}`}</span>
                                             </div>
-                                            <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-[10px] shrink-0">{count} PDVs</span>
+
+                                            <div className="flex items-center space-x-1 shrink-0">
+                                                {qStats.isImbalanced && (
+                                                    <span 
+                                                        className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-1.5 py-0.5 rounded text-[9px] font-black flex items-center shadow-xs"
+                                                        title={`⚠️ Desbalanceamento Quinzenal: ${qStats.variationPct}% de variação\n• Semanas 1 e 3: ${qStats.v13} atendimentos\n• Semanas 2 e 4: ${qStats.v24} atendimentos\nDica: Alterne clientes quinzenais na Grade de Ajuste Fino para equilibrar.`}
+                                                    >
+                                                        ⚠️ {qStats.variationPct}%
+                                                    </span>
+                                                )}
+                                                <span 
+                                                    className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded text-[10px]"
+                                                    title={`Total: ${count} PDVs\n• Semanas 1 e 3: ${qStats.v13}\n• Semanas 2 e 4: ${qStats.v24}`}
+                                                >
+                                                    {count} PDVs
+                                                </span>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -1543,8 +1698,9 @@ export const AjusteRota: React.FC = () => {
                                     <button
                                         onClick={handleExportExcel}
                                         className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow transition h-[32px]"
+                                        title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
                                     >
-                                        <UploadIcon className="w-4 h-4 mr-1 rotate-180"/> Exportar Excel Separado
+                                        <UploadIcon className="w-4 h-4 mr-1 rotate-180"/> Exportar Excel (em Abas)
                                     </button>
                                     <button
                                         onClick={handleSaveDatabase}
