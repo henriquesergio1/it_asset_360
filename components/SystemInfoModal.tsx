@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.131.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção no Otimizador de Rotas e Barra de Progresso com Percentual',
+    changes: [
+      'Correção de Exceção: Resolução definitiva do erro ReferenceError: startDate is not defined ao clicar em "Otimizar Rotas".',
+      'Barra de Progresso com Percentual: Modal overlay interativo com animação em tempo real mostrando o avanço percentual e o colaborador em processamento.',
+      'Processamento Assíncrono Desacoplado: Otimização distribuída em etapas não bloqueantes que garantem fluidez na interface durante todo o cálculo.'
+    ]
+  },
+  {
     version: '3.131.0',
     date: 'Hoje',
     title: 'Fuel360: Ordenação Interativa de Colunas na Grade de Ajuste Fino',

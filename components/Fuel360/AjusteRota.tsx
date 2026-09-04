@@ -181,6 +181,12 @@ export const AjusteRota: React.FC = () => {
     const [pendingParsedData, setPendingParsedData] = useState<VisitaPrevista[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [optimizeProgress, setOptimizeProgress] = useState<{
+        current: number;
+        total: number;
+        percentage: number;
+        currentSellerName: string;
+    } | null>(null);
 
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
@@ -503,286 +509,276 @@ export const AjusteRota: React.FC = () => {
     };
 
     // Algoritmo de Otimização (Carteira Blindada por Vendedor + Preservação Estrita de Periodicidade)
-    const handleOptimizeSimulate = () => {
+    const handleOptimizeSimulate = async () => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
             return;
         }
 
+        // A carteira é do vendedor: isolamento total por Cod_Vend (otimiza estritamente os vendedores do escopo selecionado)
+        const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
+        if (sellers.length === 0) {
+            alert("Nenhum vendedor encontrado no escopo selecionado.");
+            return;
+        }
+
         setLoading(true);
-        setTimeout(() => {
-            // A carteira é do vendedor: isolamento total por Cod_Vend (otimiza estritamente os vendedores do escopo selecionado)
-            const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
-            const result: VisitaPrevista[] = [];
+        setOptimizeProgress({
+            current: 0,
+            total: sellers.length,
+            percentage: 0,
+            currentSellerName: 'Iniciando otimização...'
+        });
 
-            // Gerar lista de datas do intervalo se o período contiver mais de um dia
-            const datesInRange: string[] = [];
-            if (startDate && endDate) {
-                const start = new Date(startDate + 'T00:00:00');
-                const end = new Date(endDate + 'T00:00:00');
-                if (start <= end) {
-                    const curr = new Date(start);
-                    while (curr <= end) {
-                        datesInRange.push(curr.toISOString().split('T')[0]);
-                        curr.setDate(curr.getDate() + 1);
+        // Aguarda renderização inicial da barra
+        await new Promise(r => setTimeout(r, 60));
+
+        const result: VisitaPrevista[] = [];
+        const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
+
+        for (let sIdx = 0; sIdx < sellers.length; sIdx++) {
+            const sellerId = sellers[sIdx];
+            const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === sellerId);
+            const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
+            const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Vendedor ${sellerId}`);
+
+            const currentPct = Math.round(((sIdx) / sellers.length) * 100);
+            setOptimizeProgress({
+                current: sIdx + 1,
+                total: sellers.length,
+                percentage: currentPct,
+                currentSellerName: `${sellerName} (${sIdx + 1}/${sellers.length})`
+            });
+
+            // Permite que o browser renderize a barra de progresso
+            await new Promise(r => setTimeout(r, 25));
+
+            if (sellerVisits.length === 0) continue;
+
+            // 1. Extrair clientes ÚNICOS da carteira deste vendedor
+            const uniqueClientsMap = new Map<number, {
+                sampleVisit: VisitaPrevista;
+                tipo: PeriodicidadeTipo;
+                originalPeriodicidade: string;
+            }>();
+
+            sellerVisits.forEach(v => {
+                if (!uniqueClientsMap.has(v.Cod_Cliente)) {
+                    const parsed = parsePeriodicidade(v.Periodicidade);
+                    uniqueClientsMap.set(v.Cod_Cliente, {
+                        sampleVisit: v,
+                        tipo: parsed.tipo,
+                        originalPeriodicidade: v.Periodicidade || parsed.original
+                    });
+                }
+            });
+
+            const uniqueClients = Array.from(uniqueClientsMap.values());
+            if (uniqueClients.length === 0) continue;
+
+            const baseLat = colab?.LatitudeBase || uniqueClients[0].sampleVisit.Lat || 0;
+            const baseLong = colab?.LongitudeBase || uniqueClients[0].sampleVisit.Long || 0;
+
+            // 2. Ordenação geográfica inicial a partir da base (Nearest Neighbor)
+            let unassigned = [...uniqueClients];
+            const orderedClients: typeof uniqueClients = [];
+            let curLat = baseLat;
+            let curLng = baseLong;
+
+            while (unassigned.length > 0) {
+                let nearestIdx = 0;
+                let minDist = Infinity;
+                for (let i = 0; i < unassigned.length; i++) {
+                    const lat = unassigned[i].sampleVisit.Lat || 0;
+                    const lng = unassigned[i].sampleVisit.Long || 0;
+                    const dist = calcDist(curLat, curLng, lat, lng);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestIdx = i;
                     }
                 }
+                const nearest = unassigned.splice(nearestIdx, 1)[0];
+                orderedClients.push(nearest);
+                curLat = nearest.sampleVisit.Lat || curLat;
+                curLng = nearest.sampleVisit.Long || curLng;
             }
 
-            sellers.forEach(sellerId => {
-                const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === sellerId);
-                if (sellerVisits.length === 0) return;
+            // 3. Alocação nos dias ativos respeitando capacidades e balanceamento de quinzenas
+            interface DayBucket {
+                day: string;
+                maxCap: number;
+                semanais: typeof uniqueClients;
+                quinzenais13: typeof uniqueClients;
+                quinzenais24: typeof uniqueClients;
+            }
 
-                const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-                const sellerName = colab?.Nome || sellerVisits[0].Nome_Vendedor;
+            const dayBuckets: DayBucket[] = activeDays.map(day => ({
+                day,
+                maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
+                semanais: [],
+                quinzenais13: [],
+                quinzenais24: []
+            }));
 
-                // 1. Extrair clientes ÚNICOS da carteira deste vendedor
-                const uniqueClientsMap = new Map<number, {
-                    sampleVisit: VisitaPrevista;
-                    tipo: PeriodicidadeTipo;
-                    originalPeriodicidade: string;
-                }>();
+            let dayIdx = 0;
 
-                sellerVisits.forEach(v => {
-                    if (!uniqueClientsMap.has(v.Cod_Cliente)) {
-                        const parsed = parsePeriodicidade(v.Periodicidade);
-                        uniqueClientsMap.set(v.Cod_Cliente, {
-                            sampleVisit: v,
-                            tipo: parsed.tipo,
-                            originalPeriodicidade: v.Periodicidade || parsed.original
-                        });
-                    }
-                });
+            orderedClients.forEach(client => {
+                if (client.tipo === 'SEMANAL') {
+                    // Semanal: ocupa vaga em ambas as quinzenas (ímpar e par)
+                    let placed = false;
+                    for (let step = 0; step < dayBuckets.length; step++) {
+                        const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
+                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
 
-                const uniqueClients = Array.from(uniqueClientsMap.values());
-                if (uniqueClients.length === 0) return;
-
-                const baseLat = colab?.LatitudeBase || uniqueClients[0].sampleVisit.Lat || 0;
-                const baseLong = colab?.LongitudeBase || uniqueClients[0].sampleVisit.Long || 0;
-
-                // 2. Ordenação geográfica inicial a partir da base (Nearest Neighbor)
-                let unassigned = [...uniqueClients];
-                const orderedClients: typeof uniqueClients = [];
-                let curLat = baseLat;
-                let curLng = baseLong;
-
-                while (unassigned.length > 0) {
-                    let nearestIdx = 0;
-                    let minDist = Infinity;
-                    for (let i = 0; i < unassigned.length; i++) {
-                        const lat = unassigned[i].sampleVisit.Lat || 0;
-                        const lng = unassigned[i].sampleVisit.Long || 0;
-                        const dist = calcDist(curLat, curLng, lat, lng);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            nearestIdx = i;
+                        if (capImpar < bucket.maxCap && capPar < bucket.maxCap) {
+                            bucket.semanais.push(client);
+                            dayIdx = (dayIdx + step) % dayBuckets.length;
+                            placed = true;
+                            break;
                         }
                     }
-                    const nearest = unassigned.splice(nearestIdx, 1)[0];
-                    orderedClients.push(nearest);
-                    curLat = nearest.sampleVisit.Lat || curLat;
-                    curLng = nearest.sampleVisit.Long || curLng;
-                }
-
-                // 3. Alocação nos dias ativos respeitando capacidades e balanceamento de quinzenas
-                const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
-
-                interface DayBucket {
-                    day: string;
-                    maxCap: number;
-                    semanais: typeof uniqueClients;
-                    quinzenais13: typeof uniqueClients;
-                    quinzenais24: typeof uniqueClients;
-                }
-
-                const dayBuckets: DayBucket[] = activeDays.map(day => ({
-                    day,
-                    maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
-                    semanais: [],
-                    quinzenais13: [],
-                    quinzenais24: []
-                }));
-
-                let dayIdx = 0;
-
-                orderedClients.forEach(client => {
-                    if (client.tipo === 'SEMANAL') {
-                        // Semanal: ocupa vaga em ambas as quinzenas (ímpar e par)
-                        let placed = false;
-                        for (let step = 0; step < dayBuckets.length; step++) {
-                            const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
-                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
-
-                            if (capImpar < bucket.maxCap && capPar < bucket.maxCap) {
-                                bucket.semanais.push(client);
-                                dayIdx = (dayIdx + step) % dayBuckets.length;
-                                placed = true;
-                                break;
-                            }
-                        }
-                        if (!placed) {
-                            // Fallback para dia com menor carga
-                            const bestBucket = [...dayBuckets].sort((a, b) => 
-                                (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) - 
-                                (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
-                            )[0];
-                            bestBucket.semanais.push(client);
-                        }
-                    } else {
-                        // Quinzenal: periodicidade estritamente quinzenal!
-                        // Pode ajustar a quinzena (1 3 vs 2 4) para nivelar o teto diário
-                        const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
-                        let placed = false;
-
-                        for (let step = 0; step < dayBuckets.length; step++) {
-                            const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
-                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
-
-                            // 1ª tentativa: no slot preferido
-                            if (preferredSlot === '1_3' && capImpar < bucket.maxCap) {
-                                bucket.quinzenais13.push(client);
-                                dayIdx = (dayIdx + step) % dayBuckets.length;
-                                placed = true;
-                                break;
-                            } else if (preferredSlot === '2_4' && capPar < bucket.maxCap) {
-                                bucket.quinzenais24.push(client);
-                                dayIdx = (dayIdx + step) % dayBuckets.length;
-                                placed = true;
-                                break;
-                            } else if (optBalanceWorkload) {
-                                // 2ª tentativa: balanceia ajustando de 1 3 para 2 4 (ou 2 4 para 1 3)
-                                if (preferredSlot === '1_3' && capPar < bucket.maxCap) {
-                                    bucket.quinzenais24.push(client);
-                                    dayIdx = (dayIdx + step) % dayBuckets.length;
-                                    placed = true;
-                                    break;
-                                } else if (preferredSlot === '2_4' && capImpar < bucket.maxCap) {
-                                    bucket.quinzenais13.push(client);
-                                    dayIdx = (dayIdx + step) % dayBuckets.length;
-                                    placed = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!placed) {
-                            const bucket = dayBuckets[dayIdx % dayBuckets.length];
-                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
-                            if (capImpar <= capPar) {
-                                bucket.quinzenais13.push(client);
-                            } else {
-                                bucket.quinzenais24.push(client);
-                            }
-                            dayIdx = (dayIdx + 1) % dayBuckets.length;
-                        }
+                    if (!placed) {
+                        // Fallback para dia com menor carga
+                        const bestBucket = [...dayBuckets].sort((a, b) => 
+                            (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) - 
+                            (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
+                        )[0];
+                        bestBucket.semanais.push(client);
                     }
-                });
-
-                // 4. Mapear cada cliente para seu plano com novo dia e periodicidade quinzenal ajustada
-                interface ClientPlan {
-                    client: typeof uniqueClients[0];
-                    diaSemana: string;
-                    periodicidade: string;
-                    tipo: PeriodicidadeTipo;
-                }
-
-                const clientPlans: ClientPlan[] = [];
-
-                dayBuckets.forEach(bucket => {
-                    bucket.semanais.forEach(c => {
-                        clientPlans.push({
-                            client: c,
-                            diaSemana: bucket.day,
-                            periodicidade: 'SEMANAL',
-                            tipo: 'SEMANAL'
-                        });
-                    });
-
-                    bucket.quinzenais13.forEach(c => {
-                        const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
-                        clientPlans.push({
-                            client: c,
-                            diaSemana: bucket.day,
-                            periodicidade: novaPeriod,
-                            tipo: 'QUINZENAL_1_3'
-                        });
-                    });
-
-                    bucket.quinzenais24.forEach(c => {
-                        const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
-                        clientPlans.push({
-                            client: c,
-                            diaSemana: bucket.day,
-                            periodicidade: novaPeriod,
-                            tipo: 'QUINZENAL_2_4'
-                        });
-                    });
-                });
-
-                // 5. Gerar visitas expandidas para o calendário mantendo rigorosamente a carteira
-                if (datesInRange.length > 1) {
-                    datesInRange.forEach(dateStr => {
-                        const dateWeekday = getWeekdayNameFromDate(dateStr);
-                        const weekNum = getWeekNumberInMonth(dateStr);
-                        const isWeekImpar = weekNum % 2 !== 0;
-
-                        const plansForDay = clientPlans.filter(p => p.diaSemana === dateWeekday);
-
-                        plansForDay.forEach(p => {
-                            let shouldInclude = false;
-                            if (p.tipo === 'SEMANAL') {
-                                shouldInclude = true;
-                            } else if (p.tipo === 'QUINZENAL_1_3' && isWeekImpar) {
-                                shouldInclude = true;
-                            } else if (p.tipo === 'QUINZENAL_2_4' && !isWeekImpar) {
-                                shouldInclude = true;
-                            }
-
-                            if (shouldInclude) {
-                                result.push({
-                                    ...p.client.sampleVisit,
-                                    Cod_Vend: sellerId,
-                                    Nome_Vendedor: sellerName,
-                                    Dia_Semana: p.diaSemana,
-                                    Periodicidade: p.periodicidade,
-                                    Data_da_Visita: dateStr
-                                });
-                            }
-                        });
-                    });
                 } else {
-                    clientPlans.forEach(p => {
-                        result.push({
-                            ...p.client.sampleVisit,
-                            Cod_Vend: sellerId,
-                            Nome_Vendedor: sellerName,
-                            Dia_Semana: p.diaSemana,
-                            Periodicidade: p.periodicidade,
-                            Data_da_Visita: startDate || p.client.sampleVisit.Data_da_Visita
-                        });
-                    });
+                    // Quinzenal: periodicidade estritamente quinzenal!
+                    // Pode ajustar a quinzena (1 3 vs 2 4) para nivelar o teto diário
+                    const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
+                    let placed = false;
+
+                    for (let step = 0; step < dayBuckets.length; step++) {
+                        const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
+                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+
+                        // 1ª tentativa: no slot preferido
+                        if (preferredSlot === '1_3' && capImpar < bucket.maxCap) {
+                            bucket.quinzenais13.push(client);
+                            dayIdx = (dayIdx + step) % dayBuckets.length;
+                            placed = true;
+                            break;
+                        } else if (preferredSlot === '2_4' && capPar < bucket.maxCap) {
+                            bucket.quinzenais24.push(client);
+                            dayIdx = (dayIdx + step) % dayBuckets.length;
+                            placed = true;
+                            break;
+                        } else if (optBalanceWorkload) {
+                            // 2ª tentativa: balanceia ajustando de 1 3 para 2 4 (ou 2 4 para 1 3)
+                            if (preferredSlot === '1_3' && capPar < bucket.maxCap) {
+                                bucket.quinzenais24.push(client);
+                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                                placed = true;
+                                break;
+                            } else if (preferredSlot === '2_4' && capImpar < bucket.maxCap) {
+                                bucket.quinzenais13.push(client);
+                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!placed) {
+                        const bucket = dayBuckets[dayIdx % dayBuckets.length];
+                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+                        if (capImpar <= capPar) {
+                            bucket.quinzenais13.push(client);
+                        } else {
+                            bucket.quinzenais24.push(client);
+                        }
+                        dayIdx = (dayIdx + 1) % dayBuckets.length;
+                    }
                 }
             });
 
-            if (result.length === 0) {
-                alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos no período selecionado.");
-                setLoading(false);
-                return;
+            // 4. Mapear cada cliente para seu plano com novo dia e periodicidade quinzenal ajustada
+            interface ClientPlan {
+                client: typeof uniqueClients[0];
+                diaSemana: string;
+                periodicidade: string;
+                tipo: PeriodicidadeTipo;
             }
 
-            setAdjustedRoutes(prev => {
-                const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
-                return [...otherRoutes, ...result];
+            const clientPlans: ClientPlan[] = [];
+
+            dayBuckets.forEach(bucket => {
+                bucket.semanais.forEach(c => {
+                    clientPlans.push({
+                        client: c,
+                        diaSemana: bucket.day,
+                        periodicidade: 'SEMANAL',
+                        tipo: 'SEMANAL'
+                    });
+                });
+
+                bucket.quinzenais13.forEach(c => {
+                    const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                    clientPlans.push({
+                        client: c,
+                        diaSemana: bucket.day,
+                        periodicidade: novaPeriod,
+                        tipo: 'QUINZENAL_1_3'
+                    });
+                });
+
+                bucket.quinzenais24.forEach(c => {
+                    const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                    clientPlans.push({
+                        client: c,
+                        diaSemana: bucket.day,
+                        periodicidade: novaPeriod,
+                        tipo: 'QUINZENAL_2_4'
+                    });
+                });
             });
+
+            // 5. Adicionar visitas com dias e periodicidades atualizados à rota final
+            clientPlans.forEach(p => {
+                result.push({
+                    ...p.client.sampleVisit,
+                    Cod_Vend: sellerId,
+                    Nome_Vendedor: sellerName,
+                    Dia_Semana: p.diaSemana,
+                    Periodicidade: p.periodicidade,
+                    Data_da_Visita: p.client.sampleVisit.Data_da_Visita || ''
+                });
+            });
+        }
+
+        setOptimizeProgress({
+            current: sellers.length,
+            total: sellers.length,
+            percentage: 100,
+            currentSellerName: 'Finalizando aplicação das rotas...'
+        });
+        await new Promise(r => setTimeout(r, 100));
+
+        if (result.length === 0) {
+            alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
             setLoading(false);
-            const escopoDesc = scopeMode === 'vendedor' 
-                ? 'do vendedor selecionado' 
-                : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
-            alert(`Otimização concluída (${escopoDesc})!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.`);
-        }, 300);
+            setOptimizeProgress(null);
+            return;
+        }
+
+        setAdjustedRoutes(prev => {
+            const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
+            return [...otherRoutes, ...result];
+        });
+
+        setLoading(false);
+        setOptimizeProgress(null);
+
+        const escopoDesc = scopeMode === 'vendedor' 
+            ? 'do vendedor selecionado' 
+            : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
+        alert(`Otimização concluída (${escopoDesc})!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.\n• Total de visitas organizadas: ${result.length}`);
     };
 
     const osrmCacheRef = useRef<Map<string, [number, number][]>>(new Map());
@@ -1927,6 +1923,53 @@ export const AjusteRota: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E PERCENTUAL */}
+            {optimizeProgress && (
+                <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
+                                <RefreshIcon className="w-5 h-5 animate-spin"/>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                                    Otimizando Roteiro
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Algoritmo de balanceamento e roteirização inteligente
+                                </p>
+                            </div>
+                            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                                {optimizeProgress.percentage}%
+                            </span>
+                        </div>
+
+                        {/* Barra de Progresso com Transição Suave */}
+                        <div className="space-y-1.5">
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                                <div 
+                                    className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-150 ease-out shadow-xs"
+                                    style={{ width: `${Math.min(100, Math.max(0, optimizeProgress.percentage))}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                <span className="truncate max-w-[70%]">{optimizeProgress.currentSellerName}</span>
+                                <span>{optimizeProgress.current} de {optimizeProgress.total}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                            <div className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
+                                <span className="mr-1.5">🔒</span> Carteira blindada por vendedor (sem transferências)
+                            </div>
+                            <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
+                                <span className="mr-1.5">⚖️</span> Equalização de quinzenas e teto diário
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
