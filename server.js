@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.129.0
+// Servidor express unificado com API e SPA React - v3.129.1
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -3201,6 +3201,41 @@ function normalizeVisitaData(row) {
         return match ? row[match] : null;
     };
 
+    const rawDia = findValue(['DiaSemana', 'Dia Semana', 'DIA_SEMANA', 'CODDIASMN', 'DIASMN', 'DESCDIASMN', 'NOMEDIASMN', 'DIA', 'DESCDIA', 'NUMDIASMN', 'COD_DIA', 'DIASEMANA']);
+    const rawDataVisita = findValue(['Data_da_Visita', 'Data da Visita', 'DATAVISITA', 'DataVisita', 'DATA']);
+
+    // Normalização universal do dia de atendimento
+    const parseDiaSemana = (val, dateVal) => {
+        if (val !== null && val !== undefined && String(val).trim() !== '') {
+            const s = String(val).trim().toUpperCase();
+            if (s === '2' || s.includes('SEG')) return 'SEGUNDA-FEIRA';
+            if (s === '3' || s.includes('TER')) return 'TERÇA-FEIRA';
+            if (s === '4' || s.includes('QUA')) return 'QUARTA-FEIRA';
+            if (s === '5' || s.includes('QUI')) return 'QUINTA-FEIRA';
+            if (s === '6' || s.includes('SEX')) return 'SEXTA-FEIRA';
+            if (s === '7' || s.includes('SAB') || s.includes('SÁB')) return 'SÁBADO';
+            if (s === '1' || s.includes('DOM')) return 'SEGUNDA-FEIRA';
+        }
+        if (dateVal) {
+            try {
+                const dt = new Date(dateVal);
+                if (!isNaN(dt.getTime())) {
+                    const d = dt.getUTCDay();
+                    switch (d) {
+                        case 1: return 'SEGUNDA-FEIRA';
+                        case 2: return 'TERÇA-FEIRA';
+                        case 3: return 'QUARTA-FEIRA';
+                        case 4: return 'QUINTA-FEIRA';
+                        case 5: return 'SEXTA-FEIRA';
+                        case 6: return 'SÁBADO';
+                        default: return 'SEGUNDA-FEIRA';
+                    }
+                }
+            } catch (e) {}
+        }
+        return 'SEGUNDA-FEIRA';
+    };
+
     return {
         Cod_Vend: findValue(['CodVend', 'Cod. Vend', 'CODVEND', 'CODMTCEPGVDD']),
         Nome_Vendedor: findValue(['NomeVendedor', 'Nome Vendedor', 'NOMEPG']),
@@ -3208,9 +3243,9 @@ function normalizeVisitaData(row) {
         Nome_Supervisor: findValue(['NomeSupervisor', 'Nome Supervisor', 'NOMESUPERVISOR', 'NOMEPGSUP']),
         Cod_Cliente: findValue(['CodCliente', 'Cod. Cliente', 'CODCET', 'IDCLIENTE']),
         Razao_Social: findValue(['RazaoSocial', 'Razão Social', 'NOMRAZSCLCET', 'CLIENTE']),
-        Dia_Semana: findValue(['DiaSemana', 'Dia Semana', 'DIA_SEMANA', 'CODDIASMN']),
+        Dia_Semana: parseDiaSemana(rawDia, rawDataVisita),
         Periodicidade: findValue(['Periodicidade', 'DESCCOVSTCET', 'FREQ']),
-        Data_da_Visita: findValue(['Data_da_Visita', 'Data da Visita', 'DATAVISITA', 'DataVisita']),
+        Data_da_Visita: rawDataVisita,
         Endereco: findValue(['Endereco', 'Endereço', 'deslgrcet', 'RUA']),
         Bairro: findValue(['Bairro', 'desbro', 'BAIRRO']),
         Cidade: findValue(['Cidade', 'descdd', 'CIDADE']),
@@ -3222,8 +3257,8 @@ function normalizeVisitaData(row) {
 
 app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
     try {
-        const startDateStr = req.query.startDate || new Date().toISOString().split('T')[0];
-        const endDateStr = req.query.endDate || new Date().toISOString().split('T')[0];
+        const startDateStr = req.query.startDate || '2000-01-01';
+        const endDateStr = req.query.endDate || '2099-12-31';
 
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);

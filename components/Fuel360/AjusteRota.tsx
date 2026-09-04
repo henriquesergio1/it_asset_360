@@ -87,15 +87,20 @@ const parsePeriodicidade = (raw: string | undefined): { tipo: PeriodicidadeTipo,
     return { tipo: 'SEMANAL', original: raw || 'SEMANAL' };
 };
 
-const normalizeDiaSemana = (dia: string): string => {
-    const d = (dia || '').trim().toUpperCase();
-    if (d.includes('SEG') || d === '1') return 'SEGUNDA-FEIRA';
-    if (d.includes('TER') || d === '2') return 'TERÇA-FEIRA';
-    if (d.includes('QUA') || d === '3') return 'QUARTA-FEIRA';
-    if (d.includes('QUI') || d === '4') return 'QUINTA-FEIRA';
-    if (d.includes('SEX') || d === '5') return 'SEXTA-FEIRA';
-    if (d.includes('SAB') || d.includes('SÁB') || d === '6') return 'SÁBADO';
-    if (d.includes('DOM') || d === '7') return 'DOMINGO';
+const normalizeDiaSemana = (dia: string | number | undefined, dateStr?: string): string => {
+    if (dia !== undefined && dia !== null && String(dia).trim() !== '') {
+        const d = String(dia).trim().toUpperCase();
+        if (d === '2' || d.includes('SEG')) return 'SEGUNDA-FEIRA';
+        if (d === '3' || d.includes('TER')) return 'TERÇA-FEIRA';
+        if (d === '4' || d.includes('QUA')) return 'QUARTA-FEIRA';
+        if (d === '5' || d.includes('QUI')) return 'QUINTA-FEIRA';
+        if (d === '6' || d.includes('SEX')) return 'SEXTA-FEIRA';
+        if (d === '7' || d.includes('SAB') || d.includes('SÁB')) return 'SÁBADO';
+        if (d === '1' || d.includes('DOM')) return 'SEGUNDA-FEIRA';
+    }
+    if (dateStr) {
+        return getWeekdayNameFromDate(dateStr);
+    }
     return 'SEGUNDA-FEIRA';
 };
 
@@ -164,8 +169,6 @@ export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
     const { user: authUser } = useAuth();
     const [teamType, setTeamType] = useState<'vendedores' | 'promotores'>('vendedores');
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     
     // Rota original carregada vs Rota sendo simulada / ajustada
     const [originalRoutes, setOriginalRoutes] = useState<VisitaPrevista[]>([]);
@@ -290,21 +293,24 @@ export const AjusteRota: React.FC = () => {
         setSelectedSeller('');
     }, [teamType]);
 
-    // Carregar rotas vigentes para ajuste
+    // Carregar rotas vigentes para ajuste (carteira integral da equipe)
     const handleLoadCurrentRoutes = async () => {
         setLoading(true);
         try {
-            // Vendas carrega do banco pela API
-            const data = await getVisitasPrevistas(startDate, endDate);
+            // Vendas carrega toda a carteira de clientes do banco pela API
+            const data = await getVisitasPrevistas();
             
-            // FILTRAR APENAS COLABORADORES DA EQUIPE SELECIONADA
+            // FILTRAR APENAS COLABORADORES DA EQUIPE SELECIONADA E NORMALIZAR DIA DA SEMANA
             const filteredData = data.filter(v => {
                 let colab = teamColaboradores.find(c => Number(c.CodigoSetor) === Number(v.Cod_Vend));
                 return !!colab;
-            });
+            }).map(v => ({
+                ...v,
+                Dia_Semana: normalizeDiaSemana(v.Dia_Semana, v.Data_da_Visita)
+            }));
 
             if (filteredData.length === 0) {
-                alert(`Nenhum roteiro vigente de ${teamType} encontrado neste período.`);
+                alert(`Nenhum roteiro vigente de ${teamType} encontrado no sistema.`);
             }
             
             setOriginalRoutes(filteredData);
@@ -400,7 +406,7 @@ export const AjusteRota: React.FC = () => {
                             Razao_Social: clientData ? clientData.Razao_Social : row['Razão Social'] || row['Razao_Social'] || `PDV ${codPdv}`,
                             Dia_Semana: diaSemana,
                             Periodicidade: row['FREQUENCIA'] || 'SEMANAL',
-                            Data_da_Visita: startDate,
+                            Data_da_Visita: new Date().toISOString().split('T')[0],
                             Endereco: clientData ? clientData.Endereco : row['Endereço'] || row['Endereco'] || '',
                             Bairro: clientData ? clientData.Bairro : row['Bairro'] || '',
                             Cidade: clientData ? clientData.Cidade : row['Cidade'] || '',
@@ -1083,7 +1089,7 @@ export const AjusteRota: React.FC = () => {
                             if (colab?.LatitudeBase && colab?.LongitudeBase) km += calcDist(lat, lng, colab.LatitudeBase, colab.LongitudeBase);
                             
                             return {
-                                Data: startDate, // Vinculado ao dia
+                                Data: new Date().toISOString().split('T')[0], // Vinculado ao dia
                                 KM: Math.round(km * 1.15),
                                 KMEstimado: Math.round(km * 1.1)
                             };
@@ -1180,33 +1186,14 @@ export const AjusteRota: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-white outline-none"
-                        />
-                        {teamType === 'vendedores' && (
-                            <>
-                                <span className="text-slate-400 text-xs font-bold">até</span>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-xs font-bold text-slate-700 dark:text-white outline-none"
-                                />
-                            </>
-                        )}
-                    </div>
-
                     {teamType === 'vendedores' ? (
                         <button
                             onClick={handleLoadCurrentRoutes}
                             disabled={loading}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition flex items-center h-[36px]"
+                            title="Carregar carteira de clientes integral de cada vendedor"
                         >
-                            {loading ? <SpinnerIcon className="w-4 h-4 animate-spin"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
+                            {loading ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <RefreshIcon className="w-4 h-4 mr-1.5"/>}
                             Carregar Rota Atual
                         </button>
                     ) : (

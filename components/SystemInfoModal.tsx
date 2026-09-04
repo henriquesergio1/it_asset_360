@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.129.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção na Leitura de Dias da Semana e Otimização da Carteira Integral',
+    changes: [
+      'Normalização Automática de Dias de Visita: Identificação de códigos numéricos do ERP (padrão WinThor/SQL) e mapeamento preciso para Segunda a Sábado na grade de ajuste de rotas.',
+      'Carga Integral da Carteira: Remoção de filtros de datas no cabeçalho de rotas de vendedores, tratando a carteira de clientes como base permanente de atendimento.',
+      'Robustez na Leitura do ERP: Suporte a múltiplos aliases de colunas de dia da semana (CODDIASMN, DIASMN, DIA_SEMANA, etc.).'
+    ]
+  },
+  {
     version: '3.129.0',
     date: 'Hoje',
     title: 'Fuel360: Exportação em Abas no Excel e Alerta de Desbalanceamento de Quinzena',
