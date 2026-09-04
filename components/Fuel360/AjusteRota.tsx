@@ -156,6 +156,11 @@ export const AjusteRota: React.FC = () => {
     const [adjustedPolylines, setAdjustedPolylines] = useState<{ id: string, color: string, points: [number, number][] }[]>([]);
     const [selectedPromoter, setSelectedPromoter] = useState<string>('ALL');
 
+    // Escopo de Roteirização: 'geral' (todos), 'equipe' (supervisor) ou 'vendedor' (individual)
+    const [scopeMode, setScopeMode] = useState<'geral' | 'equipe' | 'vendedor'>('geral');
+    const [selectedSupervisor, setSelectedSupervisor] = useState<string>('');
+    const [selectedSeller, setSelectedSeller] = useState<string>('');
+
     const teamColaboradores = useMemo(() => {
         return colaboradores.filter(c => {
             const grupo = String(c.Grupo).trim().toUpperCase();
@@ -163,6 +168,66 @@ export const AjusteRota: React.FC = () => {
             return c.Ativo && (grupo === 'PROMOTOR' || grupo === 'PROMOTORES');
         });
     }, [colaboradores, teamType]);
+
+    // Supervisores únicos presentes nas rotas
+    const supervisors = useMemo(() => {
+        const map = new Map<string, string>();
+        adjustedRoutes.forEach(r => {
+            const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
+            const supNome = r.Nome_Supervisor || 'Equipe sem Supervisor';
+            map.set(supId, supNome);
+        });
+        return Array.from(map.entries())
+            .map(([id, name]) => ({ id, name }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [adjustedRoutes]);
+
+    // Vendedores disponíveis conforme escopo
+    const availableSellers = useMemo(() => {
+        const map = new Map<number, { id: number; name: string; supId: string }>();
+        adjustedRoutes.forEach(r => {
+            const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
+            if (scopeMode === 'equipe' && selectedSupervisor && supId !== selectedSupervisor) {
+                return;
+            }
+            if (!map.has(r.Cod_Vend)) {
+                map.set(r.Cod_Vend, { id: r.Cod_Vend, name: r.Nome_Vendedor, supId });
+            }
+        });
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [adjustedRoutes, scopeMode, selectedSupervisor]);
+
+    // Rotas ajustadas filtradas pelo escopo ativo (para Mapa, KPIs e Grade)
+    const scopedAdjustedRoutes = useMemo(() => {
+        if (scopeMode === 'vendedor') {
+            if (!selectedSeller) return adjustedRoutes;
+            return adjustedRoutes.filter(r => String(r.Cod_Vend) === selectedSeller);
+        }
+        if (scopeMode === 'equipe') {
+            if (!selectedSupervisor) return adjustedRoutes;
+            return adjustedRoutes.filter(r => {
+                const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
+                return supId === selectedSupervisor;
+            });
+        }
+        return adjustedRoutes;
+    }, [adjustedRoutes, scopeMode, selectedSupervisor, selectedSeller]);
+
+    // Rotas originais filtradas pelo escopo ativo (para KPIs comparativos)
+    const scopedOriginalRoutes = useMemo(() => {
+        if (scopeMode === 'vendedor') {
+            if (!selectedSeller) return originalRoutes;
+            return originalRoutes.filter(r => String(r.Cod_Vend) === selectedSeller);
+        }
+        if (scopeMode === 'equipe') {
+            if (!selectedSupervisor) return originalRoutes;
+            return originalRoutes.filter(r => {
+                const supId = r.Cod_Supervisor ? String(r.Cod_Supervisor) : 'SEM_SUPERVISOR';
+                return supId === selectedSupervisor;
+            });
+        }
+        return originalRoutes;
+    }, [originalRoutes, scopeMode, selectedSupervisor, selectedSeller]);
 
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
@@ -179,6 +244,9 @@ export const AjusteRota: React.FC = () => {
         setAdjustedRoutes([]);
         setOriginalPolylines([]);
         setAdjustedPolylines([]);
+        setScopeMode('geral');
+        setSelectedSupervisor('');
+        setSelectedSeller('');
     }, [teamType]);
 
     // Carregar rotas vigentes para ajuste
@@ -346,8 +414,8 @@ export const AjusteRota: React.FC = () => {
 
         setLoading(true);
         setTimeout(() => {
-            // A carteira é do vendedor: isolamento total por Cod_Vend (zero transferência entre vendedores)
-            const sellers = Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend)));
+            // A carteira é do vendedor: isolamento total por Cod_Vend (otimiza estritamente os vendedores do escopo selecionado)
+            const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
             const result: VisitaPrevista[] = [];
 
             // Gerar lista de datas do intervalo se o período contiver mais de um dia
@@ -608,9 +676,15 @@ export const AjusteRota: React.FC = () => {
                 return;
             }
 
-            setAdjustedRoutes(result);
+            setAdjustedRoutes(prev => {
+                const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
+                return [...otherRoutes, ...result];
+            });
             setLoading(false);
-            alert("Otimização concluída!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.");
+            const escopoDesc = scopeMode === 'vendedor' 
+                ? 'do vendedor selecionado' 
+                : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
+            alert(`Otimização concluída (${escopoDesc})!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.`);
         }, 300);
     };
 
@@ -680,20 +754,24 @@ export const AjusteRota: React.FC = () => {
         let isMounted = true;
         
         const updateLines = async () => {
-            if (originalRoutes.length > 0) {
-                const orig = await traceAsync(originalRoutes);
+            if (scopedOriginalRoutes.length > 0) {
+                const orig = await traceAsync(scopedOriginalRoutes);
                 if (isMounted) setOriginalPolylines(orig);
+            } else {
+                if (isMounted) setOriginalPolylines([]);
             }
-            if (adjustedRoutes.length > 0) {
-                const adj = await traceAsync(adjustedRoutes);
+            if (scopedAdjustedRoutes.length > 0) {
+                const adj = await traceAsync(scopedAdjustedRoutes);
                 if (isMounted) setAdjustedPolylines(adj);
+            } else {
+                if (isMounted) setAdjustedPolylines([]);
             }
         };
 
         updateLines();
         
         return () => { isMounted = false; };
-    }, [originalRoutes, adjustedRoutes, selectedPromoter, promoterColorMap, colaboradores]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, promoterColorMap, colaboradores]);
 
     // Calcular KPIs de Comparação
     const kpis = useMemo(() => {
@@ -752,8 +830,8 @@ export const AjusteRota: React.FC = () => {
             };
         };
 
-        const orig = getKpisForSet(originalRoutes);
-        const adj = getKpisForSet(adjustedRoutes);
+        const orig = getKpisForSet(scopedOriginalRoutes);
+        const adj = getKpisForSet(scopedAdjustedRoutes);
 
         const kmSaved = orig.totalKm - adj.totalKm;
         const percentSaved = orig.totalKm ? Math.round((kmSaved / orig.totalKm) * 100) : 0;
@@ -764,7 +842,7 @@ export const AjusteRota: React.FC = () => {
             kmSaved,
             percentSaved
         };
-    }, [originalRoutes, adjustedRoutes, colaboradores, optMaxKm]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -795,15 +873,16 @@ export const AjusteRota: React.FC = () => {
 
     // Exportar Roteiro Otimizado separado por Colaborador e Dia da Semana
     const handleExportExcel = () => {
-        if (adjustedRoutes.length === 0) {
-            alert("Nenhum dado para exportar.");
+        if (scopedAdjustedRoutes.length === 0) {
+            alert("Nenhum dado para exportar no escopo atual.");
             return;
         }
 
-        const dataRows = adjustedRoutes.map((v, idx) => ({
+        const dataRows = scopedAdjustedRoutes.map((v, idx) => ({
             'CARGO': teamType === 'vendedores' ? 'VENDEDOR' : 'PROMOTOR',
             'CODIGO': v.Cod_Vend,
             'NOME DO COLABORADOR': v.Nome_Vendedor,
+            'SUPERVISOR': v.Nome_Supervisor || '',
             'FREQUENCIA': v.Periodicidade || 'SEMANAL',
             'SEMANA': (v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? 2 : 1,
             'DIA SEMANA': v.Dia_Semana,
@@ -817,10 +896,11 @@ export const AjusteRota: React.FC = () => {
             'CEP': v.CEP
         }));
 
+        const tag = scopeMode === 'equipe' ? `_Equipe_${selectedSupervisor}` : (scopeMode === 'vendedor' ? `_Vend_${selectedSeller}` : '_Geral');
         const ws = XLSX.utils.json_to_sheet(dataRows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Rotas Otimizadas");
-        XLSX.writeFile(wb, `Ajuste_Rota_${teamType}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(wb, `Ajuste_Rota_${teamType}${tag}_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     // Salvar Rota Ajustada no Banco (saveRotaPrevista)
@@ -1010,6 +1090,98 @@ export const AjusteRota: React.FC = () => {
                 </div>
             </div>
 
+            {/* SELETOR DE ESCOPO DE ROTEIRIZAÇÃO (GERAL / EQUIPE SUPERVISÃO / VENDEDOR INDIVIDUAL) */}
+            {adjustedRoutes.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center mr-1">
+                            <UsersIcon className="w-3.5 h-3.5 mr-1 text-indigo-600 dark:text-indigo-400"/> Escopo do Ajuste:
+                        </span>
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <button
+                                onClick={() => {
+                                    setScopeMode('geral');
+                                    setSelectedPromoter('ALL');
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${scopeMode === 'geral' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                            >
+                                🌐 Visão Geral ({Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).length})
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setScopeMode('equipe');
+                                    setSelectedPromoter('ALL');
+                                    if (!selectedSupervisor && supervisors.length > 0) {
+                                        setSelectedSupervisor(supervisors[0].id);
+                                    }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${scopeMode === 'equipe' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                            >
+                                👥 Por Equipe (Supervisão)
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setScopeMode('vendedor');
+                                    setSelectedPromoter('ALL');
+                                    if (!selectedSeller && availableSellers.length > 0) {
+                                        setSelectedSeller(String(availableSellers[0].id));
+                                    }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${scopeMode === 'vendedor' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                            >
+                                👤 Por Vendedor
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* SELETORES DINÂMICOS CONFORME O ESCOPO */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        {scopeMode === 'equipe' && (
+                            <div className="flex items-center space-x-1.5">
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Supervisor:</label>
+                                <select
+                                    value={selectedSupervisor}
+                                    onChange={(e) => {
+                                        setSelectedSupervisor(e.target.value);
+                                        setSelectedPromoter('ALL');
+                                    }}
+                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">Selecione uma Supervisão...</option>
+                                    {supervisors.map(sup => (
+                                        <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {scopeMode === 'vendedor' && (
+                            <div className="flex items-center space-x-1.5">
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Vendedor:</label>
+                                <select
+                                    value={selectedSeller}
+                                    onChange={(e) => {
+                                        setSelectedSeller(e.target.value);
+                                        setSelectedPromoter('ALL');
+                                    }}
+                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">Selecione um Vendedor...</option>
+                                    {availableSellers.map(seller => (
+                                        <option key={seller.id} value={String(seller.id)}>{seller.name} ({seller.id})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-100 dark:border-indigo-900/60 flex items-center">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                            {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colaborador(es) • {scopedAdjustedRoutes.length} PDVs em foco
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* PAINEL CENTRAL: KPIS E COMPARATIVO */}
             {adjustedRoutes.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -1172,7 +1344,7 @@ export const AjusteRota: React.FC = () => {
                     </div>
 
                     {/* LISTA DE COLABORADORES PARA SELEÇÃO NO MAPA */}
-                    {adjustedRoutes.length > 0 && (
+                    {scopedAdjustedRoutes.length > 0 && (
                         <div className="flex-1 flex flex-col min-h-0">
                             <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider mb-2 flex items-center">
                                 <UserGroupIcon className="w-4 h-4 mr-1 text-slate-500"/> Rotas por Colaborador
@@ -1182,11 +1354,11 @@ export const AjusteRota: React.FC = () => {
                                     className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
                                     onClick={() => setSelectedPromoter('ALL')}
                                 >
-                                    Todos os Colaboradores ({Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).length})
+                                    Todos no Escopo ({Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length})
                                 </div>
-                                {Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend))).map(sellerId => {
+                                {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).map(sellerId => {
                                     const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-                                    const count = adjustedRoutes.filter(v => v.Cod_Vend === sellerId).length;
+                                    const count = scopedAdjustedRoutes.filter(v => v.Cod_Vend === sellerId).length;
                                     const color = promoterColorMap.get(String(sellerId)) || '#64748b';
 
                                     return (
@@ -1215,7 +1387,7 @@ export const AjusteRota: React.FC = () => {
                         <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md z-[1000] text-xs font-bold text-slate-800 dark:text-white flex items-center">
                             <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400 animate-pulse"/> Visão Espacial do Ajuste
                         </div>
-                        {adjustedRoutes.length === 0 ? (
+                        {scopedAdjustedRoutes.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
                                 <p className="text-sm font-semibold">Carregue ou importe um roteiro para visualizar o mapa</p>
@@ -1231,7 +1403,7 @@ export const AjusteRota: React.FC = () => {
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
                                 {/* Casas / Bases dos Colaboradores */}
-                                {Array.from(new Set(adjustedRoutes.map(v => v.Cod_Vend))).map(vId => {
+                                {Array.from(new Set(scopedAdjustedRoutes.map(v => v.Cod_Vend))).map(vId => {
                                     const colab = colaboradores.find(c => c.CodigoSetor === vId);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
                                         const pColor = promoterColorMap.get(String(vId)) || '#94a3b8';
@@ -1277,7 +1449,7 @@ export const AjusteRota: React.FC = () => {
                                 ))}
 
                                 {/* Clientes Marcados */}
-                                {adjustedRoutes.filter(v => v.Lat && v.Long).map((v, idx) => {
+                                {scopedAdjustedRoutes.filter(v => v.Lat && v.Long).map((v, idx) => {
                                     const color = promoterColorMap.get(String(v.Cod_Vend)) || '#4f46e5';
                                     return (
                                         <CircleMarker
@@ -1399,7 +1571,7 @@ export const AjusteRota: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {adjustedRoutes
+                                        {scopedAdjustedRoutes
                                             .filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter)
                                             .slice(0, 100) // Limita renderização para manter ultra-fluidez
                                             .map((v, i) => (
@@ -1466,9 +1638,9 @@ export const AjusteRota: React.FC = () => {
                                             ))}
                                     </tbody>
                                 </table>
-                                {adjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length > 100 && (
+                                {scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length > 100 && (
                                     <div className="p-3 text-center text-slate-400 text-[10px] bg-slate-50 font-medium">
-                                        Exibindo os primeiros 100 PDVs de {adjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length}. Use filtros de colaborador para refinar a busca.
+                                        Exibindo os primeiros 100 PDVs de {scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter).length}. Use filtros de colaborador para refinar a busca.
                                     </div>
                                 )}
                             </div>

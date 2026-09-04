@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.128.0',
+    date: 'Hoje',
+    title: 'Fuel360: Ajuste de Rota por Vendedor Individual, Equipe de Supervisão ou Geral',
+    changes: [
+      'Escopo Dinâmico de Roteirização: Adicionada opção de ajuste por Geral, por Equipe (Supervisor) ou por Vendedor Individual, eliminando a poluição visual no mapa e refinando a análise.',
+      'Otimização Cirúrgica por Escopo: O botão de otimização de rotas recalcula exclusivamente os colaboradores pertencentes à equipe ou vendedor selecionado, mantendo as demais rotas já ajustadas intactas.',
+      'Filtro Visual Integrado: Traçados de rotas, marcadores de clientes no mapa, grade de ajuste e KPIs atualizam instantaneamente conforme o supervisor ou vendedor selecionado.'
+    ]
+  },
+  {
     version: '3.127.8',
     date: 'Hoje',
     title: 'Fuel360: Otimização de Rota com Carteira Blindada por Vendedor e Preservação de Periodicidade',
