@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.129.2',
+    date: 'Hoje',
+    title: 'Fuel360: Ajuste da Janela Recursiva do ERP e Mapeamento Preciso de Dias',
+    changes: [
+      'Execução Segura da Query Recursiva: Ajuste do período padrão para o ciclo mensal corrente, respeitando o limite OPTION (MAXRECURSION 1000) e a vigência de quinzenas da tabela IBETDATREFCCOVSTCET.',
+      'Alinhamento com Mapeamento SQL do ERP: Reconhecimento imediato dos valores retornados pela query (Segunda, Terca, Quarta, Quinta, Sexta, Sabado, Domingo) e dos códigos de 1 a 7.',
+      'Carga Confiável da Carteira de Clientes: Eliminação do erro de statement terminated ao carregar a rota dos colaboradores.'
+    ]
+  },
+  {
     version: '3.129.1',
     date: 'Hoje',
     title: 'Fuel360: Correção na Leitura de Dias da Semana e Otimização da Carteira Integral',

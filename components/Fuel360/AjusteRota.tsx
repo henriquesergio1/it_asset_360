@@ -90,13 +90,13 @@ const parsePeriodicidade = (raw: string | undefined): { tipo: PeriodicidadeTipo,
 const normalizeDiaSemana = (dia: string | number | undefined, dateStr?: string): string => {
     if (dia !== undefined && dia !== null && String(dia).trim() !== '') {
         const d = String(dia).trim().toUpperCase();
-        if (d === '2' || d.includes('SEG')) return 'SEGUNDA-FEIRA';
-        if (d === '3' || d.includes('TER')) return 'TERÇA-FEIRA';
-        if (d === '4' || d.includes('QUA')) return 'QUARTA-FEIRA';
-        if (d === '5' || d.includes('QUI')) return 'QUINTA-FEIRA';
-        if (d === '6' || d.includes('SEX')) return 'SEXTA-FEIRA';
-        if (d === '7' || d.includes('SAB') || d.includes('SÁB')) return 'SÁBADO';
-        if (d === '1' || d.includes('DOM')) return 'SEGUNDA-FEIRA';
+        if (d === '1' || d.includes('SEG')) return 'SEGUNDA-FEIRA';
+        if (d === '2' || d.includes('TER')) return 'TERÇA-FEIRA';
+        if (d === '3' || d.includes('QUA')) return 'QUARTA-FEIRA';
+        if (d === '4' || d.includes('QUI')) return 'QUINTA-FEIRA';
+        if (d === '5' || d.includes('SEX')) return 'SEXTA-FEIRA';
+        if (d === '6' || d.includes('SAB') || d.includes('SÁB')) return 'SÁBADO';
+        if (d === '7' || d.includes('DOM')) return 'SEGUNDA-FEIRA';
     }
     if (dateStr) {
         return getWeekdayNameFromDate(dateStr);

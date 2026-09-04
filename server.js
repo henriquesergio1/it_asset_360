@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.129.1
+// Servidor express unificado com API e SPA React - v3.129.2
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -3208,13 +3208,13 @@ function normalizeVisitaData(row) {
     const parseDiaSemana = (val, dateVal) => {
         if (val !== null && val !== undefined && String(val).trim() !== '') {
             const s = String(val).trim().toUpperCase();
-            if (s === '2' || s.includes('SEG')) return 'SEGUNDA-FEIRA';
-            if (s === '3' || s.includes('TER')) return 'TERÇA-FEIRA';
-            if (s === '4' || s.includes('QUA')) return 'QUARTA-FEIRA';
-            if (s === '5' || s.includes('QUI')) return 'QUINTA-FEIRA';
-            if (s === '6' || s.includes('SEX')) return 'SEXTA-FEIRA';
-            if (s === '7' || s.includes('SAB') || s.includes('SÁB')) return 'SÁBADO';
-            if (s === '1' || s.includes('DOM')) return 'SEGUNDA-FEIRA';
+            if (s === '1' || s.includes('SEG')) return 'SEGUNDA-FEIRA';
+            if (s === '2' || s.includes('TER')) return 'TERÇA-FEIRA';
+            if (s === '3' || s.includes('QUA')) return 'QUARTA-FEIRA';
+            if (s === '4' || s.includes('QUI')) return 'QUINTA-FEIRA';
+            if (s === '5' || s.includes('SEX')) return 'SEXTA-FEIRA';
+            if (s === '6' || s.includes('SAB') || s.includes('SÁB')) return 'SÁBADO';
+            if (s === '7' || s.includes('DOM')) return 'SEGUNDA-FEIRA';
         }
         if (dateVal) {
             try {
@@ -3257,8 +3257,16 @@ function normalizeVisitaData(row) {
 
 app.get('/api/fuel360/roteiro/previsao', async (req, res) => {
     try {
-        const startDateStr = req.query.startDate || '2000-01-01';
-        const endDateStr = req.query.endDate || '2099-12-31';
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth();
+        const pad = (n) => String(n).padStart(2, '0');
+        const defaultStart = `${y}-${pad(m + 1)}-01`;
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const defaultEnd = `${y}-${pad(m + 1)}-${pad(lastDay)}`;
+
+        const startDateStr = req.query.startDate || defaultStart;
+        const endDateStr = req.query.endDate || defaultEnd;
 
         const pool = await sql.connect(dbConfig);
         await ensureFuelTablesExist(pool);
