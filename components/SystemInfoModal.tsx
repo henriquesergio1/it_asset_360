@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.127.8',
+    date: 'Hoje',
+    title: 'Fuel360: Otimização de Rota com Carteira Blindada por Vendedor e Preservação de Periodicidade',
+    changes: [
+      'Blindagem de Carteira: Roteirizador e otimizador configurados com isolamento total por vendedor, impedindo estritamente a transferência de clientes entre colaboradores.',
+      'Preservação Estrita de Periodicidade: Clientes semanais mantêm frequência semanal contínua; clientes quinzenais mantêm frequência quinzenal.',
+      'Balanceamento Inteligente de Quinzenas: Permite ao otimizador alternar clientes quinzenais entre 1 3 (1ª e 3ª semana) e 2 4 (2ª e 4ª semana) para nivelar o teto diário de clientes e otimizar rotas por vendedor.',
+      'Grade de Ajuste Fino: Exibição explícita da coluna de periodicidade e proteção contra transferências acidentais na equipe de vendas.'
+    ]
+  },
+  {
     version: '3.127.7',
     date: 'Hoje',
     title: 'Correção na Gravação e Exibição de Alertas de Expediente (Fuso Horário e Justificativas)',

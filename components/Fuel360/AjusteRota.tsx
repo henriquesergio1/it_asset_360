@@ -65,6 +65,66 @@ const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): numbe
 
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
 
+// Helpers de Periodicidade e Calendário
+type PeriodicidadeTipo = 'SEMANAL' | 'QUINZENAL_1_3' | 'QUINZENAL_2_4';
+
+const parsePeriodicidade = (raw: string | undefined): { tipo: PeriodicidadeTipo, original: string } => {
+    const p = String(raw || '').trim().toUpperCase();
+    if (!p) return { tipo: 'SEMANAL', original: 'SEMANAL' };
+
+    // Quinzenal 1 3 (Semanas 1 e 3)
+    if (p.includes('1 3') || p.includes('1, 3') || p.includes('1,3') || p.includes('1-3') || p === '13' || (p.includes('QUINZENAL') && (p.includes('1') || p.includes('IMPAR') || p.includes('ÍMPAR')))) {
+        return { tipo: 'QUINZENAL_1_3', original: raw || '1 3' };
+    }
+    // Quinzenal 2 4 (Semanas 2 e 4)
+    if (p.includes('2 4') || p.includes('2, 4') || p.includes('2,4') || p.includes('2-4') || p === '24' || (p.includes('QUINZENAL') && (p.includes('2') || p.includes('PAR')))) {
+        return { tipo: 'QUINZENAL_2_4', original: raw || '2 4' };
+    }
+    // Quinzenal genérico
+    if (p.includes('QUINZENAL') || p.includes('QUINZENA')) {
+        return { tipo: 'QUINZENAL_1_3', original: raw || '1 3' };
+    }
+    return { tipo: 'SEMANAL', original: raw || 'SEMANAL' };
+};
+
+const normalizeDiaSemana = (dia: string): string => {
+    const d = (dia || '').trim().toUpperCase();
+    if (d.includes('SEG') || d === '1') return 'SEGUNDA-FEIRA';
+    if (d.includes('TER') || d === '2') return 'TERÇA-FEIRA';
+    if (d.includes('QUA') || d === '3') return 'QUARTA-FEIRA';
+    if (d.includes('QUI') || d === '4') return 'QUINTA-FEIRA';
+    if (d.includes('SEX') || d === '5') return 'SEXTA-FEIRA';
+    if (d.includes('SAB') || d.includes('SÁB') || d === '6') return 'SÁBADO';
+    if (d.includes('DOM') || d === '7') return 'DOMINGO';
+    return 'SEGUNDA-FEIRA';
+};
+
+const getWeekdayNameFromDate = (dateStr: string): string => {
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return 'SEGUNDA-FEIRA';
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month - 1, day);
+    const dayOfWeek = date.getDay();
+    switch (dayOfWeek) {
+        case 1: return 'SEGUNDA-FEIRA';
+        case 2: return 'TERÇA-FEIRA';
+        case 3: return 'QUARTA-FEIRA';
+        case 4: return 'QUINTA-FEIRA';
+        case 5: return 'SEXTA-FEIRA';
+        case 6: return 'SÁBADO';
+        case 0: return 'DOMINGO';
+        default: return 'SEGUNDA-FEIRA';
+    }
+};
+
+const getWeekNumberInMonth = (dateStr: string): number => {
+    const parts = dateStr.split('-');
+    const day = parseInt(parts[2], 10) || 1;
+    return Math.min(5, Math.floor((day - 1) / 7) + 1);
+};
+
 export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
     const { user: authUser } = useAuth();
@@ -277,7 +337,7 @@ export const AjusteRota: React.FC = () => {
         reader.readAsArrayBuffer(file);
     };
 
-    // Algoritmo de Otimização (Clusterização Espacial + TSP Guloso)
+    // Algoritmo de Otimização (Carteira Blindada por Vendedor + Preservação Estrita de Periodicidade)
     const handleOptimizeSimulate = () => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
@@ -286,66 +346,271 @@ export const AjusteRota: React.FC = () => {
 
         setLoading(true);
         setTimeout(() => {
+            // A carteira é do vendedor: isolamento total por Cod_Vend (zero transferência entre vendedores)
             const sellers = Array.from(new Set(adjustedRoutes.map(r => r.Cod_Vend)));
             const result: VisitaPrevista[] = [];
+
+            // Gerar lista de datas do intervalo se o período contiver mais de um dia
+            const datesInRange: string[] = [];
+            if (startDate && endDate) {
+                const start = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T00:00:00');
+                if (start <= end) {
+                    const curr = new Date(start);
+                    while (curr <= end) {
+                        datesInRange.push(curr.toISOString().split('T')[0]);
+                        curr.setDate(curr.getDate() + 1);
+                    }
+                }
+            }
 
             sellers.forEach(sellerId => {
                 const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === sellerId);
                 if (sellerVisits.length === 0) return;
 
                 const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-                const baseLat = colab?.LatitudeBase || sellerVisits[0].Lat;
-                const baseLong = colab?.LongitudeBase || sellerVisits[0].Long;
+                const sellerName = colab?.Nome || sellerVisits[0].Nome_Vendedor;
 
-                // 1. TSP Guloso simplificado para ordenar todas as visitas deste colaborador de forma geográfica contígua
-                let unassigned = [...sellerVisits];
-                const orderedPath: VisitaPrevista[] = [];
-                let currentLat = baseLat;
-                let currentLng = baseLong;
+                // 1. Extrair clientes ÚNICOS da carteira deste vendedor
+                const uniqueClientsMap = new Map<number, {
+                    sampleVisit: VisitaPrevista;
+                    tipo: PeriodicidadeTipo;
+                    originalPeriodicidade: string;
+                }>();
+
+                sellerVisits.forEach(v => {
+                    if (!uniqueClientsMap.has(v.Cod_Cliente)) {
+                        const parsed = parsePeriodicidade(v.Periodicidade);
+                        uniqueClientsMap.set(v.Cod_Cliente, {
+                            sampleVisit: v,
+                            tipo: parsed.tipo,
+                            originalPeriodicidade: v.Periodicidade || parsed.original
+                        });
+                    }
+                });
+
+                const uniqueClients = Array.from(uniqueClientsMap.values());
+                if (uniqueClients.length === 0) return;
+
+                const baseLat = colab?.LatitudeBase || uniqueClients[0].sampleVisit.Lat || 0;
+                const baseLong = colab?.LongitudeBase || uniqueClients[0].sampleVisit.Long || 0;
+
+                // 2. Ordenação geográfica inicial a partir da base (Nearest Neighbor)
+                let unassigned = [...uniqueClients];
+                const orderedClients: typeof uniqueClients = [];
+                let curLat = baseLat;
+                let curLng = baseLong;
 
                 while (unassigned.length > 0) {
                     let nearestIdx = 0;
                     let minDist = Infinity;
                     for (let i = 0; i < unassigned.length; i++) {
-                        const dist = calcDist(currentLat, currentLng, unassigned[i].Lat, unassigned[i].Long);
+                        const lat = unassigned[i].sampleVisit.Lat || 0;
+                        const lng = unassigned[i].sampleVisit.Long || 0;
+                        const dist = calcDist(curLat, curLng, lat, lng);
                         if (dist < minDist) {
                             minDist = dist;
                             nearestIdx = i;
                         }
                     }
                     const nearest = unassigned.splice(nearestIdx, 1)[0];
-                    orderedPath.push(nearest);
-                    currentLat = nearest.Lat;
-                    currentLng = nearest.Long;
+                    orderedClients.push(nearest);
+                    curLat = nearest.sampleVisit.Lat || curLat;
+                    curLng = nearest.sampleVisit.Long || curLng;
                 }
 
-                // 2. Distribuir os clientes organizados nos dias ativos respeitando maxClientes por dia
-                const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA'];
-                let dayIndex = 0;
-                let countInDay = 0;
+                // 3. Alocação nos dias ativos respeitando capacidades e balanceamento de quinzenas
+                const activeDays = optDays.length > 0 ? optDays : ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA'];
 
-                orderedPath.forEach((v) => {
-                    const currentDay = activeDays[dayIndex % activeDays.length];
-                    const maxForCurrentDay = (currentDay === 'SÁBADO' && optSatHalfPeriod) 
-                        ? Math.max(1, Math.floor(optMaxClients / 2)) 
-                        : optMaxClients;
+                interface DayBucket {
+                    day: string;
+                    maxCap: number;
+                    semanais: typeof uniqueClients;
+                    quinzenais13: typeof uniqueClients;
+                    quinzenais24: typeof uniqueClients;
+                }
 
-                    if (countInDay >= maxForCurrentDay) {
-                        dayIndex++;
-                        countInDay = 0;
+                const dayBuckets: DayBucket[] = activeDays.map(day => ({
+                    day,
+                    maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
+                    semanais: [],
+                    quinzenais13: [],
+                    quinzenais24: []
+                }));
+
+                let dayIdx = 0;
+
+                orderedClients.forEach(client => {
+                    if (client.tipo === 'SEMANAL') {
+                        // Semanal: ocupa vaga em ambas as quinzenas (ímpar e par)
+                        let placed = false;
+                        for (let step = 0; step < dayBuckets.length; step++) {
+                            const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
+                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+
+                            if (capImpar < bucket.maxCap && capPar < bucket.maxCap) {
+                                bucket.semanais.push(client);
+                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (!placed) {
+                            // Fallback para dia com menor carga
+                            const bestBucket = [...dayBuckets].sort((a, b) => 
+                                (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) - 
+                                (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
+                            )[0];
+                            bestBucket.semanais.push(client);
+                        }
+                    } else {
+                        // Quinzenal: periodicidade estritamente quinzenal!
+                        // Pode ajustar a quinzena (1 3 vs 2 4) para nivelar o teto diário
+                        const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
+                        let placed = false;
+
+                        for (let step = 0; step < dayBuckets.length; step++) {
+                            const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
+                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+
+                            // 1ª tentativa: no slot preferido
+                            if (preferredSlot === '1_3' && capImpar < bucket.maxCap) {
+                                bucket.quinzenais13.push(client);
+                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                                placed = true;
+                                break;
+                            } else if (preferredSlot === '2_4' && capPar < bucket.maxCap) {
+                                bucket.quinzenais24.push(client);
+                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                                placed = true;
+                                break;
+                            } else if (optBalanceWorkload) {
+                                // 2ª tentativa: balanceia ajustando de 1 3 para 2 4 (ou 2 4 para 1 3)
+                                if (preferredSlot === '1_3' && capPar < bucket.maxCap) {
+                                    bucket.quinzenais24.push(client);
+                                    dayIdx = (dayIdx + step) % dayBuckets.length;
+                                    placed = true;
+                                    break;
+                                } else if (preferredSlot === '2_4' && capImpar < bucket.maxCap) {
+                                    bucket.quinzenais13.push(client);
+                                    dayIdx = (dayIdx + step) % dayBuckets.length;
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!placed) {
+                            const bucket = dayBuckets[dayIdx % dayBuckets.length];
+                            const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
+                            const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+                            if (capImpar <= capPar) {
+                                bucket.quinzenais13.push(client);
+                            } else {
+                                bucket.quinzenais24.push(client);
+                            }
+                            dayIdx = (dayIdx + 1) % dayBuckets.length;
+                        }
                     }
-
-                    result.push({
-                        ...v,
-                        Dia_Semana: activeDays[dayIndex % activeDays.length]
-                    });
-                    countInDay++;
                 });
+
+                // 4. Mapear cada cliente para seu plano com novo dia e periodicidade quinzenal ajustada
+                interface ClientPlan {
+                    client: typeof uniqueClients[0];
+                    diaSemana: string;
+                    periodicidade: string;
+                    tipo: PeriodicidadeTipo;
+                }
+
+                const clientPlans: ClientPlan[] = [];
+
+                dayBuckets.forEach(bucket => {
+                    bucket.semanais.forEach(c => {
+                        clientPlans.push({
+                            client: c,
+                            diaSemana: bucket.day,
+                            periodicidade: 'SEMANAL',
+                            tipo: 'SEMANAL'
+                        });
+                    });
+
+                    bucket.quinzenais13.forEach(c => {
+                        const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
+                        clientPlans.push({
+                            client: c,
+                            diaSemana: bucket.day,
+                            periodicidade: novaPeriod,
+                            tipo: 'QUINZENAL_1_3'
+                        });
+                    });
+
+                    bucket.quinzenais24.forEach(c => {
+                        const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
+                        clientPlans.push({
+                            client: c,
+                            diaSemana: bucket.day,
+                            periodicidade: novaPeriod,
+                            tipo: 'QUINZENAL_2_4'
+                        });
+                    });
+                });
+
+                // 5. Gerar visitas expandidas para o calendário mantendo rigorosamente a carteira
+                if (datesInRange.length > 1) {
+                    datesInRange.forEach(dateStr => {
+                        const dateWeekday = getWeekdayNameFromDate(dateStr);
+                        const weekNum = getWeekNumberInMonth(dateStr);
+                        const isWeekImpar = weekNum % 2 !== 0;
+
+                        const plansForDay = clientPlans.filter(p => p.diaSemana === dateWeekday);
+
+                        plansForDay.forEach(p => {
+                            let shouldInclude = false;
+                            if (p.tipo === 'SEMANAL') {
+                                shouldInclude = true;
+                            } else if (p.tipo === 'QUINZENAL_1_3' && isWeekImpar) {
+                                shouldInclude = true;
+                            } else if (p.tipo === 'QUINZENAL_2_4' && !isWeekImpar) {
+                                shouldInclude = true;
+                            }
+
+                            if (shouldInclude) {
+                                result.push({
+                                    ...p.client.sampleVisit,
+                                    Cod_Vend: sellerId,
+                                    Nome_Vendedor: sellerName,
+                                    Dia_Semana: p.diaSemana,
+                                    Periodicidade: p.periodicidade,
+                                    Data_da_Visita: dateStr
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    clientPlans.forEach(p => {
+                        result.push({
+                            ...p.client.sampleVisit,
+                            Cod_Vend: sellerId,
+                            Nome_Vendedor: sellerName,
+                            Dia_Semana: p.diaSemana,
+                            Periodicidade: p.periodicidade,
+                            Data_da_Visita: startDate || p.client.sampleVisit.Data_da_Visita
+                        });
+                    });
+                }
             });
+
+            if (result.length === 0) {
+                alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos no período selecionado.");
+                setLoading(false);
+                return;
+            }
 
             setAdjustedRoutes(result);
             setLoading(false);
-            alert("Otimização concluída! As rotas foram redistribuídas de acordo com os parâmetros de capacidade e proximidade geográfica.");
+            alert("Otimização concluída!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.");
         }, 300);
     };
 
@@ -501,17 +766,21 @@ export const AjusteRota: React.FC = () => {
         };
     }, [originalRoutes, adjustedRoutes, colaboradores, optMaxKm]);
 
-    // Reatribuir vendedor ou dia de visita manualmente
-    const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string) => {
+    // Reatribuir vendedor, dia de visita ou quinzena manualmente
+    const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
         const targetColab = colaboradores.find(c => c.CodigoSetor === targetSellerId);
         
         setAdjustedRoutes(prev => prev.map(v => {
             if (v.Cod_Cliente === clientCode) {
+                // Para equipe de vendas, a carteira é fechada: preserva rigorosamente o vendedor original
+                const finalSellerId = teamType === 'vendedores' ? v.Cod_Vend : targetSellerId;
+                const finalSellerName = teamType === 'vendedores' ? v.Nome_Vendedor : (targetColab?.Nome || v.Nome_Vendedor);
                 return {
                     ...v,
-                    Cod_Vend: targetSellerId,
-                    Nome_Vendedor: targetColab?.Nome || v.Nome_Vendedor,
-                    Dia_Semana: targetDay
+                    Cod_Vend: finalSellerId,
+                    Nome_Vendedor: finalSellerName,
+                    Dia_Semana: targetDay,
+                    Periodicidade: targetPeriodicidade !== undefined ? targetPeriodicidade : v.Periodicidade
                 };
             }
             return v;
@@ -536,7 +805,7 @@ export const AjusteRota: React.FC = () => {
             'CODIGO': v.Cod_Vend,
             'NOME DO COLABORADOR': v.Nome_Vendedor,
             'FREQUENCIA': v.Periodicidade || 'SEMANAL',
-            'SEMANA': 1,
+            'SEMANA': (v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? 2 : 1,
             'DIA SEMANA': v.Dia_Semana,
             'NOME DIA': v.Dia_Semana,
             'ORDEM VISITA': idx + 1,
@@ -824,6 +1093,16 @@ export const AjusteRota: React.FC = () => {
                         <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
                             <CogIcon className="w-4 h-4 mr-1 text-slate-500"/> Parâmetros do Otimizador
                         </h4>
+                        
+                        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl p-2.5 text-[10px] text-indigo-700 dark:text-indigo-300 space-y-1">
+                            <div className="font-bold flex items-center">
+                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1 text-indigo-600 dark:text-indigo-400 shrink-0"/> Carteira Blindada por Vendedor
+                            </div>
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                Clientes pertencem exclusivamente ao vendedor (zero transferência). Periodicidades semanais e quinzenais preservadas.
+                            </p>
+                        </div>
+
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Clientes Máximo / Dia</label>
                             <input 
@@ -852,7 +1131,10 @@ export const AjusteRota: React.FC = () => {
                             />
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Equilibrar Equipe</span>
+                            <div>
+                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase block">Equilibrar Quinzenas</span>
+                                <span className="text-[8px] text-slate-400 block">Ajusta 1 3 e 2 4 para equalizar carga</span>
+                            </div>
                             <input 
                                 type="checkbox" 
                                 checked={optBalanceWorkload} 
@@ -1013,28 +1295,52 @@ export const AjusteRota: React.FC = () => {
                                                     <div className="border-t border-slate-100 pt-1.5 space-y-2">
                                                         <div>
                                                             <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Colaborador Atribuído</label>
-                                                            <select
-                                                                value={v.Cod_Vend}
-                                                                onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana)}
-                                                                className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700"
-                                                            >
-                                                                {teamColaboradores.map(col => (
-                                                                    <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
-                                                                ))}
-                                                            </select>
+                                                            {teamType === 'vendedores' ? (
+                                                                <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                                                    <span className="truncate">{v.Nome_Vendedor}</span>
+                                                                    <span className="text-[8px] bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold px-1 rounded ml-1 shrink-0">Carteira Fixa</span>
+                                                                </div>
+                                                            ) : (
+                                                                <select
+                                                                    value={v.Cod_Vend}
+                                                                    onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
+                                                                    className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700"
+                                                                >
+                                                                    {teamColaboradores.map(col => (
+                                                                        <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
                                                         </div>
                                                         <div className="flex gap-1.5">
                                                             <div className="flex-1">
                                                                 <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Dia de Visita</label>
                                                                 <select
                                                                     value={v.Dia_Semana}
-                                                                    onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value)}
+                                                                    onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
                                                                     className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700"
                                                                 >
                                                                     {WEEKDAYS.map(day => (
                                                                         <option key={day} value={day}>{day}</option>
                                                                     ))}
                                                                 </select>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Frequência</label>
+                                                                {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
+                                                                    <div className="w-full bg-blue-50 text-blue-700 border border-blue-200 rounded p-1 text-[10px] font-bold text-center">
+                                                                        Semanal
+                                                                    </div>
+                                                                ) : (
+                                                                    <select
+                                                                        value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
+                                                                        className="w-full bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
+                                                                    >
+                                                                        <option value="1 3">Quinzena 1 3</option>
+                                                                        <option value="2 4">Quinzena 2 4</option>
+                                                                    </select>
+                                                                )}
                                                             </div>
                                                             <button
                                                                 onClick={() => handleExcludeVisit(v.Cod_Cliente)}
@@ -1088,6 +1394,7 @@ export const AjusteRota: React.FC = () => {
                                             <th className="p-3">Endereço</th>
                                             <th className="p-3">Colaborador Atual</th>
                                             <th className="p-3">Dia de Visita</th>
+                                            <th className="p-3">Periodicidade</th>
                                             <th className="p-3 text-center">Ações</th>
                                         </tr>
                                     </thead>
@@ -1101,26 +1408,50 @@ export const AjusteRota: React.FC = () => {
                                                     <td className="p-3 truncate max-w-[180px]" title={v.Razao_Social}>{v.Razao_Social}</td>
                                                     <td className="p-3 text-slate-400 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
                                                     <td className="p-3">
-                                                        <select
-                                                            value={v.Cod_Vend}
-                                                            onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana)}
-                                                            className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
-                                                        >
-                                                            {teamColaboradores.map(col => (
-                                                                <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
-                                                            ))}
-                                                        </select>
+                                                        {teamType === 'vendedores' ? (
+                                                            <div className="flex items-center space-x-1.5">
+                                                                <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[130px]" title={v.Nome_Vendedor}>{v.Nome_Vendedor}</span>
+                                                                <span className="text-[8px] bg-slate-100 text-slate-500 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
+                                                            </div>
+                                                        ) : (
+                                                            <select
+                                                                value={v.Cod_Vend}
+                                                                onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
+                                                                className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
+                                                            >
+                                                                {teamColaboradores.map(col => (
+                                                                    <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
+                                                                ))}
+                                                            </select>
+                                                        )}
                                                     </td>
                                                     <td className="p-3">
                                                         <select
                                                             value={v.Dia_Semana}
-                                                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value)}
+                                                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
                                                             className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
                                                         >
                                                             {WEEKDAYS.map(day => (
                                                                 <option key={day} value={day}>{day}</option>
                                                             ))}
                                                         </select>
+                                                    </td>
+                                                    <td className="p-3">
+                                                        {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                                Semanal
+                                                            </span>
+                                                        ) : (
+                                                            <select
+                                                                value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
+                                                                onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
+                                                                className="bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
+                                                                title="Ajustar Quinzena (1 3 vs 2 4)"
+                                                            >
+                                                                <option value="1 3">Quinzenal (1, 3)</option>
+                                                                <option value="2 4">Quinzenal (2, 4)</option>
+                                                            </select>
+                                                        )}
                                                     </td>
                                                     <td className="p-3 text-center">
                                                         <button

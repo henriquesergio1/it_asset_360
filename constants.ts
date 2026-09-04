@@ -1,4 +1,4 @@
-export const SYSTEM_VERSION = '3.127.7';
+export const SYSTEM_VERSION = '3.127.8';
 export const APP_VERSION = SYSTEM_VERSION;
 
 // Estilos sistêmicos para padronização (UI Pattern 100% Tailwind CSS v4)
