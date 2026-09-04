@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.131.1
+// Servidor express unificado com API e SPA React - v3.132.0
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');

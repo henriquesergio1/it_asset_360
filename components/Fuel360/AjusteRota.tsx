@@ -23,7 +23,9 @@ import {
     TruckIcon,
     PlusCircleIcon,
     TrashIcon,
-    UsersIcon
+    UsersIcon,
+    PresentationChartLineIcon,
+    EyeIcon
 } from './icons';
 
 // --- CONFIGURAÇÃO DE ÍCONES ---
@@ -188,6 +190,11 @@ export const AjusteRota: React.FC = () => {
         currentSellerName: string;
     } | null>(null);
 
+    // Comparativo Antes x Depois
+    const [showCompareModal, setShowCompareModal] = useState(false);
+    const [compareOnlyChanged, setCompareOnlyChanged] = useState(true);
+    const [compareSearchFilter, setCompareSearchFilter] = useState('');
+
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
     const [optMaxKm, setOptMaxKm] = useState(60);
@@ -292,7 +299,7 @@ export const AjusteRota: React.FC = () => {
         return sellerIds.filter(id => getSellerQuinzenaStats(id, scopedAdjustedRoutes).isImbalanced).length;
     }, [scopedAdjustedRoutes]);
 
-    // Resumo de visitas distribuídas por dia da semana no escopo ativo
+    // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Ajustada/Simulada)
     const visitsByDay = useMemo(() => {
         const routes = scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
         const counts: Record<string, number> = {};
@@ -304,6 +311,114 @@ export const AjusteRota: React.FC = () => {
         });
         return counts;
     }, [scopedAdjustedRoutes, selectedPromoter]);
+
+    // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Original)
+    const originalVisitsByDay = useMemo(() => {
+        const routes = scopedOriginalRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
+        const counts: Record<string, number> = {};
+        WEEKDAYS.forEach(day => { counts[day] = 0; });
+        routes.forEach(v => {
+            if (counts[v.Dia_Semana] !== undefined) {
+                counts[v.Dia_Semana]++;
+            }
+        });
+        return counts;
+    }, [scopedOriginalRoutes, selectedPromoter]);
+
+    // Comparativo Detalhado de Clientes: Antes (Original) vs Depois (Simulado)
+    const routeComparisonDiff = useMemo(() => {
+        const origMap = new Map<string, VisitaPrevista>();
+        scopedOriginalRoutes.forEach(r => {
+            origMap.set(`${r.Cod_Cliente}-${r.Cod_Vend}`, r);
+        });
+
+        const adjMap = new Map<string, VisitaPrevista>();
+        scopedAdjustedRoutes.forEach(r => {
+            adjMap.set(`${r.Cod_Cliente}-${r.Cod_Vend}`, r);
+        });
+
+        const allKeys = Array.from(new Set([...Array.from(origMap.keys()), ...Array.from(adjMap.keys())]));
+
+        interface ClientDiffItem {
+            key: string;
+            codCliente: number;
+            razaoSocial: string;
+            endereco: string;
+            codVend: number;
+            nomeVendedor: string;
+            beforeDay: string;
+            afterDay: string;
+            beforePeriod: string;
+            afterPeriod: string;
+            changedDay: boolean;
+            changedPeriod: boolean;
+            isChanged: boolean;
+            changeType: 'MUDOU_DIA' | 'MUDOU_QUINZENA' | 'MUDOU_AMBOS' | 'INALTERADO' | 'REMOVIDO' | 'NOVO';
+        }
+
+        const items: ClientDiffItem[] = [];
+
+        allKeys.forEach(k => {
+            const before = origMap.get(k);
+            const after = adjMap.get(k);
+
+            const codCliente = after?.Cod_Cliente || before?.Cod_Cliente || 0;
+            const razaoSocial = after?.Razao_Social || before?.Razao_Social || '';
+            const endereco = after?.Endereco || before?.Endereco || '';
+            const codVend = after?.Cod_Vend || before?.Cod_Vend || 0;
+            const nomeVendedor = after?.Nome_Vendedor || before?.Nome_Vendedor || '';
+
+            const beforeDay = before?.Dia_Semana || 'Nenhum';
+            const afterDay = after?.Dia_Semana || 'Nenhum';
+            const beforePeriod = before?.Periodicidade || 'Semanal';
+            const afterPeriod = after?.Periodicidade || 'Semanal';
+
+            const changedDay = beforeDay !== afterDay;
+            const changedPeriod = beforePeriod !== afterPeriod;
+
+            let changeType: ClientDiffItem['changeType'] = 'INALTERADO';
+            if (!before && after) changeType = 'NOVO';
+            else if (before && !after) changeType = 'REMOVIDO';
+            else if (changedDay && changedPeriod) changeType = 'MUDOU_AMBOS';
+            else if (changedDay) changeType = 'MUDOU_DIA';
+            else if (changedPeriod) changeType = 'MUDOU_QUINZENA';
+
+            const isChanged = changeType !== 'INALTERADO';
+
+            // Filtro por promotor/vendedor selecionado na lateral
+            if (selectedPromoter !== 'ALL' && String(codVend) !== selectedPromoter) {
+                return;
+            }
+
+            items.push({
+                key: k,
+                codCliente,
+                razaoSocial,
+                endereco,
+                codVend,
+                nomeVendedor,
+                beforeDay,
+                afterDay,
+                beforePeriod,
+                afterPeriod,
+                changedDay,
+                changedPeriod,
+                isChanged,
+                changeType
+            });
+        });
+
+        const totalClients = items.length;
+        const totalChanged = items.filter(i => i.isChanged).length;
+        const totalUnchanged = totalClients - totalChanged;
+
+        return {
+            items,
+            totalClients,
+            totalChanged,
+            totalUnchanged
+        };
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter]);
 
     // Rotas do escopo ordenadas conforme a coluna selecionada
     const sortedRoutes = useMemo(() => {
@@ -1750,6 +1865,19 @@ export const AjusteRota: React.FC = () => {
 
                                 <div className="flex items-center space-x-2 shrink-0">
                                     <button
+                                        onClick={() => setShowCompareModal(true)}
+                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-xs transition h-[32px]"
+                                        title="Comparar a rota original com a rota ajustada antes de salvar"
+                                    >
+                                        <PresentationChartLineIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400"/>
+                                        Comparativo Antes x Depois
+                                        {routeComparisonDiff.totalChanged > 0 && (
+                                            <span className="ml-1.5 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                                {routeComparisonDiff.totalChanged}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
                                         onClick={handleExportExcel}
                                         className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow transition h-[32px]"
                                         title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
@@ -1965,6 +2093,264 @@ export const AjusteRota: React.FC = () => {
                             </div>
                             <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-semibold">
                                 <span className="mr-1.5">⚖️</span> Equalização de quinzenas e teto diário
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL COMPLETO DE COMPARATIVO ANTES X DEPOIS */}
+            {showCompareModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header do Modal */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                    <PresentationChartLineIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center">
+                                        Auditoria da Rota: Comparativo Antes x Depois
+                                        <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                            Simulação Ativa
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Confronte as alterações de dias e distribuição quinzenal antes de salvar a rota definitiva no banco.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowCompareModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Corpo com Scroll */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
+                            {/* Cards de Métricas Comparativas */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {/* Métrica 1: Quilometragem Total */}
+                                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Distância Total</span>
+                                    <div className="mt-1 flex items-baseline space-x-2">
+                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{kpis.adjusted.totalKm} KM</span>
+                                        <span className="text-xs text-slate-400 line-through">{kpis.original.totalKm} KM</span>
+                                    </div>
+                                    <span className={`text-[10px] font-bold mt-1 ${kpis.kmSaved >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {kpis.kmSaved >= 0 ? `▼ ${kpis.kmSaved} KM (-${kpis.percentSaved}%)` : `▲ ${Math.abs(kpis.kmSaved)} KM`}
+                                    </span>
+                                </div>
+
+                                {/* Métrica 2: Média KM / Colaborador */}
+                                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Média KM / Colab</span>
+                                    <div className="mt-1 flex items-baseline space-x-2">
+                                        <span className="text-lg font-black text-slate-800 dark:text-white">{kpis.adjusted.avgKmPerSeller} KM</span>
+                                        <span className="text-xs text-slate-400 line-through">{kpis.original.avgKmPerSeller} KM</span>
+                                    </div>
+                                    <span className="text-[10px] font-medium text-slate-400">
+                                        {kpis.adjusted.sellerCount} colaboradores
+                                    </span>
+                                </div>
+
+                                {/* Métrica 3: Clientes Alterados */}
+                                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Clientes Reordenados</span>
+                                    <div className="mt-1 flex items-baseline space-x-2">
+                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                                            {routeComparisonDiff.totalChanged}
+                                        </span>
+                                        <span className="text-xs text-slate-400">de {routeComparisonDiff.totalClients} PDVs</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-500">
+                                        {routeComparisonDiff.totalUnchanged} clientes mantidos
+                                    </span>
+                                </div>
+
+                                {/* Métrica 4: Vendedores Desbalanceados */}
+                                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Desbalanço Quinzenal (&gt;30%)</span>
+                                    <div className="mt-1 flex items-baseline space-x-2">
+                                        <span className={`text-lg font-black ${imbalancedSellersCount === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {imbalancedSellersCount} colab(s)
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                        {imbalancedSellersCount === 0 ? '✓ Equilíbrio 100% atingido' : 'Requer atenção'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Comparativo de Carga Diária: Antes x Depois */}
+                            <div className="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-2.5">
+                                <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                                    Distribuição Semanal de Atendimentos: Antes vs Depois
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                                    {WEEKDAYS.map(day => {
+                                        const countBefore = originalVisitsByDay[day] || 0;
+                                        const countAfter = visitsByDay[day] || 0;
+                                        const diffDay = countAfter - countBefore;
+                                        return (
+                                            <div key={day} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700 text-center shadow-2xs">
+                                                <span className="text-[10px] font-black uppercase text-slate-400 block">{day.split('-')[0]}</span>
+                                                <div className="flex items-center justify-center space-x-1 mt-1 text-xs font-black">
+                                                    <span className="text-slate-400 line-through text-[11px]">{countBefore}</span>
+                                                    <span className="text-slate-300">→</span>
+                                                    <span className="text-indigo-600 dark:text-indigo-400 text-sm">{countAfter}</span>
+                                                </div>
+                                                <span className={`text-[9px] font-bold block mt-0.5 ${diffDay > 0 ? 'text-emerald-600' : (diffDay < 0 ? 'text-slate-400' : 'text-slate-300')}`}>
+                                                    {diffDay > 0 ? `+${diffDay}` : (diffDay < 0 ? `${diffDay}` : '=')}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Tabela de Clientes: Diff Antes x Depois */}
+                            <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center space-x-2">
+                                        <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
+                                            Clientes e Roteiros Detalhados
+                                        </h4>
+                                        <span className="text-[11px] font-bold text-slate-400">
+                                            ({routeComparisonDiff.items.filter(i => (!compareOnlyChanged || i.isChanged) && (!compareSearchFilter || i.razaoSocial.toLowerCase().includes(compareSearchFilter.toLowerCase()) || String(i.codCliente).includes(compareSearchFilter) || i.nomeVendedor.toLowerCase().includes(compareSearchFilter.toLowerCase()))).length} listados)
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar PDV, Razão ou Vendedor..."
+                                            value={compareSearchFilter}
+                                            onChange={e => setCompareSearchFilter(e.target.value)}
+                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1 text-xs font-medium outline-none w-56 text-slate-800 dark:text-white"
+                                        />
+                                        <label className="flex items-center space-x-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">
+                                            <input
+                                                type="checkbox"
+                                                checked={compareOnlyChanged}
+                                                onChange={e => setCompareOnlyChanged(e.target.checked)}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span>Apenas Alterados ({routeComparisonDiff.totalChanged})</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                                    <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-200">
+                                        <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 uppercase text-[9px] border-b border-slate-200 dark:border-slate-700">
+                                            <tr>
+                                                <th className="p-3">Código/PDV</th>
+                                                <th className="p-3">Cliente / Razão Social</th>
+                                                <th className="p-3">Colaborador</th>
+                                                <th className="p-3 text-center bg-slate-100/70 dark:bg-slate-800/70">Antes (Original)</th>
+                                                <th className="p-3 text-center bg-indigo-50/70 dark:bg-indigo-950/40">Depois (Otimizado)</th>
+                                                <th className="p-3 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {routeComparisonDiff.items
+                                                .filter(i => {
+                                                    if (compareOnlyChanged && !i.isChanged) return false;
+                                                    if (compareSearchFilter) {
+                                                        const term = compareSearchFilter.toLowerCase();
+                                                        const matchRazao = i.razaoSocial.toLowerCase().includes(term);
+                                                        const matchCod = String(i.codCliente).includes(term);
+                                                        const matchColab = i.nomeVendedor.toLowerCase().includes(term);
+                                                        if (!matchRazao && !matchCod && !matchColab) return false;
+                                                    }
+                                                    return true;
+                                                })
+                                                .slice(0, 150)
+                                                .map(item => (
+                                                    <tr key={item.key} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
+                                                        <td className="p-3 font-mono font-bold text-slate-900 dark:text-white">
+                                                            {item.codCliente}
+                                                        </td>
+                                                        <td className="p-3 truncate max-w-[200px]" title={item.razaoSocial}>
+                                                            {item.razaoSocial}
+                                                        </td>
+                                                        <td className="p-3 truncate max-w-[130px]" title={item.nomeVendedor}>
+                                                            {item.nomeVendedor}
+                                                        </td>
+                                                        <td className="p-3 text-center bg-slate-50/40 dark:bg-slate-900/40">
+                                                            <div className="inline-flex flex-col items-center">
+                                                                <span className="text-slate-700 dark:text-slate-300 font-bold">{item.beforeDay}</span>
+                                                                <span className="text-[9px] text-slate-400 font-medium">{item.beforePeriod}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3 text-center bg-indigo-50/30 dark:bg-indigo-950/20">
+                                                            <div className="inline-flex flex-col items-center">
+                                                                <span className={`font-black ${item.changedDay ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                                    {item.afterDay}
+                                                                </span>
+                                                                <span className={`text-[9px] font-bold ${item.changedPeriod ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 font-medium'}`}>
+                                                                    {item.afterPeriod}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            {item.changeType === 'INALTERADO' && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-500">
+                                                                    Inalterado
+                                                                </span>
+                                                            )}
+                                                            {item.changeType === 'MUDOU_DIA' && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                                                    Dia Alterado
+                                                                </span>
+                                                            )}
+                                                            {item.changeType === 'MUDOU_QUINZENA' && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                                    Quinzena Balanceada
+                                                                </span>
+                                                            )}
+                                                            {item.changeType === 'MUDOU_AMBOS' && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                                                                    Dia + Quinzena
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer de Ações do Modal */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {routeComparisonDiff.totalChanged > 0 
+                                    ? `Total de ${routeComparisonDiff.totalChanged} clientes com novos roteiros prontos para aprovação.` 
+                                    : 'Nenhuma alteração detectada em relação à rota original.'}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={() => setShowCompareModal(false)}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition"
+                                >
+                                    Voltar aos Ajustes
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowCompareModal(false);
+                                        handleSaveDatabase();
+                                    }}
+                                    disabled={saving}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition flex items-center"
+                                >
+                                    {saving ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-4 h-4 mr-1.5"/>}
+                                    Aprovar e Salvar Simulação
+                                </button>
                             </div>
                         </div>
                     </div>

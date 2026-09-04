@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.132.0',
+    date: 'Hoje',
+    title: 'Fuel360: Auditoria e Comparativo "Antes x Depois" das Rotas Otimizadas',
+    changes: [
+      'Modal de Comparativo Antes x Depois: Confronte em tempo real a rota original contra a rota simulada antes de salvar no banco de dados.',
+      'Métricas de Impacto em Destaque: Redução de KM total, KM média por colaborador, percentual de economia e erradicação do desbalanceamento quinzenal.',
+      'Distribuição Semanal Consolidada: Comparação dia a dia (Seg a Sáb) com contadores antes/depois e indicador de delta (+/-).',
+      'Tabela de Auditoria com Filtro de Alterações: Relação minuciosa de clientes listando dia/quinzena anteriores vs atuais e status detalhado da mudança.'
+    ]
+  },
+  {
     version: '3.131.1',
     date: 'Hoje',
     title: 'Fuel360: Correção no Otimizador de Rotas e Barra de Progresso com Percentual',
