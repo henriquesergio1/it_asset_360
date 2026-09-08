@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.145.0',
+    date: 'Hoje',
+    title: 'Fuel360: Tempos de Atendimento por Canal Gravados no Banco de Dados SQL Server',
+    changes: [
+      'Persistência Centralizada Corporativa: Criação da tabela FuelCanaisAtendimento e endpoints de API (GET/POST) para salvar minutos médios de atendimento diretamente no SQL Server, garantindo compartilhamento simultâneo entre todos os operadores.',
+      'Detecção e Parametrização Dinâmica: Reconhecimento automático dos canais reais da carteira (coluna Canal_Remuneracao) e modal dedicado para ajuste de minutos por canal e cadastro de novos canais.',
+      'Cálculo Integrado da Jornada: Otimizador de rotas e KPIs somam o tempo viário ao tempo de atendimento específico de cada canal para balizamento de horas/dia.'
+    ]
+  },
+  {
     version: '3.144.0',
     date: 'Hoje',
     title: 'Fuel360: Inclusão da Coluna Canal_Remuneracao no Script ERP',

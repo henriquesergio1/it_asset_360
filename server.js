@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.144.0
+// Servidor express unificado com API e SPA React - v3.145.0
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -2221,6 +2221,27 @@ async function ensureFuelTablesExist(pool) {
                 )
             `);
         }
+
+        const checkCanaisAtend = await pool.request().query("SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FuelCanaisAtendimento'");
+        if (checkCanaisAtend.recordset.length === 0) {
+            await pool.request().query(`
+                CREATE TABLE FuelCanaisAtendimento (
+                    ID_Canal INT IDENTITY(1,1) PRIMARY KEY,
+                    Canal NVARCHAR(150) NOT NULL UNIQUE,
+                    TempoMinutos INT NOT NULL DEFAULT 15,
+                    DataAtualizacao DATETIME DEFAULT GETDATE(),
+                    UsuarioAtualizacao NVARCHAR(255) NULL
+                );
+                INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, UsuarioAtualizacao) VALUES 
+                ('PADRAO', 15, 'Sistema'),
+                ('VAREJO', 15, 'Sistema'),
+                ('SUPERMERCADO', 30, 'Sistema'),
+                ('HIPERMERCADO', 45, 'Sistema'),
+                ('ATACADO', 35, 'Sistema'),
+                ('FARMA', 15, 'Sistema'),
+                ('KEY ACCOUNT', 45, 'Sistema');
+            `);
+        }
     } catch (err) {
         console.error('AVISO ao verificar/criar tabelas Fuel360:', err.message);
     }
@@ -2702,6 +2723,66 @@ app.get('/api/fuel360/config/fuel/history', async (req, res) => {
         res.json(result.recordset || []);
     } catch (err) {
         res.json([]);
+    }
+});
+
+// Endpoints para Tempos de Atendimento por Canal de Remuneração (Persistência Corporativa no Banco)
+app.get('/api/fuel360/canais-atendimento', async (req, res) => {
+    try {
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+        const result = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
+        res.json({ success: true, canais: result.recordset || [] });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao buscar canais de atendimento:', err.message);
+        res.status(500).json({ success: false, error: err.message, canais: [] });
+    }
+});
+
+app.post('/api/fuel360/canais-atendimento/batch', async (req, res) => {
+    try {
+        const { canais, usuario } = req.body;
+        if (!Array.isArray(canais) || canais.length === 0) {
+            return res.status(400).json({ success: false, message: 'Lista de canais inválida ou vazia.' });
+        }
+
+        const pool = await sql.connect(dbConfig);
+        await ensureFuelTablesExist(pool);
+
+        const userName = usuario || req.user?.Nome || req.user?.Usuario || 'Operador Fuel';
+
+        for (const item of canais) {
+            const canalNome = String(item.Canal || '').trim().toUpperCase();
+            const minutos = parseInt(item.TempoMinutos, 10);
+            if (!canalNome || isNaN(minutos) || minutos <= 0) continue;
+
+            await pool.request()
+                .input('Canal', sql.NVarChar(150), canalNome)
+                .input('TempoMinutos', sql.Int, minutos)
+                .input('Usuario', sql.NVarChar(255), userName)
+                .query(`
+                    IF EXISTS (SELECT 1 FROM FuelCanaisAtendimento WHERE UPPER(Canal) = UPPER(@Canal))
+                        UPDATE FuelCanaisAtendimento 
+                        SET TempoMinutos = @TempoMinutos, DataAtualizacao = GETDATE(), UsuarioAtualizacao = @Usuario 
+                        WHERE UPPER(Canal) = UPPER(@Canal)
+                    ELSE
+                        INSERT INTO FuelCanaisAtendimento (Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao)
+                        VALUES (@Canal, @TempoMinutos, GETDATE(), @Usuario)
+                `);
+        }
+
+        // Registrar log de auditoria no sistema
+        await pool.request()
+            .input('Usuario', sql.NVarChar(255), userName)
+            .input('Acao', sql.NVarChar(255), 'ATUALIZAR_CANAIS_ATENDIMENTO')
+            .input('Detalhes', sql.NVarChar(sql.MAX), `Atualizados ${canais.length} canais de atendimento no banco corporativo.`)
+            .query("INSERT INTO FuelLogsSistema (DataHora, Usuario, Acao, Detalhes) VALUES (GETDATE(), @Usuario, @Acao, @Detalhes)");
+
+        const updated = await pool.request().query("SELECT ID_Canal, Canal, TempoMinutos, DataAtualizacao, UsuarioAtualizacao FROM FuelCanaisAtendimento ORDER BY Canal ASC");
+        res.json({ success: true, message: 'Canais de atendimento atualizados com sucesso.', canais: updated.recordset || [] });
+    } catch (err) {
+        console.error('[Fuel360 ERROR] Falha ao salvar canais de atendimento:', err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

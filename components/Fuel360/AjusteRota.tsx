@@ -855,6 +855,125 @@ export const AjusteRota: React.FC = () => {
     const [optSatHalfPeriod, setOptSatHalfPeriod] = useState(true);
     const [optBalanceWorkload, setOptBalanceWorkload] = useState(true);
 
+    // Tempos de Atendimento por Canal de Remuneração (Persistidos no Banco SQL Server)
+    const [channelServiceTimes, setChannelServiceTimes] = useState<Record<string, number>>({
+        'PADRAO': 15,
+        'VAREJO': 15,
+        'SUPERMERCADO': 30,
+        'HIPERMERCADO': 45,
+        'ATACADO': 35,
+        'FARMA': 15,
+        'KEY ACCOUNT': 45
+    });
+    const [dbChannelRecords, setDbChannelRecords] = useState<Array<{ ID_Canal: number; Canal: string; TempoMinutos: number; DataAtualizacao?: string }>>([]);
+    const [showChannelTimesModal, setShowChannelTimesModal] = useState(false);
+    const [savingChannelTimes, setSavingChannelTimes] = useState(false);
+    const [channelSaveFeedback, setChannelSaveFeedback] = useState<string | null>(null);
+    const [newCustomChannelName, setNewCustomChannelName] = useState('');
+    const [newCustomChannelTime, setNewCustomChannelTime] = useState(15);
+
+    // Carregar canais de atendimento gravados no banco de dados corporativo
+    const loadChannelServiceTimes = useCallback(async () => {
+        try {
+            const res = await fetch('/api/fuel360/canais-atendimento');
+            const data = await res.json();
+            if (data.success && Array.isArray(data.canais) && data.canais.length > 0) {
+                setDbChannelRecords(data.canais);
+                const map: Record<string, number> = {};
+                data.canais.forEach((item: any) => {
+                    if (item.Canal && item.TempoMinutos) {
+                        map[String(item.Canal).trim().toUpperCase()] = Number(item.TempoMinutos);
+                    }
+                });
+                setChannelServiceTimes(prev => ({ ...prev, ...map }));
+            }
+        } catch (e) {
+            console.warn('[Fuel360] Erro ao carregar canais do banco:', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadChannelServiceTimes();
+    }, [loadChannelServiceTimes]);
+
+    // Resolução do tempo em minutos de atendimento por cliente
+    const getClientServiceTime = useCallback((client?: { Canal_Remuneracao?: string }) => {
+        const defaultMins = channelServiceTimes['PADRAO'] || optServiceTimePerClient || 15;
+        if (!client?.Canal_Remuneracao || !client.Canal_Remuneracao.trim()) {
+            return defaultMins;
+        }
+        const canalNorm = client.Canal_Remuneracao.trim().toUpperCase();
+        if (channelServiceTimes[canalNorm] !== undefined) {
+            return Number(channelServiceTimes[canalNorm]);
+        }
+        for (const [key, val] of Object.entries(channelServiceTimes)) {
+            if (canalNorm.includes(key) || key.includes(canalNorm)) {
+                return Number(val);
+            }
+        }
+        return defaultMins;
+    }, [channelServiceTimes, optServiceTimePerClient]);
+
+    // Canais detectados na carteira atual de clientes carregada
+    const detectedChannelsFromRoutes = useMemo(() => {
+        const set = new Set<string>();
+        adjustedRoutes.forEach(r => {
+            if (r.Canal_Remuneracao && r.Canal_Remuneracao.trim()) {
+                set.add(r.Canal_Remuneracao.trim().toUpperCase());
+            }
+        });
+        return Array.from(set).sort();
+    }, [adjustedRoutes]);
+
+    // Contagem de clientes por canal na carteira atual
+    const clientCountByChannel = useMemo(() => {
+        const counts: Record<string, number> = {};
+        adjustedRoutes.forEach(r => {
+            const c = (r.Canal_Remuneracao && r.Canal_Remuneracao.trim().toUpperCase()) || 'SEM CANAL';
+            counts[c] = (counts[c] || 0) + 1;
+        });
+        return counts;
+    }, [adjustedRoutes]);
+
+    // Lista consolidada de canais para exibição no modal
+    const allDisplayChannels = useMemo(() => {
+        const set = new Set<string>(['PADRAO', ...Object.keys(channelServiceTimes), ...detectedChannelsFromRoutes]);
+        return Array.from(set).filter(Boolean).sort();
+    }, [channelServiceTimes, detectedChannelsFromRoutes]);
+
+    // Salvar tempos de atendimento no Banco de Dados SQL Server
+    const handleSaveChannelTimesToDatabase = async () => {
+        setSavingChannelTimes(true);
+        setChannelSaveFeedback(null);
+        try {
+            const listToSave = allDisplayChannels.map(canal => ({
+                Canal: canal.trim().toUpperCase(),
+                TempoMinutos: Number(channelServiceTimes[canal]) || channelServiceTimes['PADRAO'] || 15
+            }));
+
+            const res = await fetch('/api/fuel360/canais-atendimento/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ canais: listToSave })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setChannelSaveFeedback('✅ Tempos gravados com sucesso no banco de dados corporativo!');
+                await loadChannelServiceTimes();
+                setTimeout(() => {
+                    setChannelSaveFeedback(null);
+                    setShowChannelTimesModal(false);
+                }, 1200);
+            } else {
+                setChannelSaveFeedback('❌ Erro ao salvar: ' + (data.error || data.message));
+            }
+        } catch (err: any) {
+            setChannelSaveFeedback('❌ Erro de conexão ao salvar no banco: ' + err.message);
+        } finally {
+            setSavingChannelTimes(false);
+        }
+    };
+
     // Resumo Operacional de Rotas (KM e Tempo)
     const [showSummaryModal, setShowSummaryModal] = useState(false);
 
@@ -1415,6 +1534,8 @@ export const AjusteRota: React.FC = () => {
             const pdvs13 = visits13.length;
             const coords13 = visits13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
             const metrics13 = coords13.length > 0 ? calcCircuitMetrics(baseCoord, coords13) : { totalKm: 0, travelMinutes: 0 };
+            const serviceMins13 = visits13.reduce((sum, v) => sum + getClientServiceTime(v), 0);
+            const totalDayTime13 = metrics13.travelMinutes + serviceMins13;
 
             // Quinzena 2/4: Semanais + Quinzenal 2/4
             const visits24 = dayVisits.filter(r => {
@@ -1424,22 +1545,24 @@ export const AjusteRota: React.FC = () => {
             const pdvs24 = visits24.length;
             const coords24 = visits24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
             const metrics24 = coords24.length > 0 ? calcCircuitMetrics(baseCoord, coords24) : { totalKm: 0, travelMinutes: 0 };
+            const serviceMins24 = visits24.reduce((sum, v) => sum + getClientServiceTime(v), 0);
+            const totalDayTime24 = metrics24.travelMinutes + serviceMins24;
 
             totalPdvs13 += pdvs13;
             totalPdvs24 += pdvs24;
             totalKm13 += metrics13.totalKm;
             totalKm24 += metrics24.totalKm;
-            totalTime13 += metrics13.travelMinutes;
-            totalTime24 += metrics24.travelMinutes;
+            totalTime13 += totalDayTime13;
+            totalTime24 += totalDayTime24;
 
             const dayObj = {
                 day,
                 pdvs13,
                 km13: metrics13.totalKm,
-                time13: metrics13.travelMinutes,
+                time13: totalDayTime13,
                 pdvs24,
                 km24: metrics24.totalKm,
-                time24: metrics24.travelMinutes,
+                time24: totalDayTime24,
                 avgPdvs: Math.round(((pdvs13 + pdvs24) / 2) * 10) / 10
             };
 
@@ -1448,12 +1571,12 @@ export const AjusteRota: React.FC = () => {
                 day,
                 pdvs13,
                 km13: metrics13.totalKm,
-                time13: metrics13.travelMinutes,
+                time13: totalDayTime13,
                 pdvs24,
                 km24: metrics24.totalKm,
-                time24: metrics24.travelMinutes,
+                time24: totalDayTime24,
                 totalKm: metrics13.totalKm + metrics24.totalKm,
-                totalTime: metrics13.travelMinutes + metrics24.travelMinutes
+                totalTime: totalDayTime13 + totalDayTime24
             };
         });
 
@@ -1477,7 +1600,7 @@ export const AjusteRota: React.FC = () => {
             imbalancePct,
             isBalanced: imbalancePct <= 15
         };
-    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores]);
+    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores, getClientServiceTime]);
 
     // Limite dinâmico de renderização da tabela para Scroll Spy
     const visibleRoutesLimit = useMemo(() => {
@@ -1934,7 +2057,10 @@ export const AjusteRota: React.FC = () => {
                     const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
                     const estimatedTravelMins = 60;
                     const availableMins = Math.max(30, (hoursForDay * 60) - estimatedTravelMins);
-                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / optServiceTimePerClient));
+                    const avgServiceMins = uniqueClients.length 
+                        ? (uniqueClients.reduce((acc, c) => acc + getClientServiceTime(c.sampleVisit), 0) / uniqueClients.length) 
+                        : (channelServiceTimes['PADRAO'] || 15);
+                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / Math.max(5, avgServiceMins)));
                     cap = Math.min(cap, maxClientsByHours);
                 }
                 return {
@@ -2514,7 +2640,8 @@ export const AjusteRota: React.FC = () => {
                     totalKm += circuit.totalKm;
                     totalTravelMinutes += circuit.travelMinutes;
 
-                    const dayEstimatedTotalHours = (circuit.travelMinutes + (dayVisits.length * optServiceTimePerClient)) / 60;
+                    const dayVisitsServiceMins = dayVisits.reduce((acc, v) => acc + getClientServiceTime(v), 0);
+                    const dayEstimatedTotalHours = (circuit.travelMinutes + dayVisitsServiceMins) / 60;
 
                     if (optLimitKm && circuit.totalKm > optMaxKm) {
                         sellerHasExceededDay = true;
@@ -2564,7 +2691,7 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, optServiceTimePerClient]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, getClientServiceTime, channelServiceTimes]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -3377,6 +3504,19 @@ export const AjusteRota: React.FC = () => {
                                 <span className="text-[8.5px] text-slate-400 dark:text-slate-500 block">
                                     Inclui deslocamento viário + atendimento médio nos clientes
                                 </span>
+
+                                {/* Configuração de Tempos por Canal no Banco de Dados */}
+                                <div className="pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowChannelTimesModal(true)}
+                                        className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black transition cursor-pointer shadow-2xs"
+                                        title="Configurar permanência em minutos por Canal de Remuneração (salvo no SQL Server corporativo)"
+                                    >
+                                        <ClockIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                        <span>Tempos por Canal ({allDisplayChannels.length})</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -5400,6 +5540,212 @@ export const AjusteRota: React.FC = () => {
                                 <UserGroupIcon className="w-4 h-4"/>
                                 <span>Executar Redistribuição do Setor</span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE TEMPOS DE ATENDIMENTO POR CANAL DE REMUNERAÇÃO (BANCO DE DADOS CORPORATIVO) */}
+            {showChannelTimesModal && (
+                <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                    <ClockIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Tempos de Atendimento por Canal
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                            SQL Server
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Minutos médios de permanência por Canal de Remuneração (salvos centralizadamente no banco para todos os operadores).
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowChannelTimesModal(false);
+                                    setChannelSaveFeedback(null);
+                                }}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Feedback Toast */}
+                        {channelSaveFeedback && (
+                            <div className={`p-3 text-xs font-bold text-center ${
+                                channelSaveFeedback.includes('✅') 
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-b border-emerald-200 dark:border-emerald-800' 
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-b border-rose-200 dark:border-rose-800'
+                            }`}>
+                                {channelSaveFeedback}
+                            </div>
+                        )}
+
+                        {/* Corpo com Scroll */}
+                        <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                            <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-800/40 rounded-xl p-3 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+                                💡 <strong>Cálculo no Otimizador e Relatórios:</strong> O tempo total diário da jornada resulta do somatório do <em>tempo de trânsito viário</em> (circuito OSRM) mais a <em>permanência média em cada PDV</em> conforme seu Canal de Remuneração.
+                            </div>
+
+                            {/* Lista de Canais */}
+                            <div className="space-y-2">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Canais no Banco de Dados Corporativo:
+                                </span>
+
+                                <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+                                    {allDisplayChannels.map(canalName => {
+                                        const count = clientCountByChannel[canalName] || 0;
+                                        const mins = channelServiceTimes[canalName] ?? 15;
+                                        const isDetected = detectedChannelsFromRoutes.includes(canalName);
+
+                                        return (
+                                            <div 
+                                                key={canalName}
+                                                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition"
+                                            >
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase">
+                                                        {canalName}
+                                                    </span>
+                                                    {count > 0 && (
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                            {count} cliente{count > 1 ? 's' : ''} na rota
+                                                        </span>
+                                                    )}
+                                                    {isDetected && count === 0 && (
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                            Detectado no ERP
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center space-x-2">
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        max={300}
+                                                        value={mins}
+                                                        onChange={(e) => {
+                                                            const val = Math.max(1, Number(e.target.value) || 1);
+                                                            setChannelServiceTimes(prev => ({
+                                                                ...prev,
+                                                                [canalName]: val
+                                                            }));
+                                                        }}
+                                                        className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-900 dark:text-white focus:border-indigo-500"
+                                                    />
+                                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-6">min</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Adicionar Canal Personalizado */}
+                            <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                    Adicionar Outro Canal:
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Ex: CONVENIÊNCIA, DISTRIBUIDOR..."
+                                        value={newCustomChannelName}
+                                        onChange={(e) => setNewCustomChannelName(e.target.value)}
+                                        className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl py-1.5 px-3 text-xs font-bold uppercase text-slate-900 dark:text-white outline-none focus:border-indigo-500"
+                                    />
+                                    <div className="flex items-center space-x-1">
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={300}
+                                            value={newCustomChannelTime}
+                                            onChange={(e) => setNewCustomChannelTime(Math.max(1, Number(e.target.value) || 1))}
+                                            className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl py-1.5 px-2 text-xs font-black text-right outline-none text-slate-900 dark:text-white focus:border-indigo-500"
+                                        />
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">min</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const name = newCustomChannelName.trim().toUpperCase();
+                                            if (name) {
+                                                setChannelServiceTimes(prev => ({
+                                                    ...prev,
+                                                    [name]: newCustomChannelTime
+                                                }));
+                                                setNewCustomChannelName('');
+                                                setNewCustomChannelTime(15);
+                                            }
+                                        }}
+                                        disabled={!newCustomChannelName.trim()}
+                                        className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        + Adicionar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Rodapé com Ações */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setChannelServiceTimes({
+                                        'PADRAO': 15,
+                                        'VAREJO': 15,
+                                        'SUPERMERCADO': 30,
+                                        'HIPERMERCADO': 45,
+                                        'ATACADO': 35,
+                                        'FARMA': 15,
+                                        'KEY ACCOUNT': 45
+                                    });
+                                }}
+                                className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline cursor-pointer"
+                            >
+                                Restaurar Padrões
+                            </button>
+
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowChannelTimesModal(false);
+                                        setChannelSaveFeedback(null);
+                                    }}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveChannelTimesToDatabase}
+                                    disabled={savingChannelTimes}
+                                    className="px-4 py-2 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                                >
+                                    {savingChannelTimes ? (
+                                        <>
+                                            <SpinnerIcon className="w-3.5 h-3.5 animate-spin" />
+                                            <span>Salvando no Banco...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>💾 Gravar no Banco de Dados</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
