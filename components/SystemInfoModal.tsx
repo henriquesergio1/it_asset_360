@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.1',
+    date: 'Hoje',
+    title: 'Fuel360: Exibição de Cidade e Foco Bidirecional Tabela ➔ Mapa na Grade de Ajuste Fino',
+    changes: [
+      'Exibição de Cidade e Bairro: A coluna de endereço na Grade de Ajuste Fino agora exibe a Cidade com ícone de localização e tooltip completo.',
+      'Foco Bidirecional Tabela ➔ Mapa: Ao clicar em qualquer linha de cliente da grade ou no botão de localização, o mapa navega suavemente (flyTo) até o PDV, com destaque visual e abertura do popup de detalhes.',
+      'Centralização Suave de Tela: Rolagem automática da visualização para o container do mapa quando o PDV selecionado estiver fora do campo de visão.'
+    ]
+  },
+  {
     version: '3.140.0',
     date: 'Hoje',
     title: 'Fuel360: Roteirizador Profissional com Matriz Viária OSRM, K-Means e Itinerário',

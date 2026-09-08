@@ -228,6 +228,36 @@ const MapResizeHandler: React.FC<{ isFullscreen: boolean }> = ({ isFullscreen })
     return null;
 };
 
+interface MapFlyToTarget {
+    lat: number;
+    lng: number;
+    codCliente: number;
+    timestamp: number;
+}
+
+// Componente para navegação suave (flyTo) e abertura do popup ao clicar na grade de clientes
+const MapFlyToHandler: React.FC<{ 
+    target: MapFlyToTarget | null;
+    markerRefs: React.MutableRefObject<{ [cod: number]: L.CircleMarker | null }>;
+}> = ({ target, markerRefs }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (!target || !target.lat || !target.lng) return;
+        map.flyTo([target.lat, target.lng], 16, {
+            animate: true,
+            duration: 1.0
+        });
+        const timer = setTimeout(() => {
+            const marker = markerRefs.current[target.codCliente];
+            if (marker) {
+                marker.openPopup();
+            }
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [target, map, markerRefs]);
+    return null;
+};
+
 const pinClientIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -691,6 +721,8 @@ export const AjusteRota: React.FC = () => {
     // Scroll Spy: cliente em foco selecionado pelo mapa ou pela tabela
     const [highlightedClientCode, setHighlightedClientCode] = useState<number | null>(null);
     const highlightTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const [mapFlyToTarget, setMapFlyToTarget] = useState<MapFlyToTarget | null>(null);
+    const markerRefs = useRef<{ [cod: number]: L.CircleMarker | null }>({});
 
     // Modo Tela Cheia no Mapa
     const [isMapFullscreen, setIsMapFullscreen] = useState(false);
@@ -1095,6 +1127,59 @@ export const AjusteRota: React.FC = () => {
                 rowElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }, 120);
+    };
+
+    // Scroll Spy Bidirecional: Focar cliente clicado na Grade de Ajuste Fino diretamente no Mapa (flyTo + popup)
+    const handleFocusClientOnMap = (v: VisitaPrevista) => {
+        if (!v.Lat || !v.Long || (v.Lat === 0 && v.Long === 0)) {
+            alert(`O cliente ${v.Cod_Cliente} (${v.Razao_Social}) não possui coordenadas geográficas cadastradas para exibição no mapa.`);
+            return;
+        }
+
+        // Se houver filtro de colaborador ativo divergente, expande para todos para que o marcador esteja presente no mapa
+        if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) {
+            setSelectedPromoter('ALL');
+        }
+
+        // Se houver filtro de dia da semana ativo que exclua este cliente, inclui o dia no filtro
+        if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) {
+            setSelectedDaysFilter(prev => [...prev, v.Dia_Semana]);
+        }
+
+        // Se houver filtro de quinzena ativo que exclua este cliente, abre para 'ALL'
+        if (selectedQuinzenaFilter !== 'ALL') {
+            const pType = parsePeriodicidade(v.Periodicidade).tipo;
+            if (selectedQuinzenaFilter === '1_3' && pType === 'QUINZENAL_2_4') {
+                setSelectedQuinzenaFilter('ALL');
+            } else if (selectedQuinzenaFilter === '2_4' && pType === 'QUINZENAL_1_3') {
+                setSelectedQuinzenaFilter('ALL');
+            }
+        }
+
+        setHighlightedClientCode(v.Cod_Cliente);
+
+        if (highlightTimerRef.current) {
+            clearTimeout(highlightTimerRef.current);
+        }
+        highlightTimerRef.current = setTimeout(() => {
+            setHighlightedClientCode(null);
+        }, 5000);
+
+        setMapFlyToTarget({
+            lat: v.Lat,
+            lng: v.Long,
+            codCliente: v.Cod_Cliente,
+            timestamp: Date.now()
+        });
+
+        // Rola suavemente até o container do mapa se estiver fora do campo de visão da janela
+        const mapElem = document.getElementById('roteiro-map-container');
+        if (mapElem) {
+            const rect = mapElem.getBoundingClientRect();
+            if (rect.top < 0 || rect.bottom < 150) {
+                mapElem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     };
 
     // Limpa timer de destaque ao desmontar
@@ -2570,7 +2655,9 @@ export const AjusteRota: React.FC = () => {
                 {/* COLUNA DIREITA: MAPA E TABELA DE CLIENTES */}
                 <div className="lg:col-span-3 flex flex-col space-y-4 min-h-0">
                     {/* MAP CONTAINER */}
-                    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-300 flex flex-col ${
+                    <div 
+                        id="roteiro-map-container"
+                        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-300 flex flex-col ${
                         isMapFullscreen 
                             ? 'fixed inset-0 z-[1100] w-screen h-screen rounded-none' 
                             : 'relative isolate rounded-2xl h-96 z-10'
@@ -2684,6 +2771,7 @@ export const AjusteRota: React.FC = () => {
                                 style={{ width: '100%', height: '100%', zIndex: 0 }}
                             >
                                 <MapResizeHandler isFullscreen={isMapFullscreen} />
+                                <MapFlyToHandler target={mapFlyToTarget} markerRefs={markerRefs} />
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
@@ -2786,6 +2874,11 @@ export const AjusteRota: React.FC = () => {
                                     return (
                                         <CircleMarker
                                             key={`marker-${v.Cod_Cliente}-${idx}`}
+                                            ref={(el) => {
+                                                if (el) {
+                                                    markerRefs.current[v.Cod_Cliente] = el;
+                                                }
+                                            }}
                                             center={[v.Lat, v.Long]}
                                             radius={showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : radius)}
                                             pathOptions={{ 
@@ -2827,7 +2920,9 @@ export const AjusteRota: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <h4 className="font-black text-slate-800 dark:text-slate-100">{v.Cod_Cliente} - {v.Razao_Social}</h4>
-                                                        <p className="text-[10px] text-slate-400">{v.Endereco}</p>
+                                                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                            {v.Endereco}{v.Cidade ? ` • ${v.Cidade}` : ''}
+                                                        </p>
                                                     </div>
                                                     <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-2">
                                                         <div>
@@ -3139,7 +3234,7 @@ export const AjusteRota: React.FC = () => {
                                                 title="Clique para ordenar por Endereço"
                                             >
                                                 <div className="flex items-center space-x-1">
-                                                    <span>Endereço</span>
+                                                    <span>Endereço / Cidade</span>
                                                     <span className={sortField === 'Endereco' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Endereco' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
@@ -3209,10 +3304,18 @@ export const AjusteRota: React.FC = () => {
                                                         <tr 
                                                             key={`${v.Cod_Cliente}-${i}`} 
                                                             id={`row-pdv-${v.Cod_Cliente}`}
-                                                            className={`transition-all duration-300 ${
+                                                            onClick={(e) => {
+                                                                const target = e.target as HTMLElement;
+                                                                if (target.closest('select') || target.closest('button') || target.closest('input')) {
+                                                                    return;
+                                                                }
+                                                                handleFocusClientOnMap(v);
+                                                            }}
+                                                            title="Clique na linha para focar este cliente no mapa"
+                                                            className={`transition-all duration-300 cursor-pointer ${
                                                                 isHighlighted 
                                                                     ? 'bg-indigo-100/90 dark:bg-indigo-950/90 ring-2 ring-indigo-500 ring-inset shadow-md font-black' 
-                                                                    : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
+                                                                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/60'
                                                             }`}
                                                         >
                                                             <td className="p-3 text-slate-900 dark:text-white font-mono">
@@ -3237,7 +3340,18 @@ export const AjusteRota: React.FC = () => {
                                                                 </div>
                                                             </td>
                                                             <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
-                                                            <td className="p-3 text-slate-400 dark:text-slate-500 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
+                                                            <td 
+                                                                className="p-3 text-slate-500 dark:text-slate-400 max-w-[240px]" 
+                                                                title={`${v.Endereco || ''}${v.Bairro ? `, ${v.Bairro}` : ''}${v.Cidade ? ` - ${v.Cidade}` : ''}`}
+                                                            >
+                                                                <div className="truncate text-slate-700 dark:text-slate-200 font-medium">{v.Endereco || '-'}</div>
+                                                                {v.Cidade && (
+                                                                    <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate flex items-center gap-1 font-normal mt-0.5">
+                                                                        <span className="text-[11px] text-indigo-500 shrink-0">📍</span>
+                                                                        <span className="truncate">{v.Bairro ? `${v.Bairro} • ` : ''}{v.Cidade}</span>
+                                                                    </div>
+                                                                )}
+                                                            </td>
                                                             <td className="p-3">
                                                                 {teamType === 'vendedores' ? (
                                                                     <div className="flex items-center space-x-1.5">
@@ -3292,13 +3406,30 @@ export const AjusteRota: React.FC = () => {
                                                                 )}
                                                             </td>
                                                             <td className="p-3 text-center">
-                                                                <button
-                                                                    onClick={() => handleExcludeVisit(v.Cod_Cliente)}
-                                                                    className="text-rose-500 hover:text-rose-700 transition"
-                                                                    title="Excluir Visita"
-                                                                >
-                                                                    <TrashIcon className="w-4.5 h-4.5"/>
-                                                                </button>
+                                                                <div className="flex items-center justify-center space-x-1.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleFocusClientOnMap(v);
+                                                                        }}
+                                                                        className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 transition p-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg cursor-pointer"
+                                                                        title="Focar e abrir cliente no mapa"
+                                                                    >
+                                                                        <LocationMarkerIcon className="w-4 h-4"/>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleExcludeVisit(v.Cod_Cliente);
+                                                                        }}
+                                                                        className="text-rose-500 hover:text-rose-700 transition p-1 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg cursor-pointer"
+                                                                        title="Excluir Visita"
+                                                                    >
+                                                                        <TrashIcon className="w-4.5 h-4.5"/>
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     );
