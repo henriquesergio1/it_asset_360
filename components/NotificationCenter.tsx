@@ -8,11 +8,25 @@ import { parseLocalDate } from './recurrenceUtils';
 import { parseLocalDateParts } from '../utils/rhValidation';
 import { hasPermission } from '../utils/rbac';
 
-export const NotificationCenter: React.FC = () => {
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: 'expediente' | 'stock' | 'task' | 'rh-alert';
+  module: 'TI' | 'RH' | 'FUEL';
+  timestamp: Date;
+}
+
+interface NotificationCenterProps {
+  currentModule?: 'TI' | 'RH' | 'FUEL';
+}
+
+export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentModule }) => {
   const { tasks, consumables, expedienteAlerts, users, rhCollaborators, rhTerms } = useData();
   const { user, isAdmin } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownTab, setDropdownTab] = useState<'current' | 'all'>('current');
   
   // Preferências locais salvas no localStorage
   const [disabledTaskAlerts, setDisabledTaskAlerts] = useState<string[]>([]);
@@ -23,13 +37,11 @@ export const NotificationCenter: React.FC = () => {
   const notifiedIdsRef = useRef<Set<string>>(new Set<string>());
   const isFirstRenderRef = useRef<boolean>(true);
   
-  // Toasts ativos na UI
-  const [activeToasts, setActiveToasts] = useState<Array<{
-    id: string;
-    title: string;
-    message: string;
-    type: 'expediente' | 'stock' | 'task' | 'rh-alert';
-  }>>([]);
+  // Toasts ativos na UI e controle de fila anti-bombardeio
+  const [activeToasts, setActiveToasts] = useState<NotificationItem[]>([]);
+  const toastQueueRef = useRef<NotificationItem[]>([]);
+  const isDispatchingRef = useRef<boolean>(false);
+  const dispatchTimerRef = useRef<any>(null);
 
   // Recarregar preferências locais
   const loadPreferences = () => {
@@ -101,6 +113,7 @@ export const NotificationCenter: React.FC = () => {
       title: 'Expediente Incorreto (ERP)',
       message: `Colaborador ${alert.nome} está marcado como fora do expediente no ERP.`,
       type: 'expediente' as const,
+      module: 'TI' as const,
       timestamp: new Date()
     }));
   }, [expedienteAlerts, users]);
@@ -117,6 +130,7 @@ export const NotificationCenter: React.FC = () => {
       title: 'Estoque Crítico',
       message: `Insumo "${c.name}" atingiu limite crítico (${c.currentStock} ${c.unit} restantes).`,
       type: 'stock' as const,
+      module: 'TI' as const,
       timestamp: new Date()
     }));
   }, [consumables, disabledConsumableAlerts]);
@@ -134,6 +148,7 @@ export const NotificationCenter: React.FC = () => {
       title: t.isOverdue ? 'Tarefa Atrasada' : 'Tarefa Próxima do Prazo',
       message: `A tarefa "${t.title}" requer atenção. Prazo original: ${t.dueDate ? parseLocalDate(t.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo'}`,
       type: 'task' as const,
+      module: 'TI' as const,
       timestamp: new Date()
     }));
   }, [tasks, disabledTaskAlerts]);
@@ -155,7 +170,8 @@ export const NotificationCenter: React.FC = () => {
       id: `rh-birthday-${c.id}`,
       title: 'Aniversariante do Dia 🎂',
       message: `Hoje é aniversário de ${c.fullName}! Parabéns!`,
-      type: 'rh-alert' as any,
+      type: 'rh-alert' as const,
+      module: 'RH' as const,
       timestamp: new Date()
     }));
   }, [rhCollaborators]);
@@ -163,7 +179,7 @@ export const NotificationCenter: React.FC = () => {
   // 2. Alertas de Férias (Admissão próxima de completar 11 meses ou múltiplos de 12 meses + 11)
   const activeRhHolidayNotifications = useMemo(() => {
     if (!rhCollaborators) return [];
-    const alerts: any[] = [];
+    const alerts: NotificationItem[] = [];
     rhCollaborators.forEach(c => {
       if (!c.hireDate || c.status === 'Demitido') return;
       const hire = new Date(c.hireDate);
@@ -178,7 +194,8 @@ export const NotificationCenter: React.FC = () => {
           id: `rh-holiday-${c.id}-${totalMonths}`,
           title: 'Período de Férias Próximo 📅',
           message: `Colaborador ${c.fullName} atingiu ${totalMonths} meses de empresa. Férias próximas!`,
-          type: 'rh-alert' as any,
+          type: 'rh-alert' as const,
+          module: 'RH' as const,
           timestamp: new Date()
         });
       }
@@ -189,7 +206,7 @@ export const NotificationCenter: React.FC = () => {
   // 3. Vencimentos de Documentos e CNH
   const activeRhDocNotifications = useMemo(() => {
     if (!rhCollaborators) return [];
-    const alerts: any[] = [];
+    const alerts: NotificationItem[] = [];
     const now = new Date();
     now.setHours(0,0,0,0);
 
@@ -207,7 +224,8 @@ export const NotificationCenter: React.FC = () => {
               id: `rh-cnh-${c.id}`,
               title: 'CNH Próxima do Vencimento ⚠️',
               message: `A CNH do colaborador ${c.fullName} vence em ${days} dias (${new Date(c.cnhExpiration).toLocaleDateString('pt-BR')}).`,
-              type: 'rh-alert' as any,
+              type: 'rh-alert' as const,
+              module: 'RH' as const,
               timestamp: new Date()
             });
           }
@@ -231,7 +249,8 @@ export const NotificationCenter: React.FC = () => {
             id: `rh-exp45-${c.id}`,
             title: 'Contrato de Experiência (45d) ⚠️',
             message: `O contrato de 45 dias do colaborador ${c.fullName} vence em ${days45} dias.`,
-            type: 'rh-alert' as any,
+            type: 'rh-alert' as const,
+            module: 'RH' as const,
             timestamp: new Date()
           });
         } else if (days90 >= 0 && days90 <= 15) {
@@ -239,7 +258,8 @@ export const NotificationCenter: React.FC = () => {
             id: `rh-exp90-${c.id}`,
             title: 'Contrato de Experiência (90d) ⚠️',
             message: `O contrato de 90 dias do colaborador ${c.fullName} vence em ${days90} dias.`,
-            type: 'rh-alert' as any,
+            type: 'rh-alert' as const,
+            module: 'RH' as const,
             timestamp: new Date()
           });
         }
@@ -257,17 +277,23 @@ export const NotificationCenter: React.FC = () => {
         id: `rh-term-approval-${t.id}`,
         title: 'Validação de Assinatura 📝',
         message: `O termo ${t.id} de ${colab?.fullName || 'Colaborador'} aguarda validação.`,
-        type: 'rh-alert' as any,
+        type: 'rh-alert' as const,
+        module: 'RH' as const,
         timestamp: new Date()
       };
     });
   }, [rhTerms, rhCollaborators]);
 
-  const isRhActive = useMemo(() => {
-    if (location.pathname.startsWith('/rh')) return true;
+  const activeNavModule = useMemo<'TI' | 'RH' | 'FUEL'>(() => {
+    if (currentModule) return currentModule;
+    if (location.pathname.startsWith('/rh')) return 'RH';
+    if (location.pathname.startsWith('/fuel')) return 'FUEL';
     const stored = localStorage.getItem('current_module');
-    return stored === 'RH';
-  }, [location.pathname]);
+    if (stored === 'RH' || stored === 'FUEL' || stored === 'TI') return stored;
+    return 'TI';
+  }, [currentModule, location.pathname]);
+
+  const isRhActive = activeNavModule === 'RH';
 
   const canReceiveRhNotifications = useMemo(() => {
     if (!user) return false;
@@ -307,8 +333,8 @@ export const NotificationCenter: React.FC = () => {
   }, [user, isAdmin]);
 
   // Juntar todas as notificações ativas respeitando estritamente o perfil RBAC do usuário
-  const allNotifications = useMemo(() => {
-    const list: Array<any> = [];
+  const allNotifications = useMemo<NotificationItem[]>(() => {
+    const list: NotificationItem[] = [];
 
     if (canReceiveRhNotifications) {
       list.push(
@@ -340,7 +366,85 @@ export const NotificationCenter: React.FC = () => {
     activeTaskNotifications
   ]);
 
-  // Algoritmo de envio de notificações novas (desktop + app popup Toast)
+  // Notificações pertencentes ao módulo onde o usuário está navegando
+  const activeModuleNotifications = useMemo(() => {
+    return allNotifications.filter(n => n.module === activeNavModule);
+  }, [allNotifications, activeNavModule]);
+
+  // Notificações exibidas na lista do sino conforme aba
+  const displayedNotifications = useMemo(() => {
+    if (dropdownTab === 'current') {
+      return activeModuleNotifications;
+    }
+    return allNotifications;
+  }, [allNotifications, activeModuleNotifications, dropdownTab]);
+
+  // Constantes de controle da fila anti-bombardeio
+  const MAX_VISIBLE_TOASTS = 3;
+  const DISPATCH_INTERVAL_MS = 900;
+  const TOAST_DURATION_MS = 7000;
+
+  // Processador temporizado da fila de toasts (escalonado e suave)
+  const processNextToast = () => {
+    if (toastQueueRef.current.length === 0) {
+      isDispatchingRef.current = false;
+      return;
+    }
+
+    setActiveToasts(currentVisible => {
+      // Se já atingiu o teto na tela, aguarda um ser dispensado antes de abrir outro
+      if (currentVisible.length >= MAX_VISIBLE_TOASTS) {
+        if (dispatchTimerRef.current) clearTimeout(dispatchTimerRef.current);
+        dispatchTimerRef.current = setTimeout(processNextToast, 1200);
+        return currentVisible;
+      }
+
+      const nextToast = toastQueueRef.current.shift();
+      if (!nextToast) {
+        isDispatchingRef.current = false;
+        return currentVisible;
+      }
+
+      // Disparar notificação nativa do Browser se permitida
+      if (browserPermission === 'granted') {
+        try {
+          new Notification(nextToast.title, {
+            body: nextToast.message,
+            tag: nextToast.id,
+            requireInteraction: false
+          });
+        } catch (e) {
+          console.warn('Falha ao disparar Notification API', e);
+        }
+      }
+
+      // Autodispensar este toast específico após 7 segundos
+      setTimeout(() => {
+        setActiveToasts(prev => prev.filter(t => t.id !== nextToast.id));
+      }, TOAST_DURATION_MS);
+
+      // Agenda o próximo item da fila com delay suave de 900ms
+      if (dispatchTimerRef.current) clearTimeout(dispatchTimerRef.current);
+      dispatchTimerRef.current = setTimeout(processNextToast, DISPATCH_INTERVAL_MS);
+
+      return [...currentVisible, nextToast];
+    });
+  };
+
+  // Ao trocar de módulo na navegação, limpa imediatamente os popups e a fila do módulo anterior
+  useEffect(() => {
+    setActiveToasts(prev => prev.filter(t => t.module === activeNavModule));
+    toastQueueRef.current = toastQueueRef.current.filter(t => t.module === activeNavModule);
+  }, [activeNavModule]);
+
+  // Limpeza de timer no unmount
+  useEffect(() => {
+    return () => {
+      if (dispatchTimerRef.current) clearTimeout(dispatchTimerRef.current);
+    };
+  }, []);
+
+  // Algoritmo de despacho inteligente: filtra por módulo ativo e escalona na fila com delay
   useEffect(() => {
     if (allNotifications.length === 0) {
       if (isFirstRenderRef.current) {
@@ -350,7 +454,7 @@ export const NotificationCenter: React.FC = () => {
     }
 
     if (isFirstRenderRef.current) {
-      // Popula o cache silenciosamente na inicialização para evitar popup de Toasts antigos
+      // Popula silenciosamente o cache inicial com tudo o que já existe para evitar avalanche no login
       allNotifications.forEach(notif => {
         notifiedIdsRef.current.add(notif.id);
       });
@@ -358,40 +462,28 @@ export const NotificationCenter: React.FC = () => {
       return;
     }
 
-    allNotifications.forEach(notif => {
-      // Se não notificamos esta na sessão ainda
-      if (!notifiedIdsRef.current.has(notif.id)) {
+    // Identificar novas notificações ainda não notificadas nesta sessão
+    const newAlerts = allNotifications.filter(n => !notifiedIdsRef.current.has(n.id));
+
+    if (newAlerts.length > 0) {
+      newAlerts.forEach(notif => {
         notifiedIdsRef.current.add(notif.id);
 
-        // Enviar notificação nativa do Browser
-        if (browserPermission === 'granted') {
-          try {
-            new Notification(notif.title, {
-              body: notif.message,
-              tag: notif.id,
-              requireInteraction: false
-            });
-          } catch (e) {
-            console.warn('Falha ao disparar Notification API (comum dentro de iFrames)', e);
-          }
+        // DISPARAR POPUP TOAST APENAS SE A NOTIFICAÇÃO FOR DO MÓDULO ONDE O USUÁRIO ESTÁ NAVEGANDO!
+        // No Fuel360, não enfileira popups de RH nem de TI!
+        if (notif.module === activeNavModule) {
+          toastQueueRef.current.push(notif);
         }
+      });
 
-        // Adicionar à lista de Toasts flutuantes locais do app
-        setActiveToasts(prev => [...prev, {
-          id: notif.id,
-          title: notif.title,
-          message: notif.message,
-          type: notif.type
-        }]);
-
-        // Autodispensar toast flutuante após 8 segundos
-        setTimeout(() => {
-          setActiveToasts(prev => prev.filter(t => t.id !== notif.id));
-        }, 8000);
+      // Se a fila possui itens e não está processando, inicia o envio com delay
+      if (!isDispatchingRef.current && toastQueueRef.current.length > 0) {
+        isDispatchingRef.current = true;
+        processNextToast();
       }
-    });
+    }
 
-    // Limpar IDs antigos que sumiram das notificações ativas
+    // Limpar IDs antigos que deixaram de ser alertas ativos
     const activeIds = new Set(allNotifications.map(n => n.id));
     notifiedIdsRef.current.forEach(id => {
       if (!activeIds.has(id)) {
@@ -399,10 +491,17 @@ export const NotificationCenter: React.FC = () => {
       }
     });
 
-  }, [allNotifications, browserPermission]);
+  }, [allNotifications, activeNavModule, browserPermission]);
 
   const dismissToast = (id: string) => {
     setActiveToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const dismissAllToasts = () => {
+    setActiveToasts([]);
+    toastQueueRef.current = [];
+    if (dispatchTimerRef.current) clearTimeout(dispatchTimerRef.current);
+    isDispatchingRef.current = false;
   };
 
   return (
@@ -439,7 +538,7 @@ export const NotificationCenter: React.FC = () => {
               className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl z-50 overflow-hidden"
             >
               {/* Header Central */}
-              <div className="p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200">Central de Alertas</h3>
                   <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">Sincronizado em tempo real</p>
@@ -451,8 +550,40 @@ export const NotificationCenter: React.FC = () => {
                 )}
               </div>
 
+              {/* Seletor de Abas: Módulo Ativo vs Todos */}
+              <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-900/60 p-1.5 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDropdownTab('current')}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    dropdownTab === 'current'
+                      ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>Módulo {activeNavModule}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${dropdownTab === 'current' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-black' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                    {activeModuleNotifications.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDropdownTab('all')}
+                  className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    dropdownTab === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-700'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>Todos</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] ${dropdownTab === 'all' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-black' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                    {allNotifications.length}
+                  </span>
+                </button>
+              </div>
+
               {/* Botão de configuração de notificação por browser */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-900/20 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between gap-2">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/20 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Shield size={14} className={browserPermission === 'granted' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'} />
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Notificações no Desktop</span>
@@ -473,20 +604,22 @@ export const NotificationCenter: React.FC = () => {
 
               {/* Lista */}
               <div className="max-h-96 overflow-y-auto custom-scrollbar divide-y divide-slate-800/40">
-                {allNotifications.length === 0 ? (
+                {displayedNotifications.length === 0 ? (
                   <div className="p-10 text-center flex flex-col items-center justify-center space-y-3 opacity-50">
                     <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-700">
                       <BellOff size={24} className="text-slate-600" />
                     </div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Sem alertas ativos</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        {dropdownTab === 'current' ? `Sem alertas para o Módulo ${activeNavModule}` : 'Sem alertas ativos'}
+                      </p>
                       <p className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter mt-1">
-                        {isRhActive ? 'Sua equipe está sob controle!' : 'Sua infraestrutura está sob controle!'}
+                        {isRhActive ? 'Sua equipe está sob controle!' : 'Sua operação está sob controle!'}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  allNotifications.map(notif => (
+                  displayedNotifications.map(notif => (
                     <div key={notif.id} className="p-4 hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-all flex gap-3">
                       <div className="shrink-0 mt-0.5">
                         {notif.type === 'expediente' && (
@@ -514,9 +647,14 @@ export const NotificationCenter: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-200 truncate">
-                            {notif.title}
-                          </span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 shrink-0">
+                              {notif.module}
+                            </span>
+                            <span className="text-[11px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-200 truncate">
+                              {notif.title}
+                            </span>
+                          </div>
                         </div>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 font-bold leading-normal">
                           {notif.message}
@@ -531,8 +669,19 @@ export const NotificationCenter: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Toasts / Popups flutuantes internos no canto inferior direito do App */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
+      {/* Toasts / Popups flutuantes internos no canto inferior direito do App com fila suave */}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full">
+        {activeToasts.length >= 2 && (
+          <div className="flex justify-end pointer-events-auto">
+            <button 
+              type="button"
+              onClick={dismissAllToasts}
+              className="text-[10px] font-black uppercase tracking-wider bg-slate-900/90 dark:bg-slate-800/95 text-slate-300 hover:text-white px-3 py-1 rounded-full shadow-lg border border-slate-700/60 backdrop-blur transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+            >
+              <X size={12} /> Dispensar Todos ({activeToasts.length})
+            </button>
+          </div>
+        )}
         <AnimatePresence>
           {activeToasts.map(toast => (
             <motion.div
@@ -556,12 +705,18 @@ export const NotificationCenter: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                    {toast.title}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 shrink-0">
+                      {toast.module}
+                    </span>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 truncate">
+                      {toast.title}
+                    </span>
+                  </div>
                   <button 
                     onClick={() => dismissToast(toast.id)}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 transition-colors"
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                    title="Fechar notificação"
                   >
                     <X size={12} />
                   </button>

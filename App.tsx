@@ -345,7 +345,7 @@ const Layout = ({ children }: { children?: React.ReactNode }) => {
               v{APP_VERSION}
             </div>
             <ThemeToggle />
-            <NotificationCenter />
+            <NotificationCenter currentModule={currentModule} />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-900 dark:text-white">{user?.name}</p>
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400/80">{user?.Nome_Perfil || (user?.role === 'ADMIN' ? 'Administrador TI' : 'Operador Suporte')}</p>

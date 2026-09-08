@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.135.0',
+    date: 'Hoje',
+    title: 'Notificações: Roteamento Contextual por Módulo, Blindagem RBAC e Fila Temporizada Anti-Avalanche',
+    changes: [
+      'Notificações Contextuais por Módulo Ativo: Popups flutuantes (toasts) são direcionados estritamente para o módulo em que o colaborador está navegando (ex.: no Fuel360 não são disparados alertas de RH ou TI).',
+      'Blindagem de Permissões RBAC: Usuários com acesso exclusivo a um módulo nunca recebem ou acumulam alertas de outros módulos.',
+      'Fila com Delay Anti-Avalanche: Eliminação do bombardeio de popups ao carregar o sistema, limitando a 3 toasts simultâneos com intervalo suave de 900ms entre aparições.',
+      'Ações Rápidas de Fechamento: Botão "Dispensar Todos" para limpar a pilha de alertas e temporizador automático individual de 7 segundos.'
+    ]
+  },
+  {
     version: '3.134.0',
     date: 'Hoje',
     title: 'Fuel360: Alternador Rápido de Quinzena no Mapa com Animação e Heatmap de Visitas',
