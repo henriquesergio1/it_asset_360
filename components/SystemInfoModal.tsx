@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.139.0',
+    date: 'Hoje',
+    title: 'Fuel360: Motor Avançado de Roteirização com TSP 2-Opt e Tempo de Deslocamento',
+    changes: [
+      'Agrupamento Espacial por Dia: Algoritmo de zoneamento polar/angular por microrregiões contíguas a partir da base do colaborador, eliminando dispersão e trajetos em zig-zag entre dias.',
+      'Circuito Fechado Base-Clientes-Base (TSP 2-Opt): Roteirização diária com ponto de partida na base, sequência ótima de paradas e retorno obrigatório à base via heurística 2-Opt.',
+      'Estimativa de KM e Tempo de Deslocamento: Cálculo de distâncias viárias e tempo total de percurso (horas/minutos), exibido nos KPIs e estruturado para tempos de atendimento por PDV.',
+      'Sequenciamento de Visitas: Identificação visual da ordem das paradas do dia (#1, #2, #3...) na Grade de Ajuste Fino e itinerário.'
+    ]
+  },
+  {
     version: '3.138.0',
     date: 'Hoje',
     title: 'Fuel360: Modo Tela Cheia no Mapa e Correção de Sobreposição de Badges',

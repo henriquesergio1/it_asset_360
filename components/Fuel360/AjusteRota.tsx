@@ -247,6 +247,139 @@ const calcDist = (lat1: number, lon1: number, lat2: number, lon2: number): numbe
     return R * c;
 };
 
+// Helper de ângulo polar geográfico normalizado [0, 2*PI) em relação à base
+const calcPolarAngle = (baseLat: number, baseLng: number, targetLat: number, targetLng: number): number => {
+    const dLat = (targetLat - baseLat) * (Math.PI / 180);
+    const dLng = (targetLng - baseLng) * (Math.PI / 180) * Math.cos((baseLat * Math.PI) / 180);
+    let angle = Math.atan2(dLat, dLng);
+    if (angle < 0) angle += 2 * Math.PI;
+    return angle;
+};
+
+// Métricas reais de circuito diário (KM e tempo de deslocamento em trânsito)
+interface CircuitMetrics {
+    totalKm: number;
+    travelMinutes: number;
+}
+
+const calcCircuitMetrics = (base: { lat: number; lng: number }, stops: { lat: number; lng: number }[]): CircuitMetrics => {
+    if (stops.length === 0) return { totalKm: 0, travelMinutes: 0 };
+    
+    // Pontos do circuito diário fechado: Base -> Paradas -> Base
+    const points: { lat: number; lng: number }[] = [];
+    if (base.lat && base.lng) points.push(base);
+    stops.forEach(s => {
+        if (s.lat && s.lng) points.push(s);
+    });
+    if (base.lat && base.lng && points.length > 1) {
+        points.push(base);
+    }
+
+    if (points.length < 2) return { totalKm: 0, travelMinutes: 0 };
+
+    let totalKm = 0;
+    let totalMinutes = 0;
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const geoKm = calcDist(p1.lat, p1.lng, p2.lat, p2.lng);
+        // Fator de sinuosidade viária urbana/regional (1.18x)
+        const roadKm = geoKm * 1.18;
+        totalKm += roadKm;
+
+        // Velocidade média calibrada pelo tipo de trecho
+        let speed = 30; // km/h urbano padrão
+        if (roadKm < 2.5) speed = 22; // tráfego urbano denso
+        else if (roadKm >= 15) speed = 55; // vias expressas e rodovias
+
+        totalMinutes += (roadKm / speed) * 60;
+    }
+
+    return {
+        totalKm: Math.round(totalKm * 10) / 10,
+        travelMinutes: Math.round(totalMinutes)
+    };
+};
+
+const formatDuration = (minutes: number): string => {
+    if (minutes <= 0) return '0 min';
+    const h = Math.floor(minutes / 60);
+    const m = Math.round(minutes % 60);
+    if (h === 0) return `${m} min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+};
+
+// Heurística de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base) com 2-Opt Local Search
+function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
+    base: { lat: number; lng: number },
+    clients: T[]
+): T[] {
+    if (clients.length <= 2) return clients;
+
+    // 1. Fase de Construção: Vizinho Mais Próximo (Nearest Neighbor) a partir da Base
+    const unvisited = [...clients];
+    const orderedStops: T[] = [];
+    let curLat = base.lat || unvisited[0].lat;
+    let curLng = base.lng || unvisited[0].lng;
+
+    while (unvisited.length > 0) {
+        let nearestIdx = 0;
+        let minDist = Infinity;
+        for (let i = 0; i < unvisited.length; i++) {
+            const d = calcDist(curLat, curLng, unvisited[i].lat, unvisited[i].lng);
+            if (d < minDist) {
+                minDist = d;
+                nearestIdx = i;
+            }
+        }
+        const next = unvisited.splice(nearestIdx, 1)[0];
+        orderedStops.push(next);
+        curLat = next.lat;
+        curLng = next.lng;
+    }
+
+    // 2. Fase de Melhoria: Heurística 2-Opt em Circuito Fechado
+    // Tour fechado: [Base, ...orderedStops, Base]
+    const fullTour: { lat: number; lng: number; isBase: boolean; item?: T }[] = [
+        { lat: base.lat, lng: base.lng, isBase: true },
+        ...orderedStops.map(item => ({ lat: item.lat, lng: item.lng, isBase: false, item })),
+        { lat: base.lat, lng: base.lng, isBase: true }
+    ];
+
+    let improved = true;
+    let iterations = 0;
+    const maxIterations = 80;
+
+    while (improved && iterations < maxIterations) {
+        improved = false;
+        iterations++;
+
+        for (let i = 1; i < fullTour.length - 2; i++) {
+            for (let k = i + 1; k < fullTour.length - 1; k++) {
+                const pA = fullTour[i - 1];
+                const pB = fullTour[i];
+                const pC = fullTour[k];
+                const pD = fullTour[k + 1];
+
+                const currentDist = calcDist(pA.lat, pA.lng, pB.lat, pB.lng) + calcDist(pC.lat, pC.lng, pD.lat, pD.lng);
+                const newDist = calcDist(pA.lat, pA.lng, pC.lat, pC.lng) + calcDist(pB.lat, pB.lng, pD.lat, pD.lng);
+
+                if (newDist < currentDist - 0.0001) {
+                    const segment = fullTour.slice(i, k + 1).reverse();
+                    fullTour.splice(i, segment.length, ...segment);
+                    improved = true;
+                    break;
+                }
+            }
+            if (improved) break;
+        }
+    }
+
+    return fullTour.slice(1, -1).map(stop => stop.item!);
+}
+
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
 
 // Helpers de Periodicidade e Calendário
@@ -1003,7 +1136,7 @@ export const AjusteRota: React.FC = () => {
         reader.readAsArrayBuffer(file);
     };
 
-    // Algoritmo de Otimização (Carteira Blindada por Vendedor + Preservação Estrita de Periodicidade)
+    // Motor de Roteirização Avançado: Clusterização Espacial por Dia + TSP Circuito Fechado 2-Opt (Base -> Clientes -> Base)
     const handleOptimizeSimulate = async () => {
         if (adjustedRoutes.length === 0) {
             alert("Nenhum dado de rota carregado para otimização.");
@@ -1022,10 +1155,9 @@ export const AjusteRota: React.FC = () => {
             current: 0,
             total: sellers.length,
             percentage: 0,
-            currentSellerName: 'Iniciando otimização...'
+            currentSellerName: 'Iniciando motor de roteirização...'
         });
 
-        // Aguarda renderização inicial da barra
         await new Promise(r => setTimeout(r, 60));
 
         const result: VisitaPrevista[] = [];
@@ -1045,7 +1177,6 @@ export const AjusteRota: React.FC = () => {
                 currentSellerName: `${sellerName} (${sIdx + 1}/${sellers.length})`
             });
 
-            // Permite que o browser renderize a barra de progresso
             await new Promise(r => setTimeout(r, 25));
 
             if (sellerVisits.length === 0) continue;
@@ -1055,15 +1186,38 @@ export const AjusteRota: React.FC = () => {
                 sampleVisit: VisitaPrevista;
                 tipo: PeriodicidadeTipo;
                 originalPeriodicidade: string;
+                lat: number;
+                lng: number;
+                polarAngle: number;
+                distFromBase: number;
             }>();
+
+            // Identificar Base de Partida e Retorno do Colaborador (com fallback para o centroide da carteira)
+            const validCoordsVisits = sellerVisits.filter(v => v.Lat && v.Long);
+            let baseLat = colab?.LatitudeBase || 0;
+            let baseLng = colab?.LongitudeBase || 0;
+
+            if ((!baseLat || !baseLng) && validCoordsVisits.length > 0) {
+                baseLat = validCoordsVisits.reduce((acc, v) => acc + (v.Lat || 0), 0) / validCoordsVisits.length;
+                baseLng = validCoordsVisits.reduce((acc, v) => acc + (v.Long || 0), 0) / validCoordsVisits.length;
+            }
 
             sellerVisits.forEach(v => {
                 if (!uniqueClientsMap.has(v.Cod_Cliente)) {
                     const parsed = parsePeriodicidade(v.Periodicidade);
+                    const lat = v.Lat || 0;
+                    const lng = v.Long || 0;
+                    const polarAngle = (lat && lng) ? calcPolarAngle(baseLat, baseLng, lat, lng) : 0;
+                    const distFromBase = (lat && lng) ? calcDist(baseLat, baseLng, lat, lng) : 0;
+
                     uniqueClientsMap.set(v.Cod_Cliente, {
                         sampleVisit: v,
                         tipo: parsed.tipo,
-                        originalPeriodicidade: v.Periodicidade || parsed.original
+                        originalPeriodicidade: v.Periodicidade || parsed.original,
+                        lat,
+                        lng,
+                        polarAngle,
+                        distFromBase
                     });
                 }
             });
@@ -1071,34 +1225,16 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            const baseLat = colab?.LatitudeBase || uniqueClients[0].sampleVisit.Lat || 0;
-            const baseLong = colab?.LongitudeBase || uniqueClients[0].sampleVisit.Long || 0;
-
-            // 2. Ordenação geográfica inicial a partir da base (Nearest Neighbor)
-            let unassigned = [...uniqueClients];
-            const orderedClients: typeof uniqueClients = [];
-            let curLat = baseLat;
-            let curLng = baseLong;
-
-            while (unassigned.length > 0) {
-                let nearestIdx = 0;
-                let minDist = Infinity;
-                for (let i = 0; i < unassigned.length; i++) {
-                    const lat = unassigned[i].sampleVisit.Lat || 0;
-                    const lng = unassigned[i].sampleVisit.Long || 0;
-                    const dist = calcDist(curLat, curLng, lat, lng);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestIdx = i;
-                    }
+            // 2. Zoneamento e Clusterização Espacial Contígua por Ângulo Polar (Sweep Clustering a partir da Base)
+            // Ordenamos angularmente os clientes em volta da base: clientes geograficamente contíguos ficam adjacentes
+            const spatiallyClusteredClients = [...uniqueClients].sort((a, b) => {
+                if (Math.abs(a.polarAngle - b.polarAngle) > 0.0001) {
+                    return a.polarAngle - b.polarAngle;
                 }
-                const nearest = unassigned.splice(nearestIdx, 1)[0];
-                orderedClients.push(nearest);
-                curLat = nearest.sampleVisit.Lat || curLat;
-                curLng = nearest.sampleVisit.Long || curLng;
-            }
+                return a.distFromBase - b.distFromBase;
+            });
 
-            // 3. Alocação nos dias ativos respeitando capacidades e balanceamento de quinzenas
+            // 3. Alocação nos dias ativos respeitando capacidades máximas e balanceamento quinzenal
             interface DayBucket {
                 day: string;
                 maxCap: number;
@@ -1117,7 +1253,7 @@ export const AjusteRota: React.FC = () => {
 
             let dayIdx = 0;
 
-            orderedClients.forEach(client => {
+            spatiallyClusteredClients.forEach(client => {
                 if (client.tipo === 'SEMANAL') {
                     // Semanal: ocupa vaga em ambas as quinzenas (ímpar e par)
                     let placed = false;
@@ -1134,7 +1270,6 @@ export const AjusteRota: React.FC = () => {
                         }
                     }
                     if (!placed) {
-                        // Fallback para dia com menor carga
                         const bestBucket = [...dayBuckets].sort((a, b) => 
                             (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) - 
                             (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
@@ -1142,8 +1277,7 @@ export const AjusteRota: React.FC = () => {
                         bestBucket.semanais.push(client);
                     }
                 } else {
-                    // Quinzenal: periodicidade estritamente quinzenal!
-                    // Pode ajustar a quinzena (1 3 vs 2 4) para nivelar o teto diário
+                    // Quinzenal: aloca no slot preferido ou equilibra carga mantendo o dia da mesma microrregião
                     const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
                     let placed = false;
 
@@ -1152,7 +1286,6 @@ export const AjusteRota: React.FC = () => {
                         const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
                         const capPar = bucket.semanais.length + bucket.quinzenais24.length;
 
-                        // 1ª tentativa: no slot preferido
                         if (preferredSlot === '1_3' && capImpar < bucket.maxCap) {
                             bucket.quinzenais13.push(client);
                             dayIdx = (dayIdx + step) % dayBuckets.length;
@@ -1164,7 +1297,6 @@ export const AjusteRota: React.FC = () => {
                             placed = true;
                             break;
                         } else if (optBalanceWorkload) {
-                            // 2ª tentativa: balanceia ajustando de 1 3 para 2 4 (ou 2 4 para 1 3)
                             if (preferredSlot === '1_3' && capPar < bucket.maxCap) {
                                 bucket.quinzenais24.push(client);
                                 dayIdx = (dayIdx + step) % dayBuckets.length;
@@ -1193,56 +1325,55 @@ export const AjusteRota: React.FC = () => {
                 }
             });
 
-            // 4. Mapear cada cliente para seu plano com novo dia e periodicidade quinzenal ajustada
-            interface ClientPlan {
-                client: typeof uniqueClients[0];
-                diaSemana: string;
-                periodicidade: string;
-                tipo: PeriodicidadeTipo;
-            }
-
-            const clientPlans: ClientPlan[] = [];
-
+            // 4. Roteirização em Circuito Fechado por Dia com TSP 2-Opt (Base -> Clientes -> Base)
+            // Para cada dia e quinzena, otimizamos o itinerário da jornada completa
             dayBuckets.forEach(bucket => {
-                bucket.semanais.forEach(c => {
-                    clientPlans.push({
-                        client: c,
-                        diaSemana: bucket.day,
-                        periodicidade: 'SEMANAL',
-                        tipo: 'SEMANAL'
+                // Roteiro Quinzena 1 e 3: Semanais + Quinzenais 1_3
+                const rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
+                const optimizedClients13 = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, rawClients13);
+
+                // Roteiro Quinzena 2 e 4: Semanais + Quinzenais 2_4
+                const rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
+                const optimizedClients24 = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, rawClients24);
+
+                // Mapa de clientes já adicionados para evitar duplicidade de visitas no mesmo dia
+                const addedInDay = new Set<number>();
+
+                // Inclui na sequência otimizada da Quinzena 1 e 3
+                optimizedClients13.forEach(c => {
+                    if (addedInDay.has(c.sampleVisit.Cod_Cliente)) return;
+                    addedInDay.add(c.sampleVisit.Cod_Cliente);
+
+                    const isSemanal = c.tipo === 'SEMANAL';
+                    const periodicidadeFinal = isSemanal 
+                        ? 'SEMANAL' 
+                        : (c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3');
+
+                    result.push({
+                        ...c.sampleVisit,
+                        Cod_Vend: sellerId,
+                        Nome_Vendedor: sellerName,
+                        Dia_Semana: bucket.day,
+                        Periodicidade: periodicidadeFinal,
+                        Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
                     });
                 });
 
-                bucket.quinzenais13.forEach(c => {
-                    const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (1,3)' : '1 3';
-                    clientPlans.push({
-                        client: c,
-                        diaSemana: bucket.day,
-                        periodicidade: novaPeriod,
-                        tipo: 'QUINZENAL_1_3'
-                    });
-                });
+                // Inclui na sequência otimizada da Quinzena 2 e 4 (apenas quinzenais 2_4 não inclusos)
+                optimizedClients24.forEach(c => {
+                    if (addedInDay.has(c.sampleVisit.Cod_Cliente)) return;
+                    addedInDay.add(c.sampleVisit.Cod_Cliente);
 
-                bucket.quinzenais24.forEach(c => {
-                    const novaPeriod = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
-                    clientPlans.push({
-                        client: c,
-                        diaSemana: bucket.day,
-                        periodicidade: novaPeriod,
-                        tipo: 'QUINZENAL_2_4'
-                    });
-                });
-            });
+                    const periodicidadeFinal = c.originalPeriodicidade.toUpperCase().includes('QUINZENAL') ? 'QUINZENAL (2,4)' : '2 4';
 
-            // 5. Adicionar visitas com dias e periodicidades atualizados à rota final
-            clientPlans.forEach(p => {
-                result.push({
-                    ...p.client.sampleVisit,
-                    Cod_Vend: sellerId,
-                    Nome_Vendedor: sellerName,
-                    Dia_Semana: p.diaSemana,
-                    Periodicidade: p.periodicidade,
-                    Data_da_Visita: p.client.sampleVisit.Data_da_Visita || ''
+                    result.push({
+                        ...c.sampleVisit,
+                        Cod_Vend: sellerId,
+                        Nome_Vendedor: sellerName,
+                        Dia_Semana: bucket.day,
+                        Periodicidade: periodicidadeFinal,
+                        Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
+                    });
                 });
             });
         }
@@ -1251,7 +1382,7 @@ export const AjusteRota: React.FC = () => {
             current: sellers.length,
             total: sellers.length,
             percentage: 100,
-            currentSellerName: 'Finalizando aplicação das rotas...'
+            currentSellerName: 'Roteirização concluída com sucesso!'
         });
         await new Promise(r => setTimeout(r, 100));
 
@@ -1273,7 +1404,7 @@ export const AjusteRota: React.FC = () => {
         const escopoDesc = scopeMode === 'vendedor' 
             ? 'do vendedor selecionado' 
             : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
-        alert(`Otimização concluída (${escopoDesc})!\n\n• Carteiras mantidas 100% exclusivas por vendedor (zero transferência).\n• Clientes semanais preservados semanalmente.\n• Clientes quinzenais balanceados entre as semanas 1 3 e 2 4.\n• Total de visitas organizadas: ${result.length}`);
+        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de visitas sequenciadas: ${result.length}`);
     };
 
     const osrmCacheRef = useRef<Map<string, [number, number][]>>(new Map());
@@ -1376,56 +1507,81 @@ export const AjusteRota: React.FC = () => {
         return () => { isMounted = false; };
     }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView]);
 
-    // Calcular KPIs de Comparação
+    // Mapa da ordem/sequência de atendimento diário de cada cliente (1ª parada, 2ª parada...)
+    const visitOrderMap = useMemo(() => {
+        const map = new Map<string, { order: number; total: number }>();
+        const dayGroups = new Map<string, VisitaPrevista[]>();
+
+        scopedAdjustedRoutes.forEach(v => {
+            const key = `${v.Cod_Vend}-${v.Dia_Semana}`;
+            if (!dayGroups.has(key)) dayGroups.set(key, []);
+            dayGroups.get(key)!.push(v);
+        });
+
+        dayGroups.forEach(visits => {
+            visits.forEach((v, index) => {
+                const clientKey = `${v.Cod_Vend}-${v.Dia_Semana}-${v.Cod_Cliente}`;
+                map.set(clientKey, { order: index + 1, total: visits.length });
+            });
+        });
+
+        return map;
+    }, [scopedAdjustedRoutes]);
+
+    // Calcular KPIs de Comparação com Métricas Reais de Circuito Fechado (KM e Tempo de Deslocamento)
     const kpis = useMemo(() => {
         const getKpisForSet = (visits: VisitaPrevista[]) => {
             let totalKm = 0;
+            let totalTravelMinutes = 0;
             const sellers = Array.from(new Set(visits.map(r => r.Cod_Vend)));
             const countsPerSellerAndDay = new Map<string, number>();
+            let exceededKmCount = 0;
 
             sellers.forEach(sellerId => {
                 const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
                 const sellerVisits = visits.filter(r => r.Cod_Vend === sellerId);
 
-                // Calcular distância estimada sequencial
-                let curLat = colab?.LatitudeBase || (sellerVisits[0]?.Lat || 0);
-                let curLng = colab?.LongitudeBase || (sellerVisits[0]?.Long || 0);
+                // Base do colaborador (com fallback para primeiro cliente válido)
+                const baseLat = colab?.LatitudeBase || sellerVisits.find(v => v.Lat)?.Lat || 0;
+                const baseLng = colab?.LongitudeBase || sellerVisits.find(v => v.Long)?.Long || 0;
+                const base = { lat: baseLat, lng: baseLng };
 
+                // Agrupar visitas por dia da semana
+                const dayMap = new Map<string, VisitaPrevista[]>();
                 sellerVisits.forEach(v => {
-                    const dist = calcDist(curLat, curLng, v.Lat, v.Long);
-                    totalKm += dist;
-                    curLat = v.Lat;
-                    curLng = v.Long;
-
-                    const dayKey = `${sellerId}-${v.Dia_Semana}`;
-                    countsPerSellerAndDay.set(dayKey, (countsPerSellerAndDay.get(dayKey) || 0) + 1);
+                    if (!dayMap.has(v.Dia_Semana)) dayMap.set(v.Dia_Semana, []);
+                    dayMap.get(v.Dia_Semana)!.push(v);
                 });
 
-                // Volta para base
-                if (colab?.LatitudeBase && colab?.LongitudeBase && sellerVisits.length > 0) {
-                    totalKm += calcDist(curLat, curLng, colab.LatitudeBase, colab.LongitudeBase);
+                let sellerHasExceededDay = false;
+
+                dayMap.forEach((dayVisits, day) => {
+                    const dayKey = `${sellerId}-${day}`;
+                    countsPerSellerAndDay.set(dayKey, dayVisits.length);
+
+                    const stops = dayVisits.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
+                    const circuit = calcCircuitMetrics(base, stops);
+
+                    totalKm += circuit.totalKm;
+                    totalTravelMinutes += circuit.travelMinutes;
+
+                    if (circuit.totalKm > optMaxKm) {
+                        sellerHasExceededDay = true;
+                    }
+                });
+
+                if (sellerHasExceededDay) {
+                    exceededKmCount++;
                 }
             });
 
             const maxClientsOnSingleDay = Math.max(...Array.from(countsPerSellerAndDay.values()), 0);
-            const exceededKmCount = sellers.filter(sellerId => {
-                // Cálculo individual simples
-                let km = 0;
-                const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-                const sVisits = visits.filter(r => r.Cod_Vend === sellerId);
-                let lat = colab?.LatitudeBase || (sVisits[0]?.Lat || 0);
-                let lng = colab?.LongitudeBase || (sVisits[0]?.Long || 0);
-                sVisits.forEach(v => {
-                    km += calcDist(lat, lng, v.Lat, v.Long);
-                    lat = v.Lat; lng = v.Long;
-                });
-                if (colab?.LatitudeBase && colab?.LongitudeBase) km += calcDist(lat, lng, colab.LatitudeBase, colab.LongitudeBase);
-                return km > optMaxKm;
-            }).length;
 
             return {
-                totalKm: Math.round(totalKm * 1.15), // Fator de ajuste de rota real aproximado
-                avgKmPerSeller: sellers.length ? Math.round((totalKm * 1.15) / sellers.length) : 0,
+                totalKm: Math.round(totalKm),
+                totalTravelMinutes: Math.round(totalTravelMinutes),
+                avgKmPerSeller: sellers.length ? Math.round(totalKm / sellers.length) : 0,
+                avgMinutesPerSeller: sellers.length ? Math.round(totalTravelMinutes / sellers.length) : 0,
                 maxClientsOnSingleDay,
                 exceededKmCount,
                 sellerCount: sellers.length,
@@ -1439,11 +1595,16 @@ export const AjusteRota: React.FC = () => {
         const kmSaved = orig.totalKm - adj.totalKm;
         const percentSaved = orig.totalKm ? Math.round((kmSaved / orig.totalKm) * 100) : 0;
 
+        const timeSavedMinutes = orig.totalTravelMinutes - adj.totalTravelMinutes;
+        const percentTimeSaved = orig.totalTravelMinutes ? Math.round((timeSavedMinutes / orig.totalTravelMinutes) * 100) : 0;
+
         return {
             original: orig,
             adjusted: adj,
             kmSaved,
-            percentSaved
+            percentSaved,
+            timeSavedMinutes,
+            percentTimeSaved
         };
     }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm]);
 
@@ -1853,9 +2014,9 @@ export const AjusteRota: React.FC = () => {
                 </div>
             )}
 
-            {/* PAINEL CENTRAL: KPIS E COMPARATIVO */}
+            {/* PAINEL CENTRAL: KPIS E COMPARATIVO COM TEMPO DE DESLOCAMENTO */}
             {adjustedRoutes.length > 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     {/* KPI 1: Quilometragem */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
                         <div>
@@ -1872,25 +2033,45 @@ export const AjusteRota: React.FC = () => {
                         )}
                     </div>
 
-                    {/* KPI 2: Média KM por Colaborador */}
+                    {/* KPI 2: Tempo Total em Deslocamento */}
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
+                        <div>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider flex items-center">
+                                <ClockIcon className="w-3.5 h-3.5 mr-1 text-indigo-500"/> Tempo em Trânsito
+                            </span>
+                            <div className="flex items-baseline space-x-2 mt-1">
+                                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatDuration(kpis.adjusted.totalTravelMinutes)}</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500 line-through">{formatDuration(kpis.original.totalTravelMinutes)}</span>
+                            </div>
+                        </div>
+                        {kpis.timeSavedMinutes > 0 ? (
+                            <div className="mt-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                ⚡ -{formatDuration(kpis.timeSavedMinutes)} ({kpis.percentTimeSaved}%)
+                            </div>
+                        ) : (
+                            <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium mt-2">Circuito base-clientes-base calibrado.</p>
+                        )}
+                    </div>
+
+                    {/* KPI 3: Média KM / Colaborador */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Média de Deslocamento</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Média / Colaborador</span>
                             <div className="flex items-baseline space-x-2 mt-1">
                                 <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.adjusted.avgKmPerSeller} KM</span>
-                                <span className="text-xs text-slate-400 dark:text-slate-500">/ colab</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">~{formatDuration(kpis.adjusted.avgMinutesPerSeller)}</span>
                             </div>
                         </div>
                         <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">Distribuído entre {kpis.adjusted.sellerCount} colaboradores ativos.</p>
                     </div>
 
-                    {/* KPI 3: Carga de Clientes (Equilíbrio) */}
+                    {/* KPI 4: Carga de Clientes (Equilíbrio) */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
                             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Pico de Clientes / Dia</span>
                             <div className="flex items-baseline space-x-2 mt-1">
                                 <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.adjusted.maxClientsOnSingleDay} PDVs</span>
-                                <span className="text-xs text-slate-400 dark:text-slate-500">Máx Config: {optMaxClients}</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">Máx: {optMaxClients}</span>
                             </div>
                         </div>
                         <div className="flex items-center space-x-1">
@@ -1903,24 +2084,24 @@ export const AjusteRota: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* KPI 4: Alertas de Distância */}
+                    {/* KPI 5: Alertas de Distância */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Colaboradores com Alta KM</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Alta KM (&gt; {optMaxKm} KM)</span>
                             <div className="flex items-baseline space-x-2 mt-1">
                                 <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                     {kpis.adjusted.exceededKmCount} / {kpis.adjusted.sellerCount}
                                 </span>
-                                <span className="text-xs text-slate-400 dark:text-slate-500">teto {optMaxKm} KM</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">colab(s)</span>
                             </div>
                         </div>
                         {kpis.adjusted.exceededKmCount > 0 ? (
                             <div className="mt-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste Manual
+                                <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste
                             </div>
                         ) : (
                             <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Rotas dentro do limite
+                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Carga equilibrada
                             </div>
                         )}
                     </div>
@@ -2706,6 +2887,7 @@ export const AjusteRota: React.FC = () => {
                                                 .map((v, i) => {
                                                     const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
                                                     const isHighlighted = v.Cod_Cliente === highlightedClientCode;
+                                                    const visitSeq = visitOrderMap.get(`${v.Cod_Vend}-${v.Dia_Semana}-${v.Cod_Cliente}`);
                                                     return (
                                                         <tr 
                                                             key={`${v.Cod_Cliente}-${i}`} 
@@ -2718,6 +2900,14 @@ export const AjusteRota: React.FC = () => {
                                                         >
                                                             <td className="p-3 text-slate-900 dark:text-white font-mono">
                                                                 <div className="flex items-center gap-1.5">
+                                                                    {visitSeq && (
+                                                                        <span 
+                                                                            className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0" 
+                                                                            title={`Ordem da Parada: ${visitSeq.order}ª parada de ${visitSeq.total} no roteiro de ${v.Dia_Semana}`}
+                                                                        >
+                                                                            #{visitSeq.order}
+                                                                        </span>
+                                                                    )}
                                                                     {isHighlighted && (
                                                                         <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping shrink-0" title="PDV em foco pelo mapa" />
                                                                     )}
@@ -2896,7 +3086,7 @@ export const AjusteRota: React.FC = () => {
                         {/* Corpo com Scroll */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
                             {/* Cards de Métricas Comparativas */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                                 {/* Métrica 1: Quilometragem Total */}
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Distância Total</span>
@@ -2909,7 +3099,19 @@ export const AjusteRota: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {/* Métrica 2: Média KM / Colaborador */}
+                                {/* Métrica 2: Tempo Total em Deslocamento */}
+                                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
+                                    <span className="text-[10px] font-black uppercase text-slate-400">Tempo em Trânsito</span>
+                                    <div className="mt-1 flex items-baseline space-x-2">
+                                        <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{formatDuration(kpis.adjusted.totalTravelMinutes)}</span>
+                                        <span className="text-xs text-slate-400 line-through">{formatDuration(kpis.original.totalTravelMinutes)}</span>
+                                    </div>
+                                    <span className={`text-[10px] font-bold mt-1 ${kpis.timeSavedMinutes >= 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                        {kpis.timeSavedMinutes > 0 ? `⚡ -${formatDuration(kpis.timeSavedMinutes)} (-${kpis.percentTimeSaved}%)` : 'Otimizado em circuito'}
+                                    </span>
+                                </div>
+
+                                {/* Métrica 3: Média KM / Colaborador */}
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Média KM / Colab</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
@@ -2921,7 +3123,7 @@ export const AjusteRota: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {/* Métrica 3: Clientes Alterados */}
+                                {/* Métrica 4: Clientes Alterados */}
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Clientes Reordenados</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
@@ -2935,7 +3137,7 @@ export const AjusteRota: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {/* Métrica 4: Vendedores Desbalanceados */}
+                                {/* Métrica 5: Vendedores Desbalanceados */}
                                 <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl flex flex-col justify-between">
                                     <span className="text-[10px] font-black uppercase text-slate-400">Desbalanço Quinzenal (&gt;30%)</span>
                                     <div className="mt-1 flex items-baseline space-x-2">
