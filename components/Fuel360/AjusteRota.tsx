@@ -389,6 +389,10 @@ export const AjusteRota: React.FC = () => {
     const [selectedQuinzenaFilter, setSelectedQuinzenaFilter] = useState<'ALL' | '1_3' | '2_4'>('ALL');
     const [showHeatmap, setShowHeatmap] = useState(false);
 
+    // Scroll Spy: cliente em foco selecionado pelo mapa ou pela tabela
+    const [highlightedClientCode, setHighlightedClientCode] = useState<number | null>(null);
+    const highlightTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     const handleToggleDayFilter = (day: string) => {
         setSelectedDaysFilter(prev => {
             if (prev.includes(day)) {
@@ -730,6 +734,64 @@ export const AjusteRota: React.FC = () => {
             return sortDirection === 'asc' ? res : -res;
         });
     }, [filteredRoutes, sortField, sortDirection]);
+
+    // Limite dinâmico de renderização da tabela para Scroll Spy
+    const visibleRoutesLimit = useMemo(() => {
+        if (!highlightedClientCode) return 100;
+        const targetIndex = sortedRoutes.findIndex(r => r.Cod_Cliente === highlightedClientCode);
+        return targetIndex >= 100 ? Math.min(sortedRoutes.length, targetIndex + 15) : 100;
+    }, [sortedRoutes, highlightedClientCode]);
+
+    // Scroll Spy: Destacar cliente clicado no mapa e rolar até a respectiva linha na Grade de Ajuste Fino
+    const handleSelectPdvFromMap = (codCliente: number) => {
+        const targetRoute = scopedAdjustedRoutes.find(r => r.Cod_Cliente === codCliente);
+        if (!targetRoute) return;
+
+        // Se houver filtro de dia da semana ativo que exclua este cliente, inclui o dia no filtro
+        if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(targetRoute.Dia_Semana)) {
+            setSelectedDaysFilter(prev => [...prev, targetRoute.Dia_Semana]);
+        }
+
+        // Se houver filtro de quinzena ativo que exclua este cliente, abre para 'ALL'
+        if (selectedQuinzenaFilter !== 'ALL') {
+            const pType = parsePeriodicidade(targetRoute.Periodicidade).tipo;
+            if (selectedQuinzenaFilter === '1_3' && pType === 'QUINZENAL_2_4') {
+                setSelectedQuinzenaFilter('ALL');
+            } else if (selectedQuinzenaFilter === '2_4' && pType === 'QUINZENAL_1_3') {
+                setSelectedQuinzenaFilter('ALL');
+            }
+        }
+
+        // Se houver filtro de colaborador ativo divergente, expande para todos
+        if (selectedPromoter !== 'ALL' && String(targetRoute.Cod_Vend) !== selectedPromoter) {
+            setSelectedPromoter('ALL');
+        }
+
+        setHighlightedClientCode(codCliente);
+
+        if (highlightTimerRef.current) {
+            clearTimeout(highlightTimerRef.current);
+        }
+        highlightTimerRef.current = setTimeout(() => {
+            setHighlightedClientCode(null);
+        }, 4500);
+
+        setTimeout(() => {
+            const rowElem = document.getElementById(`row-pdv-${codCliente}`);
+            if (rowElem) {
+                rowElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 120);
+    };
+
+    // Limpa timer de destaque ao desmontar
+    useEffect(() => {
+        return () => {
+            if (highlightTimerRef.current) {
+                clearTimeout(highlightTimerRef.current);
+            }
+        };
+    }, []);
 
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
@@ -2175,18 +2237,25 @@ export const AjusteRota: React.FC = () => {
                                         }
                                     }
 
+                                    const isPdvHighlighted = v.Cod_Cliente === highlightedClientCode;
+
                                     return (
                                         <CircleMarker
                                             key={`marker-${v.Cod_Cliente}-${idx}`}
                                             center={[v.Lat, v.Long]}
-                                            radius={showHeatmap ? Math.max(4, radius - 2) : radius}
+                                            radius={showHeatmap ? Math.max(4, radius - 2) : (isPdvHighlighted ? radius + 3.5 : radius)}
                                             pathOptions={{ 
-                                                fillColor: mainColor, 
-                                                color: borderColor, 
-                                                fillOpacity: showHeatmap ? 0.45 : 0.92, 
-                                                weight: showHeatmap ? 1.5 : borderWidth,
-                                                dashArray: dashArray,
-                                                className: 'transition-all duration-300 ease-in-out'
+                                                fillColor: isPdvHighlighted ? '#4f46e5' : mainColor, 
+                                                color: isPdvHighlighted ? '#ffffff' : borderColor, 
+                                                fillOpacity: showHeatmap ? 0.45 : (isPdvHighlighted ? 1 : 0.92), 
+                                                weight: isPdvHighlighted ? 4 : (showHeatmap ? 1.5 : borderWidth),
+                                                dashArray: isPdvHighlighted ? undefined : dashArray,
+                                                className: 'transition-all duration-300 ease-in-out cursor-pointer'
+                                            }}
+                                            eventHandlers={{
+                                                click: () => {
+                                                    handleSelectPdvFromMap(v.Cod_Cliente);
+                                                }
                                             }}
                                         >
                                             <Popup>
@@ -2578,12 +2647,33 @@ export const AjusteRota: React.FC = () => {
                                             </tr>
                                         ) : (
                                             sortedRoutes
-                                                .slice(0, 100) // Limita renderização para manter ultra-fluidez
+                                                .slice(0, visibleRoutesLimit) // Limita renderização mantendo expansão para Scroll Spy
                                                 .map((v, i) => {
                                                     const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
+                                                    const isHighlighted = v.Cod_Cliente === highlightedClientCode;
                                                     return (
-                                                        <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
-                                                            <td className="p-3 text-slate-900 dark:text-white font-mono">{v.Cod_Cliente}</td>
+                                                        <tr 
+                                                            key={`${v.Cod_Cliente}-${i}`} 
+                                                            id={`row-pdv-${v.Cod_Cliente}`}
+                                                            className={`transition-all duration-300 ${
+                                                                isHighlighted 
+                                                                    ? 'bg-indigo-100/90 dark:bg-indigo-950/90 ring-2 ring-indigo-500 ring-inset shadow-md font-black' 
+                                                                    : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
+                                                            }`}
+                                                        >
+                                                            <td className="p-3 text-slate-900 dark:text-white font-mono">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {isHighlighted && (
+                                                                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-ping shrink-0" title="PDV em foco pelo mapa" />
+                                                                    )}
+                                                                    <span>{v.Cod_Cliente}</span>
+                                                                    {isHighlighted && (
+                                                                        <span className="text-[8px] bg-indigo-600 text-white font-black px-1.5 py-0.2 rounded-full uppercase tracking-tighter shrink-0 animate-pulse">
+                                                                            Foco
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
                                                             <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
                                                             <td className="p-3 text-slate-400 dark:text-slate-500 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
                                                             <td className="p-3">
@@ -2657,7 +2747,7 @@ export const AjusteRota: React.FC = () => {
                                 {sortedRoutes.length > 0 && (
                                     <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border-t border-slate-100 dark:border-slate-800">
                                         <span>
-                                            Exibindo {Math.min(100, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
+                                            Exibindo {Math.min(visibleRoutesLimit, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
                                             {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                         </span>
                                         <span className="font-bold text-slate-500 dark:text-slate-400">

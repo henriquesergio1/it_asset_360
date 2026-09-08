@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.137.0',
+    date: 'Hoje',
+    title: 'Fuel360: Scroll Spy na Grade de Ajuste Fino Sincronizado com o Mapa',
+    changes: [
+      'Scroll Spy Interativo: Clicar em qualquer PDV no mapa rola a visualização suavemente até a respectiva linha na Grade de Ajuste Fino.',
+      'Destaque Visual Dinâmico: A linha selecionada recebe anel luminoso e fundo índigo com indicador "Foco do Mapa".',
+      'Descongelamento Inteligente de Filtros: Caso o cliente esteja oculto por filtros de dias ou quinzenas, a grade inclui o cliente e expande a listagem automaticamente.'
+    ]
+  },
+  {
     version: '3.136.1',
     date: 'Hoje',
     title: 'Fuel360: Adequação Completa do Tema Escuro na Tela de Ajuste de Rotas',
