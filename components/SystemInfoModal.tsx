@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.134.0',
+    date: 'Hoje',
+    title: 'Fuel360: Alternador Rápido de Quinzena no Mapa com Animação e Heatmap de Visitas',
+    changes: [
+      'Alternador Rápido de Traçado no Mapa: Painel flutuante sobre a visão espacial para alternar entre "Todas", "Sem 1 e 3" e "Sem 2 e 4" diretamente no mapa.',
+      'Transição Animada de Trajetos: Efeito visual suave de transição nas polilinhas e marcadores ao alternar as rotas quinzenais.',
+      'Heatmap de Concentração de Visitas: Modo mapa de calor em tempo real sobre os PDVs, gerando gradientes térmicos de densidade para identificar polos e dispersões geográficas da carteira.'
+    ]
+  },
+  {
     version: '3.133.0',
     date: 'Hoje',
     title: 'Fuel360: Distinção Visual de Rotas por Dia e Quinzena, Destaque da Casa e Filtros Interativos',

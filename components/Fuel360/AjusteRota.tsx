@@ -3,7 +3,7 @@ import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
 import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import * as XLSX from 'xlsx';
 import {
@@ -98,6 +98,120 @@ export const DAY_COLORS: Record<string, { bg: string, text: string, border: stri
     'SEXTA-FEIRA':   { bg: 'bg-rose-600', text: 'text-rose-600', border: 'border-rose-500', hex: '#e11d48', label: 'SEX' },
     'SÁBADO':        { bg: 'bg-cyan-600', text: 'text-cyan-600', border: 'border-cyan-500', hex: '#0891b2', label: 'SÁB' },
     'DOMINGO':       { bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500', hex: '#64748b', label: 'DOM' }
+};
+
+// Camada de Mapa de Calor (Heatmap) em Canvas 2D acoplado ao Leaflet
+interface HeatmapPoint {
+    lat: number;
+    lng: number;
+}
+
+const HeatmapLayer: React.FC<{ points: HeatmapPoint[] }> = ({ points }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!map || points.length === 0) return;
+
+        const pane = map.getPane('overlayPane');
+        if (!pane) return;
+
+        const canvas = L.DomUtil.create('canvas', 'leaflet-heatmap-layer') as HTMLCanvasElement;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '350';
+        canvas.style.transition = 'opacity 0.3s ease';
+        pane.appendChild(canvas);
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Paleta térmica de gradiente contínuo
+        const paletteCanvas = document.createElement('canvas');
+        paletteCanvas.width = 1;
+        paletteCanvas.height = 256;
+        const pCtx = paletteCanvas.getContext('2d');
+        if (pCtx) {
+            const grad = pCtx.createLinearGradient(0, 0, 0, 256);
+            grad.addColorStop(0.0, 'rgba(0, 0, 255, 0)');
+            grad.addColorStop(0.2, 'rgba(0, 180, 255, 0.45)');
+            grad.addColorStop(0.4, 'rgba(0, 255, 120, 0.65)');
+            grad.addColorStop(0.65, 'rgba(255, 230, 0, 0.8)');
+            grad.addColorStop(0.85, 'rgba(255, 120, 0, 0.9)');
+            grad.addColorStop(1.0, 'rgba(240, 20, 20, 0.95)');
+            pCtx.fillStyle = grad;
+            pCtx.fillRect(0, 0, 1, 256);
+        }
+        const palette = pCtx ? pCtx.getImageData(0, 0, 1, 256).data : null;
+
+        const redraw = () => {
+            const size = map.getSize();
+            const bounds = map.getBounds();
+            const topLeft = map.containerPointToLayerPoint([0, 0]);
+
+            L.DomUtil.setPosition(canvas, topLeft);
+            canvas.width = size.x;
+            canvas.height = size.y;
+            ctx.clearRect(0, 0, size.x, size.y);
+
+            const visiblePoints = points.filter(p => bounds.contains([p.lat, p.lng]));
+            if (visiblePoints.length === 0) return;
+
+            const zoom = map.getZoom();
+            const radius = Math.max(18, Math.min(52, Math.round(zoom * 2.8)));
+
+            const shadowCanvas = document.createElement('canvas');
+            shadowCanvas.width = size.x;
+            shadowCanvas.height = size.y;
+            const sCtx = shadowCanvas.getContext('2d');
+            if (!sCtx) return;
+
+            visiblePoints.forEach(p => {
+                const pt = map.latLngToContainerPoint([p.lat, p.lng]);
+                const radGrad = sCtx.createRadialGradient(pt.x, pt.y, radius * 0.15, pt.x, pt.y, radius);
+                radGrad.addColorStop(0, 'rgba(0,0,0,0.35)');
+                radGrad.addColorStop(1, 'rgba(0,0,0,0)');
+                sCtx.fillStyle = radGrad;
+                sCtx.beginPath();
+                sCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
+                sCtx.fill();
+            });
+
+            const imgData = sCtx.getImageData(0, 0, size.x, size.y);
+            const data = imgData.data;
+            if (palette) {
+                for (let i = 0; i < data.length; i += 4) {
+                    const alpha = data[i + 3];
+                    if (alpha > 0) {
+                        const offset = alpha * 4;
+                        data[i] = palette[offset];
+                        data[i + 1] = palette[offset + 1];
+                        data[i + 2] = palette[offset + 2];
+                        data[i + 3] = Math.min(235, Math.round(alpha * 1.25));
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        };
+
+        redraw();
+
+        map.on('moveend', redraw);
+        map.on('zoomend', redraw);
+        map.on('resize', redraw);
+
+        return () => {
+            map.off('moveend', redraw);
+            map.off('zoomend', redraw);
+            map.off('resize', redraw);
+            if (canvas.parentNode) {
+                canvas.parentNode.removeChild(canvas);
+            }
+        };
+    }, [map, points]);
+
+    return null;
 };
 
 const pinClientIcon = new L.Icon({
@@ -273,6 +387,7 @@ export const AjusteRota: React.FC = () => {
     // Filtros Interativos da Grade de Ajuste Fino e Mapa
     const [selectedDaysFilter, setSelectedDaysFilter] = useState<string[]>([]);
     const [selectedQuinzenaFilter, setSelectedQuinzenaFilter] = useState<'ALL' | '1_3' | '2_4'>('ALL');
+    const [showHeatmap, setShowHeatmap] = useState(false);
 
     const handleToggleDayFilter = (day: string) => {
         setSelectedDaysFilter(prev => {
@@ -398,6 +513,13 @@ export const AjusteRota: React.FC = () => {
             return true;
         });
     }, [scopedAdjustedRoutes, selectedPromoter, selectedDaysFilter, selectedQuinzenaFilter]);
+
+    // Pontos geográficos para renderização do Mapa de Calor (Heatmap)
+    const heatmapPoints = useMemo(() => {
+        return filteredRoutes
+            .filter(v => v.Lat && v.Long)
+            .map(v => ({ lat: v.Lat, lng: v.Long }));
+    }, [filteredRoutes]);
 
     // Totais acumulados por Quinzena (Semanas 1/3 e Semanas 2/4) no escopo selecionado
     const quinzenaTotals = useMemo(() => {
@@ -629,6 +751,7 @@ export const AjusteRota: React.FC = () => {
         setSelectedSeller('');
         setSelectedDaysFilter([]);
         setSelectedQuinzenaFilter('ALL');
+        setShowHeatmap(false);
     }, [teamType]);
 
     // Carregar rotas vigentes para ajuste (carteira integral da equipe)
@@ -1872,6 +1995,78 @@ export const AjusteRota: React.FC = () => {
                         <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md z-[1000] text-xs font-bold text-slate-800 dark:text-white flex items-center">
                             <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400 animate-pulse"/> Visão Espacial do Ajuste
                         </div>
+
+                        {/* CONTROLES FLUTUANTES DO MAPA: ALTERNADOR RÁPIDO DE QUINZENA E HEATMAP */}
+                        {scopedAdjustedRoutes.length > 0 && (
+                            <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
+                                {/* Alternador Rápido de Traçado por Quinzena */}
+                                <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-0.5 text-xs font-bold">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedQuinzenaFilter('ALL')}
+                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 ${
+                                            selectedQuinzenaFilter === 'ALL'
+                                                ? 'bg-indigo-600 text-white shadow-xs'
+                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                        }`}
+                                        title="Visualizar traçado e clientes de todas as semanas"
+                                    >
+                                        Todas
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedQuinzenaFilter('1_3')}
+                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                            selectedQuinzenaFilter === '1_3'
+                                                ? 'bg-amber-500 text-white shadow-xs'
+                                                : 'text-slate-600 dark:text-slate-400 hover:text-amber-600'
+                                        }`}
+                                        title="Visualizar apenas traçados e clientes da Semana 1 e 3"
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-amber-300 ring-1 ring-amber-400/50 shrink-0" />
+                                        <span>Sem 1 e 3</span>
+                                        {quinzenaTotals.total13 > 0 && (
+                                            <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '1_3' ? 'bg-amber-600 text-amber-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                {quinzenaTotals.total13}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedQuinzenaFilter('2_4')}
+                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                            selectedQuinzenaFilter === '2_4'
+                                                ? 'bg-fuchsia-600 text-white shadow-xs'
+                                                : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
+                                        }`}
+                                        title="Visualizar apenas traçados e clientes da Semana 2 e 4"
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-fuchsia-300 ring-1 ring-fuchsia-400/50 shrink-0" />
+                                        <span>Sem 2 e 4</span>
+                                        {quinzenaTotals.total24 > 0 && (
+                                            <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '2_4' ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                {quinzenaTotals.total24}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Botão Heatmap de Concentração de Visitas */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowHeatmap(prev => !prev)}
+                                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 ${
+                                        showHeatmap 
+                                            ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white border-orange-400 shadow-orange-500/30 ring-2 ring-orange-400/40' 
+                                            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-orange-400 hover:text-orange-600'
+                                    }`}
+                                    title={showHeatmap ? "Ocultar Mapa de Calor de Concentração" : "Exibir Mapa de Calor de Concentração de Visitas"}
+                                >
+                                    <span className="text-sm leading-none">🔥</span>
+                                    <span>{showHeatmap ? 'Calor Ativo' : 'Mapa de Calor'}</span>
+                                </button>
+                            </div>
+                        )}
                         {scopedAdjustedRoutes.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
@@ -1887,6 +2082,9 @@ export const AjusteRota: React.FC = () => {
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
+
+                                {/* Camada de Mapa de Calor (Heatmap de Concentração de Visitas) */}
+                                {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
                                 {/* Casas / Bases dos Colaboradores com Destaque Especial */}
                                 {Array.from(new Set(scopedAdjustedRoutes.map(v => v.Cod_Vend))).map(vId => {
                                     const colab = colaboradores.find(c => c.CodigoSetor === vId);
@@ -1921,23 +2119,29 @@ export const AjusteRota: React.FC = () => {
                                 {/* Polilinhas das rotas originais (Tracejado claro se houver comparação) */}
                                 {originalPolylines.map((line, idx) => (
                                     <Polyline 
-                                        key={`orig-poly-${idx}`} 
+                                        key={`orig-poly-${line.id || idx}`} 
                                         positions={line.points} 
                                         color={line.color} 
-                                        weight={3} 
+                                        weight={showHeatmap ? 2 : 3} 
                                         dashArray="5, 10" 
-                                        opacity={0.3} 
+                                        opacity={showHeatmap ? 0.15 : 0.3} 
+                                        pathOptions={{
+                                            className: 'transition-all duration-500 ease-in-out'
+                                        }}
                                     />
                                 ))}
 
-                                {/* Polilinhas das rotas otimizadas */}
+                                {/* Polilinhas das rotas otimizadas com transição visual animada */}
                                 {adjustedPolylines.map((line, idx) => (
                                     <Polyline 
-                                        key={`adj-poly-${idx}`} 
+                                        key={`adj-poly-${line.id || idx}`} 
                                         positions={line.points} 
                                         color={line.color} 
-                                        weight={5} 
-                                        opacity={0.8} 
+                                        weight={showHeatmap ? 2.5 : 5} 
+                                        opacity={showHeatmap ? 0.35 : 0.85} 
+                                        pathOptions={{
+                                            className: 'transition-all duration-500 ease-in-out'
+                                        }}
                                     />
                                 ))}
 
@@ -1975,13 +2179,14 @@ export const AjusteRota: React.FC = () => {
                                         <CircleMarker
                                             key={`marker-${v.Cod_Cliente}-${idx}`}
                                             center={[v.Lat, v.Long]}
-                                            radius={radius}
+                                            radius={showHeatmap ? Math.max(4, radius - 2) : radius}
                                             pathOptions={{ 
                                                 fillColor: mainColor, 
                                                 color: borderColor, 
-                                                fillOpacity: 0.92, 
-                                                weight: borderWidth,
-                                                dashArray: dashArray
+                                                fillOpacity: showHeatmap ? 0.45 : 0.92, 
+                                                weight: showHeatmap ? 1.5 : borderWidth,
+                                                dashArray: dashArray,
+                                                className: 'transition-all duration-300 ease-in-out'
                                             }}
                                         >
                                             <Popup>
@@ -2078,45 +2283,56 @@ export const AjusteRota: React.FC = () => {
                             </MapContainer>
                         )}
 
-                        {/* Legenda Explicativa de Rotas no Mapa (quando em visão de vendedor) */}
-                        {scopedAdjustedRoutes.length > 0 && isSingleSellerView && (
+                        {/* Legenda Explicativa de Rotas e Heatmap no Mapa */}
+                        {scopedAdjustedRoutes.length > 0 && (isSingleSellerView || showHeatmap) && (
                             <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[320px]">
-                                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1">
-                                    <span className="flex items-center gap-1">
-                                        <GlobeIcon className="w-3 h-3 text-indigo-600"/> Legenda do Roteiro
-                                    </span>
-                                    <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Cores & Ciclos</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                    {WEEKDAYS.map(day => {
-                                        const cfg = DAY_COLORS[day];
-                                        if (!cfg) return null;
-                                        return (
-                                            <span key={day} className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.hex }}/>
-                                                <span>{cfg.label}</span>
+                                {isSingleSellerView && (
+                                    <>
+                                        <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1">
+                                            <span className="flex items-center gap-1">
+                                                <GlobeIcon className="w-3 h-3 text-indigo-600"/> Legenda do Roteiro
                                             </span>
-                                        );
-                                    })}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
-                                    <span className="flex items-center space-x-1">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white shrink-0"/>
-                                        <span>Semanal</span>
-                                    </span>
-                                    <span className="flex items-center space-x-1">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-amber-500 shrink-0"/>
-                                        <span>Quinz. 1/3</span>
-                                    </span>
-                                    <span className="flex items-center space-x-1">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-fuchsia-500 border-dashed shrink-0"/>
-                                        <span>Quinz. 2/4</span>
-                                    </span>
-                                    <span className="flex items-center space-x-1 text-red-600 font-bold">
-                                        <span>🏠</span>
-                                        <span>Base</span>
-                                    </span>
-                                </div>
+                                            <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Cores & Ciclos</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1">
+                                            {WEEKDAYS.map(day => {
+                                                const cfg = DAY_COLORS[day];
+                                                if (!cfg) return null;
+                                                return (
+                                                    <span key={day} className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.hex }}/>
+                                                        <span>{cfg.label}</span>
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
+                                            <span className="flex items-center space-x-1">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white shrink-0"/>
+                                                <span>Semanal</span>
+                                            </span>
+                                            <span className="flex items-center space-x-1">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-amber-500 shrink-0"/>
+                                                <span>Quinz. 1/3</span>
+                                            </span>
+                                            <span className="flex items-center space-x-1">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-fuchsia-500 border-dashed shrink-0"/>
+                                                <span>Quinz. 2/4</span>
+                                            </span>
+                                            <span className="flex items-center space-x-1 text-red-600 font-bold">
+                                                <span>🏠</span>
+                                                <span>Base</span>
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+                                {showHeatmap && (
+                                    <div className={`flex items-center justify-between text-[8px] text-slate-600 dark:text-slate-300 font-bold ${isSingleSellerView ? 'pt-1 border-t border-slate-200/80 dark:border-slate-800' : ''}`}>
+                                        <span className="flex items-center gap-1">🔥 Menor densidade</span>
+                                        <div className="w-20 h-2 rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-600 mx-2 shadow-xs ring-1 ring-slate-300 dark:ring-slate-700" />
+                                        <span>Alta densidade</span>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
