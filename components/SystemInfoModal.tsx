@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.142.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Referência e Deduplicação de Clientes Únicos',
+    changes: [
+      'Correção de Runtime: Implementada a função utilitária pura deduplicateVisitasPrevistas para consolidação de clientes únicos por Cod_Cliente no resumo de rota e na simulação de redistribuição.',
+      'Blindagem de Endereço de Base: Tratamento seguro para propriedades opcionais de endereço de colaborador no itinerário operacional diário.'
+    ]
+  },
+  {
     version: '3.142.0',
     date: 'Hoje',
     title: 'Fuel360: Simulação de Extinção e Redistribuição Inteligente de Setores',

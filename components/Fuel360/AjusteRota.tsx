@@ -625,6 +625,17 @@ const consolidateUniqueClients = (visits: VisitaPrevista[]): VisitaPrevista[] =>
     return Array.from(clientMap.values());
 };
 
+// Helper para deduplicar e obter uma lista de clientes únicos por Cod_Cliente
+const deduplicateVisitasPrevistas = (visits: VisitaPrevista[]): VisitaPrevista[] => {
+    const map = new Map<number, VisitaPrevista>();
+    visits.forEach(v => {
+        if (!map.has(v.Cod_Cliente)) {
+            map.set(v.Cod_Cliente, v);
+        }
+    });
+    return Array.from(map.values());
+};
+
 export interface QuinzenaStats {
     v13: number;
     v24: number;
@@ -2771,7 +2782,7 @@ export const AjusteRota: React.FC = () => {
 
         const baseLat = colab?.LatitudeBase || sellerVisits.find(v => v.Lat)?.Lat || 0;
         const baseLng = colab?.LongitudeBase || sellerVisits.find(v => v.Long)?.Long || 0;
-        const baseAddress = colab?.Endereco ? `${colab.Endereco}, ${colab.Bairro || ''} - ${colab.Cidade || ''}` : 'Base / Residência do Colaborador';
+        const baseAddress = colab?.EnderecoBase || ((colab as any)?.Endereco ? `${(colab as any).Endereco}, ${(colab as any).Bairro || ''} - ${(colab as any).Cidade || ''}` : 'Base / Residência do Colaborador');
 
         let totalKm = 0;
         let prevLat = baseLat;
