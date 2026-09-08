@@ -2483,6 +2483,7 @@ export const AjusteRota: React.FC = () => {
             const sellers = Array.from(new Set(visits.map(r => r.Cod_Vend)));
             const countsPerSellerAndDay = new Map<string, number>();
             let exceededKmCount = 0;
+            let exceededHoursCount = 0;
 
             sellers.forEach(sellerId => {
                 const sellerVisits = visits.filter(r => r.Cod_Vend === sellerId);

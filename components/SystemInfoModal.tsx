@@ -9,6 +9,14 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.143.1',
+    date: 'Hoje',
+    title: 'Fuel360: Correção de Runtime no Cálculo de KPIs de Horas',
+    changes: [
+      'Correção de Runtime: Declarada a variável exceededHoursCount no escopo da função getKpisForSet, eliminando o erro de ReferenceError ao carregar a tela de Ajuste de Rotas.'
+    ]
+  },
+  {
     version: '3.143.0',
     date: 'Hoje',
     title: 'Fuel360: Otimização de Layout, Limite de Horas de Rota e Parâmetros Reorganizados',
