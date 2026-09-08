@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.139.1',
+    date: 'Hoje',
+    title: 'Fuel360: Consolidação e Deduplicação de PDVs na Grade de Ajuste Fino',
+    changes: [
+      'Deduplicação de Carteira: Eliminação definitiva da duplicação (2x) de clientes quinzenais e quadruplicação (4x) de clientes semanais ao carregar rotas vigentes ou planilhas.',
+      'Carteira Única por Colaborador: Cada PDV físico é exibido exatamente uma vez na grade de ajuste fino, com seu respectivo dia de atendimento e periodicidade consolidada.',
+      'Sincronização com Métricas e Scroll Spy: Contadores por dia da semana e quinzenas agora refletem precisamente a quantidade real de atendimentos, otimizando o cálculo de itinerários e o foco interativo do mapa.'
+    ]
+  },
+  {
     version: '3.139.0',
     date: 'Hoje',
     title: 'Fuel360: Motor Avançado de Roteirização com TSP 2-Opt e Tempo de Deslocamento',

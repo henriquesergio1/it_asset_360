@@ -447,6 +447,56 @@ const getWeekNumberInMonth = (dateStr: string): number => {
     return Math.min(5, Math.floor((day - 1) / 7) + 1);
 };
 
+// Helper para consolidar visitas por cliente e colaborador único, eliminando duplicidades/quadruplicações mensais na interface
+const consolidateUniqueClients = (visits: VisitaPrevista[]): VisitaPrevista[] => {
+    const clientMap = new Map<string, VisitaPrevista>();
+    const clientWeeksMap = new Map<string, Set<number>>();
+
+    visits.forEach(v => {
+        const key = `${v.Cod_Vend}-${v.Cod_Cliente}`;
+        if (v.Data_da_Visita) {
+            const weekNum = getWeekNumberInMonth(v.Data_da_Visita);
+            if (!clientWeeksMap.has(key)) clientWeeksMap.set(key, new Set());
+            clientWeeksMap.get(key)!.add(weekNum);
+        }
+
+        if (!clientMap.has(key)) {
+            clientMap.set(key, { ...v });
+        } else {
+            const existing = clientMap.get(key)!;
+            // Preserva coordenadas válidas se o registro existente não tiver
+            if ((!existing.Lat || !existing.Long) && v.Lat && v.Long) {
+                existing.Lat = v.Lat;
+                existing.Long = v.Long;
+            }
+            // Se o registro existente tem periodicidade genérica/vazia e o novo registro tiver informação quinzenal mais explícita
+            const pExisting = parsePeriodicidade(existing.Periodicidade).tipo;
+            const pNew = parsePeriodicidade(v.Periodicidade).tipo;
+            if (pExisting === 'SEMANAL' && pNew !== 'SEMANAL') {
+                existing.Periodicidade = v.Periodicidade;
+            }
+        }
+    });
+
+    // Se a periodicidade do PDV estiver vazia ou indefinida, deduz através da distribuição de semanas do mês
+    clientMap.forEach((v, key) => {
+        const weeks = clientWeeksMap.get(key);
+        if (weeks && (!v.Periodicidade || v.Periodicidade.trim() === '')) {
+            const has1or3 = weeks.has(1) || weeks.has(3) || weeks.has(5);
+            const has2or4 = weeks.has(2) || weeks.has(4);
+            if (has1or3 && !has2or4) {
+                v.Periodicidade = '1 3';
+            } else if (has2or4 && !has1or3) {
+                v.Periodicidade = '2 4';
+            } else {
+                v.Periodicidade = 'SEMANAL';
+            }
+        }
+    });
+
+    return Array.from(clientMap.values());
+};
+
 export interface QuinzenaStats {
     v13: number;
     v24: number;
@@ -997,8 +1047,11 @@ export const AjusteRota: React.FC = () => {
                 alert(`Nenhum roteiro vigente de ${teamType} encontrado no sistema.`);
             }
             
-            setOriginalRoutes(filteredData);
-            setAdjustedRoutes(JSON.parse(JSON.stringify(filteredData)));
+            // Consolidar carteira de clientes únicos por vendedor, eliminando repetições mensais (semanais 4x e quinzenais 2x)
+            const uniqueData = consolidateUniqueClients(filteredData);
+
+            setOriginalRoutes(uniqueData);
+            setAdjustedRoutes(JSON.parse(JSON.stringify(uniqueData)));
         } catch (e: any) {
             alert("Erro ao carregar rotas: " + e.message);
         } finally {
@@ -1007,7 +1060,7 @@ export const AjusteRota: React.FC = () => {
     };
 
     const processRoteiroParsedData = (parsedData: VisitaPrevista[], mappings: Record<string, number>) => {
-        const finalData = parsedData.map(v => {
+        const mappedData = parsedData.map(v => {
             const mappedId = mappings[v.Nome_Vendedor];
             if (mappedId) {
                 v.Cod_Vend = Number(mappedId);
@@ -1017,16 +1070,19 @@ export const AjusteRota: React.FC = () => {
             return v;
         }).filter(v => v.Cod_Vend && v.Cod_Vend > 0);
 
-        if (finalData.length === 0) {
+        if (mappedData.length === 0) {
             alert("Nenhum dado válido restou após o mapeamento de promotores.");
             setLoading(false);
             return;
         }
 
+        // Consolidar clientes únicos da planilha por colaborador
+        const finalData = consolidateUniqueClients(mappedData);
+
         setOriginalRoutes(finalData);
         setAdjustedRoutes(JSON.parse(JSON.stringify(finalData)));
         setLoading(false);
-        alert(`Sucesso! ${finalData.length} visitas carregadas da planilha.`);
+        alert(`Sucesso! ${finalData.length} clientes únicos carregados da planilha.`);
     };
 
     // Fazer upload de roteiro personalizado via Excel (.xlsx)
