@@ -27,7 +27,9 @@ import {
     PresentationChartLineIcon,
     EyeIcon,
     ArrowsExpandIcon,
-    ArrowsCompressIcon
+    ArrowsCompressIcon,
+    SearchIcon,
+    XCircleIcon
 } from './icons';
 
 // --- CONFIGURAÇÃO DE ÍCONES ---
@@ -657,6 +659,144 @@ const getSellerQuinzenaStats = (sellerId: number, routes: VisitaPrevista[]): Qui
     return { v13, v24, variationPct, isImbalanced, hasQuinzenal };
 };
 
+// Seletor de Colaborador com Busca em Tempo Real e Ordenação por Setor
+const SearchableSellerSelect: React.FC<{
+    sellers: { id: number; name: string }[];
+    value: string;
+    onChange: (sellerId: string) => void;
+}> = ({ sellers, value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Fechar ao clicar fora ou ao pressionar Escape
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    // Focar no campo de busca automaticamente ao abrir
+    useEffect(() => {
+        if (isOpen) {
+            setSearchTerm('');
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 50);
+        }
+    }, [isOpen]);
+
+    // Filtro por nome ou código do setor
+    const filteredSellers = useMemo(() => {
+        if (!searchTerm.trim()) return sellers;
+        const term = searchTerm.toLowerCase().trim();
+        return sellers.filter(s =>
+            String(s.id).toLowerCase().includes(term) ||
+            s.name.toLowerCase().includes(term)
+        );
+    }, [sellers, searchTerm]);
+
+    const selectedSellerObj = sellers.find(s => String(s.id) === value);
+    const displayText = selectedSellerObj
+        ? `${selectedSellerObj.id} - ${selectedSellerObj.name}`
+        : 'Selecione um Vendedor...';
+
+    return (
+        <div className="relative inline-block text-left" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen(prev => !prev)}
+                className="flex items-center justify-between min-w-[220px] max-w-[280px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white shadow-sm transition outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            >
+                <span className="truncate mr-2">
+                    {displayText}
+                </span>
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className="absolute left-0 mt-1.5 w-72 max-w-[90vw] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                    {/* Campo de Busca */}
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/60">
+                        <div className="relative flex items-center">
+                            <SearchIcon className="absolute left-2.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                placeholder="Buscar por código ou nome..."
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1 text-xs text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                            {searchTerm && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                                >
+                                    <XCircleIcon className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lista de Colaboradores */}
+                    <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50">
+                        {filteredSellers.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-slate-400 dark:text-slate-500">
+                                Nenhum colaborador encontrado para "{searchTerm}"
+                            </div>
+                        ) : (
+                            filteredSellers.map(seller => {
+                                const isSelected = String(seller.id) === value;
+                                return (
+                                    <button
+                                        key={seller.id}
+                                        type="button"
+                                        onClick={() => {
+                                            onChange(String(seller.id));
+                                            setIsOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-700 dark:text-indigo-300'
+                                                : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200'
+                                        }`}
+                                    >
+                                        <div className="flex items-center space-x-2 truncate">
+                                            <span className="font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-[11px] text-slate-700 dark:text-slate-300 font-bold shrink-0">
+                                                {seller.id}
+                                            </span>
+                                            <span className="truncate">{seller.name}</span>
+                                        </div>
+                                        {isSelected && (
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-2" />
+                                        )}
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 export const AjusteRota: React.FC = () => {
     const { colaboradores } = useContext(DataContext);
     const { user: authUser } = useAuth();
@@ -848,7 +988,14 @@ export const AjusteRota: React.FC = () => {
                 map.set(r.Cod_Vend, { id: r.Cod_Vend, name: r.Nome_Vendedor, supId });
             }
         });
-        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        return Array.from(map.values()).sort((a, b) => {
+            const numA = Number(a.id);
+            const numB = Number(b.id);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return numA - numB;
+            }
+            return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+        });
     }, [adjustedRoutes, scopeMode, selectedSupervisor]);
 
     // Rotas ajustadas filtradas pelo escopo ativo (para Mapa, KPIs e Grade)
@@ -2449,19 +2596,14 @@ export const AjusteRota: React.FC = () => {
                         {scopeMode === 'vendedor' && (
                             <div className="flex items-center space-x-1.5">
                                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Vendedor:</label>
-                                <select
+                                <SearchableSellerSelect
+                                    sellers={availableSellers}
                                     value={selectedSeller}
-                                    onChange={(e) => {
-                                        setSelectedSeller(e.target.value);
+                                    onChange={(val) => {
+                                        setSelectedSeller(val);
                                         setSelectedPromoter('ALL');
                                     }}
-                                    className="bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-1.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    <option value="">Selecione um Vendedor...</option>
-                                    {availableSellers.map(seller => (
-                                        <option key={seller.id} value={String(seller.id)}>{seller.name} ({seller.id})</option>
-                                    ))}
-                                </select>
+                                />
                             </div>
                         )}
 
@@ -3895,7 +4037,7 @@ export const AjusteRota: React.FC = () => {
                                             className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                                         >
                                             {availableSellers.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                                <option key={s.id} value={s.id}>{s.id} - {s.name}</option>
                                             ))}
                                         </select>
                                     </div>

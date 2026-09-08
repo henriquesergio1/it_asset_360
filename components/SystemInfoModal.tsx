@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.4',
+    date: 'Hoje',
+    title: 'Fuel360: Ordenação Numérica por Setor e Campo de Busca de Colaboradores',
+    changes: [
+      'Ordenação Numérica por Setor: O seletor de colaboradores no Ajuste Fino de Rotas agora ordena crescentemente pelo código numérico do setor (ex.: 101, 102, 103, 104...).',
+      'Campo de Busca e Filtro em Tempo Real: Adicionado combobox pesquisável com input dedicado para filtrar instantaneamente colaboradores por código ou por nome.'
+    ]
+  },
+  {
     version: '3.140.3',
     date: 'Hoje',
     title: 'Fuel360: Resolução de Colisão de Bases e Setores entre Vendedores e Promotores',
