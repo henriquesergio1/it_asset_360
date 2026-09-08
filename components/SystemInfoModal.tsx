@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.136.1',
+    date: 'Hoje',
+    title: 'Fuel360: Adequação Completa do Tema Escuro na Tela de Ajuste de Rotas',
+    changes: [
+      'Adequação de Tema Escuro: Ajuste visual em todos os cards de métricas (Quilometragem Total, Média de Deslocamento, Pico de Clientes e Alertas de Alta KM).',
+      'Grade de Ajuste Fino: Aplicação de estilos de modo escuro no container principal, cabeçalho, tabela de clientes, selects inline e barra de resumo inferior.',
+      'Contraste e Legibilidade: Refinamento de cores de texto, divisores e badges para perfeita harmonia no modo escuro sem alterar o comportamento no modo claro.'
+    ]
+  },
+  {
     version: '3.136.0',
     date: 'Hoje',
     title: 'Notificações: Digest Consolidado Inteligente para Múltiplos Alertas Semelhantes',

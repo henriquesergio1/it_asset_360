@@ -1589,11 +1589,11 @@ export const AjusteRota: React.FC = () => {
                         </div>
                         <div className="p-6 overflow-y-auto flex-1 space-y-4">
                             {unmatchedNames.map(nome => (
-                                <div key={nome} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                                    <div className="flex-1 font-bold text-slate-700">{nome}</div>
+                                <div key={nome} className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                    <div className="flex-1 font-bold text-slate-700 dark:text-slate-200">{nome}</div>
                                     <div className="flex-1">
                                         <select 
-                                            className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 setNameMappings(prev => ({...prev, [nome]: Number(val)}));
@@ -1609,8 +1609,8 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                        <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
-                            <button onClick={() => setShowMappingModal(false)} className="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors">Cancelar</button>
+                        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex justify-end gap-3">
+                            <button onClick={() => setShowMappingModal(false)} className="px-6 py-3 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
                             <button 
                                 onClick={() => {
                                     setShowMappingModal(false);
@@ -1767,44 +1767,44 @@ export const AjusteRota: React.FC = () => {
             {adjustedRoutes.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                     {/* KPI 1: Quilometragem */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Distância Total Estimada</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Distância Total Estimada</span>
                             <div className="flex items-baseline space-x-2 mt-1">
-                                <span className="text-xl font-black text-slate-800">{kpis.adjusted.totalKm} KM</span>
-                                <span className="text-xs text-slate-400 line-through">{kpis.original.totalKm} KM</span>
+                                <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.adjusted.totalKm} KM</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500 line-through">{kpis.original.totalKm} KM</span>
                             </div>
                         </div>
                         {kpis.kmSaved > 0 && (
-                            <div className="mt-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
                                 <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Economia de {kpis.kmSaved} KM ({kpis.percentSaved}%)
                             </div>
                         )}
                     </div>
 
                     {/* KPI 2: Média KM por Colaborador */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Média de Deslocamento</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Média de Deslocamento</span>
                             <div className="flex items-baseline space-x-2 mt-1">
-                                <span className="text-xl font-black text-slate-800">{kpis.adjusted.avgKmPerSeller} KM</span>
-                                <span className="text-xs text-slate-400">/ colab</span>
+                                <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.adjusted.avgKmPerSeller} KM</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">/ colab</span>
                             </div>
                         </div>
-                        <p className="text-[9px] text-slate-400 font-medium">Distribuído entre {kpis.adjusted.sellerCount} colaboradores ativos.</p>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">Distribuído entre {kpis.adjusted.sellerCount} colaboradores ativos.</p>
                     </div>
 
                     {/* KPI 3: Carga de Clientes (Equilíbrio) */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Pico de Clientes / Dia</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Pico de Clientes / Dia</span>
                             <div className="flex items-baseline space-x-2 mt-1">
-                                <span className="text-xl font-black text-slate-800">{kpis.adjusted.maxClientsOnSingleDay} PDVs</span>
-                                <span className="text-xs text-slate-400">Máx Config: {optMaxClients}</span>
+                                <span className="text-xl font-black text-slate-800 dark:text-white">{kpis.adjusted.maxClientsOnSingleDay} PDVs</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">Máx Config: {optMaxClients}</span>
                             </div>
                         </div>
                         <div className="flex items-center space-x-1">
-                            <div className="w-full bg-slate-100 rounded-full h-1.5">
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
                                 <div 
                                     className="bg-indigo-600 h-1.5 rounded-full" 
                                     style={{ width: `${Math.min(100, (kpis.adjusted.maxClientsOnSingleDay / optMaxClients) * 100)}%` }}
@@ -1814,22 +1814,22 @@ export const AjusteRota: React.FC = () => {
                     </div>
 
                     {/* KPI 4: Alertas de Distância */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Colaboradores com Alta KM</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Colaboradores com Alta KM</span>
                             <div className="flex items-baseline space-x-2 mt-1">
-                                <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                     {kpis.adjusted.exceededKmCount} / {kpis.adjusted.sellerCount}
                                 </span>
-                                <span className="text-xs text-slate-400">teto {optMaxKm} KM</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">teto {optMaxKm} KM</span>
                             </div>
                         </div>
                         {kpis.adjusted.exceededKmCount > 0 ? (
-                            <div className="mt-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                            <div className="mt-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
                                 <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste Manual
                             </div>
                         ) : (
-                            <div className="mt-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
                                 <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Rotas dentro do limite
                             </div>
                         )}
@@ -1942,7 +1942,7 @@ export const AjusteRota: React.FC = () => {
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                                 <div 
-                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200'}`}
+                                    className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition ${selectedPromoter === 'ALL' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200'}`}
                                     onClick={() => setSelectedPromoter('ALL')}
                                 >
                                     Todos no Escopo ({Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length})
@@ -1956,7 +1956,7 @@ export const AjusteRota: React.FC = () => {
                                     return (
                                         <div 
                                             key={sellerId}
-                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200')}`}
+                                            className={`p-2 rounded-xl border text-xs font-bold cursor-pointer transition flex items-center justify-between gap-1.5 ${selectedPromoter === String(sellerId) ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300' : (qStats.isImbalanced ? 'border-amber-300 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 hover:border-amber-400' : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-indigo-200')}`}
                                             onClick={() => setSelectedPromoter(String(sellerId))}
                                         >
                                             <div className="flex items-center space-x-2 truncate min-w-0">
@@ -2228,7 +2228,7 @@ export const AjusteRota: React.FC = () => {
                                                                 <select
                                                                     value={v.Cod_Vend}
                                                                     onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
-                                                                    className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700"
+                                                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                                                                 >
                                                                     {teamColaboradores.map(col => (
                                                                         <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
@@ -2242,7 +2242,7 @@ export const AjusteRota: React.FC = () => {
                                                                 <select
                                                                     value={v.Dia_Semana}
                                                                     onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
-                                                                    className="w-full bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700"
+                                                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                                                                 >
                                                                     {WEEKDAYS.map(day => (
                                                                         <option key={day} value={day}>{day}</option>
@@ -2252,14 +2252,14 @@ export const AjusteRota: React.FC = () => {
                                                             <div className="flex-1">
                                                                 <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Frequência</label>
                                                                 {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
-                                                                    <div className="w-full bg-blue-50 text-blue-700 border border-blue-200 rounded p-1 text-[10px] font-bold text-center">
+                                                                    <div className="w-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 rounded p-1 text-[10px] font-bold text-center">
                                                                         Semanal
                                                                     </div>
                                                                 ) : (
                                                                     <select
                                                                         value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
                                                                         onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
-                                                                        className="w-full bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
+                                                                        className="w-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
                                                                     >
                                                                         <option value="1 3">Quinzena 1 3</option>
                                                                         <option value="2 4">Quinzena 2 4</option>
@@ -2339,10 +2339,10 @@ export const AjusteRota: React.FC = () => {
 
                     {/* TABELA DE AJUSTE MANUAL E EDICAO DE ROTAS */}
                     {adjustedRoutes.length > 0 && (
-                        <div className="flex-1 bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col min-h-0 shadow-sm p-4">
+                        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-0 shadow-sm p-4 transition-colors">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 mb-3">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center shrink-0">
+                                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
                                         <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
                                     </h3>
 
@@ -2483,78 +2483,78 @@ export const AjusteRota: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 rounded-xl">
-                                <table className="w-full text-left text-[11px] font-bold text-slate-700">
-                                    <thead className="bg-slate-50 text-slate-500 uppercase text-[9px] sticky top-0 z-10 border-b border-slate-100">
+                            <div className="flex-1 overflow-auto custom-scrollbar border border-slate-100 dark:border-slate-800 rounded-xl">
+                                <table className="w-full text-left text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                    <thead className="bg-slate-50 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 uppercase text-[9px] sticky top-0 z-10 border-b border-slate-100 dark:border-slate-800">
                                         <tr>
                                             <th 
                                                 onClick={() => handleSort('Cod_Cliente')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Código"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Código/PDV</span>
-                                                    <span className={sortField === 'Cod_Cliente' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Cod_Cliente' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Cod_Cliente' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
                                             </th>
                                             <th 
                                                 onClick={() => handleSort('Razao_Social')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Razão Social"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Razão Social</span>
-                                                    <span className={sortField === 'Razao_Social' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Razao_Social' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Razao_Social' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
                                             </th>
                                             <th 
                                                 onClick={() => handleSort('Endereco')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Endereço"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Endereço</span>
-                                                    <span className={sortField === 'Endereco' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Endereco' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Endereco' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
                                             </th>
                                             <th 
                                                 onClick={() => handleSort('Nome_Vendedor')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Colaborador"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Colaborador Atual</span>
-                                                    <span className={sortField === 'Nome_Vendedor' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Nome_Vendedor' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Nome_Vendedor' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
                                             </th>
                                             <th 
                                                 onClick={() => handleSort('Dia_Semana')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Dia de Visita"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Dia de Visita</span>
-                                                    <span className={sortField === 'Dia_Semana' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Dia_Semana' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Dia_Semana' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
                                             </th>
                                             <th 
                                                 onClick={() => handleSort('Periodicidade')}
-                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 transition"
+                                                className="p-3 cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-700/50 transition"
                                                 title="Clique para ordenar por Periodicidade"
                                             >
                                                 <div className="flex items-center space-x-1">
                                                     <span>Periodicidade</span>
-                                                    <span className={sortField === 'Periodicidade' ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                                    <span className={sortField === 'Periodicidade' ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-300 dark:text-slate-600'}>
                                                         {sortField === 'Periodicidade' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
                                                 </div>
@@ -2562,15 +2562,15 @@ export const AjusteRota: React.FC = () => {
                                             <th className="p-3 text-center">Ações</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-50">
+                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                                         {sortedRoutes.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="p-8 text-center text-slate-400">
+                                                <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-500">
                                                     <p className="font-bold text-xs">Nenhum PDV encontrado para os filtros de dia da semana ou quinzena selecionados.</p>
                                                     <button
                                                         type="button"
                                                         onClick={() => { setSelectedDaysFilter([]); setSelectedQuinzenaFilter('ALL'); }}
-                                                        className="mt-2 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
+                                                        className="mt-2 text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold underline cursor-pointer"
                                                     >
                                                         Limpar todos os filtros de dias e quinzenas
                                                     </button>
@@ -2582,21 +2582,21 @@ export const AjusteRota: React.FC = () => {
                                                 .map((v, i) => {
                                                     const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
                                                     return (
-                                                        <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 transition">
-                                                            <td className="p-3 text-slate-900">{v.Cod_Cliente}</td>
-                                                            <td className="p-3 truncate max-w-[180px]" title={v.Razao_Social}>{v.Razao_Social}</td>
-                                                            <td className="p-3 text-slate-400 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
+                                                        <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
+                                                            <td className="p-3 text-slate-900 dark:text-white font-mono">{v.Cod_Cliente}</td>
+                                                            <td className="p-3 truncate max-w-[180px] text-slate-800 dark:text-slate-200" title={v.Razao_Social}>{v.Razao_Social}</td>
+                                                            <td className="p-3 text-slate-400 dark:text-slate-500 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
                                                             <td className="p-3">
                                                                 {teamType === 'vendedores' ? (
                                                                     <div className="flex items-center space-x-1.5">
                                                                         <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[130px]" title={v.Nome_Vendedor}>{v.Nome_Vendedor}</span>
-                                                                        <span className="text-[8px] bg-slate-100 text-slate-500 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
+                                                                        <span className="text-[8px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
                                                                     </div>
                                                                 ) : (
                                                                     <select
                                                                         value={v.Cod_Vend}
                                                                         onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
-                                                                        className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
+                                                                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 outline-none w-full"
                                                                     >
                                                                         {teamColaboradores.map(col => (
                                                                             <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
@@ -2614,7 +2614,7 @@ export const AjusteRota: React.FC = () => {
                                                                     <select
                                                                         value={v.Dia_Semana}
                                                                         onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
-                                                                        className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
+                                                                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 outline-none w-full"
                                                                     >
                                                                         {WEEKDAYS.map(day => (
                                                                             <option key={day} value={day}>{day}</option>
@@ -2624,14 +2624,14 @@ export const AjusteRota: React.FC = () => {
                                                             </td>
                                                             <td className="p-3">
                                                                 {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
-                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
                                                                         Semanal
                                                                     </span>
                                                                 ) : (
                                                                     <select
                                                                         value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
                                                                         onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
-                                                                        className="bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
+                                                                        className="bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded p-1 text-[10px] font-bold outline-none"
                                                                         title="Ajustar Quinzena (1 3 vs 2 4)"
                                                                     >
                                                                         <option value="1 3">Quinzenal (1, 3)</option>
@@ -2655,12 +2655,12 @@ export const AjusteRota: React.FC = () => {
                                     </tbody>
                                 </table>
                                 {sortedRoutes.length > 0 && (
-                                    <div className="p-2.5 text-center text-slate-400 text-[10px] bg-slate-50 font-medium flex items-center justify-between px-4 border-t border-slate-100">
+                                    <div className="p-2.5 text-center text-slate-400 dark:text-slate-500 text-[10px] bg-slate-50 dark:bg-slate-800/60 font-medium flex items-center justify-between px-4 border-t border-slate-100 dark:border-slate-800">
                                         <span>
                                             Exibindo {Math.min(100, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
                                             {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
                                         </span>
-                                        <span className="font-bold text-slate-500">
+                                        <span className="font-bold text-slate-500 dark:text-slate-400">
                                             Total no Escopo: {scopedAdjustedRoutes.length} PDVs
                                         </span>
                                     </div>
