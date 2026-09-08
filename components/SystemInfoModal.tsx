@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.143.0',
+    date: 'Hoje',
+    title: 'Fuel360: Otimização de Layout, Limite de Horas de Rota e Parâmetros Reorganizados',
+    changes: [
+      'Novo Parâmetro de Limite de Horas / Dia: Configuração de horas máximas de jornada da rota diária com chave Liga/Desliga, combinando tempo de trânsito viário e tempo médio de atendimento.',
+      'Reorganização Modular dos Parâmetros: Agrupamento limpo e ergonômico na sidebar entre Limites Diários, Calendário & Jornada (chips de dias rápidos) e Ações.',
+      'Correção Estrutural de Layout na Grade de Ajuste Fino: Reestruturação do cabeçalho da grade em duas faixas dedicadas (Ações na linha superior e Filtros de Dias/Quinzena na linha inferior), eliminando quebras em telas estreitas.'
+    ]
+  },
+  {
     version: '3.142.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Referência e Deduplicação de Clientes Únicos',

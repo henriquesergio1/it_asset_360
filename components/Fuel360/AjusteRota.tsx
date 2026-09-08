@@ -848,6 +848,9 @@ export const AjusteRota: React.FC = () => {
     const [optMaxClients, setOptMaxClients] = useState(15);
     const [optMaxKm, setOptMaxKm] = useState(60);
     const [optLimitKm, setOptLimitKm] = useState(false);
+    const [optMaxHours, setOptMaxHours] = useState(8);
+    const [optLimitHours, setOptLimitHours] = useState(false);
+    const [optServiceTimePerClient, setOptServiceTimePerClient] = useState(15); // min por visita
     const [optDays, setOptDays] = useState<string[]>(['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
     const [optSatHalfPeriod, setOptSatHalfPeriod] = useState(true);
     const [optBalanceWorkload, setOptBalanceWorkload] = useState(true);
@@ -1926,10 +1929,18 @@ export const AjusteRota: React.FC = () => {
 
             const dayBuckets: DayBucket[] = activeDays.map(day => {
                 const w = getDayWeight(day);
+                let cap = (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients;
+                if (optLimitHours) {
+                    const hoursForDay = (day === 'SÁBADO' && optSatHalfPeriod) ? optMaxHours / 2 : optMaxHours;
+                    const estimatedTravelMins = 60;
+                    const availableMins = Math.max(30, (hoursForDay * 60) - estimatedTravelMins);
+                    const maxClientsByHours = Math.max(1, Math.floor(availableMins / optServiceTimePerClient));
+                    cap = Math.min(cap, maxClientsByHours);
+                }
                 return {
                     day,
                     weight: w,
-                    maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
+                    maxCap: cap,
                     semanais: [],
                     quinzenais13: [],
                     quinzenais24: []
@@ -2490,6 +2501,7 @@ export const AjusteRota: React.FC = () => {
                 });
 
                 let sellerHasExceededDay = false;
+                let sellerHasExceededHours = false;
 
                 dayMap.forEach((dayVisits, day) => {
                     const dayKey = `${sellerId}-${day}`;
@@ -2501,13 +2513,21 @@ export const AjusteRota: React.FC = () => {
                     totalKm += circuit.totalKm;
                     totalTravelMinutes += circuit.travelMinutes;
 
+                    const dayEstimatedTotalHours = (circuit.travelMinutes + (dayVisits.length * optServiceTimePerClient)) / 60;
+
                     if (optLimitKm && circuit.totalKm > optMaxKm) {
                         sellerHasExceededDay = true;
+                    }
+                    if (optLimitHours && dayEstimatedTotalHours > optMaxHours) {
+                        sellerHasExceededHours = true;
                     }
                 });
 
                 if (sellerHasExceededDay) {
                     exceededKmCount++;
+                }
+                if (sellerHasExceededHours) {
+                    exceededHoursCount++;
                 }
             });
 
@@ -2520,6 +2540,7 @@ export const AjusteRota: React.FC = () => {
                 avgMinutesPerSeller: sellers.length ? Math.round(totalTravelMinutes / sellers.length) : 0,
                 maxClientsOnSingleDay,
                 exceededKmCount,
+                exceededHoursCount,
                 sellerCount: sellers.length,
                 clientCount: visits.length
             };
@@ -2542,7 +2563,7 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm, optMaxHours, optLimitHours, optServiceTimePerClient]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -3207,42 +3228,50 @@ export const AjusteRota: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* KPI 5: Alertas de Distância */}
+                    {/* KPI 5: Alertas de Distância e Jornada */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
                             <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">
-                                {optLimitKm ? `Alta KM (> ${optMaxKm} KM)` : 'Limite KM Diário'}
+                                {optLimitKm || optLimitHours ? 'Limites de Rota' : 'Limite Diário'}
                             </span>
-                            <div className="flex items-baseline space-x-2 mt-1">
-                                {optLimitKm ? (
-                                    <>
-                                        <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                            {kpis.adjusted.exceededKmCount} / {kpis.adjusted.sellerCount}
+                            <div className="flex flex-col space-y-1 mt-1">
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-slate-500 dark:text-slate-400">KM:</span>
+                                    {optLimitKm ? (
+                                        <span className={`font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                            {kpis.adjusted.exceededKmCount > 0 ? `${kpis.adjusted.exceededKmCount} > ${optMaxKm}km` : `Máx ${optMaxKm}km (OK)`}
                                         </span>
-                                        <span className="text-xs text-slate-400 dark:text-slate-500">colab(s)</span>
-                                    </>
-                                ) : (
-                                    <span className="text-sm font-black text-slate-600 dark:text-slate-300">
-                                        Flexível (Sem Teto)
-                                    </span>
-                                )}
+                                    ) : (
+                                        <span className="font-bold text-slate-400">Livre</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-slate-500 dark:text-slate-400">Jornada:</span>
+                                    {optLimitHours ? (
+                                        <span className={`font-black ${kpis.adjusted.exceededHoursCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                            {kpis.adjusted.exceededHoursCount > 0 ? `${kpis.adjusted.exceededHoursCount} > ${optMaxHours}h` : `Máx ${optMaxHours}h (OK)`}
+                                        </span>
+                                    ) : (
+                                        <span className="font-bold text-slate-400">Livre</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        {optLimitKm ? (
-                            kpis.adjusted.exceededKmCount > 0 ? (
-                                <div className="mt-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                        <div className="mt-2">
+                            {(!optLimitKm && !optLimitHours) ? (
+                                <div className="bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                    <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Otimização Livre
+                                </div>
+                            ) : (kpis.adjusted.exceededKmCount > 0 || kpis.adjusted.exceededHoursCount > 0) ? (
+                                <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
                                     <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste
                                 </div>
                             ) : (
-                                <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                    <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Carga equilibrada
+                                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                    <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Carga Equilibrada
                                 </div>
-                            )
-                        ) : (
-                            <div className="mt-2 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Otimização Livre
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -3251,114 +3280,201 @@ export const AjusteRota: React.FC = () => {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
                 {/* COLUNA ESQUERDA: PARÂMETROS E LISTA DE AJUSTES */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col space-y-4 overflow-y-auto custom-scrollbar shadow-sm transition-colors">
-                    {/* PARÂMETROS DO ROTEIRIZADOR */}
-                    <div className="space-y-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-                        <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
-                            <CogIcon className="w-4 h-4 mr-1 text-slate-500"/> Parâmetros do Otimizador
-                        </h4>
+                    {/* PARÂMETROS DO ROTEIRIZADOR (AGRUPADOS E ORGANIZADOS) */}
+                    <div className="space-y-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center">
+                                <CogIcon className="w-4 h-4 mr-1 text-indigo-600"/> Parâmetros do Otimizador
+                            </h4>
+                        </div>
                         
-                        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl p-2.5 text-[10px] text-indigo-700 dark:text-indigo-300 space-y-1">
-                            <div className="font-bold flex items-center">
-                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1 text-indigo-600 dark:text-indigo-400 shrink-0"/> Carteira Blindada por Vendedor
+                        {/* BLINDAGEM DE CARTEIRA (COMPACTO) */}
+                        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 rounded-xl p-2 text-[10px] text-indigo-700 dark:text-indigo-300 flex items-start space-x-1.5">
+                            <CheckCircleIcon className="w-3.5 h-3.5 mt-0.5 text-indigo-600 dark:text-indigo-400 shrink-0"/>
+                            <div>
+                                <span className="font-black block">Carteira Blindada por Vendedor</span>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 leading-tight block">
+                                    Clientes pertencem exclusivamente ao vendedor. Periodicidades preservadas.
+                                </span>
                             </div>
-                            <p className="text-[9px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                Clientes pertencem exclusivamente ao vendedor (zero transferência). Periodicidades semanais e quinzenais preservadas.
-                            </p>
                         </div>
 
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Clientes Máximo / Dia</label>
-                            <input 
-                                type="number" 
-                                value={optMaxClients} 
-                                onChange={(e) => setOptMaxClients(Number(e.target.value))}
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <div className="flex items-center justify-between mb-1">
-                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">KM Máximo Rota / Dia</label>
-                                <label className="flex items-center space-x-1 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={optLimitKm} 
-                                        onChange={(e) => setOptLimitKm(e.target.checked)}
-                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3 h-3 cursor-pointer"
-                                    />
-                                    <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Ativar</span>
+                        {/* GRUPO 1: LIMITES DIÁRIOS (CLIENTES, KM E HORAS) */}
+                        <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-xl p-2.5 space-y-2.5">
+                            <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                ⏱️ Limites Diários por Rota
+                            </span>
+
+                            {/* Clientes Máximo / Dia */}
+                            <div className="flex items-center justify-between gap-2">
+                                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                    Clientes Máx. / Dia:
                                 </label>
+                                <input 
+                                    type="number" 
+                                    value={optMaxClients} 
+                                    onChange={(e) => setOptMaxClients(Math.max(1, Number(e.target.value)))}
+                                    className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white"
+                                />
                             </div>
-                            <input 
-                                type="number" 
-                                value={optMaxKm} 
-                                disabled={!optLimitKm}
-                                onChange={(e) => setOptMaxKm(Number(e.target.value))}
-                                className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitKm ? 'opacity-40 cursor-not-allowed' : ''}`}
-                                placeholder={!optLimitKm ? "Desativado (Livre)" : "KM máx."}
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Sábado Meio-Período</span>
-                            <input 
-                                type="checkbox" 
-                                checked={optSatHalfPeriod} 
-                                onChange={(e) => setOptSatHalfPeriod(e.target.checked)}
-                                className="rounded text-indigo-600 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase block">Equilibrar Quinzenas</span>
-                                <span className="text-[8px] text-slate-400 block">Ajusta 1 3 e 2 4 para equalizar carga</span>
-                            </div>
-                            <input 
-                                type="checkbox" 
-                                checked={optBalanceWorkload} 
-                                onChange={(e) => setOptBalanceWorkload(e.target.checked)}
-                                className="rounded text-indigo-600 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <div className="pt-1">
-                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5">Dias Ativos</label>
-                            <div className="grid grid-cols-2 gap-1.5">
-                                {WEEKDAYS.map(day => (
-                                    <label key={day} className="flex items-center space-x-1.5 text-[10px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+
+                            {/* KM Máximo Rota / Dia com Liga/Desliga */}
+                            <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center space-x-1.5 cursor-pointer">
                                         <input 
                                             type="checkbox" 
-                                            checked={optDays.includes(day)}
-                                            onChange={(e) => {
-                                                if(e.target.checked) setOptDays([...optDays, day]);
-                                                else setOptDays(optDays.filter(d => d !== day));
-                                            }}
-                                            className="rounded text-indigo-600 focus:ring-indigo-500"
+                                            checked={optLimitKm} 
+                                            onChange={(e) => setOptLimitKm(e.target.checked)}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
                                         />
-                                        <span>{day.split('-')[0]}</span>
+                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                            Limitar KM / Dia:
+                                        </span>
                                     </label>
-                                ))}
+                                    <div className="flex items-center space-x-1">
+                                        <input 
+                                            type="number" 
+                                            value={optMaxKm} 
+                                            disabled={!optLimitKm}
+                                            onChange={(e) => setOptMaxKm(Number(e.target.value))}
+                                            className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitKm ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-400">km</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* NOVO: Horas Máximas da Rota / Dia com Liga/Desliga */}
+                            <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                                <div className="flex items-center justify-between">
+                                    <label className="flex items-center space-x-1.5 cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={optLimitHours} 
+                                            onChange={(e) => setOptLimitHours(e.target.checked)}
+                                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                            Limitar Horas / Dia:
+                                        </span>
+                                    </label>
+                                    <div className="flex items-center space-x-1">
+                                        <input 
+                                            type="number" 
+                                            value={optMaxHours} 
+                                            disabled={!optLimitHours}
+                                            step={0.5}
+                                            min={1}
+                                            max={24}
+                                            onChange={(e) => setOptMaxHours(Number(e.target.value))}
+                                            className={`w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg py-1 px-2 text-xs font-black text-right outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitHours ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-400">h</span>
+                                    </div>
+                                </div>
+                                <span className="text-[8.5px] text-slate-400 dark:text-slate-500 block">
+                                    Inclui deslocamento viário + atendimento médio nos clientes
+                                </span>
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleOptimizeSimulate}
-                            disabled={loading || adjustedRoutes.length === 0}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-sm disabled:opacity-50 cursor-pointer"
-                        >
-                            <RefreshIcon className="w-4 h-4 mr-1"/> Otimizar Rotas
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSourceSectorToExtinguish('');
-                                setTargetSectorsSelected([]);
-                                setShowExtinguishModal(true);
-                            }}
-                            disabled={loading || adjustedRoutes.length === 0}
-                            className="w-full mt-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-xs transition cursor-pointer disabled:opacity-50"
-                            title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
-                        >
-                            <UserGroupIcon className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400"/>
-                            Redistribuir Setor Extinto
-                        </button>
+                        {/* GRUPO 2: CALENDÁRIO OPERACIONAL E DIAS ATIVOS */}
+                        <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 rounded-xl p-2.5 space-y-2">
+                            <span className="text-[9.5px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                                📅 Calendário & Jornada
+                            </span>
+
+                            {/* Dias Ativos em Chips Elegantes */}
+                            <div>
+                                <label className="block text-[9.5px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                                    Dias de Atendimento Ativos:
+                                </label>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {WEEKDAYS.map(day => {
+                                        const shortName = day.split('-')[0].slice(0, 3);
+                                        const isActive = optDays.includes(day);
+                                        return (
+                                            <button
+                                                key={day}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (isActive) {
+                                                        if (optDays.length > 1) setOptDays(optDays.filter(d => d !== day));
+                                                    } else {
+                                                        setOptDays([...optDays, day]);
+                                                    }
+                                                }}
+                                                className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition-all text-center cursor-pointer border ${
+                                                    isActive
+                                                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs font-black'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                {shortName}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Toggles Rápidos */}
+                            <div className="space-y-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                                        Sábado Meio-Período
+                                    </span>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={optSatHalfPeriod} 
+                                        onChange={(e) => setOptSatHalfPeriod(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                </label>
+
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <div>
+                                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">
+                                            Equilibrar Quinzenas
+                                        </span>
+                                        <span className="text-[8px] text-slate-400 block">
+                                            Equaliza Sem 1/3 e Sem 2/4
+                                        </span>
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={optBalanceWorkload} 
+                                        onChange={(e) => setOptBalanceWorkload(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* BOTÕES DE AÇÃO */}
+                        <div className="pt-1 space-y-1.5">
+                            <button
+                                onClick={handleOptimizeSimulate}
+                                disabled={loading || adjustedRoutes.length === 0}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black p-2.5 rounded-xl text-xs flex items-center justify-center shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50"
+                            >
+                                <RefreshIcon className="w-4 h-4 mr-1.5"/> Otimizar Rotas
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSourceSectorToExtinguish('');
+                                    setTargetSectorsSelected([]);
+                                    setShowExtinguishModal(true);
+                                }}
+                                disabled={loading || adjustedRoutes.length === 0}
+                                className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-2xs transition cursor-pointer disabled:opacity-50"
+                                title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
+                            >
+                                <UserGroupIcon className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400"/>
+                                Redistribuir Setor Extinto
+                            </button>
+                        </div>
                     </div>
 
                     {/* LISTA DE COLABORADORES PARA SELEÇÃO NO MAPA COM ALERTA DE DESBALANCEAMENTO QUINZENAL */}
@@ -3882,175 +3998,187 @@ export const AjusteRota: React.FC = () => {
                     {/* TABELA DE AJUSTE MANUAL E EDICAO DE ROTAS */}
                     {adjustedRoutes.length > 0 && (
                         <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-0 shadow-sm p-4 transition-colors">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 mb-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
-                                        <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
-                                    </h3>
+                            {/* CABEÇALHO DA GRADE: DUAS FAIXAS BEM DEFINIDAS */}
+                            <div className="space-y-2.5 mb-3">
+                                {/* FAIXA 1: TÍTULO E AÇÕES PRINCIPAIS */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                    <div className="flex items-center space-x-2">
+                                        <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center shrink-0">
+                                            <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
+                                        </h3>
+                                        <span className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-200/60 dark:border-indigo-800">
+                                            {scopedAdjustedRoutes.length} visitas
+                                        </span>
+                                    </div>
 
-                                    {/* RESUMO E FILTROS INTERATIVOS DE VISITAS POR DIA DA SEMANA E QUINZENA */}
-                                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                                        {/* FILTRO DE DIAS DA SEMANA (CLICÁVEIS - SELEÇÃO MÚLTIPLA) */}
-                                        <div className="flex flex-wrap items-center gap-1">
-                                            {WEEKDAYS.map(day => {
-                                                const shortName = day.split('-')[0].slice(0, 3);
-                                                const count = visitsByDay[day] || 0;
-                                                const isSelected = selectedDaysFilter.includes(day);
-                                                const hasAnySelected = selectedDaysFilter.length > 0;
-                                                const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
-                                                const dayMetrics = operationalSummary.dayMap[day];
-                                                const displayKm = selectedQuinzenaFilter === '1_3' 
-                                                    ? dayMetrics?.km13 
-                                                    : (selectedQuinzenaFilter === '2_4' 
-                                                        ? dayMetrics?.km24 
-                                                        : (dayMetrics?.km13 || dayMetrics?.km24 || 0));
-
-                                                return (
-                                                    <button
-                                                        key={day}
-                                                        type="button"
-                                                        onClick={() => handleToggleDayFilter(day)}
-                                                        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
-                                                            isSelected 
-                                                                ? `${dayCfg.bg} text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-slate-400 font-black` 
-                                                                : hasAnySelected
-                                                                    ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
-                                                                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                                                        }`}
-                                                        title={`Clique para filtrar ${day}. Total: ${count} atendimentos${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
-                                                    >
-                                                        <span className="uppercase font-semibold">{shortName}:</span>
-                                                        <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
-                                                            {count}
-                                                        </span>
-                                                        {Boolean(displayKm && displayKm > 0) && (
-                                                            <span className={`text-[9px] font-semibold ml-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'}`}>
-                                                                • {displayKm}km
-                                                            </span>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-
-                                            {selectedDaysFilter.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleClearDayFilter}
-                                                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
-                                                    title="Limpar filtro de dias e exibir a semana completa"
-                                                >
-                                                    Todos
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* DIVISOR */}
-                                        <div className="h-4 w-px bg-slate-300 dark:bg-slate-600 mx-0.5 hidden sm:block"/>
-
-                                        {/* TOTALIZADORES E FILTROS POR QUINZENA (SEMANAS 1/3 E 2/4) */}
-                                        <div className="flex flex-wrap items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
-                                                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
-                                                    selectedQuinzenaFilter === '1_3'
-                                                        ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 ring-offset-1 font-black shadow-sm'
-                                                        : selectedQuinzenaFilter !== 'ALL'
-                                                            ? 'bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40 opacity-50 hover:opacity-100'
-                                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 font-bold'
-                                                }`}
-                                                title={`Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal13Count} Quinzenais 1/3). Clique para filtrar.`}
-                                            >
-                                                <span className="font-semibold">Sem 1/3:</span>
-                                                <span className="font-black">{quinzenaTotals.total13}</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
-                                                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
-                                                    selectedQuinzenaFilter === '2_4'
-                                                        ? 'bg-fuchsia-600 text-white border-fuchsia-700 ring-2 ring-fuchsia-400 ring-offset-1 font-black shadow-sm'
-                                                        : selectedQuinzenaFilter !== 'ALL'
-                                                            ? 'bg-fuchsia-50/50 dark:bg-fuchsia-950/20 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200/50 dark:border-fuchsia-800/40 opacity-50 hover:opacity-100'
-                                                            : 'bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800/60 hover:bg-fuchsia-100 font-bold'
-                                                }`}
-                                                title={`Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal24Count} Quinzenais 2/4). Clique para filtrar.`}
-                                            >
-                                                <span className="font-semibold">Sem 2/4:</span>
-                                                <span className="font-black">{quinzenaTotals.total24}</span>
-                                            </button>
-
-                                            {quinzenaTotals.isImbalanced && (
-                                                <span 
-                                                    className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"
-                                                    title={`Variação de ${quinzenaTotals.variationPct}% entre as quinzenas (Sem 1/3: ${quinzenaTotals.total13} vs Sem 2/4: ${quinzenaTotals.total24}).`}
-                                                >
-                                                    ⚠️ {quinzenaTotals.variationPct}% var.
+                                    {/* BOTÕES DE AÇÃO COM WRAP SUAVE E ALINHAMENTO IMPECÁVEL */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            onClick={() => setShowSummaryModal(true)}
+                                            disabled={scopedAdjustedRoutes.length === 0}
+                                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-blue-200 dark:border-blue-800 shadow-2xs transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                            title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
+                                        >
+                                            <ChartBarIcon className="w-3.5 h-3.5 mr-1.5 text-blue-600 dark:text-blue-400"/>
+                                            Resumo KM & Tempo
+                                        </button>
+                                        <button
+                                            onClick={() => setShowItineraryModal(true)}
+                                            disabled={scopedAdjustedRoutes.length === 0}
+                                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-emerald-200 dark:border-emerald-800 shadow-2xs transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                            title="Visualizar a sequência cronológica da rota do dia com links de navegação para Google Maps e Waze"
+                                        >
+                                            <LocationMarkerIcon className="w-3.5 h-3.5 mr-1.5 text-emerald-600 dark:text-emerald-400"/>
+                                            Itinerário do Dia
+                                        </button>
+                                        <button
+                                            onClick={() => setShowCompareModal(true)}
+                                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-2xs transition h-[32px]"
+                                            title="Comparar a rota original com a rota ajustada antes de salvar"
+                                        >
+                                            <PresentationChartLineIcon className="w-3.5 h-3.5 mr-1.5 text-indigo-600 dark:text-indigo-400"/>
+                                            Comparativo
+                                            {routeComparisonDiff.totalChanged > 0 && (
+                                                <span className="ml-1.5 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                                                    {routeComparisonDiff.totalChanged}
                                                 </span>
                                             )}
-
-                                            {selectedQuinzenaFilter !== 'ALL' && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedQuinzenaFilter('ALL')}
-                                                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
-                                                    title="Limpar filtro de quinzena e exibir todas as semanas"
-                                                >
-                                                    Todas
-                                                </button>
-                                            )}
-                                        </div>
+                                        </button>
+                                        <button
+                                            onClick={handleExportExcel}
+                                            className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-2xs transition h-[32px]"
+                                            title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
+                                        >
+                                            <UploadIcon className="w-3.5 h-3.5 mr-1.5 rotate-180"/> Exportar Excel (em Abas)
+                                        </button>
+                                        <button
+                                            onClick={handleSaveDatabase}
+                                            disabled={saving}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-1.5 rounded-xl text-xs flex items-center shadow-md hover:shadow-lg transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {saving ? <SpinnerIcon className="w-3.5 h-3.5 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-3.5 h-3.5 mr-1.5"/>}
+                                            Salvar Simulação
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center space-x-2 shrink-0">
-                                    <button
-                                        onClick={() => setShowSummaryModal(true)}
-                                        disabled={scopedAdjustedRoutes.length === 0}
-                                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-blue-200 dark:border-blue-800 shadow-xs transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                        title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
-                                    >
-                                        <ChartBarIcon className="w-4 h-4 mr-1.5 text-blue-600 dark:text-blue-400"/>
-                                        Resumo KM & Tempo
-                                    </button>
-                                    <button
-                                        onClick={() => setShowItineraryModal(true)}
-                                        disabled={scopedAdjustedRoutes.length === 0}
-                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-emerald-200 dark:border-emerald-800 shadow-xs transition h-[32px] disabled:opacity-50 cursor-pointer"
-                                        title="Visualizar a sequência cronológica da rota do dia com links de navegação para Google Maps e Waze"
-                                    >
-                                        <LocationMarkerIcon className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400"/>
-                                        Itinerário do Dia
-                                    </button>
-                                    <button
-                                        onClick={() => setShowCompareModal(true)}
-                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-xs transition h-[32px]"
-                                        title="Comparar a rota original com a rota ajustada antes de salvar"
-                                    >
-                                        <PresentationChartLineIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400"/>
-                                        Comparativo Antes x Depois
-                                        {routeComparisonDiff.totalChanged > 0 && (
-                                            <span className="ml-1.5 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full">
-                                                {routeComparisonDiff.totalChanged}
+                                {/* FAIXA 2: BARRA DE FILTROS E NAVEGAÇÃO RÁPIDA (DIAS DA SEMANA E QUINZENA) */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+                                    {/* FILTRO DE DIAS DA SEMANA */}
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 flex items-center">
+                                            Dias:
+                                        </span>
+                                        {WEEKDAYS.map(day => {
+                                            const shortName = day.split('-')[0].slice(0, 3);
+                                            const count = visitsByDay[day] || 0;
+                                            const isSelected = selectedDaysFilter.includes(day);
+                                            const hasAnySelected = selectedDaysFilter.length > 0;
+                                            const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
+                                            const dayMetrics = operationalSummary.dayMap[day];
+                                            const displayKm = selectedQuinzenaFilter === '1_3' 
+                                                ? dayMetrics?.km13 
+                                                : (selectedQuinzenaFilter === '2_4' 
+                                                    ? dayMetrics?.km24 
+                                                    : (dayMetrics?.km13 || dayMetrics?.km24 || 0));
+
+                                            return (
+                                                <button
+                                                    key={day}
+                                                    type="button"
+                                                    onClick={() => handleToggleDayFilter(day)}
+                                                    className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                        isSelected 
+                                                            ? `${dayCfg.bg} text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-slate-400 font-black` 
+                                                            : hasAnySelected
+                                                                ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
+                                                                : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                                                    }`}
+                                                    title={`Clique para filtrar ${day}. Total: ${count} atendimentos${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
+                                                >
+                                                    <span className="uppercase font-semibold">{shortName}:</span>
+                                                    <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
+                                                        {count}
+                                                    </span>
+                                                    {Boolean(displayKm && displayKm > 0) && (
+                                                        <span className={`text-[9px] font-semibold ml-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'}`}>
+                                                            • {displayKm}km
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+
+                                        {selectedDaysFilter.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={handleClearDayFilter}
+                                                className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                                                title="Limpar filtro de dias e exibir a semana completa"
+                                            >
+                                                Todos os Dias
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* TOTALIZADORES E FILTROS POR QUINZENA (SEMANAS 1/3 E 2/4) */}
+                                    <div className="flex flex-wrap items-center gap-1.5 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-700 pt-1.5 sm:pt-0 sm:pl-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1">
+                                            Ciclo:
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter('ALL')}
+                                            className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                                                selectedQuinzenaFilter === 'ALL'
+                                                    ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-2xs font-black'
+                                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            Todas ({quinzenaTotals.semanalCount + quinzenaTotals.quinzenal13Count + quinzenaTotals.quinzenal24Count})
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
+                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                selectedQuinzenaFilter === '1_3'
+                                                    ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 ring-offset-1 font-black shadow-sm'
+                                                    : selectedQuinzenaFilter !== 'ALL'
+                                                        ? 'bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40 opacity-50 hover:opacity-100'
+                                                        : 'bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 font-bold'
+                                            }`}
+                                            title={`Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal13Count} Quinzenais 1/3). Clique para filtrar.`}
+                                        >
+                                            <span className="font-semibold">Sem 1/3:</span>
+                                            <span className="font-black">{quinzenaTotals.total13}</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
+                                            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                selectedQuinzenaFilter === '2_4'
+                                                    ? 'bg-fuchsia-600 text-white border-fuchsia-700 ring-2 ring-fuchsia-400 ring-offset-1 font-black shadow-sm'
+                                                    : selectedQuinzenaFilter !== 'ALL'
+                                                        ? 'bg-fuchsia-50/50 dark:bg-fuchsia-950/20 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200/50 dark:border-fuchsia-800/40 opacity-50 hover:opacity-100'
+                                                        : 'bg-white dark:bg-slate-900 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800/60 hover:bg-fuchsia-50 font-bold'
+                                            }`}
+                                            title={`Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal24Count} Quinzenais 2/4). Clique para filtrar.`}
+                                        >
+                                            <span className="font-semibold">Sem 2/4:</span>
+                                            <span className="font-black">{quinzenaTotals.total24}</span>
+                                        </button>
+
+                                        {quinzenaTotals.isImbalanced && (
+                                            <span 
+                                                className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"
+                                                title={`Variação de ${quinzenaTotals.variationPct}% entre as quinzenas (Sem 1/3: ${quinzenaTotals.total13} vs Sem 2/4: ${quinzenaTotals.total24}).`}
+                                            >
+                                                ⚠️ {quinzenaTotals.variationPct}% var.
                                             </span>
                                         )}
-                                    </button>
-                                    <button
-                                        onClick={handleExportExcel}
-                                        className="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow transition h-[32px]"
-                                        title="Exportar planilha Excel estruturada com abas consolidadas e por equipe/colaborador conforme o escopo selecionado"
-                                    >
-                                        <UploadIcon className="w-4 h-4 mr-1 rotate-180"/> Exportar Excel (em Abas)
-                                    </button>
-                                    <button
-                                        onClick={handleSaveDatabase}
-                                        disabled={saving}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center shadow transition h-[32px]"
-                                    >
-                                        {saving ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1"/> : <CheckCircleIcon className="w-4 h-4 mr-1"/>}
-                                        Salvar Simulação
-                                    </button>
+                                    </div>
                                 </div>
                             </div>
 
