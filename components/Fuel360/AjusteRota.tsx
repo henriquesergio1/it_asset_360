@@ -25,7 +25,9 @@ import {
     TrashIcon,
     UsersIcon,
     PresentationChartLineIcon,
-    EyeIcon
+    EyeIcon,
+    ArrowsExpandIcon,
+    ArrowsCompressIcon
 } from './icons';
 
 // --- CONFIGURAÇÃO DE ÍCONES ---
@@ -214,6 +216,18 @@ const HeatmapLayer: React.FC<{ points: HeatmapPoint[] }> = ({ points }) => {
     return null;
 };
 
+// Componente para redimensionamento dinâmico dos azulejos do mapa (Leaflet)
+const MapResizeHandler: React.FC<{ isFullscreen: boolean }> = ({ isFullscreen }) => {
+    const map = useMap();
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [isFullscreen, map]);
+    return null;
+};
+
 const pinClientIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -392,6 +406,20 @@ export const AjusteRota: React.FC = () => {
     // Scroll Spy: cliente em foco selecionado pelo mapa ou pela tabela
     const [highlightedClientCode, setHighlightedClientCode] = useState<number | null>(null);
     const highlightTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Modo Tela Cheia no Mapa
+    const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+
+    // Fechar tela cheia ao pressionar a tecla ESC
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isMapFullscreen) {
+                setIsMapFullscreen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMapFullscreen]);
 
     const handleToggleDayFilter = (day: string) => {
         setSelectedDaysFilter(prev => {
@@ -2053,82 +2081,108 @@ export const AjusteRota: React.FC = () => {
                 {/* COLUNA DIREITA: MAPA E TABELA DE CLIENTES */}
                 <div className="lg:col-span-3 flex flex-col space-y-4 min-h-0">
                     {/* MAP CONTAINER */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm h-96 relative flex flex-col transition-colors">
+                    <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm transition-all duration-300 flex flex-col ${
+                        isMapFullscreen 
+                            ? 'fixed inset-0 z-[1100] w-screen h-screen rounded-none' 
+                            : 'relative isolate rounded-2xl h-96 z-10'
+                    }`}>
                         <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md z-[1000] text-xs font-bold text-slate-800 dark:text-white flex items-center">
                             <GlobeIcon className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400 animate-pulse"/> Visão Espacial do Ajuste
                         </div>
 
-                        {/* CONTROLES FLUTUANTES DO MAPA: ALTERNADOR RÁPIDO DE QUINZENA E HEATMAP */}
-                        {scopedAdjustedRoutes.length > 0 && (
-                            <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
-                                {/* Alternador Rápido de Traçado por Quinzena */}
-                                <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-0.5 text-xs font-bold">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedQuinzenaFilter('ALL')}
-                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 ${
-                                            selectedQuinzenaFilter === 'ALL'
-                                                ? 'bg-indigo-600 text-white shadow-xs'
-                                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                        }`}
-                                        title="Visualizar traçado e clientes de todas as semanas"
-                                    >
-                                        Todas
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedQuinzenaFilter('1_3')}
-                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-                                            selectedQuinzenaFilter === '1_3'
-                                                ? 'bg-amber-500 text-white shadow-xs'
-                                                : 'text-slate-600 dark:text-slate-400 hover:text-amber-600'
-                                        }`}
-                                        title="Visualizar apenas traçados e clientes da Semana 1 e 3"
-                                    >
-                                        <span className="w-2 h-2 rounded-full bg-amber-300 ring-1 ring-amber-400/50 shrink-0" />
-                                        <span>Sem 1 e 3</span>
-                                        {quinzenaTotals.total13 > 0 && (
-                                            <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '1_3' ? 'bg-amber-600 text-amber-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                                                {quinzenaTotals.total13}
-                                            </span>
-                                        )}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedQuinzenaFilter('2_4')}
-                                        className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-                                            selectedQuinzenaFilter === '2_4'
-                                                ? 'bg-fuchsia-600 text-white shadow-xs'
-                                                : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
-                                        }`}
-                                        title="Visualizar apenas traçados e clientes da Semana 2 e 4"
-                                    >
-                                        <span className="w-2 h-2 rounded-full bg-fuchsia-300 ring-1 ring-fuchsia-400/50 shrink-0" />
-                                        <span>Sem 2 e 4</span>
-                                        {quinzenaTotals.total24 > 0 && (
-                                            <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '2_4' ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                                                {quinzenaTotals.total24}
-                                            </span>
-                                        )}
-                                    </button>
-                                </div>
+                        {/* CONTROLES FLUTUANTES DO MAPA: ALTERNADOR RÁPIDO DE QUINZENA, HEATMAP E TELA CHEIA */}
+                        <div className="absolute top-3 right-3 z-[1000] flex flex-wrap items-center gap-2">
+                            {scopedAdjustedRoutes.length > 0 && (
+                                <>
+                                    {/* Alternador Rápido de Traçado por Quinzena */}
+                                    <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-md flex items-center gap-0.5 text-xs font-bold">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter('ALL')}
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 ${
+                                                selectedQuinzenaFilter === 'ALL'
+                                                    ? 'bg-indigo-600 text-white shadow-xs'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                            title="Visualizar traçado e clientes de todas as semanas"
+                                        >
+                                            Todas
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter('1_3')}
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                                selectedQuinzenaFilter === '1_3'
+                                                    ? 'bg-amber-500 text-white shadow-xs'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-amber-600'
+                                            }`}
+                                            title="Visualizar apenas traçados e clientes da Semana 1 e 3"
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-amber-300 ring-1 ring-amber-400/50 shrink-0" />
+                                            <span>Sem 1 e 3</span>
+                                            {quinzenaTotals.total13 > 0 && (
+                                                <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '1_3' ? 'bg-amber-600 text-amber-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                    {quinzenaTotals.total13}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedQuinzenaFilter('2_4')}
+                                            className={`px-2.5 py-1 rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                                                selectedQuinzenaFilter === '2_4'
+                                                    ? 'bg-fuchsia-600 text-white shadow-xs'
+                                                    : 'text-slate-600 dark:text-slate-400 hover:text-fuchsia-600'
+                                            }`}
+                                            title="Visualizar apenas traçados e clientes da Semana 2 e 4"
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-fuchsia-300 ring-1 ring-fuchsia-400/50 shrink-0" />
+                                            <span>Sem 2 e 4</span>
+                                            {quinzenaTotals.total24 > 0 && (
+                                                <span className={`text-[10px] px-1 py-0.2 rounded-full ${selectedQuinzenaFilter === '2_4' ? 'bg-fuchsia-700 text-fuchsia-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                                    {quinzenaTotals.total24}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
 
-                                {/* Botão Heatmap de Concentração de Visitas */}
-                                <button
-                                    type="button"
-                                    onClick={() => setShowHeatmap(prev => !prev)}
-                                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 ${
-                                        showHeatmap 
-                                            ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white border-orange-400 shadow-orange-500/30 ring-2 ring-orange-400/40' 
-                                            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-orange-400 hover:text-orange-600'
-                                    }`}
-                                    title={showHeatmap ? "Ocultar Mapa de Calor de Concentração" : "Exibir Mapa de Calor de Concentração de Visitas"}
-                                >
-                                    <span className="text-sm leading-none">🔥</span>
-                                    <span>{showHeatmap ? 'Calor Ativo' : 'Mapa de Calor'}</span>
-                                </button>
-                            </div>
-                        )}
+                                    {/* Botão Heatmap de Concentração de Visitas */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowHeatmap(prev => !prev)}
+                                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 ${
+                                            showHeatmap 
+                                                ? 'bg-gradient-to-r from-orange-500 to-rose-600 text-white border-orange-400 shadow-orange-500/30 ring-2 ring-orange-400/40' 
+                                                : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-orange-400 hover:text-orange-600'
+                                        }`}
+                                        title={showHeatmap ? "Ocultar Mapa de Calor de Concentração" : "Exibir Mapa de Calor de Concentração de Visitas"}
+                                    >
+                                        <span className="text-sm leading-none">🔥</span>
+                                        <span>{showHeatmap ? 'Calor Ativo' : 'Mapa de Calor'}</span>
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Botão Maximizar / Tela Cheia */}
+                            <button
+                                type="button"
+                                onClick={() => setIsMapFullscreen(prev => !prev)}
+                                className="px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md border transition-all duration-200 bg-white/95 dark:bg-slate-900/95 backdrop-blur text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                title={isMapFullscreen ? "Recolher Mapa em Tela Cheia (ESC)" : "Expandir Mapa em Tela Cheia"}
+                            >
+                                {isMapFullscreen ? (
+                                    <>
+                                        <ArrowsCompressIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                        <span>Recolher</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowsExpandIcon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                                        <span>Tela Cheia</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                         {scopedAdjustedRoutes.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500">
                                 <LocationMarkerIcon className="w-12 h-12 mb-2 text-slate-300"/>
@@ -2138,8 +2192,9 @@ export const AjusteRota: React.FC = () => {
                             <MapContainer 
                                 center={[-23.5505, -46.6333]} 
                                 zoom={12} 
-                                style={{ width: '100%', height: '100%' }}
+                                style={{ width: '100%', height: '100%', zIndex: 0 }}
                             >
+                                <MapResizeHandler isFullscreen={isMapFullscreen} />
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
@@ -2763,7 +2818,7 @@ export const AjusteRota: React.FC = () => {
 
             {/* MODAL OVERLAY DE PROGRESSO DA OTIMIZAÇÃO COM BARRA E PERCENTUAL */}
             {optimizeProgress && (
-                <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black">
@@ -2810,7 +2865,7 @@ export const AjusteRota: React.FC = () => {
 
             {/* MODAL COMPLETO DE COMPARATIVO ANTES X DEPOIS */}
             {showCompareModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
                         {/* Header do Modal */}
                         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.138.0',
+    date: 'Hoje',
+    title: 'Fuel360: Modo Tela Cheia no Mapa e Correção de Sobreposição de Badges',
+    changes: [
+      'Visualização em Tela Cheia: Implementação do botão para expandir o mapa em viewport completo com atalho pela tecla ESC, permitindo análise ampla de grandes áreas geográficas e malhas viárias.',
+      'Redimensionamento Inteligente: Sincronização em tempo real do renderizador de azulejos Leaflet (invalidateSize), eliminando falhas visuais ou bordas cinzas ao redimensionar.',
+      'Correção de Empilhamento e Z-Index: Isolamento do contexto gráfico do mapa e elevação dos modais de progresso e comparativo (z-2000), impedindo que badges flutuantes perfurem janelas abertas.'
+    ]
+  },
+  {
     version: '3.137.1',
     date: 'Hoje',
     title: 'Design & Acessibilidade: Correção de Contraste no Tema Claro / Escuro',
