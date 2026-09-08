@@ -763,11 +763,65 @@ export const AjusteRota: React.FC = () => {
 
     const teamColaboradores = useMemo(() => {
         return colaboradores.filter(c => {
-            const grupo = String(c.Grupo).trim().toUpperCase();
-            if (teamType === 'vendedores') return c.Ativo && grupo === 'VENDEDOR';
-            return c.Ativo && (grupo === 'PROMOTOR' || grupo === 'PROMOTORES');
+            const grupo = String(c.Grupo || '').trim().toUpperCase();
+            if (teamType === 'vendedores') {
+                return c.Ativo && (grupo === 'VENDEDOR' || grupo === 'VENDEDORES' || grupo === 'VENDAS');
+            }
+            return c.Ativo && (grupo === 'PROMOTOR' || grupo === 'PROMOTORES' || grupo === 'PROMOÇÃO' || grupo === 'PROMOCAO');
         });
     }, [colaboradores, teamType]);
+
+    // Localizador resiliente de colaborador por código de setor e/ou nome, blindando contra colisões entre Vendedores e Promotores
+    const getColabBySectorOrName = (sellerId: number, sellerName?: string): Colaborador | undefined => {
+        const sId = Number(sellerId);
+        const sNameNorm = sellerName ? sellerName.trim().toUpperCase() : '';
+
+        // 1. Filtrar lista estrita da equipe ativa (vendedores ou promotores)
+        const teamPool = colaboradores.filter(c => {
+            const g = String(c.Grupo || '').trim().toUpperCase();
+            if (teamType === 'vendedores') {
+                return g === 'VENDEDOR' || g === 'VENDEDORES' || g === 'VENDAS';
+            }
+            return g === 'PROMOTOR' || g === 'PROMOTORES' || g === 'PROMOÇÃO' || g === 'PROMOCAO';
+        });
+
+        // 1.1 Match exato de Código E Nome no time ativo (máxima precisão de desempate)
+        if (sNameNorm) {
+            const exact = teamPool.find(c => Number(c.CodigoSetor) === sId && c.Nome.trim().toUpperCase() === sNameNorm);
+            if (exact) return exact;
+
+            // 1.2 Match por Código E semelhança de Nome no time ativo
+            const byCodeAndNameLike = teamPool.find(c => {
+                if (Number(c.CodigoSetor) !== sId) return false;
+                const cName = c.Nome.trim().toUpperCase();
+                return cName.includes(sNameNorm) || sNameNorm.includes(cName);
+            });
+            if (byCodeAndNameLike) return byCodeAndNameLike;
+        }
+
+        // 1.3 Match apenas por Código no time ativo (priorizando colaboradores ativos)
+        const byCodeActive = teamPool.find(c => c.Ativo && Number(c.CodigoSetor) === sId);
+        if (byCodeActive) return byCodeActive;
+
+        const byCodeAny = teamPool.find(c => Number(c.CodigoSetor) === sId);
+        if (byCodeAny) return byCodeAny;
+
+        // 2. Se fornecido Nome, busca pelo Nome em todo o cadastro
+        if (sNameNorm) {
+            const byName = colaboradores.find(c => {
+                const cName = c.Nome.trim().toUpperCase();
+                return cName === sNameNorm;
+            });
+            if (byName) return byName;
+        }
+
+        // 3. Fallback: teamColaboradores
+        const inTeamColabs = teamColaboradores.find(c => Number(c.CodigoSetor) === sId);
+        if (inTeamColabs) return inTeamColabs;
+
+        // 4. Último recurso
+        return colaboradores.find(c => Number(c.CodigoSetor) === sId);
+    };
 
     // Supervisores únicos presentes nas rotas
     const supervisors = useMemo(() => {
@@ -1421,8 +1475,8 @@ export const AjusteRota: React.FC = () => {
         for (let sIdx = 0; sIdx < sellers.length; sIdx++) {
             const sellerId = sellers[sIdx];
             const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === sellerId);
-            const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-            const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Vendedor ${sellerId}`);
+            const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+            const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`);
 
             const currentPct = Math.round(((sIdx) / sellers.length) * 100);
             setOptimizeProgress({
@@ -1698,8 +1752,8 @@ export const AjusteRota: React.FC = () => {
             for (const sellerId of sellers) {
                 if (selectedPromoter !== 'ALL' && String(sellerId) !== selectedPromoter) continue;
 
-                const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
                 const sellerVisits = routes.filter(r => r.Cod_Vend === sellerId);
+                const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
                 const sellerBaseColor = promoterColorMap.get(String(sellerId)) || '#64748b';
 
                 // Separar por dia da semana
@@ -1818,8 +1872,8 @@ export const AjusteRota: React.FC = () => {
             let exceededKmCount = 0;
 
             sellers.forEach(sellerId => {
-                const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
                 const sellerVisits = visits.filter(r => r.Cod_Vend === sellerId);
+                const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
 
                 // Base do colaborador (com fallback para primeiro cliente válido)
                 const baseLat = colab?.LatitudeBase || sellerVisits.find(v => v.Lat)?.Lat || 0;
@@ -1890,7 +1944,7 @@ export const AjusteRota: React.FC = () => {
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
-        const targetColab = colaboradores.find(c => c.CodigoSetor === targetSellerId);
+        const targetColab = getColabBySectorOrName(targetSellerId);
         
         setAdjustedRoutes(prev => prev.map(v => {
             if (v.Cod_Cliente === clientCode) {
@@ -2060,7 +2114,7 @@ export const AjusteRota: React.FC = () => {
                 TotalKM: kpis.adjusted.totalKm,
                 UsuarioSimulacao: authUser?.Nome || 'Operador',
                 Itens: Array.from(groups.entries()).map(([vendedorId, visits]) => {
-                    const colab = colaboradores.find(c => c.CodigoSetor === vendedorId);
+                    const colab = getColabBySectorOrName(vendedorId, visits[0]?.Nome_Vendedor);
                     
                     // Separar visitas por dia
                     const dailyMap = new Map<string, VisitaPrevista[]>();
@@ -2112,8 +2166,8 @@ export const AjusteRota: React.FC = () => {
         const activeSellerId = itinerarySeller 
             ? Number(itinerarySeller) 
             : (sellerList.length > 0 ? sellerList[0].id : (scopedAdjustedRoutes[0]?.Cod_Vend || 0));
-        const colab = colaboradores.find(c => c.CodigoSetor === activeSellerId);
         const sellerVisits = scopedAdjustedRoutes.filter(r => r.Cod_Vend === activeSellerId);
+        const colab = getColabBySectorOrName(activeSellerId, sellerVisits[0]?.Nome_Vendedor);
 
         // Filtra pelo dia e quinzena
         const dayVisits = sellerVisits.filter(v => {
@@ -2624,8 +2678,9 @@ export const AjusteRota: React.FC = () => {
                                     Todos no Escopo ({Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length})
                                 </div>
                                 {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).map(sellerId => {
-                                    const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
-                                    const count = scopedAdjustedRoutes.filter(v => v.Cod_Vend === sellerId).length;
+                                    const sellerVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === sellerId);
+                                    const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
+                                    const count = sellerVisits.length;
                                     const color = promoterColorMap.get(String(sellerId)) || '#64748b';
                                     const qStats = getSellerQuinzenaStats(sellerId, scopedAdjustedRoutes);
 
@@ -2793,7 +2848,8 @@ export const AjusteRota: React.FC = () => {
                                 {showHeatmap && <HeatmapLayer points={heatmapPoints} />}
                                 {/* Casas / Bases dos Colaboradores com Destaque Especial */}
                                 {Array.from(new Set(scopedAdjustedRoutes.map(v => v.Cod_Vend))).map(vId => {
-                                    const colab = colaboradores.find(c => c.CodigoSetor === vId);
+                                    const vVisits = scopedAdjustedRoutes.filter(v => v.Cod_Vend === vId);
+                                    const colab = getColabBySectorOrName(vId, vVisits[0]?.Nome_Vendedor);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
                                         const pColor = promoterColorMap.get(String(vId)) || '#ef4444';
                                         return (

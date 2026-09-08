@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.3',
+    date: 'Hoje',
+    title: 'Fuel360: Resolução de Colisão de Bases e Setores entre Vendedores e Promotores',
+    changes: [
+      'Blindagem de Base Residencial: Implementada resolução inteligente de colaborador (`getColabBySectorOrName`) que isola o time ativo (Vendedores vs Promotores) e realiza cruzamento com o Nome do colaborador.',
+      'Eliminação de Distorção em Rotas e KMs: Corrige a seleção de base para colaboradores que compartilham o mesmo código de setor numérico (ex: Vendedor 206 Edson vs Promotora 206 Andreia), garantindo rotas e quilometragens 100% fiéis à base real.'
+    ]
+  },
+  {
     version: '3.140.2',
     date: 'Hoje',
     title: 'Fuel360: Estabilização de Navegação no Mapa e Botão Ver na Tabela no Popup',
