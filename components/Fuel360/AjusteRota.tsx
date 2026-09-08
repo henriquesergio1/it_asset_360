@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useMemo, useRef } from 'react';
 import { DataContext } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
-import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData } from './services/apiService';
+import { getVisitasPrevistas, getPromoterClients, saveRotaPrevista, getOSRMData, getOSRMTable } from './services/apiService';
 import { VisitaPrevista, Colaborador } from './types';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -380,6 +380,101 @@ function optimizeDayCircuit2Opt<T extends { lat: number; lng: number }>(
     return fullTour.slice(1, -1).map(stop => stop.item!);
 }
 
+// Heurística de Roteirização TSP Circuito Fechado (Base -> Clientes -> Base) com Matriz Viária Real OSRM e 2-Opt Local Search
+async function optimizeDayCircuitWithOSRM<T extends { lat: number; lng: number }>(
+    base: { lat: number; lng: number },
+    clients: T[]
+): Promise<T[]> {
+    if (clients.length <= 2) return clients;
+
+    // Monta todos os pontos do dia incluindo a base no índice 0
+    const allPoints = [{ lat: base.lat, lng: base.lng }, ...clients.map(c => ({ lat: c.lat, lng: c.lng }))];
+
+    let osrmMatrix: number[][] | null = null;
+
+    // Se houver base e clientes válidos (até 80 clientes por dia), consulta a Matriz Viária Real do OSRM
+    if (base.lat && base.lng && clients.length > 0 && clients.length <= 80) {
+        try {
+            const tableRes = await getOSRMTable(allPoints);
+            if (tableRes && tableRes.distances && tableRes.distances.length === allPoints.length) {
+                osrmMatrix = tableRes.distances;
+            }
+        } catch (e) {
+            osrmMatrix = null;
+        }
+    }
+
+    // Função de custo entre nós (0 = Base, 1..N = clientes)
+    const getCost = (idxA: number, idxB: number, pA: { lat: number; lng: number }, pB: { lat: number; lng: number }): number => {
+        if (osrmMatrix && osrmMatrix[idxA] && osrmMatrix[idxA][idxB] !== undefined && osrmMatrix[idxA][idxB] !== null && osrmMatrix[idxA][idxB] > 0) {
+            return osrmMatrix[idxA][idxB];
+        }
+        return calcDist(pA.lat, pA.lng, pB.lat, pB.lng) * 1.18;
+    };
+
+    // 1. Fase de Construção: Vizinho Mais Próximo (Nearest Neighbor) a partir da Base (índice 0)
+    const unvisited = clients.map((c, i) => ({ item: c, origIdx: i + 1 }));
+    const orderedStops: { item: T; origIdx: number }[] = [];
+    let curIdx = 0;
+    let curPoint = { lat: base.lat, lng: base.lng };
+
+    while (unvisited.length > 0) {
+        let nearestPos = 0;
+        let minCost = Infinity;
+
+        for (let i = 0; i < unvisited.length; i++) {
+            const cost = getCost(curIdx, unvisited[i].origIdx, curPoint, unvisited[i].item);
+            if (cost < minCost) {
+                minCost = cost;
+                nearestPos = i;
+            }
+        }
+
+        const next = unvisited.splice(nearestPos, 1)[0];
+        orderedStops.push(next);
+        curIdx = next.origIdx;
+        curPoint = { lat: next.item.lat, lng: next.item.lng };
+    }
+
+    // 2. Fase de Melhoria: Busca Local 2-Opt em Circuito Fechado [Base, ...orderedStops, Base]
+    const fullTour: { lat: number; lng: number; isBase: boolean; origIdx: number; item?: T }[] = [
+        { lat: base.lat, lng: base.lng, isBase: true, origIdx: 0 },
+        ...orderedStops.map(s => ({ lat: s.item.lat, lng: s.item.lng, isBase: false, origIdx: s.origIdx, item: s.item })),
+        { lat: base.lat, lng: base.lng, isBase: true, origIdx: 0 }
+    ];
+
+    let improved = true;
+    let iterations = 0;
+    const maxIterations = 80;
+
+    while (improved && iterations < maxIterations) {
+        improved = false;
+        iterations++;
+
+        for (let i = 1; i < fullTour.length - 2; i++) {
+            for (let k = i + 1; k < fullTour.length - 1; k++) {
+                const pA = fullTour[i - 1];
+                const pB = fullTour[i];
+                const pC = fullTour[k];
+                const pD = fullTour[k + 1];
+
+                const currentCost = getCost(pA.origIdx, pB.origIdx, pA, pB) + getCost(pC.origIdx, pD.origIdx, pC, pD);
+                const newCost = getCost(pA.origIdx, pC.origIdx, pA, pC) + getCost(pB.origIdx, pD.origIdx, pB, pD);
+
+                if (newCost < currentCost - 0.0001) {
+                    const segment = fullTour.slice(i, k + 1).reverse();
+                    fullTour.splice(i, segment.length, ...segment);
+                    improved = true;
+                    break;
+                }
+            }
+            if (improved) break;
+        }
+    }
+
+    return fullTour.slice(1, -1).map(stop => stop.item!);
+}
+
 const WEEKDAYS = ['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'];
 
 // Helpers de Periodicidade e Calendário
@@ -559,6 +654,13 @@ export const AjusteRota: React.FC = () => {
     const [showCompareModal, setShowCompareModal] = useState(false);
     const [compareOnlyChanged, setCompareOnlyChanged] = useState(true);
     const [compareSearchFilter, setCompareSearchFilter] = useState('');
+
+    // Itinerário Operacional Passo a Passo com Google Maps e Waze
+    const [showItineraryModal, setShowItineraryModal] = useState(false);
+    const [itineraryDay, setItineraryDay] = useState<string>('SEGUNDA-FEIRA');
+    const [itinerarySeller, setItinerarySeller] = useState<string>('');
+    const [itineraryQuinzena, setItineraryQuinzena] = useState<'1_3' | '2_4'>('1_3');
+    const [copiedItinerary, setCopiedItinerary] = useState(false);
 
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
@@ -1281,13 +1383,20 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            // 2. Zoneamento e Clusterização Espacial Contígua por Ângulo Polar (Sweep Clustering a partir da Base)
-            // Ordenamos angularmente os clientes em volta da base: clientes geograficamente contíguos ficam adjacentes
-            const spatiallyClusteredClients = [...uniqueClients].sort((a, b) => {
-                if (Math.abs(a.polarAngle - b.polarAngle) > 0.0001) {
-                    return a.polarAngle - b.polarAngle;
+            // 2. Zoneamento e Clusterização Territorial Compacta (Capacitated K-Means Geográfico)
+            const numClusters = activeDays.length;
+            const sortedByAngle = [...uniqueClients].sort((a, b) => a.polarAngle - b.polarAngle);
+            const clientsPerDayInitial = Math.ceil(sortedByAngle.length / numClusters);
+
+            // Centróides iniciais distribuídos angularmente em torno da base
+            let centroids: { lat: number; lng: number }[] = activeDays.map((_, idx) => {
+                const slice = sortedByAngle.slice(idx * clientsPerDayInitial, (idx + 1) * clientsPerDayInitial);
+                if (slice.length > 0) {
+                    const avgLat = slice.reduce((sum, c) => sum + c.lat, 0) / slice.length;
+                    const avgLng = slice.reduce((sum, c) => sum + c.lng, 0) / slice.length;
+                    return { lat: avgLat, lng: avgLng };
                 }
-                return a.distFromBase - b.distFromBase;
+                return { lat: baseLat, lng: baseLng };
             });
 
             // 3. Alocação nos dias ativos respeitando capacidades máximas e balanceamento quinzenal
@@ -1299,98 +1408,116 @@ export const AjusteRota: React.FC = () => {
                 quinzenais24: typeof uniqueClients;
             }
 
-            const dayBuckets: DayBucket[] = activeDays.map(day => ({
-                day,
-                maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
-                semanais: [],
-                quinzenais13: [],
-                quinzenais24: []
-            }));
+            let dayBuckets: DayBucket[] = [];
 
-            let dayIdx = 0;
+            // Executa 8 iterações de K-Means com restrição de capacidade para convergir em bolsões territoriais compactos
+            for (let iter = 0; iter < 8; iter++) {
+                dayBuckets = activeDays.map(day => ({
+                    day,
+                    maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
+                    semanais: [],
+                    quinzenais13: [],
+                    quinzenais24: []
+                }));
 
-            spatiallyClusteredClients.forEach(client => {
-                if (client.tipo === 'SEMANAL') {
-                    // Semanal: ocupa vaga em ambas as quinzenas (ímpar e par)
-                    let placed = false;
-                    for (let step = 0; step < dayBuckets.length; step++) {
-                        const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
-                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
+                // Ordena clientes priorizando semanais para alocação firme nos melhores centros
+                const clientsToAssign = [...uniqueClients].sort((a, b) => {
+                    if (a.tipo === 'SEMANAL' && b.tipo !== 'SEMANAL') return -1;
+                    if (a.tipo !== 'SEMANAL' && b.tipo === 'SEMANAL') return 1;
+                    return 0;
+                });
 
-                        if (capImpar < bucket.maxCap && capPar < bucket.maxCap) {
-                            bucket.semanais.push(client);
-                            dayIdx = (dayIdx + step) % dayBuckets.length;
-                            placed = true;
-                            break;
-                        }
-                    }
-                    if (!placed) {
-                        const bestBucket = [...dayBuckets].sort((a, b) => 
-                            (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) - 
-                            (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
-                        )[0];
-                        bestBucket.semanais.push(client);
-                    }
-                } else {
-                    // Quinzenal: aloca no slot preferido ou equilibra carga mantendo o dia da mesma microrregião
-                    const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
-                    let placed = false;
+                clientsToAssign.forEach(client => {
+                    // Ordena os índices de dias pela distância deste cliente ao centróide do dia
+                    const rankedDayIndices = dayBuckets.map((_, idx) => {
+                        const cent = centroids[idx];
+                        const dist = (client.lat && client.lng && cent.lat && cent.lng)
+                            ? calcDist(client.lat, client.lng, cent.lat, cent.lng)
+                            : 9999;
+                        return { idx, dist };
+                    }).sort((a, b) => a.dist - b.dist);
 
-                    for (let step = 0; step < dayBuckets.length; step++) {
-                        const bucket = dayBuckets[(dayIdx + step) % dayBuckets.length];
-                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
-
-                        if (preferredSlot === '1_3' && capImpar < bucket.maxCap) {
-                            bucket.quinzenais13.push(client);
-                            dayIdx = (dayIdx + step) % dayBuckets.length;
-                            placed = true;
-                            break;
-                        } else if (preferredSlot === '2_4' && capPar < bucket.maxCap) {
-                            bucket.quinzenais24.push(client);
-                            dayIdx = (dayIdx + step) % dayBuckets.length;
-                            placed = true;
-                            break;
-                        } else if (optBalanceWorkload) {
-                            if (preferredSlot === '1_3' && capPar < bucket.maxCap) {
-                                bucket.quinzenais24.push(client);
-                                dayIdx = (dayIdx + step) % dayBuckets.length;
-                                placed = true;
-                                break;
-                            } else if (preferredSlot === '2_4' && capImpar < bucket.maxCap) {
-                                bucket.quinzenais13.push(client);
-                                dayIdx = (dayIdx + step) % dayBuckets.length;
+                    if (client.tipo === 'SEMANAL') {
+                        let placed = false;
+                        for (const item of rankedDayIndices) {
+                            const b = dayBuckets[item.idx];
+                            const cap13 = b.semanais.length + b.quinzenais13.length;
+                            const cap24 = b.semanais.length + b.quinzenais24.length;
+                            if (cap13 < b.maxCap && cap24 < b.maxCap) {
+                                b.semanais.push(client);
                                 placed = true;
                                 break;
                             }
                         }
-                    }
-
-                    if (!placed) {
-                        const bucket = dayBuckets[dayIdx % dayBuckets.length];
-                        const capImpar = bucket.semanais.length + bucket.quinzenais13.length;
-                        const capPar = bucket.semanais.length + bucket.quinzenais24.length;
-                        if (capImpar <= capPar) {
-                            bucket.quinzenais13.push(client);
-                        } else {
-                            bucket.quinzenais24.push(client);
+                        if (!placed) {
+                            const best = [...dayBuckets].sort((a, b) => 
+                                (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) -
+                                (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
+                            )[0];
+                            best.semanais.push(client);
                         }
-                        dayIdx = (dayIdx + 1) % dayBuckets.length;
-                    }
-                }
-            });
+                    } else {
+                        const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
+                        let placed = false;
 
-            // 4. Roteirização em Circuito Fechado por Dia com TSP 2-Opt (Base -> Clientes -> Base)
-            // Para cada dia e quinzena, otimizamos o itinerário da jornada completa
-            dayBuckets.forEach(bucket => {
+                        for (const item of rankedDayIndices) {
+                            const b = dayBuckets[item.idx];
+                            const cap13 = b.semanais.length + b.quinzenais13.length;
+                            const cap24 = b.semanais.length + b.quinzenais24.length;
+
+                            if (preferredSlot === '1_3' && cap13 < b.maxCap) {
+                                b.quinzenais13.push(client);
+                                placed = true;
+                                break;
+                            } else if (preferredSlot === '2_4' && cap24 < b.maxCap) {
+                                b.quinzenais24.push(client);
+                                placed = true;
+                                break;
+                            } else if (optBalanceWorkload) {
+                                if (preferredSlot === '1_3' && cap24 < b.maxCap) {
+                                    b.quinzenais24.push(client);
+                                    placed = true;
+                                    break;
+                                } else if (preferredSlot === '2_4' && cap13 < b.maxCap) {
+                                    b.quinzenais13.push(client);
+                                    placed = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!placed) {
+                            const b = dayBuckets[rankedDayIndices[0].idx];
+                            const cap13 = b.semanais.length + b.quinzenais13.length;
+                            const cap24 = b.semanais.length + b.quinzenais24.length;
+                            if (cap13 <= cap24) b.quinzenais13.push(client);
+                            else b.quinzenais24.push(client);
+                        }
+                    }
+                });
+
+                // Atualiza centróides com base na média das coordenadas das paradas do dia
+                centroids = dayBuckets.map(b => {
+                    const allInDay = [...b.semanais, ...b.quinzenais13, ...b.quinzenais24].filter(c => c.lat && c.lng);
+                    if (allInDay.length > 0) {
+                        return {
+                            lat: allInDay.reduce((s, c) => s + c.lat, 0) / allInDay.length,
+                            lng: allInDay.reduce((s, c) => s + c.lng, 0) / allInDay.length
+                        };
+                    }
+                    return { lat: baseLat, lng: baseLng };
+                });
+            }
+
+            // 4. Roteirização em Circuito Fechado por Dia com TSP 2-Opt e Matriz Viária Real OSRM (Base -> Clientes -> Base)
+            for (const bucket of dayBuckets) {
                 // Roteiro Quinzena 1 e 3: Semanais + Quinzenais 1_3
                 const rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
-                const optimizedClients13 = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, rawClients13);
+                const optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13);
 
                 // Roteiro Quinzena 2 e 4: Semanais + Quinzenais 2_4
                 const rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
-                const optimizedClients24 = optimizeDayCircuit2Opt({ lat: baseLat, lng: baseLng }, rawClients24);
+                const optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24);
 
                 // Mapa de clientes já adicionados para evitar duplicidade de visitas no mesmo dia
                 const addedInDay = new Set<number>();
@@ -1431,7 +1558,7 @@ export const AjusteRota: React.FC = () => {
                         Data_da_Visita: c.sampleVisit.Data_da_Visita || ''
                     });
                 });
-            });
+            }
         }
 
         setOptimizeProgress({
@@ -1878,6 +2005,131 @@ export const AjusteRota: React.FC = () => {
         } finally {
             setSaving(false);
         }
+    };
+
+    // Dados calculados do Itinerário Operacional do Dia Selecionado
+    const currentItineraryData = useMemo(() => {
+        if (!showItineraryModal) return null;
+
+        const sellerList = availableSellers;
+        const activeSellerId = itinerarySeller 
+            ? Number(itinerarySeller) 
+            : (sellerList.length > 0 ? sellerList[0].id : (scopedAdjustedRoutes[0]?.Cod_Vend || 0));
+        const colab = colaboradores.find(c => c.CodigoSetor === activeSellerId);
+        const sellerVisits = scopedAdjustedRoutes.filter(r => r.Cod_Vend === activeSellerId);
+
+        // Filtra pelo dia e quinzena
+        const dayVisits = sellerVisits.filter(v => {
+            if (v.Dia_Semana !== itineraryDay) return false;
+            const p = parsePeriodicidade(v.Periodicidade).tipo;
+            if (itineraryQuinzena === '1_3') return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            if (itineraryQuinzena === '2_4') return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            return true;
+        });
+
+        const baseLat = colab?.LatitudeBase || sellerVisits.find(v => v.Lat)?.Lat || 0;
+        const baseLng = colab?.LongitudeBase || sellerVisits.find(v => v.Long)?.Long || 0;
+        const baseAddress = colab?.Endereco ? `${colab.Endereco}, ${colab.Bairro || ''} - ${colab.Cidade || ''}` : 'Base / Residência do Colaborador';
+
+        let totalKm = 0;
+        let prevLat = baseLat;
+        let prevLng = baseLng;
+
+        const stopsWithKm = dayVisits.map((v, idx) => {
+            const curLat = v.Lat || 0;
+            const curLng = v.Long || 0;
+            const legKm = (prevLat && prevLng && curLat && curLng) ? Math.round(calcDist(prevLat, prevLng, curLat, curLng) * 1.18 * 10) / 10 : 0;
+            totalKm += legKm;
+            if (curLat && curLng) {
+                prevLat = curLat;
+                prevLng = curLng;
+            }
+            return {
+                ...v,
+                stopOrder: idx + 1,
+                legKm,
+                cumKm: Math.round(totalKm * 10) / 10
+            };
+        });
+
+        const returnLegKm = (prevLat && prevLng && baseLat && baseLng && dayVisits.length > 0)
+            ? Math.round(calcDist(prevLat, prevLng, baseLat, baseLng) * 1.18 * 10) / 10
+            : 0;
+        totalKm += returnLegKm;
+
+        return {
+            sellerId: activeSellerId,
+            sellerName: colab?.Nome || sellerVisits[0]?.Nome_Vendedor || 'Colaborador',
+            colab,
+            day: itineraryDay,
+            quinzena: itineraryQuinzena,
+            baseLat,
+            baseLng,
+            baseAddress,
+            stops: stopsWithKm,
+            totalStops: stopsWithKm.length,
+            totalKm: Math.round(totalKm * 10) / 10,
+            returnLegKm
+        };
+    }, [showItineraryModal, scopedAdjustedRoutes, itinerarySeller, itineraryDay, itineraryQuinzena, availableSellers, colaboradores]);
+
+    // Disparo para o Google Maps
+    const handleOpenGoogleMaps = () => {
+        if (!currentItineraryData || currentItineraryData.stops.length === 0) {
+            alert("Sem paradas válidas no itinerário para traçar a rota.");
+            return;
+        }
+        const { baseLat, baseLng, stops } = currentItineraryData;
+        const validStops = stops.filter(s => s.Lat && s.Long);
+        if (validStops.length === 0) {
+            alert("Nenhuma coordenada geográfica válida encontrada para navegação.");
+            return;
+        }
+
+        const origin = (baseLat && baseLng) ? `${baseLat},${baseLng}` : `${validStops[0].Lat},${validStops[0].Long}`;
+        const destination = (baseLat && baseLng) ? `${baseLat},${baseLng}` : `${validStops[validStops.length - 1].Lat},${validStops[validStops.length - 1].Long}`;
+        const waypoints = validStops.slice(0, 8).map(s => `${s.Lat},${s.Long}`).join('|');
+
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    // Disparo para o Waze (primeira parada do roteiro ou parada selecionada)
+    const handleOpenWaze = (stopLat?: number, stopLng?: number) => {
+        const lat = stopLat || currentItineraryData?.stops[0]?.Lat;
+        const lng = stopLng || currentItineraryData?.stops[0]?.Long;
+        if (!lat || !lng) {
+            alert("Coordenada não disponível para abrir no Waze.");
+            return;
+        }
+        const url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    // Copiar itinerário textual formatado para WhatsApp
+    const handleCopyItinerary = () => {
+        if (!currentItineraryData) return;
+        const { sellerName, day, quinzena, totalStops, totalKm, baseAddress, stops, returnLegKm } = currentItineraryData;
+
+        let text = `🚗 *ROTEIRO DE VISITAS - ${sellerName.toUpperCase()}*\n`;
+        text += `📅 *${day}* (${quinzena === '1_3' ? 'Semanas 1 e 3' : 'Semanas 2 e 4'})\n`;
+        text += `📍 *${totalStops} Paradas* | Estimativa Total: *${totalKm} KM*\n`;
+        text += `----------------------------------------\n`;
+        text += `🏠 *Partida:* ${baseAddress}\n\n`;
+
+        stops.forEach(s => {
+            text += `*#${s.stopOrder}* [${s.Cod_Cliente}] ${s.Razao_Social}\n`;
+            text += `   📍 ${s.Endereco}\n`;
+            text += `   📏 +${s.legKm} KM (Acumulado: ${s.cumKm} KM)\n\n`;
+        });
+
+        text += `🏁 *Retorno:* ${baseAddress} (+${returnLegKm} KM)\n`;
+        text += `----------------------------------------\n`;
+        text += `Gerado automaticamente pelo Fuel360`;
+
+        navigator.clipboard.writeText(text);
+        setCopiedItinerary(true);
+        setTimeout(() => setCopiedItinerary(false), 3000);
     };
 
     return (
@@ -2814,6 +3066,15 @@ export const AjusteRota: React.FC = () => {
 
                                 <div className="flex items-center space-x-2 shrink-0">
                                     <button
+                                        onClick={() => setShowItineraryModal(true)}
+                                        disabled={scopedAdjustedRoutes.length === 0}
+                                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-emerald-200 dark:border-emerald-800 shadow-xs transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                        title="Visualizar a sequência cronológica da rota do dia com links de navegação para Google Maps e Waze"
+                                    >
+                                        <LocationMarkerIcon className="w-4 h-4 mr-1.5 text-emerald-600 dark:text-emerald-400"/>
+                                        Itinerário do Dia
+                                    </button>
+                                    <button
                                         onClick={() => setShowCompareModal(true)}
                                         className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 dark:text-indigo-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-indigo-200 dark:border-indigo-800 shadow-xs transition h-[32px]"
                                         title="Comparar a rota original com a rota ajustada antes de salvar"
@@ -3372,6 +3633,249 @@ export const AjusteRota: React.FC = () => {
                                 >
                                     {saving ? <SpinnerIcon className="w-4 h-4 animate-spin mr-1.5"/> : <CheckCircleIcon className="w-4 h-4 mr-1.5"/>}
                                     Aprovar e Salvar Simulação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ITINERÁRIO OPERACIONAL PASSO A PASSO COM GOOGLE MAPS E WAZE */}
+            {showItineraryModal && currentItineraryData && (
+                <div className="fixed inset-0 z-[2000] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 lg:p-6 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+                        {/* Header do Modal */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                    <LocationMarkerIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center">
+                                        Itinerário Operacional do Dia
+                                        <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                            Circuito Otimizado
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Sequência cronológica de atendimento partindo da base residencial com links de navegação em tempo real.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowItineraryModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Filtros Rápidos no Topo do Modal */}
+                        <div className="px-5 py-3 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                {/* Seletor de Colaborador */}
+                                {availableSellers.length > 1 && (
+                                    <div className="flex items-center space-x-1.5">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400">Colaborador:</span>
+                                        <select
+                                            value={currentItineraryData.sellerId}
+                                            onChange={e => setItinerarySeller(e.target.value)}
+                                            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                                        >
+                                            {availableSellers.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                {/* Seletor de Dia da Semana */}
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-[10px] font-bold uppercase text-slate-400 mr-1">Dia:</span>
+                                    {WEEKDAYS.map(day => {
+                                        const isSelected = day === itineraryDay;
+                                        const shortName = day.split('-')[0].slice(0, 3);
+                                        return (
+                                            <button
+                                                key={day}
+                                                type="button"
+                                                onClick={() => setItineraryDay(day)}
+                                                className={`px-2 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                                                    isSelected 
+                                                        ? 'bg-emerald-600 text-white shadow-xs' 
+                                                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {shortName}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Seletor de Quinzena */}
+                                <div className="flex items-center space-x-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setItineraryQuinzena('1_3')}
+                                        className={`px-2 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                                            itineraryQuinzena === '1_3'
+                                                ? 'bg-amber-500 text-white'
+                                                : 'bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300'
+                                        }`}
+                                    >
+                                        Sem 1/3
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setItineraryQuinzena('2_4')}
+                                        className={`px-2 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                                            itineraryQuinzena === '2_4'
+                                                ? 'bg-fuchsia-600 text-white'
+                                                : 'bg-white dark:bg-slate-800 text-fuchsia-800 dark:text-fuchsia-300'
+                                        }`}
+                                    >
+                                        Sem 2/4
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Resumo de KM e Paradas */}
+                            <div className="flex items-center space-x-2">
+                                <span className="text-xs font-bold text-slate-500">
+                                    {currentItineraryData.totalStops} clientes no roteiro
+                                </span>
+                                <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black px-2.5 py-0.5 rounded-full text-xs">
+                                    ~{currentItineraryData.totalKm} KM Total
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Corpo com Scroll: Timeline das Paradas */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+                            {currentItineraryData.stops.length === 0 ? (
+                                <div className="p-12 text-center text-slate-400">
+                                    <p className="font-bold text-sm">Nenhum cliente agendado para {itineraryDay} nesta quinzena.</p>
+                                    <p className="text-xs mt-1">Selecione outro dia da semana ou quinzena acima.</p>
+                                </div>
+                            ) : (
+                                <div className="relative border-l-2 border-slate-200 dark:border-slate-800 ml-4 pl-6 space-y-6">
+                                    {/* PONTO 0: SAÍDA DA BASE */}
+                                    <div className="relative">
+                                        <div className="absolute -left-[33px] top-0 w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-black shadow-md">
+                                            🏠
+                                        </div>
+                                        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
+                                                    Partida (Circuito Fechado)
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-400">0.0 KM</span>
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                                Base Residencial do Colaborador ({currentItineraryData.sellerName})
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                {currentItineraryData.baseAddress}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* PARADAS DO ITINERÁRIO */}
+                                    {currentItineraryData.stops.map(stop => (
+                                        <div key={stop.Cod_Cliente} className="relative">
+                                            <div className="absolute -left-[33px] top-1.5 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px] font-black shadow-md">
+                                                {stop.stopOrder}
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3.5 hover:border-emerald-400 transition">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">
+                                                            #{stop.stopOrder} • PDV {stop.Cod_Cliente}
+                                                        </span>
+                                                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                                            {stop.Periodicidade}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1.5 shrink-0">
+                                                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                                            +{stop.legKm} KM
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleOpenWaze(stop.Lat, stop.Long)}
+                                                            className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-100 transition cursor-pointer"
+                                                            title="Abrir este destino no Waze"
+                                                        >
+                                                            Waze
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <h4 className="text-xs font-black text-slate-900 dark:text-white mt-1">
+                                                    {stop.Razao_Social}
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                    {stop.Endereco}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* PONTO FINAL: RETORNO À BASE */}
+                                    <div className="relative">
+                                        <div className="absolute -left-[33px] top-0 w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-black shadow-md">
+                                            🏁
+                                        </div>
+                                        <div className="bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                                                    Retorno à Origem
+                                                </span>
+                                                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                                    +{currentItineraryData.returnLegKm} KM (Total: {currentItineraryData.totalKm} KM)
+                                                </span>
+                                            </div>
+                                            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                                                Retorno à Base / Residência
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                {currentItineraryData.baseAddress}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer de Ações do Itinerário */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/70">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {currentItineraryData.totalStops > 0 
+                                    ? `Roteiro sequenciado com menor deslocamento viário real.` 
+                                    : 'Sem paradas para exibir.'}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={handleCopyItinerary}
+                                    disabled={currentItineraryData.stops.length === 0}
+                                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition cursor-pointer shadow-xs disabled:opacity-50 flex items-center"
+                                    title="Copiar itinerário formatado em texto para colar no WhatsApp"
+                                >
+                                    {copiedItinerary ? '✅ Itinerário Copiado!' : '📋 Copiar p/ WhatsApp'}
+                                </button>
+                                <button
+                                    onClick={() => handleOpenWaze()}
+                                    disabled={currentItineraryData.stops.length === 0}
+                                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-700 text-white transition cursor-pointer shadow-xs disabled:opacity-50 flex items-center"
+                                    title="Abrir navegação no Waze"
+                                >
+                                    Abrir no Waze
+                                </button>
+                                <button
+                                    onClick={handleOpenGoogleMaps}
+                                    disabled={currentItineraryData.stops.length === 0}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition cursor-pointer disabled:opacity-50 flex items-center"
+                                    title="Abrir rota completa com waypoints ordenados no Google Maps"
+                                >
+                                    🗺️ Navegar no Google Maps
                                 </button>
                             </div>
                         </div>

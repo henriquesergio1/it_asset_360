@@ -348,6 +348,31 @@ const RealService = {
             }
             return null; 
         }
+    },
+    getOSRMTable: async (points: { lat: number; lng: number }[]): Promise<{ distances: number[][]; durations: number[][] } | null> => {
+        if (points.length < 2) return null;
+        const coordsStr = points.map(p => `${p.lng},${p.lat}`).join(';');
+        const url = `${API_BASE_URL}/osrm-table?coords=${encodeURIComponent(coordsStr)}`;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const resp = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!resp.ok) return null;
+            const data = await resp.json();
+            if (data.code === 'Ok' && data.distances) {
+                const kmDistances = data.distances.map((row: number[]) => 
+                    row.map((d: number) => (d !== null && d !== undefined) ? d / 1000 : 0)
+                );
+                return {
+                    distances: kmDistances,
+                    durations: data.durations || []
+                };
+            }
+            return null;
+        } catch (e) {
+            return null;
+        }
     }
 };
 
@@ -454,6 +479,10 @@ const MockService = {
     getOSRMData: async (points: any[], isRoundTrip: boolean) => {
         await new Promise(r => setTimeout(r, 500));
         return { distance: 10.5, geometry: [] };
+    },
+    getOSRMTable: async (points: { lat: number; lng: number }[]) => {
+        await new Promise(r => setTimeout(r, 200));
+        return null;
     }
 };
 
@@ -470,5 +499,5 @@ export const {
     saveRotaPrevista, checkRotaPrevistaExists, getRotaPrevistaHistory, getRotaPrevistaDetails,
     deleteRotaPrevista, updateRotaPrevistaDiario, getCalculoHistory, getCalculoDetails, updateCalculoDiario,
     moveColaboradoresToGroup, bulkUpdateColaboradores, corrigirAusenciasHistorico, getSugestoesVinculo, batchUpdateColaboradoresAddress,
-    geocodeAddress, getOSRMData, calcDistance
+    geocodeAddress, getOSRMData, getOSRMTable, calcDistance
 } = Service;

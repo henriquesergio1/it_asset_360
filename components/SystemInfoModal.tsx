@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.0',
+    date: 'Hoje',
+    title: 'Fuel360: Roteirizador Profissional com Matriz Viária OSRM, K-Means e Itinerário',
+    changes: [
+      'Matriz Viária Real OSRM: Integração do Table Service OSRM local no algoritmo TSP 2-Opt, otimizando o menor percurso com base nas distâncias e mãos de direção reais das ruas.',
+      'Clusterização Territorial K-Means: Particionamento espacial capacitado dos dias da semana em bolsões territoriais contíguos e compactos, eliminando dispersões geográficas.',
+      'Itinerário Operacional Passo a Passo: Linha do tempo sequenciada da jornada do dia (Base -> Clientes com KM de trecho -> Retorno Base) com cálculo da rota fechada.',
+      'Navegação Google Maps e Waze: Botão de disparo para abrir rota com waypoints ordenados no Google Maps, navegação de parada no Waze e cópia rápida do itinerário para WhatsApp.'
+    ]
+  },
+  {
     version: '3.139.1',
     date: 'Hoje',
     title: 'Fuel360: Consolidação e Deduplicação de PDVs na Grade de Ajuste Fino',
