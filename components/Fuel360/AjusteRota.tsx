@@ -844,6 +844,20 @@ export const AjusteRota: React.FC = () => {
     // Resumo Operacional de Rotas (KM e Tempo)
     const [showSummaryModal, setShowSummaryModal] = useState(false);
 
+    // Simulação de Extinção e Redistribuição de Setores
+    const [showExtinguishModal, setShowExtinguishModal] = useState(false);
+    const [sourceSectorToExtinguish, setSourceSectorToExtinguish] = useState<string>('');
+    const [targetSectorsSelected, setTargetSectorsSelected] = useState<number[]>([]);
+    const [balanceLoadEqually, setBalanceLoadEqually] = useState(true);
+    const [autoOptimizeAfterDistribute, setAutoOptimizeAfterDistribute] = useState(true);
+    const [backupRoutesBeforeExtinguish, setBackupRoutesBeforeExtinguish] = useState<VisitaPrevista[] | null>(null);
+    const [extinguishFeedback, setExtinguishFeedback] = useState<{
+        sourceName: string;
+        sourceId: number;
+        totalMoved: number;
+        breakdown: { targetId: number; targetName: string; count: number }[];
+    } | null>(null);
+
     // Map polylines
     const [originalPolylines, setOriginalPolylines] = useState<{ id: string, color: string, points: [number, number][] }[]>([]);
     const [adjustedPolylines, setAdjustedPolylines] = useState<{ 
@@ -1013,6 +1027,31 @@ export const AjusteRota: React.FC = () => {
             return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
         });
     }, [adjustedRoutes, scopeMode, selectedSupervisor]);
+
+    // Todos os vendedores/setores presentes na rota ajustada (para extinção e redistribuição)
+    const allAdjustedSellers = useMemo(() => {
+        const map = new Map<number, { id: number; name: string; clientCount: number }>();
+        adjustedRoutes.forEach(r => {
+            if (!map.has(r.Cod_Vend)) {
+                map.set(r.Cod_Vend, { id: r.Cod_Vend, name: r.Nome_Vendedor, clientCount: 0 });
+            }
+        });
+        const uniqueSet = new Set<string>();
+        adjustedRoutes.forEach(r => {
+            const key = `${r.Cod_Vend}-${r.Cod_Cliente}`;
+            if (!uniqueSet.has(key)) {
+                uniqueSet.add(key);
+                const s = map.get(r.Cod_Vend);
+                if (s) s.clientCount++;
+            }
+        });
+        return Array.from(map.values()).sort((a, b) => {
+            const numA = Number(a.id);
+            const numB = Number(b.id);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+        });
+    }, [adjustedRoutes]);
 
     // Rotas ajustadas filtradas pelo escopo ativo (para Mapa, KPIs e Grade)
     const scopedAdjustedRoutes = useMemo(() => {
@@ -1738,18 +1777,8 @@ export const AjusteRota: React.FC = () => {
     };
 
     // Motor de Roteirização Avançado: Clusterização Espacial por Dia + TSP Circuito Fechado 2-Opt (Base -> Clientes -> Base)
-    const handleOptimizeSimulate = async () => {
-        if (adjustedRoutes.length === 0) {
-            alert("Nenhum dado de rota carregado para otimização.");
-            return;
-        }
-
-        // A carteira é do vendedor: isolamento total por Cod_Vend (otimiza estritamente os vendedores do escopo selecionado)
-        const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
-        if (sellers.length === 0) {
-            alert("Nenhum vendedor encontrado no escopo selecionado.");
-            return;
-        }
+    const runOptimizationForSellers = async (sellers: number[], baseRoutes: VisitaPrevista[]) => {
+        if (sellers.length === 0) return [];
 
         setLoading(true);
         setOptimizeProgress({
@@ -1766,7 +1795,7 @@ export const AjusteRota: React.FC = () => {
 
         for (let sIdx = 0; sIdx < sellers.length; sIdx++) {
             const sellerId = sellers[sIdx];
-            const sellerVisits = adjustedRoutes.filter(r => r.Cod_Vend === sellerId);
+            const sellerVisits = baseRoutes.filter(r => r.Cod_Vend === sellerId);
             const colab = getColabBySectorOrName(sellerId, sellerVisits[0]?.Nome_Vendedor);
             const sellerName = colab?.Nome || (sellerVisits.length > 0 ? sellerVisits[0].Nome_Vendedor : `Colaborador ${sellerId}`);
 
@@ -1782,7 +1811,6 @@ export const AjusteRota: React.FC = () => {
 
             if (sellerVisits.length === 0) continue;
 
-            // 1. Extrair clientes ÚNICOS da carteira deste vendedor
             const uniqueClientsMap = new Map<number, {
                 sampleVisit: VisitaPrevista;
                 tipo: PeriodicidadeTipo;
@@ -1793,7 +1821,6 @@ export const AjusteRota: React.FC = () => {
                 distFromBase: number;
             }>();
 
-            // Identificar Base de Partida e Retorno do Colaborador (com fallback para o centroide da carteira)
             const validCoordsVisits = sellerVisits.filter(v => v.Lat && v.Long);
             let baseLat = colab?.LatitudeBase || 0;
             let baseLng = colab?.LongitudeBase || 0;
@@ -1805,18 +1832,22 @@ export const AjusteRota: React.FC = () => {
 
             sellerVisits.forEach(v => {
                 if (!uniqueClientsMap.has(v.Cod_Cliente)) {
-                    const parsed = parsePeriodicidade(v.Periodicidade);
-                    const lat = v.Lat || 0;
-                    const lng = v.Long || 0;
-                    const polarAngle = (lat && lng) ? calcPolarAngle(baseLat, baseLng, lat, lng) : 0;
-                    const distFromBase = (lat && lng) ? calcDist(baseLat, baseLng, lat, lng) : 0;
+                    const parsedP = parsePeriodicidade(v.Periodicidade);
+                    const clientLat = v.Lat || 0;
+                    const clientLng = v.Long || 0;
+                    const polarAngle = (clientLat && clientLng) 
+                        ? calcPolarAngle(baseLat, baseLng, clientLat, clientLng)
+                        : 0;
+                    const distFromBase = (clientLat && clientLng)
+                        ? calcDist(baseLat, baseLng, clientLat, clientLng)
+                        : 9999;
 
                     uniqueClientsMap.set(v.Cod_Cliente, {
                         sampleVisit: v,
-                        tipo: parsed.tipo,
-                        originalPeriodicidade: v.Periodicidade || parsed.original,
-                        lat,
-                        lng,
+                        tipo: parsedP.tipo,
+                        originalPeriodicidade: v.Periodicidade || 'Semanal',
+                        lat: clientLat,
+                        lng: clientLng,
                         polarAngle,
                         distFromBase
                     });
@@ -1826,11 +1857,10 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            // 2. Zoneamento Territorial Compacto e Balanceamento Equitativo de Carga
+            // 2. Clusterização Angular Contígua
             const getDayWeight = (day: string) => (day === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1.0;
             const totalWeight = activeDays.reduce((sum, d) => sum + getDayWeight(d), 0);
 
-            // Centróide geográfico da carteira de clientes do vendedor
             const validCoords = uniqueClients.filter(c => c.lat && c.lng);
             const centerPortfolioLat = validCoords.length > 0 
                 ? validCoords.reduce((acc, c) => acc + c.lat, 0) / validCoords.length 
@@ -1839,7 +1869,6 @@ export const AjusteRota: React.FC = () => {
                 ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length 
                 : baseLng;
 
-            // Ordenação espacial contígua (varredura angular 360° em torno do centróide da carteira + distância radial)
             const sortedSpatially = [...uniqueClients].sort((a, b) => {
                 const angleA = (a.lat && a.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng) : a.polarAngle;
                 const angleB = (b.lat && b.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng) : b.polarAngle;
@@ -1848,12 +1877,10 @@ export const AjusteRota: React.FC = () => {
                 return a.distFromBase - b.distFromBase;
             });
 
-            // Separação dos clientes por modalidade
             const allSemanais = sortedSpatially.filter(c => c.tipo === 'SEMANAL');
             let poolQuinzenais13 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_1_3');
             let poolQuinzenais24 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_2_4');
 
-            // EQUALIZAÇÃO QUINZENAL EFETIVA: Quando "Equilibrar Quinzenas" estiver ativo, iguala os volumes de 1/3 e 2/4
             if (optBalanceWorkload) {
                 const allQuinzenais = [...poolQuinzenais13, ...poolQuinzenais24];
                 const targetQ13 = Math.floor(allQuinzenais.length / 2);
@@ -1877,7 +1904,6 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
-            // 3. Estruturação dos Buckets Diários Balanceados
             interface DayBucket {
                 day: string;
                 weight: number;
@@ -1899,7 +1925,6 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            // Distribuição homogênea dos clientes SEMANAIS entre os dias ativos por cota cumulativa
             let remSemanais = [...allSemanais];
             let accSemanais = 0;
             let cumWeightSemanais = 0;
@@ -1912,7 +1937,6 @@ export const AjusteRota: React.FC = () => {
                 accSemanais += bucket.semanais.length;
             });
 
-            // Distribuição dos QUINZENAIS 1/3 (meta estrita por cota cumulativa sem dias vazios ou com quedas)
             const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
             let remQ13 = [...poolQuinzenais13];
             let accVisits13 = 0;
@@ -1936,7 +1960,6 @@ export const AjusteRota: React.FC = () => {
                 bestBucket.quinzenais13.push(c);
             }
 
-            // Distribuição dos QUINZENAIS 2/4 (meta estrita por cota cumulativa sem dias vazios ou com quedas)
             const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
             let remQ24 = [...poolQuinzenais24];
             let accVisits24 = 0;
@@ -1960,7 +1983,6 @@ export const AjusteRota: React.FC = () => {
                 bestBucket.quinzenais24.push(c);
             }
 
-            // Centróides calculados sobre os clusters balanceados de cada dia
             const calcDayCentroid = (bucket: DayBucket) => {
                 const stops = [...bucket.semanais, ...bucket.quinzenais13, ...bucket.quinzenais24].filter(c => c.lat && c.lng);
                 if (stops.length > 0) {
@@ -1974,12 +1996,9 @@ export const AjusteRota: React.FC = () => {
 
             let dayCentroids = dayBuckets.map(calcDayCentroid);
 
-            // Refinamento Espacial de Contiguidade (Boundary Swaps):
-            // Troca clientes entre dias vizinhos somente quando aproxima do centróide, mantendo o balanceamento perfeito
             for (let pass = 0; pass < 6; pass++) {
                 dayCentroids = dayBuckets.map(calcDayCentroid);
 
-                // Refinamento Quinzena 1 e 3
                 for (let i = 0; i < dayBuckets.length; i++) {
                     for (let j = i + 1; j < dayBuckets.length; j++) {
                         const b1 = dayBuckets[i];
@@ -2007,7 +2026,6 @@ export const AjusteRota: React.FC = () => {
                     }
                 }
 
-                // Refinamento Quinzena 2 e 4
                 for (let i = 0; i < dayBuckets.length; i++) {
                     for (let j = i + 1; j < dayBuckets.length; j++) {
                         const b1 = dayBuckets[i];
@@ -2036,20 +2054,15 @@ export const AjusteRota: React.FC = () => {
                 }
             }
 
-            // 4. Roteirização em Circuito Fechado por Dia com TSP 2-Opt e Matriz Viária Real OSRM (Base -> Clientes -> Base)
             for (const bucket of dayBuckets) {
-                // Roteiro Quinzena 1 e 3: Semanais + Quinzenais 1_3
                 const rawClients13 = [...bucket.semanais, ...bucket.quinzenais13];
                 const optimizedClients13 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients13);
 
-                // Roteiro Quinzena 2 e 4: Semanais + Quinzenais 2_4
                 const rawClients24 = [...bucket.semanais, ...bucket.quinzenais24];
                 const optimizedClients24 = await optimizeDayCircuitWithOSRM({ lat: baseLat, lng: baseLng }, rawClients24);
 
-                // Mapa de clientes já adicionados para evitar duplicidade de visitas no mesmo dia
                 const addedInDay = new Set<number>();
 
-                // Inclui na sequência otimizada da Quinzena 1 e 3
                 optimizedClients13.forEach(c => {
                     if (addedInDay.has(c.sampleVisit.Cod_Cliente)) return;
                     addedInDay.add(c.sampleVisit.Cod_Cliente);
@@ -2069,7 +2082,6 @@ export const AjusteRota: React.FC = () => {
                     });
                 });
 
-                // Inclui na sequência otimizada da Quinzena 2 e 4 (apenas quinzenais 2_4 não inclusos)
                 optimizedClients24.forEach(c => {
                     if (addedInDay.has(c.sampleVisit.Cod_Cliente)) return;
                     addedInDay.add(c.sampleVisit.Cod_Cliente);
@@ -2096,25 +2108,216 @@ export const AjusteRota: React.FC = () => {
         });
         await new Promise(r => setTimeout(r, 100));
 
-        if (result.length === 0) {
-            alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
-            setLoading(false);
-            setOptimizeProgress(null);
-            return;
+        if (result.length > 0) {
+            setAdjustedRoutes(prev => {
+                const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
+                return [...otherRoutes, ...result];
+            });
         }
-
-        setAdjustedRoutes(prev => {
-            const otherRoutes = prev.filter(r => !sellers.includes(r.Cod_Vend));
-            return [...otherRoutes, ...result];
-        });
 
         setLoading(false);
         setOptimizeProgress(null);
+        return result;
+    };
+
+    const handleOptimizeSimulate = async () => {
+        if (adjustedRoutes.length === 0) {
+            alert("Nenhum dado de rota carregado para otimização.");
+            return;
+        }
+
+        const sellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
+        if (sellers.length === 0) {
+            alert("Nenhum vendedor encontrado no escopo selecionado.");
+            return;
+        }
+
+        const result = await runOptimizationForSellers(sellers, adjustedRoutes);
+        if (result && result.length === 0) {
+            alert("Aviso: Nenhuma visita pôde ser gerada para os dias ativos configurados.");
+            return;
+        }
 
         const escopoDesc = scopeMode === 'vendedor' 
             ? 'do vendedor selecionado' 
             : (scopeMode === 'equipe' ? 'da equipe de supervisão selecionada' : 'geral');
-        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de visitas sequenciadas: ${result.length}`);
+        alert(`Otimização e Roteirização Concluída (${escopoDesc})!\n\n• Circuito fechado diário: Base ➜ Clientes ➜ Retorno à Base.\n• Algoritmo TSP 2-Opt aplicado: eliminação de cruzamentos e menor percurso.\n• Zoneamento por microrregiões contíguas preservado.\n• Carteiras mantidas 100% blindadas por colaborador.\n• Total de visitas sequenciadas: ${result ? result.length : 0}`);
+    };
+
+    // SIMULAÇÃO DE EXTINÇÃO E REDISTRIBUIÇÃO DE SETORES COM BALANCEAMENTO EQUILIBRADO
+    const handleExtinguishAndDistributeSector = async () => {
+        if (!sourceSectorToExtinguish) {
+            alert("Selecione o setor/vendedor que será extinto.");
+            return;
+        }
+        const sourceId = Number(sourceSectorToExtinguish);
+        if (targetSectorsSelected.length === 0) {
+            alert("Selecione ao menos um setor receptor para absorver os clientes.");
+            return;
+        }
+        if (targetSectorsSelected.includes(sourceId)) {
+            alert("O setor a ser extinto não pode estar entre os setores receptores de destino.");
+            return;
+        }
+
+        const sourceVisits = adjustedRoutes.filter(r => r.Cod_Vend === sourceId);
+        if (sourceVisits.length === 0) {
+            alert("O setor selecionado não possui clientes cadastrados na rota ativa.");
+            return;
+        }
+
+        // Salva backup para permitir desfazer
+        setBackupRoutesBeforeExtinguish([...adjustedRoutes]);
+
+        // Clientes únicos do setor extinto
+        const uniqueClientsToMove = deduplicateVisitasPrevistas(sourceVisits);
+        const sourceColab = getColabBySectorOrName(sourceId, sourceVisits[0]?.Nome_Vendedor);
+        const sourceName = sourceColab?.Nome || sourceVisits[0]?.Nome_Vendedor || `Setor ${sourceId}`;
+
+        // Caracterização geográfica e de carga dos setores receptores
+        interface TargetReceptorInfo {
+            id: number;
+            name: string;
+            baseLat: number;
+            baseLng: number;
+            centroidLat: number;
+            centroidLng: number;
+            initialCount: number;
+            quota: number;
+            assignedClients: VisitaPrevista[];
+        }
+
+        const receptors: TargetReceptorInfo[] = targetSectorsSelected.map(tId => {
+            const tVisits = adjustedRoutes.filter(r => r.Cod_Vend === tId);
+            const tColab = getColabBySectorOrName(tId, tVisits[0]?.Nome_Vendedor);
+            const tName = tColab?.Nome || (tVisits.length > 0 ? tVisits[0].Nome_Vendedor : `Setor ${tId}`);
+            const baseLat = tColab?.LatitudeBase || 0;
+            const baseLng = tColab?.LongitudeBase || 0;
+
+            const validCoords = tVisits.filter(v => v.Lat && v.Long);
+            const centroidLat = validCoords.length > 0
+                ? validCoords.reduce((acc, v) => acc + v.Lat!, 0) / validCoords.length
+                : baseLat;
+            const centroidLng = validCoords.length > 0
+                ? validCoords.reduce((acc, v) => acc + v.Long!, 0) / validCoords.length
+                : baseLng;
+
+            const tUnique = deduplicateVisitasPrevistas(tVisits);
+
+            return {
+                id: tId,
+                name: tName,
+                baseLat,
+                baseLng,
+                centroidLat,
+                centroidLng,
+                initialCount: tUnique.length,
+                quota: 0,
+                assignedClients: []
+            };
+        });
+
+        const totalToDistribute = uniqueClientsToMove.length;
+
+        // Cota de distribuição: quando balanceLoadEqually estiver ativo, reparte em parcelas balanceadas
+        if (balanceLoadEqually && receptors.length > 1) {
+            const baseQuota = Math.floor(totalToDistribute / receptors.length);
+            const remainder = totalToDistribute % receptors.length;
+            receptors.forEach((r, idx) => {
+                r.quota = baseQuota + (idx < remainder ? 1 : 0);
+            });
+        } else {
+            receptors.forEach(r => { r.quota = totalToDistribute; });
+        }
+
+        // Ordenação espacial dos clientes do setor extinto para agrupamento de proximidade
+        const refLat = receptors[0].centroidLat || receptors[0].baseLat;
+        const refLng = receptors[0].centroidLng || receptors[0].baseLng;
+
+        const sortedClients = [...uniqueClientsToMove].sort((a, b) => {
+            const distA = (a.Lat && a.Long) ? calcDist(a.Lat, a.Long, refLat, refLng) : 9999;
+            const distB = (b.Lat && b.Long) ? calcDist(b.Lat, b.Long, refLat, refLng) : 9999;
+            return distA - distB;
+        });
+
+        // Atribuição de cada cliente ao setor receptor geograficamente mais favorável respeitando a cota
+        const clientAssignment = new Map<number, TargetReceptorInfo>();
+
+        sortedClients.forEach(client => {
+            const cLat = client.Lat || 0;
+            const cLng = client.Long || 0;
+
+            // Filtra os receptores que ainda têm cota disponível
+            const availableReceptors = receptors.filter(r => r.assignedClients.length < r.quota);
+            const candidateList = availableReceptors.length > 0 ? availableReceptors : receptors;
+
+            candidateList.sort((r1, r2) => {
+                const d1 = (cLat && cLng && r1.centroidLat && r1.centroidLng)
+                    ? calcDist(cLat, cLng, r1.centroidLat, r1.centroidLng)
+                    : (cLat && cLng && r1.baseLat && r1.baseLng ? calcDist(cLat, cLng, r1.baseLat, r1.baseLng) : 9999);
+                const d2 = (cLat && cLng && r2.centroidLat && r2.centroidLng)
+                    ? calcDist(cLat, cLng, r2.centroidLat, r2.centroidLng)
+                    : (cLat && cLng && r2.baseLat && r2.baseLng ? calcDist(cLat, cLng, r2.baseLat, r2.baseLng) : 9999);
+                return d1 - d2;
+            });
+
+            const chosen = candidateList[0];
+            chosen.assignedClients.push(client);
+            clientAssignment.set(client.Cod_Cliente, chosen);
+        });
+
+        // Atualização de todas as visitas dos clientes do setor extinto com os dados do novo setor receptor
+        const updatedSourceVisits = sourceVisits.map(v => {
+            const receptor = clientAssignment.get(v.Cod_Cliente);
+            if (!receptor) return v;
+            return {
+                ...v,
+                Cod_Vend: receptor.id,
+                Nome_Vendedor: receptor.name
+            };
+        });
+
+        // Novo array de rotas ajustadas: remove o setor extinto e adiciona as visitas reatribuídas
+        const otherRoutes = adjustedRoutes.filter(r => r.Cod_Vend !== sourceId);
+        const newAdjustedRoutes = [...otherRoutes, ...updatedSourceVisits];
+
+        if (scopeMode === 'vendedor' && selectedSeller === String(sourceId)) {
+            setSelectedSeller(String(receptors[0].id));
+        }
+
+        setAdjustedRoutes(newAdjustedRoutes);
+
+        const breakdown = receptors.map(r => ({
+            targetId: r.id,
+            targetName: r.name,
+            count: r.assignedClients.length
+        }));
+
+        setExtinguishFeedback({
+            sourceName,
+            sourceId,
+            totalMoved: totalToDistribute,
+            breakdown
+        });
+
+        setShowExtinguishModal(false);
+
+        // Se autoOptimizeAfterDistribute estiver ativo, reotimiza os setores receptores com a nova carga
+        if (autoOptimizeAfterDistribute) {
+            setTimeout(async () => {
+                await runOptimizationForSellers(receptors.map(r => r.id), newAdjustedRoutes);
+            }, 100);
+        }
+    };
+
+    // Desfazer a extinção/redistribuição e restaurar a carteira do setor anterior
+    const handleUndoExtinguish = () => {
+        if (!backupRoutesBeforeExtinguish) return;
+        if (!confirm("Deseja restaurar as rotas para o estado anterior à redistribuição do setor?")) return;
+        setAdjustedRoutes(backupRoutesBeforeExtinguish);
+        setBackupRoutesBeforeExtinguish(null);
+        setExtinguishFeedback(null);
+        alert("Redistribuição desfeita com sucesso! O setor e todas as suas visitas foram restaurados.");
     };
 
     const osrmCacheRef = useRef<Map<string, [number, number][]>>(new Map());
@@ -2852,6 +3055,73 @@ export const AjusteRota: React.FC = () => {
                             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
                             {Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend))).length} Colaborador(es) • {scopedAdjustedRoutes.length} PDVs em foco
                         </div>
+
+                        <div className="flex items-center space-x-1.5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSourceSectorToExtinguish('');
+                                    setTargetSectorsSelected([]);
+                                    setShowExtinguishModal(true);
+                                }}
+                                disabled={loading || adjustedRoutes.length === 0}
+                                className="bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center shadow-xs transition cursor-pointer disabled:opacity-50"
+                                title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
+                            >
+                                <UserGroupIcon className="w-3.5 h-3.5 mr-1 text-amber-600 dark:text-amber-400"/>
+                                Redistribuir Setor Extinto
+                            </button>
+                            {backupRoutesBeforeExtinguish && (
+                                <button
+                                    type="button"
+                                    onClick={handleUndoExtinguish}
+                                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold px-2.5 py-1.5 rounded-xl text-xs flex items-center shadow-xs transition cursor-pointer"
+                                    title="Restaurar a carteira do setor extinto de volta ao estado original"
+                                >
+                                    ↩️ Desfazer
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* BANNER DE FEEDBACK DE REDISTRIBUIÇÃO DE SETOR */}
+            {extinguishFeedback && (
+                <div className="bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 rounded-2xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center space-x-3">
+                        <span className="text-xl">⚡</span>
+                        <div>
+                            <h4 className="text-xs font-black text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                Setor {extinguishFeedback.sourceId} ({extinguishFeedback.sourceName}) Extinto e Redistribuído!
+                                <span className="bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                                    {extinguishFeedback.totalMoved} clientes transferidos
+                                </span>
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-amber-800 dark:text-amber-300">
+                                {extinguishFeedback.breakdown.map(b => (
+                                    <span key={b.targetId} className="bg-white/80 dark:bg-slate-900/80 px-2 py-0.5 rounded-md font-semibold border border-amber-200 dark:border-amber-800/50">
+                                        Setor {b.targetId} ({b.targetName}): <b className="text-indigo-600 dark:text-indigo-400">+{b.count} clientes</b>
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={handleUndoExtinguish}
+                            className="bg-rose-100 hover:bg-rose-200 text-rose-800 dark:bg-rose-950 dark:hover:bg-rose-900 dark:text-rose-200 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer shadow-2xs"
+                        >
+                            ↩️ Desfazer Redistribuição
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setExtinguishFeedback(null)}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg text-xs cursor-pointer"
+                        >
+                            ✕
+                        </button>
                     </div>
                 </div>
             )}
@@ -3060,9 +3330,23 @@ export const AjusteRota: React.FC = () => {
                         <button
                             onClick={handleOptimizeSimulate}
                             disabled={loading || adjustedRoutes.length === 0}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-sm disabled:opacity-50"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-sm disabled:opacity-50 cursor-pointer"
                         >
                             <RefreshIcon className="w-4 h-4 mr-1"/> Otimizar Rotas
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSourceSectorToExtinguish('');
+                                setTargetSectorsSelected([]);
+                                setShowExtinguishModal(true);
+                            }}
+                            disabled={loading || adjustedRoutes.length === 0}
+                            className="w-full mt-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold p-2 rounded-xl text-xs flex items-center justify-center shadow-xs transition cursor-pointer disabled:opacity-50"
+                            title="Simular a extinção de um setor e redistribuir sua carteira para os demais setores selecionados com balanceamento equilibrado"
+                        >
+                            <UserGroupIcon className="w-4 h-4 mr-1.5 text-amber-600 dark:text-amber-400"/>
+                            Redistribuir Setor Extinto
                         </button>
                     </div>
 
@@ -4743,6 +5027,238 @@ export const AjusteRota: React.FC = () => {
                                 className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition cursor-pointer shadow-xs"
                             >
                                 Fechar Resumo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE SIMULAÇÃO DE EXTINÇÃO E REDISTRIBUIÇÃO DE SETOR */}
+            {showExtinguishModal && (
+                <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-amber-50/50 dark:bg-amber-950/20">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 flex items-center justify-center">
+                                    <UserGroupIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Simular Extinção & Redistribuição de Setor
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                            Fusão de Carteiras
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Descontinue um setor e redistribua seus clientes para um ou mais setores receptores selecionados, com balanceamento equilibrado.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowExtinguishModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Corpo com Scroll */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
+                            {/* PASSO 1: SETOR A SER EXTINTO */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                        <span className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] font-black">1</span>
+                                        Setor que será Extinto (Origem / Doador):
+                                    </label>
+                                    {sourceSectorToExtinguish && (
+                                        <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-800">
+                                            {allAdjustedSellers.find(s => String(s.id) === sourceSectorToExtinguish)?.clientCount || 0} clientes na carteira
+                                        </span>
+                                    )}
+                                </div>
+
+                                <select
+                                    value={sourceSectorToExtinguish}
+                                    onChange={(e) => {
+                                        const newSource = e.target.value;
+                                        setSourceSectorToExtinguish(newSource);
+                                        setTargetSectorsSelected(prev => prev.filter(id => String(id) !== newSource));
+                                    }}
+                                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                                >
+                                    <option value="">Selecione o setor que será descontinuado...</option>
+                                    {allAdjustedSellers.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            Setor {s.id} - {s.name} ({s.clientCount} clientes)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* PASSO 2: SETORES RECEPTORES */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <label className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                        <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
+                                        Setores que irão Absorver a Carteira (Destino):
+                                    </label>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const candidates = allAdjustedSellers
+                                                    .filter(s => String(s.id) !== sourceSectorToExtinguish)
+                                                    .map(s => s.id);
+                                                setTargetSectorsSelected(candidates);
+                                            }}
+                                            className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                        >
+                                            Selecionar Todos
+                                        </button>
+                                        <span className="text-slate-300 dark:text-slate-600">•</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTargetSectorsSelected([])}
+                                            className="text-[10px] font-bold text-slate-500 hover:underline cursor-pointer"
+                                        >
+                                            Limpar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                                    {allAdjustedSellers
+                                        .filter(s => String(s.id) !== sourceSectorToExtinguish)
+                                        .map(s => {
+                                            const isSelected = targetSectorsSelected.includes(s.id);
+                                            const sourceCount = allAdjustedSellers.find(x => String(x.id) === sourceSectorToExtinguish)?.clientCount || 0;
+                                            const quotaPrevista = targetSectorsSelected.length > 0 
+                                                ? Math.floor(sourceCount / targetSectorsSelected.length)
+                                                : 0;
+
+                                            return (
+                                                <div
+                                                    key={s.id}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setTargetSectorsSelected(prev => prev.filter(x => x !== s.id));
+                                                        } else {
+                                                            setTargetSectorsSelected(prev => [...prev, s.id]);
+                                                        }
+                                                    }}
+                                                    className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                                        isSelected
+                                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-2xs'
+                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center space-x-2.5 truncate">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => {}}
+                                                            className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                        />
+                                                        <div className="truncate">
+                                                            <div className="text-xs font-black text-slate-800 dark:text-white truncate">
+                                                                {s.id} - {s.name}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 font-medium">
+                                                                Carteira atual: {s.clientCount} clientes
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {isSelected && sourceCount > 0 && (
+                                                        <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded shrink-0 ml-1">
+                                                            ~+{quotaPrevista}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+
+                            {/* PASSO 3: PARÂMETROS DE EQUILÍBRIO */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+                                <label className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black">3</span>
+                                    Regras de Equilíbrio e Otimização:
+                                </label>
+
+                                <div className="space-y-2.5">
+                                    <label className="flex items-start space-x-2.5 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={balanceLoadEqually}
+                                            onChange={(e) => setBalanceLoadEqually(e.target.checked)}
+                                            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        />
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                                                Respeitar equilíbrio e balanceamento de carga entre os setores receptores
+                                            </span>
+                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                                Distribui os clientes do setor extinto em cotas iguais e homogêneas entre os setores selecionados, combinando menor distância geográfica e equilíbrio de esforço.
+                                            </span>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex items-start space-x-2.5 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoOptimizeAfterDistribute}
+                                            onChange={(e) => setAutoOptimizeAfterDistribute(e.target.checked)}
+                                            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        />
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                                                Reotimizar automaticamente os circuitos viários e dias da semana dos setores receptores
+                                            </span>
+                                            <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                                Após a transferência, recalcula o sequenciamento TSP e o balanceamento diário (Segunda a Sexta) dos setores que receberam novos clientes.
+                                            </span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* PREVIEW DA OPERAÇÃO */}
+                            {sourceSectorToExtinguish && targetSectorsSelected.length > 0 && (
+                                <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-xs text-indigo-900 dark:text-indigo-200">
+                                    <div className="font-bold flex items-center gap-1.5">
+                                        <span>📊</span>
+                                        <span>Resumo da Simulação:</span>
+                                    </div>
+                                    <p className="mt-1 text-[11px] leading-relaxed">
+                                        O <b>Setor {sourceSectorToExtinguish}</b> terá seus <b>{allAdjustedSellers.find(s => String(s.id) === sourceSectorToExtinguish)?.clientCount || 0} clientes</b> transferidos para <b>{targetSectorsSelected.length} setor(es) receptor(es)</b>.
+                                        {targetSectorsSelected.length > 1 && balanceLoadEqually && (
+                                            <span> Cada setor receptor receberá uma cota balanceada de aproximadamente <b>~{Math.round((allAdjustedSellers.find(s => String(s.id) === sourceSectorToExtinguish)?.clientCount || 0) / targetSectorsSelected.length)} clientes</b> baseada na maior proximidade geográfica.</span>
+                                        )}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <button
+                                type="button"
+                                onClick={() => setShowExtinguishModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExtinguishAndDistributeSector}
+                                disabled={!sourceSectorToExtinguish || targetSectorsSelected.length === 0 || loading}
+                                className="px-5 py-2.5 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-700 text-white shadow-md transition cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                            >
+                                <UserGroupIcon className="w-4 h-4"/>
+                                <span>Executar Redistribuição do Setor</span>
                             </button>
                         </div>
                     </div>

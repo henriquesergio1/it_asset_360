@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.142.0',
+    date: 'Hoje',
+    title: 'Fuel360: Simulação de Extinção e Redistribuição Inteligente de Setores',
+    changes: [
+      'Redistribuição de Setor Extinto / Fusão de Setores: Permite simular a extinção de um setor comercial (ex: setor 401) e redistribuir sua carteira para um ou múltiplos setores receptores selecionados.',
+      'Critério Híbrido de Proximidade e Carga: Algoritmo espacial que calcula as distâncias aos centróides e bases residenciais dos setores receptores, garantindo a absorção geográfica ideal.',
+      'Balanceamento e Equilíbrio de Carga: Distribuição equitativa e ponderada entre os setores selecionados, evitando sobrecarregar vendedores individuais.',
+      'Re-roteirização Automática & Desfazer: Otimiza os circuitos e dias de atendimento dos setores receptores com 1 clique, contando com opção para desfazer a qualquer momento.'
+    ]
+  },
+  {
     version: '3.141.0',
     date: 'Hoje',
     title: 'Fuel360: Recursos Avançados de Roteirização Profissional (Resumo de KM/Tempo, Popup no Mapa e KM Flexível)',
