@@ -15,7 +15,38 @@ export interface NotificationItem {
   type: 'expediente' | 'stock' | 'task' | 'rh-alert';
   module: 'TI' | 'RH' | 'FUEL';
   timestamp: Date;
+  isDigest?: boolean;
+  digestCount?: number;
 }
+
+// Helper para agrupar alertas por família lógica para o Digest Consolidado
+const getAlertFamily = (notif: NotificationItem): { family: string; label: string } => {
+  if (notif.id.startsWith('rh-exp')) {
+    return { family: 'contrato_experiencia', label: 'Contratos de Experiência' };
+  }
+  if (notif.id.startsWith('rh-cnh-')) {
+    return { family: 'cnh', label: 'CNH Próxima do Vencimento' };
+  }
+  if (notif.id.startsWith('rh-holiday-')) {
+    return { family: 'ferias', label: 'Períodos de Férias' };
+  }
+  if (notif.id.startsWith('rh-birthday-')) {
+    return { family: 'aniversario', label: 'Aniversariantes do Dia' };
+  }
+  if (notif.id.startsWith('rh-term-approval-')) {
+    return { family: 'termos', label: 'Validações de Termos Pendentes' };
+  }
+  if (notif.type === 'task' || notif.id.startsWith('task-')) {
+    return { family: 'tarefas', label: 'Tarefas Pendentes' };
+  }
+  if (notif.type === 'stock' || notif.id.startsWith('stock-')) {
+    return { family: 'estoque', label: 'Itens em Estoque Crítico' };
+  }
+  if (notif.type === 'expediente' || notif.id.startsWith('expediente-')) {
+    return { family: 'expediente', label: 'Divergências de Expediente ERP' };
+  }
+  return { family: notif.type, label: notif.title };
+};
 
 interface NotificationCenterProps {
   currentModule?: 'TI' | 'RH' | 'FUEL';
@@ -466,20 +497,54 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentM
     const newAlerts = allNotifications.filter(n => !notifiedIdsRef.current.has(n.id));
 
     if (newAlerts.length > 0) {
+      // Filtrar apenas alertas pertinentes ao módulo que o colaborador está navegando no momento
+      const activeModuleNewAlerts = newAlerts.filter(n => n.module === activeNavModule);
+
+      // Marca todos os newAlerts como notificados na sessão para evitar loops
       newAlerts.forEach(notif => {
         notifiedIdsRef.current.add(notif.id);
-
-        // DISPARAR POPUP TOAST APENAS SE A NOTIFICAÇÃO FOR DO MÓDULO ONDE O USUÁRIO ESTÁ NAVEGANDO!
-        // No Fuel360, não enfileira popups de RH nem de TI!
-        if (notif.module === activeNavModule) {
-          toastQueueRef.current.push(notif);
-        }
       });
 
-      // Se a fila possui itens e não está processando, inicia o envio com delay
-      if (!isDispatchingRef.current && toastQueueRef.current.length > 0) {
-        isDispatchingRef.current = true;
-        processNextToast();
+      if (activeModuleNewAlerts.length > 0) {
+        // Agrupar os novos alertas do módulo ativo por família lógica
+        const groupedByFamily = new Map<string, { family: string; label: string; items: NotificationItem[] }>();
+
+        activeModuleNewAlerts.forEach(notif => {
+          const { family, label } = getAlertFamily(notif);
+          if (!groupedByFamily.has(family)) {
+            groupedByFamily.set(family, { family, label, items: [] });
+          }
+          groupedByFamily.get(family)!.items.push(notif);
+        });
+
+        // Digest Consolidado Inteligente: se acumular 5 ou mais alertas da mesma família, unifica em 1 toast resumido
+        groupedByFamily.forEach(group => {
+          if (group.items.length >= 5) {
+            const first = group.items[0];
+            const digestToast: NotificationItem = {
+              id: `digest-${group.family}-${Date.now()}`,
+              title: `${group.label} (${group.items.length})`,
+              message: `Você tem ${group.items.length} ${group.label.toLowerCase()} com atenção requerida. Clique aqui para ver todos os detalhes na Central de Alertas.`,
+              type: first.type,
+              module: first.module,
+              timestamp: new Date(),
+              isDigest: true,
+              digestCount: group.items.length
+            };
+            toastQueueRef.current.push(digestToast);
+          } else {
+            // Menos de 5 itens: exibe individualmente na fila temporizada suave
+            group.items.forEach(item => {
+              toastQueueRef.current.push(item);
+            });
+          }
+        });
+
+        // Se a fila possui itens e não está processando, inicia o envio com delay
+        if (!isDispatchingRef.current && toastQueueRef.current.length > 0) {
+          isDispatchingRef.current = true;
+          processNextToast();
+        }
       }
     }
 
@@ -689,19 +754,34 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentM
               initial={{ opacity: 0, x: 50, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 50, scale: 0.9 }}
-              className="pointer-events-auto bg-white dark:bg-slate-800/95 border-l-4 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 flex gap-3 backdrop-blur-md"
+              onClick={() => {
+                setDropdownTab('current');
+                setIsOpen(true);
+                dismissToast(toast.id);
+              }}
+              className={`pointer-events-auto bg-white dark:bg-slate-800/95 border-l-4 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-4 flex gap-3 backdrop-blur-md cursor-pointer hover:shadow-indigo-500/10 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all ${toast.isDigest ? 'ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-indigo-950/20' : ''}`}
               style={{
                 borderLeftColor: 
+                  toast.isDigest ? '#6366f1' :
                   toast.type === 'expediente' ? '#f87171' : 
                   toast.type === 'stock' ? '#fbbf24' : 
                   toast.type === 'rh-alert' ? '#818cf8' : '#60a5fa'
               }}
+              title={toast.isDigest ? "Clique para abrir a Central de Alertas" : "Clique para ver detalhes"}
             >
               <div className="shrink-0">
-                {toast.type === 'expediente' && <Clock size={16} className="text-red-400 animate-pulse" />}
-                {toast.type === 'stock' && <Package size={16} className="text-amber-600 dark:text-amber-400 animate-pulse" />}
-                {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-600 dark:text-sky-400 animate-pulse" />}
-                {toast.type === 'rh-alert' && <Bell size={16} className="text-indigo-650 dark:text-indigo-400 animate-pulse" />}
+                {toast.isDigest ? (
+                  <div className="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400">
+                    <Bell size={16} className="animate-bounce" />
+                  </div>
+                ) : (
+                  <>
+                    {toast.type === 'expediente' && <Clock size={16} className="text-red-400 animate-pulse" />}
+                    {toast.type === 'stock' && <Package size={16} className="text-amber-600 dark:text-amber-400 animate-pulse" />}
+                    {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-600 dark:text-sky-400 animate-pulse" />}
+                    {toast.type === 'rh-alert' && <Bell size={16} className="text-indigo-650 dark:text-indigo-400 animate-pulse" />}
+                  </>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
@@ -709,13 +789,21 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentM
                     <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 shrink-0">
                       {toast.module}
                     </span>
+                    {toast.isDigest && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-indigo-600 text-white shadow-xs shrink-0 animate-pulse">
+                        Digest ({toast.digestCount})
+                      </span>
+                    )}
                     <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 truncate">
                       {toast.title}
                     </span>
                   </div>
                   <button 
-                    onClick={() => dismissToast(toast.id)}
-                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissToast(toast.id);
+                    }}
+                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
                     title="Fechar notificação"
                   >
                     <X size={12} />
@@ -724,6 +812,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentM
                 <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mt-1 uppercase tracking-tight leading-normal">
                   {toast.message}
                 </p>
+                {toast.isDigest && (
+                  <p className="text-[9.5px] font-black text-indigo-600 dark:text-indigo-400 mt-1.5 flex items-center gap-1">
+                    <span>Ver lista completa na Central de Alertas</span>
+                    <span>→</span>
+                  </p>
+                )}
               </div>
             </motion.div>
           ))}

@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.136.0',
+    date: 'Hoje',
+    title: 'Notificações: Digest Consolidado Inteligente para Múltiplos Alertas Semelhantes',
+    changes: [
+      'Digest Consolidado Inteligente: Quando um módulo acumula 5 ou mais alertas da mesma categoria (ex.: múltiplos contratos de experiência vencendo), eles são agrupados em um único toast resumido.',
+      'Abertura Rápida com 1 Clique: Clicar no toast consolidado abre diretamente a Central de Alertas (sino) focada no módulo atual.',
+      'Preservação Total de Detalhes: Todos os colaboradores e registros continuam minuciosamente listados e acessíveis no dropdown da Central de Alertas.'
+    ]
+  },
+  {
     version: '3.135.0',
     date: 'Hoje',
     title: 'Notificações: Roteamento Contextual por Módulo, Blindagem RBAC e Fila Temporizada Anti-Avalanche',
