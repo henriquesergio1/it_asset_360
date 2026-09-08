@@ -46,6 +46,60 @@ function createBaseIcon(color: string) {
     });
 }
 
+function createHomeIcon(promoterColor?: string) {
+    return L.divIcon({
+        className: 'custom-home-icon',
+        html: `
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));">
+                <div style="
+                    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 10px;
+                    border: 2.5px solid #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 0 0 2px ${promoterColor || '#ef4444'};
+                ">
+                    <svg style="width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                </div>
+                <div style="
+                    background: #0f172a;
+                    color: #ffffff;
+                    font-size: 8.5px;
+                    font-weight: 900;
+                    padding: 1.5px 6px;
+                    border-radius: 6px;
+                    margin-top: 3px;
+                    white-space: nowrap;
+                    border: 1px solid rgba(255,255,255,0.4);
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                ">
+                    🏠 BASE
+                </div>
+            </div>
+        `,
+        iconSize: [38, 54],
+        iconAnchor: [19, 22],
+        popupAnchor: [0, -24]
+    });
+}
+
+// Paleta de cores cromáticas e consistentes por dia da semana para visão detalhada de vendedor
+export const DAY_COLORS: Record<string, { bg: string, text: string, border: string, hex: string, label: string }> = {
+    'SEGUNDA-FEIRA': { bg: 'bg-blue-600', text: 'text-blue-600', border: 'border-blue-500', hex: '#2563eb', label: 'SEG' },
+    'TERÇA-FEIRA':   { bg: 'bg-purple-600', text: 'text-purple-600', border: 'border-purple-500', hex: '#7c3aed', label: 'TER' },
+    'QUARTA-FEIRA':  { bg: 'bg-emerald-600', text: 'text-emerald-600', border: 'border-emerald-500', hex: '#059669', label: 'QUA' },
+    'QUINTA-FEIRA':  { bg: 'bg-amber-600', text: 'text-amber-600', border: 'border-amber-500', hex: '#d97706', label: 'QUI' },
+    'SEXTA-FEIRA':   { bg: 'bg-rose-600', text: 'text-rose-600', border: 'border-rose-500', hex: '#e11d48', label: 'SEX' },
+    'SÁBADO':        { bg: 'bg-cyan-600', text: 'text-cyan-600', border: 'border-cyan-500', hex: '#0891b2', label: 'SÁB' },
+    'DOMINGO':       { bg: 'bg-slate-600', text: 'text-slate-600', border: 'border-slate-500', hex: '#64748b', label: 'DOM' }
+};
+
 const pinClientIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -216,6 +270,24 @@ export const AjusteRota: React.FC = () => {
     const [sortField, setSortField] = useState<'Cod_Cliente' | 'Razao_Social' | 'Endereco' | 'Nome_Vendedor' | 'Dia_Semana' | 'Periodicidade'>('Cod_Cliente');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+    // Filtros Interativos da Grade de Ajuste Fino e Mapa
+    const [selectedDaysFilter, setSelectedDaysFilter] = useState<string[]>([]);
+    const [selectedQuinzenaFilter, setSelectedQuinzenaFilter] = useState<'ALL' | '1_3' | '2_4'>('ALL');
+
+    const handleToggleDayFilter = (day: string) => {
+        setSelectedDaysFilter(prev => {
+            if (prev.includes(day)) {
+                return prev.filter(d => d !== day);
+            } else {
+                return [...prev, day];
+            }
+        });
+    };
+
+    const handleClearDayFilter = () => {
+        setSelectedDaysFilter([]);
+    };
+
     const handleSort = (field: typeof sortField) => {
         if (sortField === field) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -299,9 +371,92 @@ export const AjusteRota: React.FC = () => {
         return sellerIds.filter(id => getSellerQuinzenaStats(id, scopedAdjustedRoutes).isImbalanced).length;
     }, [scopedAdjustedRoutes]);
 
+    // Identificar se a visão atual está focada em um vendedor individual (para ativar distinção de dias/quinzenas)
+    const isSingleSellerView = useMemo(() => {
+        if (scopeMode === 'vendedor' && selectedSeller) return true;
+        if (selectedPromoter !== 'ALL') return true;
+        const uniqueSellersInScope = new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend));
+        return uniqueSellersInScope.size === 1;
+    }, [scopeMode, selectedSeller, selectedPromoter, scopedAdjustedRoutes]);
+
+    // Rotas ajustadas com os filtros interativos aplicados (dias da semana e quinzenas)
+    const filteredRoutes = useMemo(() => {
+        return scopedAdjustedRoutes.filter(v => {
+            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) {
+                return false;
+            }
+            if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) {
+                return false;
+            }
+            if (selectedQuinzenaFilter === '1_3') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                if (p !== 'SEMANAL' && p !== 'QUINZENAL_1_3') return false;
+            } else if (selectedQuinzenaFilter === '2_4') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                if (p !== 'SEMANAL' && p !== 'QUINZENAL_2_4') return false;
+            }
+            return true;
+        });
+    }, [scopedAdjustedRoutes, selectedPromoter, selectedDaysFilter, selectedQuinzenaFilter]);
+
+    // Totais acumulados por Quinzena (Semanas 1/3 e Semanas 2/4) no escopo selecionado
+    const quinzenaTotals = useMemo(() => {
+        const routes = scopedAdjustedRoutes.filter(v => {
+            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+            if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) return false;
+            return true;
+        });
+
+        let total13 = 0;
+        let total24 = 0;
+        let quinzenal13Count = 0;
+        let quinzenal24Count = 0;
+        let semanalCount = 0;
+
+        routes.forEach(v => {
+            const p = parsePeriodicidade(v.Periodicidade).tipo;
+            if (p === 'SEMANAL') {
+                total13++;
+                total24++;
+                semanalCount++;
+            } else if (p === 'QUINZENAL_1_3') {
+                total13++;
+                quinzenal13Count++;
+            } else if (p === 'QUINZENAL_2_4') {
+                total24++;
+                quinzenal24Count++;
+            }
+        });
+
+        const diff = Math.abs(total13 - total24);
+        const max = Math.max(total13, total24);
+        const variationPct = max > 0 ? Math.round((diff / max) * 100) : 0;
+
+        return {
+            total13,
+            total24,
+            quinzenal13Count,
+            quinzenal24Count,
+            semanalCount,
+            variationPct,
+            isImbalanced: variationPct > 30 && (quinzenal13Count > 0 || quinzenal24Count > 0)
+        };
+    }, [scopedAdjustedRoutes, selectedPromoter, selectedDaysFilter]);
+
     // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Ajustada/Simulada)
     const visitsByDay = useMemo(() => {
-        const routes = scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
+        const routes = scopedAdjustedRoutes.filter(v => {
+            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+            if (selectedQuinzenaFilter === '1_3') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            }
+            if (selectedQuinzenaFilter === '2_4') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            }
+            return true;
+        });
         const counts: Record<string, number> = {};
         WEEKDAYS.forEach(day => { counts[day] = 0; });
         routes.forEach(v => {
@@ -310,11 +465,22 @@ export const AjusteRota: React.FC = () => {
             }
         });
         return counts;
-    }, [scopedAdjustedRoutes, selectedPromoter]);
+    }, [scopedAdjustedRoutes, selectedPromoter, selectedQuinzenaFilter]);
 
     // Resumo de visitas distribuídas por dia da semana no escopo ativo (Rota Original)
     const originalVisitsByDay = useMemo(() => {
-        const routes = scopedOriginalRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
+        const routes = scopedOriginalRoutes.filter(v => {
+            if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+            if (selectedQuinzenaFilter === '1_3') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            }
+            if (selectedQuinzenaFilter === '2_4') {
+                const p = parsePeriodicidade(v.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            }
+            return true;
+        });
         const counts: Record<string, number> = {};
         WEEKDAYS.forEach(day => { counts[day] = 0; });
         routes.forEach(v => {
@@ -323,7 +489,7 @@ export const AjusteRota: React.FC = () => {
             }
         });
         return counts;
-    }, [scopedOriginalRoutes, selectedPromoter]);
+    }, [scopedOriginalRoutes, selectedPromoter, selectedQuinzenaFilter]);
 
     // Comparativo Detalhado de Clientes: Antes (Original) vs Depois (Simulado)
     const routeComparisonDiff = useMemo(() => {
@@ -420,10 +586,9 @@ export const AjusteRota: React.FC = () => {
         };
     }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter]);
 
-    // Rotas do escopo ordenadas conforme a coluna selecionada
+    // Rotas do escopo ordenadas conforme a coluna selecionada (respeitando os filtros de dias e quinzenas)
     const sortedRoutes = useMemo(() => {
-        const list = scopedAdjustedRoutes.filter(v => selectedPromoter === 'ALL' || String(v.Cod_Vend) === selectedPromoter);
-        return [...list].sort((a, b) => {
+        return [...filteredRoutes].sort((a, b) => {
             let res = 0;
             if (sortField === 'Cod_Cliente') {
                 res = Number(a.Cod_Cliente) - Number(b.Cod_Cliente);
@@ -442,7 +607,7 @@ export const AjusteRota: React.FC = () => {
             }
             return sortDirection === 'asc' ? res : -res;
         });
-    }, [scopedAdjustedRoutes, selectedPromoter, sortField, sortDirection]);
+    }, [filteredRoutes, sortField, sortDirection]);
 
     // Mapeamento de cores
     const promoterColorMap = useMemo(() => {
@@ -462,6 +627,8 @@ export const AjusteRota: React.FC = () => {
         setScopeMode('geral');
         setSelectedSupervisor('');
         setSelectedSeller('');
+        setSelectedDaysFilter([]);
+        setSelectedQuinzenaFilter('ALL');
     }, [teamType]);
 
     // Carregar rotas vigentes para ajuste (carteira integral da equipe)
@@ -909,7 +1076,7 @@ export const AjusteRota: React.FC = () => {
 
                 const colab = colaboradores.find(c => c.CodigoSetor === sellerId);
                 const sellerVisits = routes.filter(r => r.Cod_Vend === sellerId);
-                const color = promoterColorMap.get(String(sellerId)) || '#64748b';
+                const sellerBaseColor = promoterColorMap.get(String(sellerId)) || '#64748b';
 
                 // Separar por dia da semana
                 const groupedByDay = new Map<string, VisitaPrevista[]>();
@@ -919,7 +1086,8 @@ export const AjusteRota: React.FC = () => {
                 });
 
                 for (const [day, visits] of groupedByDay.entries()) {
-                    const sortedVisits = visits; // Sem sorting complexo, manter ordem do planner
+                    const sortedVisits = visits; // Mantém a ordem sequencial
+                    const lineColor = isSingleSellerView ? (DAY_COLORS[day]?.hex || sellerBaseColor) : sellerBaseColor;
                     
                     const pointsObj: any[] = [];
                     if (colab?.LatitudeBase && colab?.LongitudeBase) {
@@ -936,21 +1104,21 @@ export const AjusteRota: React.FC = () => {
                         const hashKey = pointsObj.map(p => `${p.Lat},${p.Long}`).join('|');
                         
                         if (osrmCacheRef.current.has(hashKey)) {
-                            lines.push({ id: `${sellerId}-${day}`, color, points: osrmCacheRef.current.get(hashKey)! });
+                            lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: osrmCacheRef.current.get(hashKey)! });
                         } else {
                             try {
                                 const osrm = await getOSRMData(pointsObj, false);
                                 if (osrm && osrm.geometry && osrm.geometry.length > 0) {
                                     osrmCacheRef.current.set(hashKey, osrm.geometry);
-                                    lines.push({ id: `${sellerId}-${day}`, color, points: osrm.geometry });
+                                    lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: osrm.geometry });
                                 } else {
                                     const straightCoords = pointsObj.map(c => [c.Lat, c.Long] as [number, number]);
                                     osrmCacheRef.current.set(hashKey, straightCoords);
-                                    lines.push({ id: `${sellerId}-${day}`, color, points: straightCoords });
+                                    lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: straightCoords });
                                 }
                             } catch (e) {
                                 const straightCoords = pointsObj.map(c => [c.Lat, c.Long] as [number, number]);
-                                lines.push({ id: `${sellerId}-${day}`, color, points: straightCoords });
+                                lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: straightCoords });
                             }
                         }
                     }
@@ -962,14 +1130,28 @@ export const AjusteRota: React.FC = () => {
         let isMounted = true;
         
         const updateLines = async () => {
-            if (scopedOriginalRoutes.length > 0) {
-                const orig = await traceAsync(scopedOriginalRoutes);
+            const filteredOriginal = scopedOriginalRoutes.filter(v => {
+                if (selectedPromoter !== 'ALL' && String(v.Cod_Vend) !== selectedPromoter) return false;
+                if (selectedDaysFilter.length > 0 && !selectedDaysFilter.includes(v.Dia_Semana)) return false;
+                if (selectedQuinzenaFilter === '1_3') {
+                    const p = parsePeriodicidade(v.Periodicidade).tipo;
+                    if (p !== 'SEMANAL' && p !== 'QUINZENAL_1_3') return false;
+                } else if (selectedQuinzenaFilter === '2_4') {
+                    const p = parsePeriodicidade(v.Periodicidade).tipo;
+                    if (p !== 'SEMANAL' && p !== 'QUINZENAL_2_4') return false;
+                }
+                return true;
+            });
+
+            if (filteredOriginal.length > 0) {
+                const orig = await traceAsync(filteredOriginal);
                 if (isMounted) setOriginalPolylines(orig);
             } else {
                 if (isMounted) setOriginalPolylines([]);
             }
-            if (scopedAdjustedRoutes.length > 0) {
-                const adj = await traceAsync(scopedAdjustedRoutes);
+
+            if (filteredRoutes.length > 0) {
+                const adj = await traceAsync(filteredRoutes);
                 if (isMounted) setAdjustedPolylines(adj);
             } else {
                 if (isMounted) setAdjustedPolylines([]);
@@ -979,7 +1161,7 @@ export const AjusteRota: React.FC = () => {
         updateLines();
         
         return () => { isMounted = false; };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, selectedPromoter, promoterColorMap, colaboradores]);
+    }, [filteredRoutes, scopedOriginalRoutes, selectedDaysFilter, selectedQuinzenaFilter, selectedPromoter, promoterColorMap, colaboradores, isSingleSellerView]);
 
     // Calcular KPIs de Comparação
     const kpis = useMemo(() => {
@@ -1705,21 +1887,29 @@ export const AjusteRota: React.FC = () => {
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; OpenStreetMap contributors'
                                 />
-                                {/* Casas / Bases dos Colaboradores */}
+                                {/* Casas / Bases dos Colaboradores com Destaque Especial */}
                                 {Array.from(new Set(scopedAdjustedRoutes.map(v => v.Cod_Vend))).map(vId => {
                                     const colab = colaboradores.find(c => c.CodigoSetor === vId);
                                     if(colab && colab.LatitudeBase && colab.LongitudeBase) {
-                                        const pColor = promoterColorMap.get(String(vId)) || '#94a3b8';
+                                        const pColor = promoterColorMap.get(String(vId)) || '#ef4444';
                                         return (
                                             <Marker 
                                                 key={`base-${vId}`} 
                                                 position={[colab.LatitudeBase, colab.LongitudeBase]} 
-                                                icon={createBaseIcon(pColor)}
+                                                icon={createHomeIcon(pColor)}
+                                                zIndexOffset={1000}
                                             >
                                                 <Popup>
-                                                    <div className="text-xs font-bold">
-                                                        <p className="text-slate-800">{colab.Nome}</p>
-                                                        <p className="text-slate-400 font-normal">Base / Casa</p>
+                                                    <div className="text-xs p-1 space-y-1 font-sans">
+                                                        <div className="flex items-center space-x-1.5 text-red-600 dark:text-red-400 font-black">
+                                                            <span>🏠</span>
+                                                            <span className="uppercase tracking-wider text-[10px]">Base / Residência</span>
+                                                        </div>
+                                                        <p className="text-slate-900 dark:text-slate-100 font-bold text-sm">{colab.Nome}</p>
+                                                        {colab.EnderecoBase && (
+                                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{colab.EnderecoBase}</p>
+                                                        )}
+                                                        <p className="text-[9px] text-slate-400 dark:text-slate-500 italic">Ponto de partida e retorno diário do colaborador</p>
                                                     </div>
                                                 </Popup>
                                             </Marker>
@@ -1751,23 +1941,77 @@ export const AjusteRota: React.FC = () => {
                                     />
                                 ))}
 
-                                {/* Clientes Marcados */}
-                                {scopedAdjustedRoutes.filter(v => v.Lat && v.Long).map((v, idx) => {
-                                    const color = promoterColorMap.get(String(v.Cod_Vend)) || '#4f46e5';
+                                {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena) */}
+                                {filteredRoutes.filter(v => v.Lat && v.Long).map((v, idx) => {
+                                    const pType = parsePeriodicidade(v.Periodicidade).tipo;
+                                    const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA' };
+                                    const dayColor = dayCfg.hex;
+                                    const sellerColor = promoterColorMap.get(String(v.Cod_Vend)) || '#4f46e5';
+                                    const mainColor = isSingleSellerView ? dayColor : sellerColor;
+
+                                    // Distinção visual no mapa:
+                                    // Semanal: sólido com borda branca clássica (radius: 7, weight: 2)
+                                    // Quinzena 1 e 3: anel com borda amarela/dourada espessa (radius: 8.5, weight: 3.5, color: '#f59e0b')
+                                    // Quinzena 2 e 4: borda magenta/fúcsia tracejada (radius: 8.5, weight: 3.5, color: '#ec4899', dashArray: '3, 3')
+                                    let borderColor = '#ffffff';
+                                    let borderWidth = 2;
+                                    let radius = 7;
+                                    let dashArray: string | undefined = undefined;
+
+                                    if (isSingleSellerView) {
+                                        if (pType === 'QUINZENAL_1_3') {
+                                            borderColor = '#f59e0b';
+                                            borderWidth = 3.5;
+                                            radius = 8.5;
+                                        } else if (pType === 'QUINZENAL_2_4') {
+                                            borderColor = '#ec4899';
+                                            borderWidth = 3.5;
+                                            radius = 8.5;
+                                            dashArray = '3, 3';
+                                        }
+                                    }
+
                                     return (
                                         <CircleMarker
                                             key={`marker-${v.Cod_Cliente}-${idx}`}
                                             center={[v.Lat, v.Long]}
-                                            radius={7}
-                                            pathOptions={{ fillColor: color, color: '#ffffff', fillOpacity: 0.9, weight: 2 }}
+                                            radius={radius}
+                                            pathOptions={{ 
+                                                fillColor: mainColor, 
+                                                color: borderColor, 
+                                                fillOpacity: 0.92, 
+                                                weight: borderWidth,
+                                                dashArray: dashArray
+                                            }}
                                         >
                                             <Popup>
-                                                <div className="text-xs space-y-2 p-1">
+                                                <div className="text-xs space-y-2 p-1 font-sans">
                                                     <div>
-                                                        <h4 className="font-black text-slate-800">{v.Cod_Cliente} - {v.Razao_Social}</h4>
+                                                        <div className="flex items-center justify-between gap-1 mb-1">
+                                                            <span 
+                                                                className="px-1.5 py-0.5 rounded text-[9px] font-black text-white"
+                                                                style={{ backgroundColor: dayColor }}
+                                                            >
+                                                                {v.Dia_Semana}
+                                                            </span>
+                                                            {pType === 'SEMANAL' ? (
+                                                                <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                                                    Semanal
+                                                                </span>
+                                                            ) : pType === 'QUINZENAL_1_3' ? (
+                                                                <span className="bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-300">
+                                                                    Quinzena 1 e 3
+                                                                </span>
+                                                            ) : (
+                                                                <span className="bg-fuchsia-100 dark:bg-fuchsia-900/60 text-fuchsia-800 dark:text-fuchsia-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-fuchsia-300">
+                                                                    Quinzena 2 e 4
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <h4 className="font-black text-slate-800 dark:text-slate-100">{v.Cod_Cliente} - {v.Razao_Social}</h4>
                                                         <p className="text-[10px] text-slate-400">{v.Endereco}</p>
                                                     </div>
-                                                    <div className="border-t border-slate-100 pt-1.5 space-y-2">
+                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-2">
                                                         <div>
                                                             <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">Colaborador Atribuído</label>
                                                             {teamType === 'vendedores' ? (
@@ -1833,6 +2077,48 @@ export const AjusteRota: React.FC = () => {
                                 })}
                             </MapContainer>
                         )}
+
+                        {/* Legenda Explicativa de Rotas no Mapa (quando em visão de vendedor) */}
+                        {scopedAdjustedRoutes.length > 0 && isSingleSellerView && (
+                            <div className="absolute bottom-2 right-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg z-[1000] text-[9px] space-y-1 max-w-[320px]">
+                                <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200/80 dark:border-slate-800 pb-1">
+                                    <span className="flex items-center gap-1">
+                                        <GlobeIcon className="w-3 h-3 text-indigo-600"/> Legenda do Roteiro
+                                    </span>
+                                    <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase">Cores & Ciclos</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                    {WEEKDAYS.map(day => {
+                                        const cfg = DAY_COLORS[day];
+                                        if (!cfg) return null;
+                                        return (
+                                            <span key={day} className="flex items-center space-x-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.hex }}/>
+                                                <span>{cfg.label}</span>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 pt-0.5 text-slate-600 dark:text-slate-400 font-medium text-[8.5px]">
+                                    <span className="flex items-center space-x-1">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-white shrink-0"/>
+                                        <span>Semanal</span>
+                                    </span>
+                                    <span className="flex items-center space-x-1">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-amber-500 shrink-0"/>
+                                        <span>Quinz. 1/3</span>
+                                    </span>
+                                    <span className="flex items-center space-x-1">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-fuchsia-500 border-dashed shrink-0"/>
+                                        <span>Quinz. 2/4</span>
+                                    </span>
+                                    <span className="flex items-center space-x-1 text-red-600 font-bold">
+                                        <span>🏠</span>
+                                        <span>Base</span>
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* TABELA DE AJUSTE MANUAL E EDICAO DE ROTAS */}
@@ -1844,22 +2130,108 @@ export const AjusteRota: React.FC = () => {
                                         <ClipboardListIcon className="w-4 h-4 mr-1.5 text-indigo-600"/> Grade de Ajuste Fino
                                     </h3>
 
-                                    {/* RESUMO DE VISITAS POR DIA DA SEMANA */}
-                                    <div className="flex flex-wrap items-center gap-1 bg-slate-50 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                                        {WEEKDAYS.map(day => {
-                                            const shortName = day.split('-')[0].slice(0, 3);
-                                            const count = visitsByDay[day] || 0;
-                                            return (
-                                                <div 
-                                                    key={day} 
-                                                    className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-[10px] font-bold shadow-2xs"
-                                                    title={`${day}: ${count} atendimentos programados`}
+                                    {/* RESUMO E FILTROS INTERATIVOS DE VISITAS POR DIA DA SEMANA E QUINZENA */}
+                                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        {/* FILTRO DE DIAS DA SEMANA (CLICÁVEIS - SELEÇÃO MÚLTIPLA) */}
+                                        <div className="flex flex-wrap items-center gap-1">
+                                            {WEEKDAYS.map(day => {
+                                                const shortName = day.split('-')[0].slice(0, 3);
+                                                const count = visitsByDay[day] || 0;
+                                                const isSelected = selectedDaysFilter.includes(day);
+                                                const hasAnySelected = selectedDaysFilter.length > 0;
+                                                const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
+
+                                                return (
+                                                    <button
+                                                        key={day}
+                                                        type="button"
+                                                        onClick={() => handleToggleDayFilter(day)}
+                                                        className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-2xs transition-all active:scale-95 cursor-pointer border ${
+                                                            isSelected 
+                                                                ? `${dayCfg.bg} text-white border-transparent shadow-sm ring-2 ring-offset-1 ring-slate-400 font-black` 
+                                                                : hasAnySelected
+                                                                    ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
+                                                                    : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                                                        }`}
+                                                        title={`Clique para filtrar ${day}. Total: ${count} atendimentos`}
+                                                    >
+                                                        <span className="uppercase font-semibold">{shortName}:</span>
+                                                        <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
+                                                            {count}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+
+                                            {selectedDaysFilter.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearDayFilter}
+                                                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                                                    title="Limpar filtro de dias e exibir a semana completa"
                                                 >
-                                                    <span className="text-slate-500 uppercase font-semibold">{shortName}:</span>
-                                                    <span className="text-indigo-600 dark:text-indigo-400 font-black">{count}</span>
-                                                </div>
-                                            );
-                                        })}
+                                                    Todos
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* DIVISOR */}
+                                        <div className="h-4 w-px bg-slate-300 dark:bg-slate-600 mx-0.5 hidden sm:block"/>
+
+                                        {/* TOTALIZADORES E FILTROS POR QUINZENA (SEMANAS 1/3 E 2/4) */}
+                                        <div className="flex flex-wrap items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedQuinzenaFilter(prev => prev === '1_3' ? 'ALL' : '1_3')}
+                                                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                    selectedQuinzenaFilter === '1_3'
+                                                        ? 'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-400 ring-offset-1 font-black shadow-sm'
+                                                        : selectedQuinzenaFilter !== 'ALL'
+                                                            ? 'bg-amber-50/50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border-amber-200/50 dark:border-amber-800/40 opacity-50 hover:opacity-100'
+                                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 font-bold'
+                                                }`}
+                                                title={`Semanas 1 e 3: ${quinzenaTotals.total13} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal13Count} Quinzenais 1/3). Clique para filtrar.`}
+                                            >
+                                                <span className="font-semibold">Sem 1/3:</span>
+                                                <span className="font-black">{quinzenaTotals.total13}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedQuinzenaFilter(prev => prev === '2_4' ? 'ALL' : '2_4')}
+                                                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[10px] transition-all active:scale-95 cursor-pointer border ${
+                                                    selectedQuinzenaFilter === '2_4'
+                                                        ? 'bg-fuchsia-600 text-white border-fuchsia-700 ring-2 ring-fuchsia-400 ring-offset-1 font-black shadow-sm'
+                                                        : selectedQuinzenaFilter !== 'ALL'
+                                                            ? 'bg-fuchsia-50/50 dark:bg-fuchsia-950/20 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200/50 dark:border-fuchsia-800/40 opacity-50 hover:opacity-100'
+                                                            : 'bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-800 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800/60 hover:bg-fuchsia-100 font-bold'
+                                                }`}
+                                                title={`Semanas 2 e 4: ${quinzenaTotals.total24} atendimentos (${quinzenaTotals.semanalCount} Semanais + ${quinzenaTotals.quinzenal24Count} Quinzenais 2/4). Clique para filtrar.`}
+                                            >
+                                                <span className="font-semibold">Sem 2/4:</span>
+                                                <span className="font-black">{quinzenaTotals.total24}</span>
+                                            </button>
+
+                                            {quinzenaTotals.isImbalanced && (
+                                                <span 
+                                                    className="text-[9px] bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5"
+                                                    title={`Variação de ${quinzenaTotals.variationPct}% entre as quinzenas (Sem 1/3: ${quinzenaTotals.total13} vs Sem 2/4: ${quinzenaTotals.total24}).`}
+                                                >
+                                                    ⚠️ {quinzenaTotals.variationPct}% var.
+                                                </span>
+                                            )}
+
+                                            {selectedQuinzenaFilter !== 'ALL' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedQuinzenaFilter('ALL')}
+                                                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition cursor-pointer shadow-2xs"
+                                                    title="Limpar filtro de quinzena e exibir todas as semanas"
+                                                >
+                                                    Todas
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1975,75 +2347,106 @@ export const AjusteRota: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {sortedRoutes
-                                            .slice(0, 100) // Limita renderização para manter ultra-fluidez
-                                            .map((v, i) => (
-                                                <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 transition">
-                                                    <td className="p-3 text-slate-900">{v.Cod_Cliente}</td>
-                                                    <td className="p-3 truncate max-w-[180px]" title={v.Razao_Social}>{v.Razao_Social}</td>
-                                                    <td className="p-3 text-slate-400 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
-                                                    <td className="p-3">
-                                                        {teamType === 'vendedores' ? (
-                                                            <div className="flex items-center space-x-1.5">
-                                                                <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[130px]" title={v.Nome_Vendedor}>{v.Nome_Vendedor}</span>
-                                                                <span className="text-[8px] bg-slate-100 text-slate-500 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
-                                                            </div>
-                                                        ) : (
-                                                            <select
-                                                                value={v.Cod_Vend}
-                                                                onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
-                                                                className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
-                                                            >
-                                                                {teamColaboradores.map(col => (
-                                                                    <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
-                                                                ))}
-                                                            </select>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3">
-                                                        <select
-                                                            value={v.Dia_Semana}
-                                                            onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
-                                                            className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
-                                                        >
-                                                            {WEEKDAYS.map(day => (
-                                                                <option key={day} value={day}>{day}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td className="p-3">
-                                                        {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                                                Semanal
-                                                            </span>
-                                                        ) : (
-                                                            <select
-                                                                value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
-                                                                onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
-                                                                className="bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
-                                                                title="Ajustar Quinzena (1 3 vs 2 4)"
-                                                            >
-                                                                <option value="1 3">Quinzenal (1, 3)</option>
-                                                                <option value="2 4">Quinzenal (2, 4)</option>
-                                                            </select>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <button
-                                                            onClick={() => handleExcludeVisit(v.Cod_Cliente)}
-                                                            className="text-rose-500 hover:text-rose-700 transition"
-                                                            title="Excluir Visita"
-                                                        >
-                                                            <TrashIcon className="w-4.5 h-4.5"/>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                        {sortedRoutes.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="p-8 text-center text-slate-400">
+                                                    <p className="font-bold text-xs">Nenhum PDV encontrado para os filtros de dia da semana ou quinzena selecionados.</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setSelectedDaysFilter([]); setSelectedQuinzenaFilter('ALL'); }}
+                                                        className="mt-2 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer"
+                                                    >
+                                                        Limpar todos os filtros de dias e quinzenas
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            sortedRoutes
+                                                .slice(0, 100) // Limita renderização para manter ultra-fluidez
+                                                .map((v, i) => {
+                                                    const dayCfg = DAY_COLORS[v.Dia_Semana] || { hex: '#4f46e5', label: 'DIA', bg: 'bg-indigo-600' };
+                                                    return (
+                                                        <tr key={`${v.Cod_Cliente}-${i}`} className="hover:bg-slate-50/50 transition">
+                                                            <td className="p-3 text-slate-900">{v.Cod_Cliente}</td>
+                                                            <td className="p-3 truncate max-w-[180px]" title={v.Razao_Social}>{v.Razao_Social}</td>
+                                                            <td className="p-3 text-slate-400 truncate max-w-[220px]" title={v.Endereco}>{v.Endereco}</td>
+                                                            <td className="p-3">
+                                                                {teamType === 'vendedores' ? (
+                                                                    <div className="flex items-center space-x-1.5">
+                                                                        <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[130px]" title={v.Nome_Vendedor}>{v.Nome_Vendedor}</span>
+                                                                        <span className="text-[8px] bg-slate-100 text-slate-500 font-semibold px-1 py-0.5 rounded shrink-0">Carteira</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <select
+                                                                        value={v.Cod_Vend}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, Number(e.target.value), v.Dia_Semana, v.Periodicidade)}
+                                                                        className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
+                                                                    >
+                                                                        {teamColaboradores.map(col => (
+                                                                            <option key={col.ID_Colaborador} value={col.CodigoSetor}>{col.Nome}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3">
+                                                                <div className="flex items-center space-x-1.5">
+                                                                    <span 
+                                                                        className="w-2 h-2 rounded-full shrink-0" 
+                                                                        style={{ backgroundColor: dayCfg.hex }}
+                                                                        title={v.Dia_Semana}
+                                                                    />
+                                                                    <select
+                                                                        value={v.Dia_Semana}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, e.target.value, v.Periodicidade)}
+                                                                        className="bg-slate-50 border border-slate-200 rounded p-1 text-[10px] font-bold text-slate-700 outline-none w-full"
+                                                                    >
+                                                                        {WEEKDAYS.map(day => (
+                                                                            <option key={day} value={day}>{day}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {parsePeriodicidade(v.Periodicidade).tipo === 'SEMANAL' ? (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                                        Semanal
+                                                                    </span>
+                                                                ) : (
+                                                                    <select
+                                                                        value={(v.Periodicidade && (v.Periodicidade.includes('2 4') || v.Periodicidade.includes('24') || v.Periodicidade.includes('2, 4'))) ? '2 4' : '1 3'}
+                                                                        onChange={(e) => handleManualReassign(v.Cod_Cliente, v.Cod_Vend, v.Dia_Semana, e.target.value === '2 4' ? '2 4' : '1 3')}
+                                                                        className="bg-amber-50 text-amber-800 border border-amber-200 rounded p-1 text-[10px] font-bold outline-none"
+                                                                        title="Ajustar Quinzena (1 3 vs 2 4)"
+                                                                    >
+                                                                        <option value="1 3">Quinzenal (1, 3)</option>
+                                                                        <option value="2 4">Quinzenal (2, 4)</option>
+                                                                    </select>
+                                                                )}
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                <button
+                                                                    onClick={() => handleExcludeVisit(v.Cod_Cliente)}
+                                                                    className="text-rose-500 hover:text-rose-700 transition"
+                                                                    title="Excluir Visita"
+                                                                >
+                                                                    <TrashIcon className="w-4.5 h-4.5"/>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })
+                                        )}
                                     </tbody>
                                 </table>
-                                {sortedRoutes.length > 100 && (
-                                    <div className="p-3 text-center text-slate-400 text-[10px] bg-slate-50 font-medium">
-                                        Exibindo os primeiros 100 PDVs de {sortedRoutes.length}. Use filtros de colaborador para refinar a busca.
+                                {sortedRoutes.length > 0 && (
+                                    <div className="p-2.5 text-center text-slate-400 text-[10px] bg-slate-50 font-medium flex items-center justify-between px-4 border-t border-slate-100">
+                                        <span>
+                                            Exibindo {Math.min(100, sortedRoutes.length)} de {sortedRoutes.length} PDVs filtrados
+                                            {selectedDaysFilter.length > 0 || selectedQuinzenaFilter !== 'ALL' ? ' (com filtros ativos)' : ''}
+                                        </span>
+                                        <span className="font-bold text-slate-500">
+                                            Total no Escopo: {scopedAdjustedRoutes.length} PDVs
+                                        </span>
                                     </div>
                                 )}
                             </div>

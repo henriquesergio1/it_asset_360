@@ -9,6 +9,18 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.133.0',
+    date: 'Hoje',
+    title: 'Fuel360: Distinção Visual de Rotas por Dia e Quinzena, Destaque da Casa e Filtros Interativos',
+    changes: [
+      'Distinção Cromática por Dia no Mapa: Na visão por vendedor, cada dia da semana possui sua cor própria nos marcadores e trajetos (Segunda a Sábado), eliminando a visualização monocromática.',
+      'Diferenciação Visual de Quinzenas: Identificação nítida de clientes semanais e quinzenais (1 3 vs 2 4) por estilo de borda e marcador no mapa geográfico.',
+      'Destaque da Base / Casa do Colaborador: Marcador exclusivo com ícone de casa em SVG, acabamento estilizado de alta visibilidade e etiqueta "BASE".',
+      'Filtros Interativos de Dias da Semana: Chips de dias no cabeçalho da Grade de Ajuste Fino agora são botões clicáveis com seleção múltipla, filtrando instantaneamente a grade e o mapa.',
+      'Totalizadores e Filtro por Quinzena: Botões com contagem de atendimentos nas semanas 1/3 e semanas 2/4 que atuam como filtros rápidos de ciclo.'
+    ]
+  },
+  {
     version: '3.132.0',
     date: 'Hoje',
     title: 'Fuel360: Auditoria e Comparativo "Antes x Depois" das Rotas Otimizadas',
