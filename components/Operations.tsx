@@ -483,10 +483,10 @@ const Operations = () => {
  return (
  <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pb-20">
  <div className="flex justify-between items-end">
- <div>
- <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Painel de Operações</h1>
- <p className="font-medium">Gestão centralizada de Entregas e Devoluções.</p>
- </div>
+  <div>
+  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Painel de Operações</h1>
+  <p className="font-medium text-slate-500 dark:text-slate-400">Gestão centralizada de Entregas e Devoluções.</p>
+  </div>
  </div>
 
  <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700">
@@ -581,7 +581,7 @@ const Operations = () => {
  <div className="h-10 w-10 bg-orange-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Quem está devolvendo?</h3>
  </div>
- <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
+ <p className="text-xs font-bold uppercase tracking-widest mb-4 italic text-slate-500 dark:text-slate-400">
  Como este é um ativo compartilhado, selecione qual colaborador está realizando a devolução:
  </p>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -589,16 +589,16 @@ const Operations = () => {
  <button 
  key={u.id}
  onClick={() => setReturningUserId(u.id)}
- className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-900/20 text-orange-400' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-600'}`}
+ className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${returningUserId === u.id ? ' border-orange-500 bg-orange-100 dark:bg-orange-950/40 text-orange-950 dark:text-orange-300 font-bold' : ' bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300'}`}
  >
- <div className={`h-10 w-10 rounded-full flex items-center justify-center ${returningUserId === u.id ? ' bg-orange-900/40 text-orange-400' : ' bg-slate-700 '}`}>
+ <div className={`h-10 w-10 rounded-full flex items-center justify-center ${returningUserId === u.id ? ' bg-orange-200 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300' : ' bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 '}`}>
  <UserIcon size={20}/>
  </div>
  <div className="text-left overflow-hidden">
  <div className="text-[11px] font-bold uppercase truncate">{u.fullName}</div>
  <div className="text-[11px] font-mono opacity-60 truncate">{u.email}</div>
  </div>
- {returningUserId === u.id && <CheckSquare size={18} className="ml-auto shrink-0"/>}
+ {returningUserId === u.id && <CheckSquare size={18} className="ml-auto shrink-0 text-orange-600 dark:text-orange-400"/>}
  </button>
  ))}
  </div>
@@ -612,23 +612,23 @@ const Operations = () => {
  </div>
  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Conferência de Devolução</h3>
  </div>
- <p className="text-xs font-bold uppercase tracking-widest mb-4 italic">
+ <p className="text-xs font-bold uppercase tracking-widest mb-4 italic text-slate-500 dark:text-slate-400">
  Marque os itens que foram devolvidos fisicamente pelo colaborador:
  </p>
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/50 bg-orange-900/10 p-6 rounded-3xl border border-orange-900/30 shadow-inner transition-colors">
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-orange-50/60 dark:bg-orange-950/20 p-6 rounded-3xl border border-orange-200 dark:border-orange-900/30 shadow-inner transition-colors">
  {Object.keys(checklist).map(item => (
  <button 
  key={item} 
  onClick={() => setChecklist({...checklist, [item]: !checklist[item]})} 
- className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-slate-100 dark:bg-slate-800 border-orange-500 text-orange-100' : 'bg-slate-100/50 bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-70'}`}
+ className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${checklist[item] ? ' bg-orange-100 dark:bg-orange-950/40 border-orange-500 text-orange-950 dark:text-orange-200 font-bold shadow-sm' : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'}`}
  >
  <div className="flex items-center gap-3">
- <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-900/50 text-orange-400' : ' bg-slate-700 '}`}>
+ <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${checklist[item] ? ' bg-orange-200 text-orange-800 dark:bg-orange-900/50 dark:text-orange-400' : ' bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
  {item.includes('Chip') ? <Cpu size={18}/> : <Package size={18}/>}
  </div>
  <span className="text-[11px] font-bold uppercase text-left">{item}</span>
  </div>
- {checklist[item] ? <CheckSquare size={20} className="text-orange-400"/> : <X size={20} />}
+ {checklist[item] ? <CheckSquare size={20} className="text-orange-600 dark:text-orange-400"/> : <X size={20} className="text-slate-400 dark:text-slate-500" />}
  </button>
  ))}
  </div>
@@ -654,12 +654,12 @@ const Operations = () => {
  </div>
  <div className="flex-1">
  <div className="flex items-center justify-between">
- <span className={`font-bold uppercase text-[11px] tracking-wider ${inactivateAfterReturn ? ' text-red-400' : ''}`}>
+ <span className={`font-bold uppercase text-[11px] tracking-wider ${inactivateAfterReturn ? ' text-rose-700 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
  Marcar como Desligamento
  </span>
- {inactivateAfterReturn && <CheckSquare size={20} className=""/>}
+ {inactivateAfterReturn && <CheckSquare size={20} className="text-rose-600 dark:text-rose-400"/>}
  </div>
- <p className="text-[11px] font-bold uppercase mt-1 leading-relaxed">
+ <p className="text-[11px] font-bold uppercase mt-1 leading-relaxed text-slate-500 dark:text-slate-400">
  Ao finalizar, o sistema inativará o cadastro do colaborador automaticamente após a devolução.
  </p>
  </div>
@@ -676,7 +676,7 @@ const Operations = () => {
  <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">Observações Adicionais</h3>
  </div>
  <textarea 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-100 dark:focus:ring-slate-800 focus:border-slate-400 dark:focus:border-slate-500 outline-none transition-all shadow-inner bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
  rows={4} 
  placeholder="Descreva aqui qualquer detalhe importante (ex: tela riscada, entrega via motoboy, etc)..."
  value={notes}
@@ -695,11 +695,11 @@ const Operations = () => {
  
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div className="space-y-2">
- <label className="text-xs font-bold uppercase tracking-wider">Condição do Ativo</label>
+ <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Condição do Ativo</label>
  <select 
  value={condition} 
  onChange={e => setCondition(e.target.value)}
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-sm focus:ring-4 focus:ring-slate-100 dark:focus:ring-slate-800 focus:border-slate-400 dark:focus:border-slate-500 outline-none transition-all bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
  >
  <option value="Perfeito">Perfeito Estado</option>
  <option value="Bom">Bom Estado (Marcas de Uso)</option>
@@ -710,7 +710,7 @@ const Operations = () => {
  
  {condition !== 'Perfeito' && condition !== 'Bom' && (
  <div className="space-y-2">
- <label className="text-xs font-bold uppercase tracking-wider">Evidências (Máx 3)</label>
+ <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Evidências (Máx 3)</label>
  <div className="grid grid-cols-3 gap-2">
  {evidenceFiles.map((file, idx) => (
  <div key={idx} className="relative h-20 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 group">
@@ -750,9 +750,9 @@ const Operations = () => {
 
  {condition !== 'Perfeito' && condition !== 'Bom' && (
  <div className="space-y-2">
- <label className="text-xs font-bold uppercase tracking-wider">Descrição Detalhada do Dano / Ocorrência</label>
+ <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Descrição Detalhada do Dano / Ocorrência</label>
  <textarea 
- className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-50 focus:ring-slate-900/50 focus:border-slate-300 focus:border-slate-300 dark:border-slate-600 outline-none transition-all shadow-inner bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-600 dark:text-slate-400 placeholder:text-slate-600"
+ className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-slate-100 dark:focus:ring-slate-800 focus:border-slate-400 dark:focus:border-slate-500 outline-none transition-all shadow-inner bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
  rows={3} 
  placeholder="Descreva o dano físico (ex: tela trincada, carcaça amassada) ou detalhes do BO em caso de furto..."
  value={damageDescription}

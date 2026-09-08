@@ -779,7 +779,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ currentM
                     {toast.type === 'expediente' && <Clock size={16} className="text-red-400 animate-pulse" />}
                     {toast.type === 'stock' && <Package size={16} className="text-amber-600 dark:text-amber-400 animate-pulse" />}
                     {toast.type === 'task' && <AlertTriangle size={16} className="text-blue-600 dark:text-sky-400 animate-pulse" />}
-                    {toast.type === 'rh-alert' && <Bell size={16} className="text-indigo-650 dark:text-indigo-400 animate-pulse" />}
+                    {toast.type === 'rh-alert' && <Bell size={16} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />}
                   </>
                 )}
               </div>

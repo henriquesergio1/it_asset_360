@@ -2671,7 +2671,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                       <button 
                                         type="button"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleViewTermFile(t); }}
-                                        className="p-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:text-emerald-350 dark:hover:text-emerald-300 transition-all border border-emerald-900/40"
+                                        className="p-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:text-emerald-700 dark:hover:text-emerald-300 transition-all border border-emerald-900/40"
                                         title={!!(t.fileUrl || t.hasFile) ? "Visualizar Arquivo Assinado" : "Visualizar Comprovante Digital"}
                                       >
                                         <Eye size={16} />
@@ -2692,7 +2692,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                         <button 
                                           type="button"
                                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleGenerateSignatureLink(t.id); }}
-                                          className="p-2 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:text-indigo-300 transition-all border border-indigo-350 dark:border-indigo-700/40"
+                                          className="p-2 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:text-indigo-300 transition-all border border-indigo-200 dark:border-indigo-700/40"
                                           title="Gerar Link de Assinatura"
                                         >
                                           <Share2 size={16} />
@@ -2705,7 +2705,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                         <button 
                                           type="button"
                                           onClick={(e) => { e.stopPropagation(); handleApproveSignature(t.id); }}
-                                          className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-350 dark:border-emerald-700/30"
+                                          className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-200 dark:border-emerald-700/30"
                                           title="Aprovar Assinatura"
                                         >
                                           <Check size={12} />
@@ -2734,7 +2734,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                           className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
                                           title="Ver Evidências de Identidade (Doc + Selfie)"
                                         >
-                                          <Camera size={14} className="text-indigo-650 dark:text-indigo-400" />
+                                          <Camera size={14} className="text-indigo-600 dark:text-indigo-400" />
                                           <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
                                         </button>
                                       </div>
@@ -2746,7 +2746,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                           <button 
                                             type="button"
                                             onClick={() => setResolvingManualTerm(t)}
-                                            className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                            className="p-2 bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                             title="Resolução Manual"
                                           >
                                             <CheckSquare size={16} />
@@ -3481,9 +3481,9 @@ export const RhCollaboratorManager: React.FC = () => {
                                            log.action.includes('Exclusão') ? 'bg-red-950 text-red-400' :
                                            log.action.includes('Demitir') ? 'bg-red-950 text-red-400' :
                                            log.action.includes('Resolução Manual') ? 'bg-orange-950 text-orange-400' :
-                                           'bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400';
+                                           'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
                         return (
-                          <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-350 dark:hover:border-slate-650 transition-all">
+                          <div key={log.id} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 group hover:border-slate-300 dark:hover:border-slate-600 transition-all">
                             <div className="flex justify-between items-start">
                               <div className="flex items-center gap-3">
                                 <span className={ "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter " + statusClass }>
@@ -3583,20 +3583,20 @@ export const RhCollaboratorManager: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {/* Seção 1: Dados Pessoais */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
                       Dados Pessoais
                     </h3>
                     
-                    <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-150 dark:border-slate-800">
+                    <div className="flex items-center gap-4 mb-4 p-3 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-800">
                       <div className="relative group shrink-0">
                         {form.photo ? (
                           <img 
                             src={form.photo} 
                             alt="Preview" 
-                            className="w-16 h-16 rounded-full object-cover border border-slate-350 dark:border-slate-650"
+                            className="w-16 h-16 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                           />
                         ) : (
-                          <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-650 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-slate-350 dark:border-slate-650">
+                          <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs border border-slate-200 dark:border-slate-700">
                             Sem Foto
                           </div>
                         )}
@@ -3604,7 +3604,7 @@ export const RhCollaboratorManager: React.FC = () => {
                       <div className="space-y-1">
                         <span className="block text-[10px] font-black uppercase text-slate-400">Foto de Perfil</span>
                         <div className="flex gap-2">
-                          <label className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-755 text-white font-black text-[10px] uppercase rounded-lg cursor-pointer transition-colors shadow-sm">
+                          <label className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase rounded-lg cursor-pointer transition-colors shadow-sm">
                             Selecionar
                             <input 
                               type="file" 
@@ -3617,7 +3617,7 @@ export const RhCollaboratorManager: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setForm(p => ({ ...p, photo: null as any, hasPhoto: false }))}
-                              className="px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 font-black text-[10px] uppercase rounded-lg border border-red-500/20 transition-all hover:bg-red-100 dark:hover:bg-red-500/30"
+                              className="px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 font-black text-[10px] uppercase rounded-lg border border-red-500/20 transition-all hover:bg-red-100 dark:hover:bg-red-500/30"
                             >
                               Remover
                             </button>
@@ -3741,7 +3741,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Seção 2: Documentos e Endereço */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
                       Documentação e Endereço
                     </h3>
 
@@ -3894,7 +3894,7 @@ export const RhCollaboratorManager: React.FC = () => {
 
                   {/* Seção 3: Dados Contratuais */}
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
+                    <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">
                       Contratação e Cargo
                     </h3>
 
@@ -4415,7 +4415,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                             <button 
                                               type="button"
                                               onClick={(e) => { e.stopPropagation(); handleApproveSignature(t.id); }}
-                                              className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-350 dark:border-emerald-700/30"
+                                              className="p-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all flex items-center gap-1 font-bold text-[9px] uppercase tracking-wider border border-emerald-200 dark:border-emerald-700/30"
                                               title="Aprovar Assinatura"
                                             >
                                               <Check size={12} />
@@ -4444,7 +4444,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                               className="p-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-1.5"
                                               title="Ver Evidências de Identidade (Doc + Selfie)"
                                             >
-                                              <Camera size={14} className="text-indigo-650 dark:text-indigo-400" />
+                                              <Camera size={14} className="text-indigo-600 dark:text-indigo-400" />
                                               <span className="text-[9px] font-black uppercase tracking-widest px-1">Evidências</span>
                                             </button>
                                           </div>
@@ -4456,7 +4456,7 @@ export const RhCollaboratorManager: React.FC = () => {
                                               <button 
                                                 type="button"
                                                 onClick={() => setResolvingManualTerm(t)}
-                                                className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                                className="p-2 bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                                 title="Resolução Manual"
                                               >
                                                 <CheckSquare size={16} />
@@ -4831,7 +4831,7 @@ export const RhCollaboratorManager: React.FC = () => {
                     className={`px-5 py-2.5 font-black text-xs rounded-xl uppercase tracking-wider shadow-md transition-all ${
                       canSubmit
                         ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                        : 'bg-slate-350 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                     }`}
                   >
                     Confirmar Demissão
@@ -4949,11 +4949,11 @@ export const RhCollaboratorManager: React.FC = () => {
               <X size={20} />
             </button>
 
-            <h3 className="text-sm font-black uppercase text-indigo-650 dark:text-indigo-400 tracking-wider text-center pt-2">
+            <h3 className="text-sm font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider text-center pt-2">
               Foto de Perfil - {selectedColab.fullName}
             </h3>
 
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-750 flex items-center justify-center max-h-[60vh] overflow-hidden w-full">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-center max-h-[60vh] overflow-hidden w-full">
               <img
                 src={selectedColab.photo}
                 alt={selectedColab.fullName}
@@ -5007,32 +5007,32 @@ export const RhCollaboratorManager: React.FC = () => {
       {/* Modal de Link de Assinatura */}
       {isLinkModalOpen && generatedSignatureLink && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl relative">
-            <h3 className="text-sm font-black uppercase text-indigo-500 tracking-wider mb-2">Link de Assinatura Digital</h3>
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl relative">
+            <h3 className="text-sm font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider mb-2">Link de Assinatura Digital</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed font-medium">
               Envie o link abaixo para o colaborador assinar o termo digitalmente através de geolocalização e fotos de evidência:
             </p>
-            <div className="flex gap-2 p-2 bg-black/40 border border-slate-700 rounded-2xl mb-4">
+            <div className="flex gap-2 p-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl mb-4">
               <input 
                 type="text" 
                 readOnly 
                 value={generatedSignatureLink} 
-                className="flex-1 bg-transparent border-0 outline-none text-xs text-slate-200 font-mono select-all truncate pl-2"
+                className="flex-1 bg-transparent border-0 outline-none text-xs text-slate-900 dark:text-slate-200 font-mono select-all truncate pl-2"
               />
               <button 
                 onClick={() => {
                   navigator.clipboard.writeText(generatedSignatureLink);
                   showToast("Link copiado com sucesso!", "success");
                 }}
-                className="px-4 py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0"
               >
                 <Copy size={12} /> Copiar
               </button>
             </div>
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
               <button 
                 onClick={() => { setIsLinkModalOpen(false); setGeneratedSignatureLink(null); }}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-350 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Fechar
               </button>
@@ -5044,28 +5044,28 @@ export const RhCollaboratorManager: React.FC = () => {
       {/* Modal de Resolução Manual */}
       {resolvingManualTerm && (
         <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center gap-2 text-orange-500 font-bold uppercase text-xs tracking-wider">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold uppercase text-xs tracking-wider">
               <CheckSquare size={18} />
               <span>Resolução Manual de Termo</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
               Use esta opção se o colaborador assinou o documento físico em papel ou via outro meio e você deseja dar baixa manual sem exigir a assinatura eletrônica.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 ml-1">Motivo / Observação da Resolução</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Motivo / Observação da Resolução</label>
               <textarea 
                 required
                 placeholder="Ex: Assinado fisicamente em papel e arquivado na pasta de prontuário do colaborador."
                 value={resolveManualReason}
                 onChange={e => setResolveManualReason(e.target.value)}
-                className="w-full border border-slate-700 rounded-xl p-3 focus:border-orange-500 outline-none text-xs bg-slate-950 text-slate-100 min-h-[90px]"
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 focus:border-orange-500 outline-none text-xs bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-[90px] font-medium"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button 
                 onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-355 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Cancelar
               </button>
@@ -5084,15 +5084,15 @@ export const RhCollaboratorManager: React.FC = () => {
       {/* Modal de Evidências da Assinatura Digital */}
       {signatureData && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-fade-in">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-800 mb-4 shrink-0">
-              <h3 className="text-xs font-black uppercase text-indigo-500 tracking-wider flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 shrink-0">
+              <h3 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider flex items-center gap-2">
                 <Camera size={16} />
                 <span>Evidências e Assinatura Digital</span>
               </h3>
               <button 
                 onClick={() => setSignatureData(null)} 
-                className="h-8 w-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all"
+                className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all"
               >
                 <X size={16} />
               </button>
@@ -5101,38 +5101,38 @@ export const RhCollaboratorManager: React.FC = () => {
               <div className="space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Assinatura Digital</span>
                 {signatureData.signatureCanvas ? (
-                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-white flex items-center justify-center min-h-[220px] p-2">
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white flex items-center justify-center min-h-[220px] p-2">
                     <img src={signatureData.signatureCanvas} className="max-h-52 object-contain" alt="Assinatura Digital" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 min-h-[220px]">Não coletada</div>
                 )}
               </div>
               <div className="space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Foto do Documento</span>
                 {signatureData.documentPhoto ? (
-                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[220px]">
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center min-h-[220px]">
                     <img src={signatureData.documentPhoto} className="max-h-60 object-contain" alt="Documento" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 min-h-[220px]">Não coletada</div>
                 )}
               </div>
               <div className="space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">Foto de Selfie</span>
                 {signatureData.selfiePhoto ? (
-                  <div className="border border-slate-700 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-[220px]">
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center min-h-[220px]">
                     <img src={signatureData.selfiePhoto} className="max-h-60 object-contain" alt="Selfie" />
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-650 min-h-[220px]">Não coletada</div>
+                  <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-center text-xs text-slate-400 dark:text-slate-500 min-h-[220px]">Não coletada</div>
                 )}
               </div>
             </div>
-            <div className="pt-3 border-t border-slate-800 flex justify-end shrink-0">
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
               <button 
-                onClick={() => setSignatureData(null)}
-                className="px-5 py-2 bg-indigo-650 hover:bg-indigo-755 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                onClick={() => setSignatureData(null)} 
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               >
                 Entendido
               </button>

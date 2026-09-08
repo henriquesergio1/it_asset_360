@@ -321,13 +321,13 @@ export const RhDashboard: React.FC = () => {
                         <div key={term.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-150 dark:border-slate-800 flex items-center justify-between group hover:border-orange-500/40 transition-all">
                           <div className="min-w-0 flex-1 mr-2">
                             <span className="block text-xs font-black text-slate-900 dark:text-white truncate">{colab?.fullName || 'Desconhecido'}</span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-450 uppercase tracking-tighter truncate block mt-0.5">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate block mt-0.5">
                               {sector?.name || 'Sem Setor'} • Cód: {colab?.role || 'N/A'} • {term.assetDetails}
                             </span>
                           </div>
                           <Link 
                             to="/rh/comodato"
-                            className="p-1.5 bg-white dark:bg-slate-800 text-slate-650 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
+                            className="p-1.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 flex items-center gap-1 text-[10px] font-black uppercase shrink-0"
                           >
                             Analisar <ArrowRight size={12} />
                           </Link>
@@ -374,7 +374,7 @@ export const RhDashboard: React.FC = () => {
                         <div key={term.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-blue-200 dark:border-blue-900/20 flex items-center justify-between group hover:border-blue-500/40 transition-all">
                           <div className="min-w-0 flex-1 mr-2">
                             <span className="block text-xs font-black text-slate-900 dark:text-white truncate">{colab?.fullName || 'Desconhecido'}</span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-450 uppercase tracking-tighter truncate block mt-0.5">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate block mt-0.5">
                               {sector?.name || 'Sem Setor'} • Cód: {colab?.role || 'N/A'} • {term.assetDetails}
                             </span>
                           </div>

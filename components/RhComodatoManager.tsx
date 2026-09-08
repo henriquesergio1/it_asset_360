@@ -900,7 +900,7 @@ export const RhComodatoManager: React.FC = () => {
                         {!signatureData ? (
                           <button
                             onClick={() => handleViewSignatureEvidences(selectedTerm.id)}
-                            className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-755 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
                           >
                             <Eye size={14} /> Carregar Evidências (Assinatura + Selfie + Documento)
                           </button>
@@ -914,7 +914,7 @@ export const RhComodatoManager: React.FC = () => {
                                     <img src={signatureData.signatureCanvas} alt="Assinatura Digital" className="mx-auto max-h-32 object-contain" />
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-slate-450 block py-8">Assinatura não coletada</span>
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 block py-8">Assinatura não coletada</span>
                                 )}
                               </div>
                               <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center flex flex-col justify-between">
@@ -924,7 +924,7 @@ export const RhComodatoManager: React.FC = () => {
                                     <img src={signatureData.selfiePhoto} alt="Selfie" className="mx-auto rounded-lg max-h-36 object-contain" />
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-slate-450 block py-8">Selfie não enviada</span>
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 block py-8">Selfie não enviada</span>
                                 )}
                               </div>
                               <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center flex flex-col justify-between">
@@ -934,7 +934,7 @@ export const RhComodatoManager: React.FC = () => {
                                     <img src={signatureData.documentPhoto} alt="Documento" className="mx-auto rounded-lg max-h-36 object-contain" />
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-slate-450 block py-8">Documento não enviado</span>
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 block py-8">Documento não enviado</span>
                                 )}
                               </div>
                             </div>
@@ -947,7 +947,7 @@ export const RhComodatoManager: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => handleRejectSignature(selectedTerm.id)}
-                                className="flex-1 py-2.5 bg-red-650 hover:bg-red-750 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
+                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase rounded-xl transition-all flex items-center justify-center gap-2"
                               >
                                 <X size={14} /> Rejeitar Assinatura
                               </button>
@@ -1039,7 +1039,7 @@ export const RhComodatoManager: React.FC = () => {
                                 </div>
                                 <button
                                   onClick={() => handleRejectSignature(selectedTerm.id)}
-                                  className="w-full py-2 bg-red-650 hover:bg-red-750 text-white font-black text-[10px] uppercase rounded-lg transition-all flex items-center justify-center gap-1.5"
+                                  className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase rounded-lg transition-all flex items-center justify-center gap-1.5"
                                 >
                                   <Trash2 size={12} /> Invalidar e Rejeitar Assinatura
                                 </button>
@@ -1067,13 +1067,13 @@ export const RhComodatoManager: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleViewTermFile(selectedTerm)}
-                      className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-650 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20"
+                      className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20"
                     >
                       <Eye size={14} /> Ver Anexo
                     </button>
                     <button
                       onClick={() => handleDeleteTermFile(selectedTerm.id)}
-                      className="flex items-center gap-2 bg-red-50 dark:bg-red-500/20 text-red-650 dark:text-red-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-red-500/20"
+                      className="flex items-center gap-2 bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-red-500/20"
                     >
                       <Trash2 size={14} /> Excluir Anexo
                     </button>
@@ -1086,18 +1086,18 @@ export const RhComodatoManager: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleGenerateSignatureLink(selectedTerm.id)}
-                      className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-650 dark:text-indigo-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-indigo-500/20 cursor-pointer"
+                      className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-indigo-500/20 cursor-pointer"
                       title="Copiar link para o colaborador assinar via celular/email"
                     >
                       <Share2 size={14} /> Link Assinatura
                     </button>
-                    <label className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-650 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20 cursor-pointer">
+                    <label className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-emerald-500/20 cursor-pointer">
                       <Upload size={14} /> Upload Assinado
                       <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleUploadTermFile(selectedTerm.id, e)} />
                     </label>
                     <button
                       onClick={() => setResolvingManualTerm(selectedTerm)}
-                      className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100/80 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 text-orange-650 dark:text-orange-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-orange-500/20 cursor-pointer"
+                      className="flex items-center gap-2 bg-orange-50 hover:bg-orange-100/80 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 text-orange-700 dark:text-orange-400 font-black text-xs px-4 py-3 rounded-xl uppercase tracking-wider transition-all border border-orange-500/20 cursor-pointer"
                     >
                       <CheckSquare size={14} /> Resolução Manual
                     </button>
@@ -1106,7 +1106,7 @@ export const RhComodatoManager: React.FC = () => {
                 
                 <button
                   onClick={() => { setIsDetailModalOpen(false); setSelectedTerm(null); setSignatureData(null); }}
-                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-650 cursor-pointer"
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-black text-xs rounded-xl uppercase tracking-wider transition-all border border-slate-200 dark:border-slate-700 cursor-pointer"
                 >
                   Fechar
                 </button>
@@ -1219,7 +1219,7 @@ export const RhComodatoManager: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateTerm(false)}
-                className="px-6 py-3 bg-slate-250 hover:bg-slate-350 dark:bg-slate-700 text-slate-700 dark:text-slate-250 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
+                className="px-6 py-3 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-black text-xs rounded-xl uppercase tracking-wider transition-all"
               >
                 Cancelar
               </button>
@@ -1243,7 +1243,7 @@ export const RhComodatoManager: React.FC = () => {
               <h3 className="text-md font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                 <PenTool className="text-emerald-500 animate-pulse" /> Assinatura Eletrônica Legal
               </h3>
-              <button onClick={() => setSigningTerm(null)} className="text-slate-400 hover:text-slate-650">
+              <button onClick={() => setSigningTerm(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -1390,7 +1390,7 @@ export const RhComodatoManager: React.FC = () => {
             <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
               <button
                 onClick={() => { setResolvingManualTerm(null); setResolveManualReason(''); }}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-750 text-slate-500 font-bold text-xs uppercase rounded-lg"
+                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase rounded-lg transition-all"
               >
                 Cancelar
               </button>

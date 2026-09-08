@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.137.1',
+    date: 'Hoje',
+    title: 'Design & Acessibilidade: Correção de Contraste no Tema Claro / Escuro',
+    changes: [
+      'Checklist de Devolução (T.I.): Correção dos textos dos itens conferidos que estavam invisíveis no tema claro, garantindo alto contraste tanto no estado marcado quanto desmarcado.',
+      'Varredura Visual: Padronização de formulários de manutenção, botões de status e caixas de seleção nos módulos de T.I. e R.H., eliminando fundos escuros fixos e classes CSS arbitrárias.'
+    ]
+  },
+  {
     version: '3.137.0',
     date: 'Hoje',
     title: 'Fuel360: Scroll Spy na Grade de Ajuste Fino Sincronizado com o Mapa',

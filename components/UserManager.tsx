@@ -2571,7 +2571,7 @@ const UserManager: React.FC = () => {
                                   <button 
                                     type="button"
                                     onClick={() => setResolvingManualTerm(term)}
-                                    className="p-2 bg-white dark:bg-slate-800 text-orange-400 rounded-lg hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
+                                    className="p-2 bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all border border-slate-200 dark:border-slate-700"
                                     title="Resolução Manual"
                                   >
                                     <CheckSquare size={16} />
@@ -2679,14 +2679,14 @@ const UserManager: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 px-6 py-3 flex justify-between items-center shrink-0 border-t border-slate-200 dark:border-slate-700">
               <div className="flex gap-3">
                 {!isViewOnly && (
-                  <button type="button" onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Cancelar Edição</button>
+                  <button type="button" onClick={() => setIsViewOnly(true)} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Cancelar Edição</button>
                 )}
                 {isViewOnly && (
                   <button type="button" onClick={() => setIsViewOnly(false)} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-black text-[11px] uppercase tracking-widest hover:bg-emerald-50 dark:bg-emerald-500/20 transition-all border border-emerald-900/30">Habilitar Edição</button>
                 )}
               </div>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-750 transition-all">Fechar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Fechar</button>
                 {!isViewOnly && (
                   <button type="submit" form="userForm" className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-black text-[11px] uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"><Save size={16}/> Salvar Alterações</button>
                 )}

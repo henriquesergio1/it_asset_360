@@ -1457,51 +1457,51 @@ const DeviceManager = () => {
         {maintenanceSubTab === 'EXTERNAL' ? (
           <>
             {!isViewOnly && (
-              <div className="bg-orange-900/20 p-6 rounded-2xl border border-orange-900/40 space-y-4 transition-colors">
+              <div className="bg-orange-50/60 dark:bg-orange-950/20 p-6 rounded-2xl border border-orange-200 dark:border-orange-900/40 space-y-4 transition-colors">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 bg-orange-900/40 rounded-full flex items-center justify-center text-orange-400">
+                  <div className="h-8 w-8 bg-orange-200 dark:bg-orange-900/40 rounded-full flex items-center justify-center text-orange-800 dark:text-orange-400">
                     <Wrench size={16}/>
                   </div>
-                  <h5 className="text-[11px] font-black text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
+                  <h5 className="text-[11px] font-black text-orange-950 dark:text-orange-200 uppercase tracking-widest">Nova Manutenção</h5>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-3">
-                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Descrição</label>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Descrição</label>
                     <input 
                       placeholder="Ex: Troca de tela..."
-                      className="w-full border-2 border-orange-900/30 rounded-xl p-3 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-inner"
+                      className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:border-orange-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-inner"
                       value={newMaint.description || ''} 
                       onChange={e => setNewMaint({...newMaint, description: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Custo (R$)</label>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Custo (R$)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-3 text-orange-400 text-xs font-bold">R$</span>
+                      <span className="absolute left-3 top-3 text-slate-400 dark:text-slate-500 text-xs font-bold">R$</span>
                       <input 
                         type="text"
-                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+                        className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-sm focus:border-orange-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                         value={formatCurrencyBR(newMaint.cost || 0)} 
                         onChange={e => setNewMaint({...newMaint, cost: parseCurrencyBR(e.target.value)})}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Data</label>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Data</label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-3 text-orange-300" size={16}/>
+                      <Calendar className="absolute left-3 top-3 text-slate-400 dark:text-slate-500" size={16}/>
                       <input 
                         type="date"
-                        className="w-full border-2 border-orange-900/30 rounded-xl p-3 pl-10 text-sm focus:border-orange-400 outline-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+                        className="w-full border-2 border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-10 text-sm focus:border-orange-500 outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                         value={newMaint.date || ''} 
                         onChange={e => setNewMaint({...newMaint, date: e.target.value})}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-orange-400 mb-1">Anexo</label>
-                    <label className={`w-full flex items-center gap-3 bg-slate-100 dark:bg-slate-800 border-2 border-dashed p-2.5 rounded-xl cursor-pointer hover:bg-orange-100/50 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
-                      <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-400">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">Anexo</label>
+                    <label className={`w-full flex items-center gap-3 bg-white dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 p-2.5 rounded-xl cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all ${isUploadingMaint ? 'opacity-50' : ''}`}>
+                      <div className="h-8 w-8 rounded-lg flex items-center justify-center text-orange-600 dark:text-orange-400">
                         {isUploadingMaint ? <RefreshCw size={16} className="animate-spin"/> : <Paperclip size={16}/>}
                       </div>
                       <span className="text-[11px] font-bold uppercase truncate">{newMaint.invoiceUrl ? 'Carregado' : 'Importar Nota'}</span>
@@ -1522,19 +1522,19 @@ const DeviceManager = () => {
               </div>
             )}
             <div className="space-y-3">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 text-orange-400"><History size={12}/> Histórico de Manutenções</h4>
+              <h4 className="text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 text-orange-700 dark:text-orange-400"><History size={12}/> Histórico de Manutenções</h4>
               <div className="grid grid-cols-1 gap-3">
                 {deviceMaintenances.length > 0 ? deviceMaintenances.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(m => (
                   <div key={m.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl hover:border-orange-200 transition-all group">
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-400">
+                      <div className="h-10 w-10 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-orange-700 dark:text-orange-400">
                         <Wrench size={20}/>
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 dark:text-white text-sm">{m.description}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400">{formatDateBR(m.date)}</span>
-                          <span className="text-[10px] font-bold uppercase text-orange-400">R$ {formatCurrencyBR(m.cost)}</span>
+                          <span className="text-[10px] font-bold uppercase text-orange-700 dark:text-orange-400">R$ {formatCurrencyBR(m.cost)}</span>
                         </div>
                       </div>
                     </div>
@@ -1697,7 +1697,7 @@ const DeviceManager = () => {
           {deviceAccounts.length > 0 ? deviceAccounts.map(acc => (
             <div key={acc.id} className="p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
               <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : acc.type === AccountType.OFFICE ? 'bg-orange-900/20 text-orange-400' : acc.type === AccountType.ERP ? 'bg-purple-900/20 text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${acc.type === AccountType.EMAIL ? 'bg-blue-50 dark:bg-sky-500/20 text-blue-600 dark:text-sky-400' : acc.type === AccountType.OFFICE ? 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' : acc.type === AccountType.ERP ? 'bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                   {acc.type === AccountType.EMAIL ? <Mail size={24}/> : acc.type === AccountType.OFFICE ? <FileText size={24}/> : acc.type === AccountType.ERP ? <Lock size={24}/> : <Key size={24}/>}
                 </div>
                 <div>
