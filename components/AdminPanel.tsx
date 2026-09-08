@@ -296,7 +296,8 @@ SELECT DISTINCT
     TRIM(h.descdd) AS Cidade,
     g.codcepcet AS CEP,
     d.LATCET AS Lat,
-    d.LONCET AS Long
+    d.LONCET AS Long,
+    fad.desfad AS Canal_Remuneracao
 FROM dbo.IBETVSTCET a
 INNER JOIN DiasComInfo x ON a.CODDIASMN = x.DiaSemana
 INNER JOIN dbo.IBETDATREFCCOVSTCET f
@@ -315,6 +316,7 @@ LEFT JOIN FLEXX10071188.dbo.IBETCPLEPG sup
 LEFT JOIN ibetedrcet g ON a.codcet = g.codcet AND codtpoedr = 1
 LEFT JOIN ibetcdd h ON g.codcdd = h.codcdd AND g.coduf_ = h.coduf_
 LEFT JOIN ibetbro i ON g.codbro = i.codbro AND h.coduf_ = i.coduf_ AND h.codcdd = i.codcdd
+LEFT JOIN dbo.ibetfad fad ON d.codfad = fad.codfad
 WHERE d.TPOSTUCET = 'A'
 AND e.CODMTCEPGVDD NOT IN (881,333,444,555,666,888,998,999)
 ORDER BY Cod_Vend, Data_da_Visita

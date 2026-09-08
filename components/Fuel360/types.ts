@@ -178,6 +178,7 @@ export interface VisitaPrevista {
     CEP: string;
     Lat: number;
     Long: number;
+    Canal_Remuneracao?: string;
 }
 
 export interface RotaCalculada {

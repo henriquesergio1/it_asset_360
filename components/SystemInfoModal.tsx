@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.144.0',
+    date: 'Hoje',
+    title: 'Fuel360: Inclusão da Coluna Canal_Remuneracao no Script ERP',
+    changes: [
+      'Integração ERP Fuel360: Adicionada a coluna Canal_Remuneracao (oriunda de ibetfad.desfad vinculada com IBETCET.codfad) ao script SQL de vendedores.',
+      'Junção Segura de Dados: Implementado LEFT JOIN com dbo.ibetfad garantindo preservação total de clientes sem canal ou com código nulo.',
+      'Normalização no Backend & Tipagem: Mapeamento no backend (server.js) e inclusão de Canal_Remuneracao opcional na interface VisitaPrevista.'
+    ]
+  },
+  {
     version: '3.143.1',
     date: 'Hoje',
     title: 'Fuel360: Correção de Runtime no Cálculo de KPIs de Horas',

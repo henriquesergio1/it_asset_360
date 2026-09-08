@@ -1,5 +1,5 @@
 
-// Servidor express unificado com API e SPA React - v3.143.1
+// Servidor express unificado com API e SPA React - v3.144.0
 const express = require('express');
 const packageJson = require('./package.json');
 const sql = require('mssql');
@@ -3251,7 +3251,8 @@ function normalizeVisitaData(row) {
         Cidade: findValue(['Cidade', 'descdd', 'CIDADE']),
         CEP: findValue(['CEP', 'codcepcet', 'CEP_CLIENTE']),
         Lat: parseFloat(findValue(['Lat', 'Latitude', 'LATCET', 'LATITUDE']) || 0),
-        Long: parseFloat(findValue(['Long', 'Longitude', 'LONCET', 'Lng', 'LONGITUDE']) || 0)
+        Long: parseFloat(findValue(['Long', 'Longitude', 'LONCET', 'Lng', 'LONGITUDE']) || 0),
+        Canal_Remuneracao: findValue(['Canal_Remuneracao', 'CanalRemuneracao', 'Canal_Remuneração', 'Canal', 'desfad']) || ''
     };
 }
 
