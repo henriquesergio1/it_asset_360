@@ -1087,8 +1087,20 @@ export const AjusteRota: React.FC = () => {
         return targetIndex >= 100 ? Math.min(sortedRoutes.length, targetIndex + 15) : 100;
     }, [sortedRoutes, highlightedClientCode]);
 
-    // Scroll Spy: Destacar cliente clicado no mapa e rolar até a respectiva linha na Grade de Ajuste Fino
+    // Destaque visual do cliente clicado no mapa (sem rolar a tela, abrindo apenas os detalhes no mapa)
     const handleSelectPdvFromMap = (codCliente: number) => {
+        setHighlightedClientCode(codCliente);
+
+        if (highlightTimerRef.current) {
+            clearTimeout(highlightTimerRef.current);
+        }
+        highlightTimerRef.current = setTimeout(() => {
+            setHighlightedClientCode(null);
+        }, 4500);
+    };
+
+    // Navegação sob demanda do Mapa para a Grade de Ajuste Fino (acionado pelo botão 'Ver na Tabela' do Popup)
+    const handleScrollToPdvInTable = (codCliente: number) => {
         const targetRoute = scopedAdjustedRoutes.find(r => r.Cod_Cliente === codCliente);
         if (!targetRoute) return;
 
@@ -1119,14 +1131,14 @@ export const AjusteRota: React.FC = () => {
         }
         highlightTimerRef.current = setTimeout(() => {
             setHighlightedClientCode(null);
-        }, 4500);
+        }, 5000);
 
         setTimeout(() => {
             const rowElem = document.getElementById(`row-pdv-${codCliente}`);
             if (rowElem) {
                 rowElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        }, 120);
+        }, 150);
     };
 
     // Scroll Spy Bidirecional: Focar cliente clicado na Grade de Ajuste Fino diretamente no Mapa (flyTo + popup)
@@ -2982,6 +2994,19 @@ export const AjusteRota: React.FC = () => {
                                                                 <TrashIcon className="w-4 h-4"/>
                                                             </button>
                                                         </div>
+                                                    </div>
+
+                                                    {/* Botão para navegar até o cliente na Grade de Ajuste Fino sob demanda */}
+                                                    <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleScrollToPdvInTable(v.Cod_Cliente)}
+                                                            className="w-full py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/90 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/80 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                                            title="Localizar e rolar até este cliente na Grade de Ajuste Fino"
+                                                        >
+                                                            <ClipboardListIcon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                                            <span>Ver na Tabela</span>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </Popup>

@@ -9,6 +9,15 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.2',
+    date: 'Hoje',
+    title: 'Fuel360: Estabilização de Navegação no Mapa e Botão Ver na Tabela no Popup',
+    changes: [
+      'Estabilização de Foco no Mapa: O clique nas bolinhas de cliente no mapa agora abre apenas o popup de detalhes sem rolar involuntariamente a tela para a tabela.',
+      'Botão "Ver na Tabela" no Popup: Inclusão de botão dedicado no popup do cliente que permite navegar sob demanda até o cliente na Grade de Ajuste Fino, aplicando filtros e destaque visual com suavidade.'
+    ]
+  },
+  {
     version: '3.140.1',
     date: 'Hoje',
     title: 'Fuel360: Exibição de Cidade e Foco Bidirecional Tabela ➔ Mapa na Grade de Ajuste Fino',
