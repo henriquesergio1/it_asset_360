@@ -9,6 +9,17 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.141.0',
+    date: 'Hoje',
+    title: 'Fuel360: Recursos Avançados de Roteirização Profissional (Resumo de KM/Tempo, Popup no Mapa e KM Flexível)',
+    changes: [
+      'Popup Interativo no Traçado do Mapa: Ao clicar em qualquer linha de rota no mapa, exibe detalhes instantâneos do dia, quinzena, quantidade de PDVs, KM total e tempo estimado em trânsito.',
+      'Parâmetro Liga/Desliga para KM Máximo: Adicionado controle flexível para ativar ou desativar o teto diário de quilometragem, ideal para roteirização em regiões rurais ou intermunicipais.',
+      'Equalização Estrita Quinzenal: Algoritmo de distribuição por resto uniforme garantindo 8 a 9 paradas em cada dia útil (Segunda a Sexta) nas duas quinzenas sem quedas residuais.',
+      'Resumo Operacional de Desempenho: Indicadores de KM e Tempo nos botões de dias e painel consolidado da semana.'
+    ]
+  },
+  {
     version: '3.140.5',
     date: 'Hoje',
     title: 'Fuel360: Balanceamento Equitativo de Carga Diária e Quinzenal no Otimizador de Rotas',

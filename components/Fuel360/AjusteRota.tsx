@@ -29,7 +29,8 @@ import {
     ArrowsExpandIcon,
     ArrowsCompressIcon,
     SearchIcon,
-    XCircleIcon
+    XCircleIcon,
+    ChartBarIcon
 } from './icons';
 
 // --- CONFIGURAÇÃO DE ÍCONES ---
@@ -835,13 +836,28 @@ export const AjusteRota: React.FC = () => {
     // Parâmetros de Roteirização
     const [optMaxClients, setOptMaxClients] = useState(15);
     const [optMaxKm, setOptMaxKm] = useState(60);
+    const [optLimitKm, setOptLimitKm] = useState(false);
     const [optDays, setOptDays] = useState<string[]>(['SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA']);
     const [optSatHalfPeriod, setOptSatHalfPeriod] = useState(true);
     const [optBalanceWorkload, setOptBalanceWorkload] = useState(true);
 
+    // Resumo Operacional de Rotas (KM e Tempo)
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+
     // Map polylines
     const [originalPolylines, setOriginalPolylines] = useState<{ id: string, color: string, points: [number, number][] }[]>([]);
-    const [adjustedPolylines, setAdjustedPolylines] = useState<{ id: string, color: string, points: [number, number][] }[]>([]);
+    const [adjustedPolylines, setAdjustedPolylines] = useState<{ 
+        id: string; 
+        color: string; 
+        points: [number, number][];
+        day?: string;
+        quinzena?: string;
+        sellerId?: number;
+        sellerName?: string;
+        stopsCount?: number;
+        distKm?: number;
+        durationMin?: number;
+    }[]>([]);
     const [selectedPromoter, setSelectedPromoter] = useState<string>('ALL');
 
     // Escopo de Roteirização: 'geral' (todos), 'equipe' (supervisor) ou 'vendedor' (individual)
@@ -1281,6 +1297,135 @@ export const AjusteRota: React.FC = () => {
         });
     }, [filteredRoutes, sortField, sortDirection]);
 
+    // Resumo Operacional Consolidado de KM, Tempo e Balanceamento Quinzena a Quinzena
+    const operationalSummary = useMemo(() => {
+        // Base de colaboradores do escopo
+        const activeSellers = Array.from(new Set(scopedAdjustedRoutes.map(r => r.Cod_Vend)));
+        const primarySellerId = activeSellers.length === 1 ? activeSellers[0] : (selectedPromoter !== 'ALL' ? Number(selectedPromoter) : activeSellers[0]);
+        const primarySellerColab = colaboradores.find(c => c.CodigoSetor === primarySellerId || c.ID_Colaborador === primarySellerId);
+        const baseCoord = {
+            lat: primarySellerColab?.LatitudeBase || 0,
+            lng: primarySellerColab?.LongitudeBase || 0
+        };
+
+        const uniqueClients = deduplicateVisitasPrevistas(scopedAdjustedRoutes);
+        let semanalCount = 0;
+        let quinzenal13Count = 0;
+        let quinzenal24Count = 0;
+
+        uniqueClients.forEach(c => {
+            const p = parsePeriodicidade(c.Periodicidade).tipo;
+            if (p === 'SEMANAL') semanalCount++;
+            else if (p === 'QUINZENAL_1_3') quinzenal13Count++;
+            else if (p === 'QUINZENAL_2_4') quinzenal24Count++;
+        });
+
+        // Métricas por Dia da Semana
+        const daysMetrics: Array<{
+            day: string;
+            pdvs13: number;
+            km13: number;
+            time13: number;
+            pdvs24: number;
+            km24: number;
+            time24: number;
+            avgPdvs: number;
+        }> = [];
+
+        const dayMap: Record<string, {
+            day: string;
+            pdvs13: number;
+            km13: number;
+            time13: number;
+            pdvs24: number;
+            km24: number;
+            time24: number;
+            totalKm: number;
+            totalTime: number;
+        }> = {};
+
+        let totalPdvs13 = 0;
+        let totalPdvs24 = 0;
+        let totalKm13 = 0;
+        let totalKm24 = 0;
+        let totalTime13 = 0;
+        let totalTime24 = 0;
+
+        WEEKDAYS.forEach(day => {
+            const dayVisits = scopedAdjustedRoutes.filter(r => r.Dia_Semana === day);
+            
+            // Quinzena 1/3: Semanais + Quinzenal 1/3
+            const visits13 = dayVisits.filter(r => {
+                const p = parsePeriodicidade(r.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_1_3';
+            });
+            const pdvs13 = visits13.length;
+            const coords13 = visits13.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
+            const metrics13 = coords13.length > 0 ? calcCircuitMetrics(baseCoord, coords13) : { totalKm: 0, travelMinutes: 0 };
+
+            // Quinzena 2/4: Semanais + Quinzenal 2/4
+            const visits24 = dayVisits.filter(r => {
+                const p = parsePeriodicidade(r.Periodicidade).tipo;
+                return p === 'SEMANAL' || p === 'QUINZENAL_2_4';
+            });
+            const pdvs24 = visits24.length;
+            const coords24 = visits24.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
+            const metrics24 = coords24.length > 0 ? calcCircuitMetrics(baseCoord, coords24) : { totalKm: 0, travelMinutes: 0 };
+
+            totalPdvs13 += pdvs13;
+            totalPdvs24 += pdvs24;
+            totalKm13 += metrics13.totalKm;
+            totalKm24 += metrics24.totalKm;
+            totalTime13 += metrics13.travelMinutes;
+            totalTime24 += metrics24.travelMinutes;
+
+            const dayObj = {
+                day,
+                pdvs13,
+                km13: metrics13.totalKm,
+                time13: metrics13.travelMinutes,
+                pdvs24,
+                km24: metrics24.totalKm,
+                time24: metrics24.travelMinutes,
+                avgPdvs: Math.round(((pdvs13 + pdvs24) / 2) * 10) / 10
+            };
+
+            daysMetrics.push(dayObj);
+            dayMap[day] = {
+                day,
+                pdvs13,
+                km13: metrics13.totalKm,
+                time13: metrics13.travelMinutes,
+                pdvs24,
+                km24: metrics24.totalKm,
+                time24: metrics24.travelMinutes,
+                totalKm: metrics13.totalKm + metrics24.totalKm,
+                totalTime: metrics13.travelMinutes + metrics24.travelMinutes
+            };
+        });
+
+        const diffPdvs = Math.abs(totalPdvs13 - totalPdvs24);
+        const maxPdvs = Math.max(totalPdvs13, totalPdvs24);
+        const imbalancePct = maxPdvs > 0 ? Math.round((diffPdvs / maxPdvs) * 100) : 0;
+
+        return {
+            uniqueClientsCount: uniqueClients.length,
+            semanalCount,
+            quinzenal13Count,
+            quinzenal24Count,
+            daysMetrics,
+            dayMap,
+            totalPdvs13,
+            totalPdvs24,
+            totalKm13: Math.round(totalKm13 * 10) / 10,
+            totalKm24: Math.round(totalKm24 * 10) / 10,
+            totalTime13,
+            totalTime24,
+            imbalancePct,
+            isBalanced: imbalancePct <= 15
+        };
+    }, [scopedAdjustedRoutes, selectedPromoter, colaboradores]);
+
     // Limite dinâmico de renderização da tabela para Scroll Spy
     const visibleRoutesLimit = useMemo(() => {
         if (!highlightedClientCode) return 100;
@@ -1716,10 +1861,18 @@ export const AjusteRota: React.FC = () => {
                 if (poolQuinzenais13.length > targetQ13) {
                     const excess = poolQuinzenais13.length - targetQ13;
                     const toMove = poolQuinzenais13.splice(poolQuinzenais13.length - excess, excess);
+                    toMove.forEach(c => {
+                        c.tipo = 'QUINZENAL_2_4';
+                        c.originalPeriodicidade = '2 4';
+                    });
                     poolQuinzenais24.push(...toMove);
                 } else if (poolQuinzenais13.length < targetQ13) {
                     const deficit = targetQ13 - poolQuinzenais13.length;
                     const toMove = poolQuinzenais24.splice(0, deficit);
+                    toMove.forEach(c => {
+                        c.tipo = 'QUINZENAL_1_3';
+                        c.originalPeriodicidade = '1 3';
+                    });
                     poolQuinzenais13.push(...toMove);
                 }
             }
@@ -1746,49 +1899,66 @@ export const AjusteRota: React.FC = () => {
                 };
             });
 
-            // Distribuição homogênea dos clientes SEMANAIS entre os dias ativos
+            // Distribuição homogênea dos clientes SEMANAIS entre os dias ativos por cota cumulativa
             let remSemanais = [...allSemanais];
+            let accSemanais = 0;
+            let cumWeightSemanais = 0;
             dayBuckets.forEach((bucket, idx) => {
+                cumWeightSemanais += bucket.weight;
                 const isLast = idx === dayBuckets.length - 1;
-                const quota = isLast 
-                    ? remSemanais.length 
-                    : Math.min(remSemanais.length, Math.round(allSemanais.length * (bucket.weight / totalWeight)));
+                const cumTarget = isLast ? allSemanais.length : Math.round(allSemanais.length * (cumWeightSemanais / totalWeight));
+                const quota = Math.max(0, Math.min(remSemanais.length, cumTarget - accSemanais));
                 bucket.semanais = remSemanais.splice(0, quota);
+                accSemanais += bucket.semanais.length;
             });
 
-            // Distribuição dos QUINZENAIS 1/3 (meta de carga diária da Quinzena 1/3 sem dias vazios)
+            // Distribuição dos QUINZENAIS 1/3 (meta estrita por cota cumulativa sem dias vazios ou com quedas)
             const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
             let remQ13 = [...poolQuinzenais13];
+            let accVisits13 = 0;
+            let cumWeight13 = 0;
             dayBuckets.forEach((bucket, idx) => {
+                cumWeight13 += bucket.weight;
                 const isLast = idx === dayBuckets.length - 1;
-                const targetDayTotal13 = Math.round(totalTargetVisits13 * (bucket.weight / totalWeight));
-                const neededQ13 = Math.max(0, targetDayTotal13 - bucket.semanais.length);
-                const quota = isLast ? remQ13.length : Math.min(remQ13.length, Math.min(bucket.maxCap - bucket.semanais.length, neededQ13));
+                const cumTarget = isLast ? totalTargetVisits13 : Math.round(totalTargetVisits13 * (cumWeight13 / totalWeight));
+                const targetForThisBucket = Math.max(0, cumTarget - accVisits13);
+                const neededQ13 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                const quota = isLast ? remQ13.length : Math.max(0, Math.min(remQ13.length, Math.min(maxAllowed, neededQ13)));
                 bucket.quinzenais13 = remQ13.splice(0, quota);
+                accVisits13 += (bucket.semanais.length + bucket.quinzenais13.length);
             });
-            remQ13.forEach(c => {
+            while (remQ13.length > 0) {
+                const c = remQ13.shift()!;
                 const bestBucket = [...dayBuckets].sort((a, b) => 
                     (a.semanais.length + a.quinzenais13.length) - (b.semanais.length + b.quinzenais13.length)
                 )[0];
                 bestBucket.quinzenais13.push(c);
-            });
+            }
 
-            // Distribuição dos QUINZENAIS 2/4 (meta de carga diária da Quinzena 2/4 sem dias vazios)
+            // Distribuição dos QUINZENAIS 2/4 (meta estrita por cota cumulativa sem dias vazios ou com quedas)
             const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
             let remQ24 = [...poolQuinzenais24];
+            let accVisits24 = 0;
+            let cumWeight24 = 0;
             dayBuckets.forEach((bucket, idx) => {
+                cumWeight24 += bucket.weight;
                 const isLast = idx === dayBuckets.length - 1;
-                const targetDayTotal24 = Math.round(totalTargetVisits24 * (bucket.weight / totalWeight));
-                const neededQ24 = Math.max(0, targetDayTotal24 - bucket.semanais.length);
-                const quota = isLast ? remQ24.length : Math.min(remQ24.length, Math.min(bucket.maxCap - bucket.semanais.length, neededQ24));
+                const cumTarget = isLast ? totalTargetVisits24 : Math.round(totalTargetVisits24 * (cumWeight24 / totalWeight));
+                const targetForThisBucket = Math.max(0, cumTarget - accVisits24);
+                const neededQ24 = Math.max(0, targetForThisBucket - bucket.semanais.length);
+                const maxAllowed = optLimitKm ? Math.max(0, bucket.maxCap - bucket.semanais.length) : Infinity;
+                const quota = isLast ? remQ24.length : Math.max(0, Math.min(remQ24.length, Math.min(maxAllowed, neededQ24)));
                 bucket.quinzenais24 = remQ24.splice(0, quota);
+                accVisits24 += (bucket.semanais.length + bucket.quinzenais24.length);
             });
-            remQ24.forEach(c => {
+            while (remQ24.length > 0) {
+                const c = remQ24.shift()!;
                 const bestBucket = [...dayBuckets].sort((a, b) => 
                     (a.semanais.length + a.quinzenais24.length) - (b.semanais.length + b.quinzenais24.length)
                 )[0];
                 bestBucket.quinzenais24.push(c);
-            });
+            }
 
             // Centróides calculados sobre os clusters balanceados de cada dia
             const calcDayCentroid = (bucket: DayBucket) => {
@@ -1986,23 +2156,35 @@ export const AjusteRota: React.FC = () => {
 
                     if (pointsObj.length > 1) {
                         const hashKey = pointsObj.map(p => `${p.Lat},${p.Long}`).join('|');
+                        const stopsCoords = sortedVisits.filter(v => v.Lat && v.Long).map(v => ({ lat: v.Lat, lng: v.Long }));
+                        const circuit = calcCircuitMetrics({ lat: colab?.LatitudeBase || 0, lng: colab?.LongitudeBase || 0 }, stopsCoords);
+                        const lineMeta = {
+                            id: `${sellerId}-${day}`,
+                            color: lineColor,
+                            day,
+                            sellerId,
+                            sellerName: colab?.Nome || visits[0]?.Nome_Vendedor || `Colaborador ${sellerId}`,
+                            stopsCount: sortedVisits.length,
+                            distKm: circuit.totalKm,
+                            durationMin: circuit.travelMinutes
+                        };
                         
                         if (osrmCacheRef.current.has(hashKey)) {
-                            lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: osrmCacheRef.current.get(hashKey)! });
+                            lines.push({ ...lineMeta, points: osrmCacheRef.current.get(hashKey)! });
                         } else {
                             try {
                                 const osrm = await getOSRMData(pointsObj, false);
                                 if (osrm && osrm.geometry && osrm.geometry.length > 0) {
                                     osrmCacheRef.current.set(hashKey, osrm.geometry);
-                                    lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: osrm.geometry });
+                                    lines.push({ ...lineMeta, points: osrm.geometry });
                                 } else {
                                     const straightCoords = pointsObj.map(c => [c.Lat, c.Long] as [number, number]);
                                     osrmCacheRef.current.set(hashKey, straightCoords);
-                                    lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: straightCoords });
+                                    lines.push({ ...lineMeta, points: straightCoords });
                                 }
                             } catch (e) {
                                 const straightCoords = pointsObj.map(c => [c.Lat, c.Long] as [number, number]);
-                                lines.push({ id: `${sellerId}-${day}`, color: lineColor, points: straightCoords });
+                                lines.push({ ...lineMeta, points: straightCoords });
                             }
                         }
                     }
@@ -2105,7 +2287,7 @@ export const AjusteRota: React.FC = () => {
                     totalKm += circuit.totalKm;
                     totalTravelMinutes += circuit.travelMinutes;
 
-                    if (circuit.totalKm > optMaxKm) {
+                    if (optLimitKm && circuit.totalKm > optMaxKm) {
                         sellerHasExceededDay = true;
                     }
                 });
@@ -2146,7 +2328,7 @@ export const AjusteRota: React.FC = () => {
             timeSavedMinutes,
             percentTimeSaved
         };
-    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm]);
+    }, [scopedOriginalRoutes, scopedAdjustedRoutes, colaboradores, optMaxKm, optLimitKm]);
 
     // Reatribuir vendedor, dia de visita ou quinzena manualmente
     const handleManualReassign = (clientCode: number, targetSellerId: number, targetDay: string, targetPeriodicidade?: string) => {
@@ -2747,21 +2929,37 @@ export const AjusteRota: React.FC = () => {
                     {/* KPI 5: Alertas de Distância */}
                     <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between transition-colors">
                         <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">Alta KM (&gt; {optMaxKm} KM)</span>
+                            <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-wider">
+                                {optLimitKm ? `Alta KM (> ${optMaxKm} KM)` : 'Limite KM Diário'}
+                            </span>
                             <div className="flex items-baseline space-x-2 mt-1">
-                                <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                    {kpis.adjusted.exceededKmCount} / {kpis.adjusted.sellerCount}
-                                </span>
-                                <span className="text-xs text-slate-400 dark:text-slate-500">colab(s)</span>
+                                {optLimitKm ? (
+                                    <>
+                                        <span className={`text-xl font-black ${kpis.adjusted.exceededKmCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                            {kpis.adjusted.exceededKmCount} / {kpis.adjusted.sellerCount}
+                                        </span>
+                                        <span className="text-xs text-slate-400 dark:text-slate-500">colab(s)</span>
+                                    </>
+                                ) : (
+                                    <span className="text-sm font-black text-slate-600 dark:text-slate-300">
+                                        Flexível (Sem Teto)
+                                    </span>
+                                )}
                             </div>
                         </div>
-                        {kpis.adjusted.exceededKmCount > 0 ? (
-                            <div className="mt-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste
-                            </div>
+                        {optLimitKm ? (
+                            kpis.adjusted.exceededKmCount > 0 ? (
+                                <div className="mt-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                    <ExclamationIcon className="w-3.5 h-3.5 mr-1"/> Necessita Ajuste
+                                </div>
+                            ) : (
+                                <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                    <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Carga equilibrada
+                                </div>
+                            )
                         ) : (
-                            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
-                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Carga equilibrada
+                            <div className="mt-2 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/60 rounded-lg px-2 py-1 text-[10px] font-bold w-fit flex items-center">
+                                <CheckCircleIcon className="w-3.5 h-3.5 mr-1"/> Otimização Livre
                             </div>
                         )}
                     </div>
@@ -2797,12 +2995,25 @@ export const AjusteRota: React.FC = () => {
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">KM Máximo Rota / Dia</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">KM Máximo Rota / Dia</label>
+                                <label className="flex items-center space-x-1 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={optLimitKm} 
+                                        onChange={(e) => setOptLimitKm(e.target.checked)}
+                                        className="rounded text-indigo-600 focus:ring-indigo-500 w-3 h-3 cursor-pointer"
+                                    />
+                                    <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Ativar</span>
+                                </label>
+                            </div>
                             <input 
                                 type="number" 
                                 value={optMaxKm} 
+                                disabled={!optLimitKm}
                                 onChange={(e) => setOptMaxKm(Number(e.target.value))}
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white"
+                                className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold outline-none text-slate-800 dark:text-white transition-opacity ${!optLimitKm ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                placeholder={!optLimitKm ? "Desativado (Livre)" : "KM máx."}
                             />
                         </div>
                         <div className="flex items-center justify-between">
@@ -3094,8 +3305,8 @@ export const AjusteRota: React.FC = () => {
                                     />
                                 ))}
 
-                                {/* Polilinhas das rotas otimizadas com transição visual animada */}
-                                {adjustedPolylines.map((line, idx) => (
+                                {/* Polilinhas das rotas otimizadas com transição visual animada e Popup Interativo */}
+                                {adjustedPolylines.map((line: any, idx) => (
                                     <Polyline 
                                         key={`adj-poly-${line.id || idx}`} 
                                         positions={line.points} 
@@ -3103,9 +3314,55 @@ export const AjusteRota: React.FC = () => {
                                         weight={showHeatmap ? 2.5 : 5} 
                                         opacity={showHeatmap ? 0.35 : 0.85} 
                                         pathOptions={{
-                                            className: 'transition-all duration-500 ease-in-out'
+                                            className: 'transition-all duration-500 ease-in-out cursor-pointer'
                                         }}
-                                    />
+                                    >
+                                        <Popup>
+                                            <div className="p-2 min-w-[210px] text-xs font-sans">
+                                                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+                                                    <span 
+                                                        className="px-2 py-0.5 rounded text-[10px] font-black text-white" 
+                                                        style={{ backgroundColor: line.color }}
+                                                    >
+                                                        {line.day || 'ROTA'}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-slate-500">
+                                                        {selectedQuinzenaFilter === 'ALL' ? 'Todas as Semanas' : (selectedQuinzenaFilter === '1_3' ? 'Sem 1 e 3' : 'Sem 2 e 4')}
+                                                    </span>
+                                                </div>
+                                                <div className="text-slate-800 font-bold mb-2 truncate">
+                                                    {line.sellerName}
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-1 bg-slate-50 p-2 rounded-lg text-center mb-2">
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">PDVs</div>
+                                                        <div className="font-black text-indigo-600 text-xs">{line.stopsCount || 0}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Distância</div>
+                                                        <div className="font-black text-slate-700 text-xs">{line.distKm || 0} km</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Tempo</div>
+                                                        <div className="font-black text-slate-700 text-xs">
+                                                            {Math.floor((line.durationMin || 0) / 60)}h {(line.durationMin || 0) % 60}m
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (line.day) setItineraryDay(line.day);
+                                                        if (line.sellerId) setItinerarySeller(String(line.sellerId));
+                                                        setShowItineraryModal(true);
+                                                    }}
+                                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] flex items-center justify-center transition cursor-pointer"
+                                                >
+                                                    <ClipboardListIcon className="w-3.5 h-3.5 mr-1" /> Ver Itinerário Detalhado
+                                                </button>
+                                            </div>
+                                        </Popup>
+                                    </Polyline>
                                 ))}
 
                                 {/* Clientes Marcados (com distinção cromática por dia da semana e quinzena) */}
@@ -3346,6 +3603,12 @@ export const AjusteRota: React.FC = () => {
                                                 const isSelected = selectedDaysFilter.includes(day);
                                                 const hasAnySelected = selectedDaysFilter.length > 0;
                                                 const dayCfg = DAY_COLORS[day] || { hex: '#4f46e5', label: shortName, bg: 'bg-indigo-600' };
+                                                const dayMetrics = operationalSummary.dayMap[day];
+                                                const displayKm = selectedQuinzenaFilter === '1_3' 
+                                                    ? dayMetrics?.km13 
+                                                    : (selectedQuinzenaFilter === '2_4' 
+                                                        ? dayMetrics?.km24 
+                                                        : (dayMetrics?.km13 || dayMetrics?.km24 || 0));
 
                                                 return (
                                                     <button
@@ -3359,12 +3622,17 @@ export const AjusteRota: React.FC = () => {
                                                                     ? 'bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-400 opacity-60 hover:opacity-100 hover:text-slate-700 dark:hover:text-slate-200'
                                                                     : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
                                                         }`}
-                                                        title={`Clique para filtrar ${day}. Total: ${count} atendimentos`}
+                                                        title={`Clique para filtrar ${day}. Total: ${count} atendimentos${displayKm ? ` • ~${displayKm} km estimados` : ''}`}
                                                     >
                                                         <span className="uppercase font-semibold">{shortName}:</span>
                                                         <span className={isSelected ? 'text-white font-black' : 'text-indigo-600 dark:text-indigo-400 font-black'}>
                                                             {count}
                                                         </span>
+                                                        {Boolean(displayKm && displayKm > 0) && (
+                                                            <span className={`text-[9px] font-semibold ml-0.5 ${isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'}`}>
+                                                                • {displayKm}km
+                                                            </span>
+                                                        )}
                                                     </button>
                                                 );
                                             })}
@@ -3442,6 +3710,15 @@ export const AjusteRota: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-center space-x-2 shrink-0">
+                                    <button
+                                        onClick={() => setShowSummaryModal(true)}
+                                        disabled={scopedAdjustedRoutes.length === 0}
+                                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center border border-blue-200 dark:border-blue-800 shadow-xs transition h-[32px] disabled:opacity-50 cursor-pointer"
+                                        title="Visualizar o resumo operacional consolidado de KM, tempo em trânsito e balanceamento diário e quinzenal"
+                                    >
+                                        <ChartBarIcon className="w-4 h-4 mr-1.5 text-blue-600 dark:text-blue-400"/>
+                                        Resumo KM & Tempo
+                                    </button>
                                     <button
                                         onClick={() => setShowItineraryModal(true)}
                                         disabled={scopedAdjustedRoutes.length === 0}
@@ -4291,6 +4568,182 @@ export const AjusteRota: React.FC = () => {
                                     🗺️ Navegar no Google Maps
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE RESUMO OPERACIONAL DE ROTAS (KM, TEMPO E BALANCEAMENTO) */}
+            {showSummaryModal && (
+                <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                    <ChartBarIcon className="w-5 h-5"/>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        Resumo Operacional de Rotas
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                            Consolidado KM & Tempo
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Detalhamento diário e quinzenal com projeção de quilometragem e tempo em trânsito (Base ↔ PDVs ↔ Base).
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSummaryModal(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* KPIs Rápidos */}
+                        <div className="p-4 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+                                <span className="text-[10px] font-bold uppercase text-slate-400">Carteira Ativa</span>
+                                <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
+                                    {operationalSummary.uniqueClientsCount} <span className="text-xs font-normal text-slate-500">PDVs</span>
+                                </div>
+                                <span className="text-[9px] text-slate-500">
+                                    {operationalSummary.semanalCount} Sem. • {operationalSummary.quinzenal13Count + operationalSummary.quinzenal24Count} Quinz.
+                                </span>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-2xs">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">Semanas 1 e 3</span>
+                                    <span className="text-[9px] font-black bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-1 rounded">1/3</span>
+                                </div>
+                                <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
+                                    {operationalSummary.totalPdvs13} <span className="text-xs font-normal text-slate-500">visitas</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500">
+                                    ~{operationalSummary.totalKm13} km • {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m
+                                </span>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-fuchsia-200 dark:border-fuchsia-800/50 shadow-2xs">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase text-fuchsia-600 dark:text-fuchsia-400">Semanas 2 e 4</span>
+                                    <span className="text-[9px] font-black bg-fuchsia-100 dark:bg-fuchsia-950 text-fuchsia-800 dark:text-fuchsia-300 px-1 rounded">2/4</span>
+                                </div>
+                                <div className="text-lg font-black text-slate-800 dark:text-white mt-0.5">
+                                    {operationalSummary.totalPdvs24} <span className="text-xs font-normal text-slate-500">visitas</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500">
+                                    ~{operationalSummary.totalKm24} km • {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m
+                                </span>
+                            </div>
+
+                            <div className="bg-white dark:bg-slate-800/90 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+                                <span className="text-[10px] font-bold uppercase text-slate-400">Balanceamento</span>
+                                <div className="flex items-center space-x-1 mt-0.5">
+                                    <span className={`text-lg font-black ${operationalSummary.isBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                        {operationalSummary.imbalancePct}%
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-400">var.</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500">
+                                    {operationalSummary.isBalanced ? '✅ Carga Equalizada' : '⚠️ Variação acima de 15%'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Corpo com Tabela Detalhada */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                        <th className="pb-2.5">Dia da Semana</th>
+                                        <th className="pb-2.5 text-center text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 px-2 rounded-t">Sem 1/3 (PDVs)</th>
+                                        <th className="pb-2.5 text-center text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 px-2">Sem 1/3 (KM)</th>
+                                        <th className="pb-2.5 text-center text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/20 px-2 rounded-t">Sem 1/3 (Tempo)</th>
+                                        <th className="pb-2.5 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-50/50 dark:bg-fuchsia-950/20 px-2 rounded-t">Sem 2/4 (PDVs)</th>
+                                        <th className="pb-2.5 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-50/50 dark:bg-fuchsia-950/20 px-2">Sem 2/4 (KM)</th>
+                                        <th className="pb-2.5 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-50/50 dark:bg-fuchsia-950/20 px-2 rounded-t">Sem 2/4 (Tempo)</th>
+                                        <th className="pb-2.5 text-center">Média Diária</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {operationalSummary.daysMetrics.map(item => {
+                                        const cfg = DAY_COLORS[item.day] || { hex: '#4f46e5', label: item.day, bg: 'bg-indigo-600' };
+                                        return (
+                                            <tr key={item.day} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                                <td className="py-3 font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cfg.hex }}/>
+                                                    <span>{item.day}</span>
+                                                </td>
+                                                <td className="py-3 text-center font-black text-amber-700 dark:text-amber-400 bg-amber-50/30 dark:bg-amber-950/10">
+                                                    {item.pdvs13}
+                                                </td>
+                                                <td className="py-3 text-center text-slate-600 dark:text-slate-300 bg-amber-50/30 dark:bg-amber-950/10 font-bold">
+                                                    {item.km13 > 0 ? `${item.km13} km` : '—'}
+                                                </td>
+                                                <td className="py-3 text-center text-slate-500 dark:text-slate-400 bg-amber-50/30 dark:bg-amber-950/10 font-medium">
+                                                    {item.time13 > 0 ? `${Math.floor(item.time13 / 60)}h ${item.time13 % 60}m` : '—'}
+                                                </td>
+                                                <td className="py-3 text-center font-black text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-50/30 dark:bg-fuchsia-950/10">
+                                                    {item.pdvs24}
+                                                </td>
+                                                <td className="py-3 text-center text-slate-600 dark:text-slate-300 bg-fuchsia-50/30 dark:bg-fuchsia-950/10 font-bold">
+                                                    {item.km24 > 0 ? `${item.km24} km` : '—'}
+                                                </td>
+                                                <td className="py-3 text-center text-slate-500 dark:text-slate-400 bg-fuchsia-50/30 dark:bg-fuchsia-950/10 font-medium">
+                                                    {item.time24 > 0 ? `${Math.floor(item.time24 / 60)}h ${item.time24 % 60}m` : '—'}
+                                                </td>
+                                                <td className="py-3 text-center font-black text-indigo-600 dark:text-indigo-400">
+                                                    {item.avgPdvs} PDVs
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr className="border-t-2 border-slate-300 dark:border-slate-700 font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80">
+                                        <td className="py-3 uppercase text-[11px] tracking-wider">Total Consolidado</td>
+                                        <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
+                                            {operationalSummary.totalPdvs13} PDVs
+                                        </td>
+                                        <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
+                                            {operationalSummary.totalKm13} km
+                                        </td>
+                                        <td className="py-3 text-center text-amber-700 dark:text-amber-400 bg-amber-100/50 dark:bg-amber-950/40">
+                                            {Math.floor(operationalSummary.totalTime13 / 60)}h {operationalSummary.totalTime13 % 60}m
+                                        </td>
+                                        <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
+                                            {operationalSummary.totalPdvs24} PDVs
+                                        </td>
+                                        <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
+                                            {operationalSummary.totalKm24} km
+                                        </td>
+                                        <td className="py-3 text-center text-fuchsia-700 dark:text-fuchsia-400 bg-fuchsia-100/50 dark:bg-fuchsia-950/40">
+                                            {Math.floor(operationalSummary.totalTime24 / 60)}h {operationalSummary.totalTime24 % 60}m
+                                        </td>
+                                        <td className="py-3 text-center text-indigo-600 dark:text-indigo-400 font-black">
+                                            {Math.round(((operationalSummary.totalPdvs13 + operationalSummary.totalPdvs24) / 2) * 10) / 10} / sem
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                💡 Cálculo viário baseado em matriz de distâncias e circuito fechado saindo e retornando à residência cadastrada.
+                            </span>
+                            <button
+                                onClick={() => setShowSummaryModal(false)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition cursor-pointer shadow-xs"
+                            >
+                                Fechar Resumo
+                            </button>
                         </div>
                     </div>
                 </div>
