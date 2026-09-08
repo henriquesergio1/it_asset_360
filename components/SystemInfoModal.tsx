@@ -9,6 +9,16 @@ interface SystemInfoModalProps {
 
 const versions = [
   {
+    version: '3.140.5',
+    date: 'Hoje',
+    title: 'Fuel360: Balanceamento Equitativo de Carga Diária e Quinzenal no Otimizador de Rotas',
+    changes: [
+      'Alocação Homogênea de Carga Diária: Implementada meta dinâmica de visitas por dia útil (idealPerDay), eliminando a saturação assimétrica (dias com 15 visitas esgotando o saldo e deixando outros dias com 0 ou 1 cliente).',
+      'Equalização Quinzenal Efetiva (Sem 1/3 vs Sem 2/4): Distribuição balanceada de paradas quinzenais quando a opção estiver ativa, eliminando disparidades volumétricas acentuadas.',
+      'Zoneamento Territorial Contíguo: Preservada a compactação geográfica com penalização progressiva de dias saturados, garantindo rotas densas e viáveis.'
+    ]
+  },
+  {
     version: '3.140.4',
     date: 'Hoje',
     title: 'Fuel360: Ordenação Numérica por Setor e Campo de Busca de Colaboradores',

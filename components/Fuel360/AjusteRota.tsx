@@ -1681,130 +1681,189 @@ export const AjusteRota: React.FC = () => {
             const uniqueClients = Array.from(uniqueClientsMap.values());
             if (uniqueClients.length === 0) continue;
 
-            // 2. Zoneamento e Clusterização Territorial Compacta (Capacitated K-Means Geográfico)
-            const numClusters = activeDays.length;
-            const sortedByAngle = [...uniqueClients].sort((a, b) => a.polarAngle - b.polarAngle);
-            const clientsPerDayInitial = Math.ceil(sortedByAngle.length / numClusters);
+            // 2. Zoneamento Territorial Compacto e Balanceamento Equitativo de Carga
+            const getDayWeight = (day: string) => (day === 'SÁBADO' && optSatHalfPeriod) ? 0.5 : 1.0;
+            const totalWeight = activeDays.reduce((sum, d) => sum + getDayWeight(d), 0);
 
-            // Centróides iniciais distribuídos angularmente em torno da base
-            let centroids: { lat: number; lng: number }[] = activeDays.map((_, idx) => {
-                const slice = sortedByAngle.slice(idx * clientsPerDayInitial, (idx + 1) * clientsPerDayInitial);
-                if (slice.length > 0) {
-                    const avgLat = slice.reduce((sum, c) => sum + c.lat, 0) / slice.length;
-                    const avgLng = slice.reduce((sum, c) => sum + c.lng, 0) / slice.length;
-                    return { lat: avgLat, lng: avgLng };
-                }
-                return { lat: baseLat, lng: baseLng };
+            // Centróide geográfico da carteira de clientes do vendedor
+            const validCoords = uniqueClients.filter(c => c.lat && c.lng);
+            const centerPortfolioLat = validCoords.length > 0 
+                ? validCoords.reduce((acc, c) => acc + c.lat, 0) / validCoords.length 
+                : baseLat;
+            const centerPortfolioLng = validCoords.length > 0 
+                ? validCoords.reduce((acc, c) => acc + c.lng, 0) / validCoords.length 
+                : baseLng;
+
+            // Ordenação espacial contígua (varredura angular 360° em torno do centróide da carteira + distância radial)
+            const sortedSpatially = [...uniqueClients].sort((a, b) => {
+                const angleA = (a.lat && a.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, a.lat, a.lng) : a.polarAngle;
+                const angleB = (b.lat && b.lng) ? calcPolarAngle(centerPortfolioLat, centerPortfolioLng, b.lat, b.lng) : b.polarAngle;
+                const diffAngle = angleA - angleB;
+                if (Math.abs(diffAngle) > 0.05) return diffAngle;
+                return a.distFromBase - b.distFromBase;
             });
 
-            // 3. Alocação nos dias ativos respeitando capacidades máximas e balanceamento quinzenal
+            // Separação dos clientes por modalidade
+            const allSemanais = sortedSpatially.filter(c => c.tipo === 'SEMANAL');
+            let poolQuinzenais13 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_1_3');
+            let poolQuinzenais24 = sortedSpatially.filter(c => c.tipo === 'QUINZENAL_2_4');
+
+            // EQUALIZAÇÃO QUINZENAL EFETIVA: Quando "Equilibrar Quinzenas" estiver ativo, iguala os volumes de 1/3 e 2/4
+            if (optBalanceWorkload) {
+                const allQuinzenais = [...poolQuinzenais13, ...poolQuinzenais24];
+                const targetQ13 = Math.floor(allQuinzenais.length / 2);
+
+                if (poolQuinzenais13.length > targetQ13) {
+                    const excess = poolQuinzenais13.length - targetQ13;
+                    const toMove = poolQuinzenais13.splice(poolQuinzenais13.length - excess, excess);
+                    poolQuinzenais24.push(...toMove);
+                } else if (poolQuinzenais13.length < targetQ13) {
+                    const deficit = targetQ13 - poolQuinzenais13.length;
+                    const toMove = poolQuinzenais24.splice(0, deficit);
+                    poolQuinzenais13.push(...toMove);
+                }
+            }
+
+            // 3. Estruturação dos Buckets Diários Balanceados
             interface DayBucket {
                 day: string;
+                weight: number;
                 maxCap: number;
                 semanais: typeof uniqueClients;
                 quinzenais13: typeof uniqueClients;
                 quinzenais24: typeof uniqueClients;
             }
 
-            let dayBuckets: DayBucket[] = [];
-
-            // Executa 8 iterações de K-Means com restrição de capacidade para convergir em bolsões territoriais compactos
-            for (let iter = 0; iter < 8; iter++) {
-                dayBuckets = activeDays.map(day => ({
+            const dayBuckets: DayBucket[] = activeDays.map(day => {
+                const w = getDayWeight(day);
+                return {
                     day,
+                    weight: w,
                     maxCap: (day === 'SÁBADO' && optSatHalfPeriod) ? Math.max(1, Math.floor(optMaxClients / 2)) : optMaxClients,
                     semanais: [],
                     quinzenais13: [],
                     quinzenais24: []
-                }));
+                };
+            });
 
-                // Ordena clientes priorizando semanais para alocação firme nos melhores centros
-                const clientsToAssign = [...uniqueClients].sort((a, b) => {
-                    if (a.tipo === 'SEMANAL' && b.tipo !== 'SEMANAL') return -1;
-                    if (a.tipo !== 'SEMANAL' && b.tipo === 'SEMANAL') return 1;
-                    return 0;
-                });
+            // Distribuição homogênea dos clientes SEMANAIS entre os dias ativos
+            let remSemanais = [...allSemanais];
+            dayBuckets.forEach((bucket, idx) => {
+                const isLast = idx === dayBuckets.length - 1;
+                const quota = isLast 
+                    ? remSemanais.length 
+                    : Math.min(remSemanais.length, Math.round(allSemanais.length * (bucket.weight / totalWeight)));
+                bucket.semanais = remSemanais.splice(0, quota);
+            });
 
-                clientsToAssign.forEach(client => {
-                    // Ordena os índices de dias pela distância deste cliente ao centróide do dia
-                    const rankedDayIndices = dayBuckets.map((_, idx) => {
-                        const cent = centroids[idx];
-                        const dist = (client.lat && client.lng && cent.lat && cent.lng)
-                            ? calcDist(client.lat, client.lng, cent.lat, cent.lng)
-                            : 9999;
-                        return { idx, dist };
-                    }).sort((a, b) => a.dist - b.dist);
+            // Distribuição dos QUINZENAIS 1/3 (meta de carga diária da Quinzena 1/3 sem dias vazios)
+            const totalTargetVisits13 = allSemanais.length + poolQuinzenais13.length;
+            let remQ13 = [...poolQuinzenais13];
+            dayBuckets.forEach((bucket, idx) => {
+                const isLast = idx === dayBuckets.length - 1;
+                const targetDayTotal13 = Math.round(totalTargetVisits13 * (bucket.weight / totalWeight));
+                const neededQ13 = Math.max(0, targetDayTotal13 - bucket.semanais.length);
+                const quota = isLast ? remQ13.length : Math.min(remQ13.length, Math.min(bucket.maxCap - bucket.semanais.length, neededQ13));
+                bucket.quinzenais13 = remQ13.splice(0, quota);
+            });
+            remQ13.forEach(c => {
+                const bestBucket = [...dayBuckets].sort((a, b) => 
+                    (a.semanais.length + a.quinzenais13.length) - (b.semanais.length + b.quinzenais13.length)
+                )[0];
+                bestBucket.quinzenais13.push(c);
+            });
 
-                    if (client.tipo === 'SEMANAL') {
-                        let placed = false;
-                        for (const item of rankedDayIndices) {
-                            const b = dayBuckets[item.idx];
-                            const cap13 = b.semanais.length + b.quinzenais13.length;
-                            const cap24 = b.semanais.length + b.quinzenais24.length;
-                            if (cap13 < b.maxCap && cap24 < b.maxCap) {
-                                b.semanais.push(client);
-                                placed = true;
-                                break;
-                            }
-                        }
-                        if (!placed) {
-                            const best = [...dayBuckets].sort((a, b) => 
-                                (a.semanais.length * 2 + a.quinzenais13.length + a.quinzenais24.length) -
-                                (b.semanais.length * 2 + b.quinzenais13.length + b.quinzenais24.length)
-                            )[0];
-                            best.semanais.push(client);
-                        }
-                    } else {
-                        const preferredSlot: '1_3' | '2_4' = client.tipo === 'QUINZENAL_2_4' ? '2_4' : '1_3';
-                        let placed = false;
+            // Distribuição dos QUINZENAIS 2/4 (meta de carga diária da Quinzena 2/4 sem dias vazios)
+            const totalTargetVisits24 = allSemanais.length + poolQuinzenais24.length;
+            let remQ24 = [...poolQuinzenais24];
+            dayBuckets.forEach((bucket, idx) => {
+                const isLast = idx === dayBuckets.length - 1;
+                const targetDayTotal24 = Math.round(totalTargetVisits24 * (bucket.weight / totalWeight));
+                const neededQ24 = Math.max(0, targetDayTotal24 - bucket.semanais.length);
+                const quota = isLast ? remQ24.length : Math.min(remQ24.length, Math.min(bucket.maxCap - bucket.semanais.length, neededQ24));
+                bucket.quinzenais24 = remQ24.splice(0, quota);
+            });
+            remQ24.forEach(c => {
+                const bestBucket = [...dayBuckets].sort((a, b) => 
+                    (a.semanais.length + a.quinzenais24.length) - (b.semanais.length + b.quinzenais24.length)
+                )[0];
+                bestBucket.quinzenais24.push(c);
+            });
 
-                        for (const item of rankedDayIndices) {
-                            const b = dayBuckets[item.idx];
-                            const cap13 = b.semanais.length + b.quinzenais13.length;
-                            const cap24 = b.semanais.length + b.quinzenais24.length;
+            // Centróides calculados sobre os clusters balanceados de cada dia
+            const calcDayCentroid = (bucket: DayBucket) => {
+                const stops = [...bucket.semanais, ...bucket.quinzenais13, ...bucket.quinzenais24].filter(c => c.lat && c.lng);
+                if (stops.length > 0) {
+                    return {
+                        lat: stops.reduce((s, c) => s + c.lat, 0) / stops.length,
+                        lng: stops.reduce((s, c) => s + c.lng, 0) / stops.length
+                    };
+                }
+                return { lat: baseLat, lng: baseLng };
+            };
 
-                            if (preferredSlot === '1_3' && cap13 < b.maxCap) {
-                                b.quinzenais13.push(client);
-                                placed = true;
-                                break;
-                            } else if (preferredSlot === '2_4' && cap24 < b.maxCap) {
-                                b.quinzenais24.push(client);
-                                placed = true;
-                                break;
-                            } else if (optBalanceWorkload) {
-                                if (preferredSlot === '1_3' && cap24 < b.maxCap) {
-                                    b.quinzenais24.push(client);
-                                    placed = true;
-                                    break;
-                                } else if (preferredSlot === '2_4' && cap13 < b.maxCap) {
-                                    b.quinzenais13.push(client);
-                                    placed = true;
-                                    break;
+            let dayCentroids = dayBuckets.map(calcDayCentroid);
+
+            // Refinamento Espacial de Contiguidade (Boundary Swaps):
+            // Troca clientes entre dias vizinhos somente quando aproxima do centróide, mantendo o balanceamento perfeito
+            for (let pass = 0; pass < 6; pass++) {
+                dayCentroids = dayBuckets.map(calcDayCentroid);
+
+                // Refinamento Quinzena 1 e 3
+                for (let i = 0; i < dayBuckets.length; i++) {
+                    for (let j = i + 1; j < dayBuckets.length; j++) {
+                        const b1 = dayBuckets[i];
+                        const b2 = dayBuckets[j];
+                        const c1 = dayCentroids[i];
+                        const c2 = dayCentroids[j];
+
+                        for (let k1 = 0; k1 < b1.quinzenais13.length; k1++) {
+                            const cli1 = b1.quinzenais13[k1];
+                            if (!cli1.lat || !cli1.lng) continue;
+
+                            for (let k2 = 0; k2 < b2.quinzenais13.length; k2++) {
+                                const cli2 = b2.quinzenais13[k2];
+                                if (!cli2.lat || !cli2.lng) continue;
+
+                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
+                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
+
+                                if (swappedDist < currentDist - 0.5) {
+                                    b1.quinzenais13[k1] = cli2;
+                                    b2.quinzenais13[k2] = cli1;
                                 }
                             }
                         }
+                    }
+                }
 
-                        if (!placed) {
-                            const b = dayBuckets[rankedDayIndices[0].idx];
-                            const cap13 = b.semanais.length + b.quinzenais13.length;
-                            const cap24 = b.semanais.length + b.quinzenais24.length;
-                            if (cap13 <= cap24) b.quinzenais13.push(client);
-                            else b.quinzenais24.push(client);
+                // Refinamento Quinzena 2 e 4
+                for (let i = 0; i < dayBuckets.length; i++) {
+                    for (let j = i + 1; j < dayBuckets.length; j++) {
+                        const b1 = dayBuckets[i];
+                        const b2 = dayBuckets[j];
+                        const c1 = dayCentroids[i];
+                        const c2 = dayCentroids[j];
+
+                        for (let k1 = 0; k1 < b1.quinzenais24.length; k1++) {
+                            const cli1 = b1.quinzenais24[k1];
+                            if (!cli1.lat || !cli1.lng) continue;
+
+                            for (let k2 = 0; k2 < b2.quinzenais24.length; k2++) {
+                                const cli2 = b2.quinzenais24[k2];
+                                if (!cli2.lat || !cli2.lng) continue;
+
+                                const currentDist = calcDist(cli1.lat, cli1.lng, c1.lat, c1.lng) + calcDist(cli2.lat, cli2.lng, c2.lat, c2.lng);
+                                const swappedDist = calcDist(cli1.lat, cli1.lng, c2.lat, c2.lng) + calcDist(cli2.lat, cli2.lng, c1.lat, c1.lng);
+
+                                if (swappedDist < currentDist - 0.5) {
+                                    b1.quinzenais24[k1] = cli2;
+                                    b2.quinzenais24[k2] = cli1;
+                                }
+                            }
                         }
                     }
-                });
-
-                // Atualiza centróides com base na média das coordenadas das paradas do dia
-                centroids = dayBuckets.map(b => {
-                    const allInDay = [...b.semanais, ...b.quinzenais13, ...b.quinzenais24].filter(c => c.lat && c.lng);
-                    if (allInDay.length > 0) {
-                        return {
-                            lat: allInDay.reduce((s, c) => s + c.lat, 0) / allInDay.length,
-                            lng: allInDay.reduce((s, c) => s + c.lng, 0) / allInDay.length
-                        };
-                    }
-                    return { lat: baseLat, lng: baseLng };
-                });
+                }
             }
 
             // 4. Roteirização em Circuito Fechado por Dia com TSP 2-Opt e Matriz Viária Real OSRM (Base -> Clientes -> Base)
